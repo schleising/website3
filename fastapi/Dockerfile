@@ -8,4 +8,4 @@ RUN pip install -r /app/requirements.txt
 
 COPY ./website /app
 
-CMD [ "uvicorn", "app.index:app", "--host", "0.0.0.0" ]
+CMD [ "uvicorn", "app.index:app", "--uds", "/socket/uvicorn.sock" ]

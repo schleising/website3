@@ -1,4 +1,4 @@
-version: "3.7"
+version: "3.11"
 
 services:
     web:
@@ -8,6 +8,8 @@ services:
           - 8011:443
         depends_on:
           - api
+        volumes:
+          - socket_volume:/socket
 
     api:
         build: fastapi
@@ -15,3 +17,8 @@ services:
           - PORT=8000
         ports:
           - 8000:8000
+        volumes:
+          - socket_volume:/socket
+
+volumes:
+  socket_volume:
