@@ -1,0 +1,17 @@
+version: "3.7"
+
+services:
+    web:
+        build: nginx
+        ports:
+          - 8010:80
+          - 8011:443
+        depends_on:
+          - api
+
+    api:
+        build: fastapi
+        environment:
+          - PORT=8000
+        ports:
+          - 8000:8000
