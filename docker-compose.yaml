@@ -10,6 +10,7 @@ services:
           - api
         volumes:
           - socket_volume:/socket
+        restart: always
 
     api:
         build: fastapi
@@ -19,6 +20,7 @@ services:
           - 8000:8000
         volumes:
           - socket_volume:/socket
+        restart: always
 
 volumes:
   socket_volume:
