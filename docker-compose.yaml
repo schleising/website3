@@ -1,26 +1,28 @@
 version: "3.11"
 
 services:
-    web:
-        build: nginx
-        ports:
-          - 8010:80
-          - 8011:443
-        depends_on:
-          - api
-        volumes:
-          - socket_volume:/socket
-        restart: always
+  web:
+    build: nginx
+    ports:
+      - 8010:80
+      - 8011:443
+    depends_on:
+      - api
+    volumes:
+      - ./website/static:/static:ro
+      - socket_volume:/socket:rw
+    # restart: always
 
-    api:
-        build: fastapi
-        environment:
-          - PORT=8000
-        ports:
-          - 8000:8000
-        volumes:
-          - socket_volume:/socket
-        restart: always
+  api:
+    build: fastapi
+    environment:
+      - PORT=8000
+    ports:
+      - 8000:8000
+    volumes:
+      - ./website:/app:ro
+      - socket_volume:/socket:rw
+    # restart: always
 
 volumes:
   socket_volume:

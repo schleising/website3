@@ -1,11 +1,7 @@
 FROM python:3.11-alpine
 
-RUN mkdir /app
+COPY ./requirements.txt /requirements.txt
 
-COPY ./requirements.txt /app/requirements.txt
-
-RUN pip install -r /app/requirements.txt
-
-COPY ./website /app
+RUN pip install -r /requirements.txt
 
 CMD [ "uvicorn", "app.index:app", "--uds", "/socket/uvicorn.sock" ]
