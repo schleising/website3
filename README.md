@@ -12,7 +12,7 @@ Third attempt at a website using everything I've learned in 2 years
 # docker-compose up --build
 ```
 
-Once the [`nginx`](https://nginx.org/) image is running, it will only work at that time on port 80 without SSL, to use SSL connect to the container command prompt and enter the following command and follow the instructions,
+Once the [`nginx`](https://nginx.org/) image is running, it will only work at that time on port 80 without SSL, to use SSL connect to the container command prompt, enter the following command and follow the instructions,
 
 ```
 # certbot --nginx -d domain.com -d www.domain.com
