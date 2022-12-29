@@ -11,7 +11,7 @@ services:
     volumes:
       - ./website/static:/static:ro
       - socket_volume:/socket:rw
-    restart: always
+    # restart: always
 
   fastapi:
     build: fastapi
@@ -20,7 +20,7 @@ services:
       - socket_volume:/socket:rw
       - nginx_conf:/etc/nginx:rw
       - letsencrypt_conf:/etc/letsencrypt:rw
-    restart: always
+    # restart: always
 
 volumes:
   socket_volume:
