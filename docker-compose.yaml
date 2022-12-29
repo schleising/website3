@@ -15,10 +15,6 @@ services:
 
   api:
     build: fastapi
-    environment:
-      - PORT=8000
-    ports:
-      - 8000:8000
     volumes:
       - ./website:/app:ro
       - socket_volume:/socket:rw
