@@ -8,8 +8,8 @@ Third attempt at a website using everything I've learned in 2 years
 - Redirect incoming port 443 to 8011
 
 ```
-# git clone https://github.com/schleising/website3.git
-# docker-compose up --build
+$ git clone https://github.com/schleising/website3.git
+$ docker-compose up --build
 ```
 
 Once the [`nginx`](https://nginx.org/) image is running, it will only work at that time on port 80 without SSL, to use SSL connect to the container command prompt, enter the following command and follow the instructions,
