@@ -11,14 +11,14 @@ services:
     volumes:
       - ./website/static:/static:ro
       - socket_volume:/socket:rw
-    # restart: always
+    restart: always
 
   fastapi:
     build: fastapi
     volumes:
       - ./website:/app:ro
       - socket_volume:/socket:rw
-    # restart: always
+    restart: always
 
 volumes:
   socket_volume:
