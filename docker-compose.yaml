@@ -1,19 +1,19 @@
 version: "3.11"
 
 services:
-  web:
+  nginx:
     build: nginx
     ports:
       - 8010:80
       - 8011:443
     depends_on:
-      - api
+      - fastapi
     volumes:
       - ./website/static:/static:ro
       - socket_volume:/socket:rw
     # restart: always
 
-  api:
+  fastapi:
     build: fastapi
     volumes:
       - ./website:/app:ro
