@@ -18,7 +18,11 @@ services:
     volumes:
       - ./website:/app:ro
       - socket_volume:/socket:rw
+      - nginx_conf:/etc/nginx:rw
+      - letsencrypt_conf:/etc/letsencrypt:rw
     restart: always
 
 volumes:
   socket_volume:
+  nginx_conf:
+  letsencrypt_conf:
