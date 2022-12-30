@@ -5,9 +5,14 @@ from fastapi.templating import Jinja2Templates
 from .database.database import Database
 from .database.models.item_model import ItemModel
 
+from .irca_db.router import irca_router
+
 TEMPLATES = Jinja2Templates('/app/templates')
 
 app = FastAPI()
+
+# Include the IRCA database router
+app.include_router(irca_router)
 
 # Get an instance of the Database class
 MONGODB = Database()
@@ -23,28 +28,6 @@ COLLECTION = MONGODB.get_collection('item_collection')
 async def root(request: Request):
     print('Hello')
     return TEMPLATES.TemplateResponse('index.html', {'request': request})
-
-# Dirty attempt to add test items to the database
-@app.get('/items/{item_id}', response_model=ItemModel)
-async def post_item(item_id: int):
-    # Create an instance of ItemModel
-    item = ItemModel(name=str(item_id), number=item_id)
-
-    if COLLECTION is not None:
-        # If we have got a collection, insert the new item
-        result = await COLLECTION.insert_one(item.dict())
-
-        # Print the result
-        print(f'{item_id} Added as {result.inserted_id}')
-
-        # Return the item as a json string to the browser
-        return item
-    else:
-        # Log that the item was not added
-        print(f'{item_id} NOT Added')
-
-        # Return the item as a json string to the browser
-        return item
 
 # Close the connection when the app shuts down
 @app.on_event('shutdown')
