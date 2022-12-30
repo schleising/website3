@@ -9,6 +9,7 @@ Third attempt at a website using everything I've learned in 2 years
 
 ```
 $ git clone https://github.com/schleising/website3.git
+$ cd website3
 $ docker-compose up --build
 ```
 
