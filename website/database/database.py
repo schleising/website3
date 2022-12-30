@@ -5,7 +5,7 @@ class Database:
         """Creates a Database instance, creates a connection to the Mongo DB
         """
         with open('/app/database/db_server.txt', 'r', encoding='utf8') as serverFile:
-            serverName = serverFile.read()
+            serverName = serverFile.read().strip()
 
             self.client = AsyncIOMotorClient(serverName, 27017)
 
