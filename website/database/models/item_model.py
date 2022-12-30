@@ -1,5 +1,5 @@
-from odmantic import Model
+from pydantic import BaseModel
 
-class ItemModel(Model):
+class ItemModel(BaseModel):
     name: str
     number: int
