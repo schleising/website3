@@ -7,7 +7,7 @@ body {
 }
 
 #outer {
-  background-color: yellowgreen;
+  /* background-color: yellowgreen; */
   padding: 5px;
   height: 100vh;
   display: flex;
@@ -15,16 +15,16 @@ body {
 }
 
 #header {
-  background-color: blue;
-  color: aliceblue;
-  padding: 5px;
+  background-color: #F8F8F8;
+  /* color: aliceblue; */
+  padding: 10px;
   display: flex;
   flex-direction: row;
 }
 
 #main {
-  background-color: turquoise;
-  padding: 5px;
+  /* background-color: turquoise; */
+  /* padding: 5px; */
   display: flex;
   flex-direction: row;
   flex: 1 1 auto;
@@ -32,8 +32,8 @@ body {
 }
 
 #sidebar {
-  background-color: blueviolet;
-  padding: 5px;
+  background-color: #F8F8F8;
+  padding: 10px;
   color: white;
   display: flex;
   flex-direction: column;
@@ -42,8 +42,8 @@ body {
 }
 
 #content {
-  background-color: teal;
-  color: white;
+  /* background-color: teal; */
+  /* color: white; */
   padding: 5px;
   display: flex;
   flex: 1 1 auto;
@@ -51,8 +51,8 @@ body {
 }
 
 #grid-wrapper {
-  background-color: darkorange;
-  color: white;
+  /* background-color: darkorange; */
+  /* color: white; */
   padding: 5px;
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -62,7 +62,7 @@ body {
 }
 
 .box {
-  background-color: cornflowerblue;
+  /* background-color: cornflowerblue; */
   padding: 5px;
   min-width: 0;
   min-height: 0;
@@ -81,9 +81,9 @@ img {
 }
 
 #footer {
-  background-color: tomato;
-  padding: 5px;
-  color: white;
+  background-color: #F8F8F8;
+  padding: 10px;
+  /* color: white; */
   display: flex;
   flex-direction: row;
 }
