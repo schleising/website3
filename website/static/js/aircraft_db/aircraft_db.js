@@ -1,3 +1,9 @@
+function checkForEnter(event) {
+    if (event.key == "Enter") {
+        searchClicked()
+    }
+}
+
 function searchClicked() {
     var xmlhttp = new XMLHttpRequest();
     var url = "/aircraft/tail_no/" + document.getElementById("input_tail_number").value
