@@ -22,6 +22,10 @@ body {
   flex-direction: row;
 }
 
+h2 {
+  margin: 0px;
+}
+
 #main {
   /* background-color: turquoise; */
   /* padding: 5px; */
