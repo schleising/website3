@@ -13,7 +13,7 @@ aircraft_router = APIRouter(prefix='/aircraft')
 async def get_aircraft_page(request: Request):
     return TEMPLATES.TemplateResponse('aircraft_db/aircraft_template.html', {'request': request})
 
-@aircraft_router.get('/details', response_model=AircraftModel | None)
+@aircraft_router.get('/tail_no/{tail_no}', response_model=AircraftModel | None)
 async def get_ac(tail_no: str | None = None):
     reader = IrcaReader()
 

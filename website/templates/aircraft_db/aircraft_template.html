@@ -13,7 +13,7 @@
   <div id="aircraft_controls">
     <label for="input_tail_number" class="form_label">Enter Tail Number</label>
     <input type="search" class="form_control" id="input_tail_number">
-    <button type="submit" class="btn btn-primary">Search</button>
+    <button type="submit" class="btn btn-primary" onclick="searchClicked()">Search</button>
   </div>
   <div id="aircraft_output">
     <table class="table table-striped">
@@ -29,8 +29,108 @@
           <td id="registration"></td>
         </tr>
         <tr>
-          <th>Mode S Address</th>
+          <th>Mode S</th>
           <td id="icao24"></td>
+        </tr>
+        <tr>
+          <th>Manufacturer ICAO</th>
+          <td id="manufacturericao"></td>
+        </tr>
+        <tr>
+          <th>Manufacturer Name</th>
+          <td id="manufacturername"></td>
+        </tr>
+        <tr>
+          <th>Model</th>
+          <td id="model"></td>
+        </tr>
+        <tr>
+          <th>Type Code</th>
+          <td id="typecode"></td>
+        </tr>
+        <tr>
+          <th>Serial Number</th>
+          <td id="serialnumber"></td>
+        </tr>
+        <tr>
+          <th>Line Number</th>
+          <td id="linenumber"></td>
+        </tr>
+        <tr>
+          <th>ICAO Aircraft Type</th>
+          <td id="icaoaircrafttype"></td>
+        </tr>
+        <tr>
+          <th>Operator</th>
+          <td id="operator"></td>
+        </tr>
+        <tr>
+          <th>Operator Call Sign</th>
+          <td id="operatorcallsign"></td>
+        </tr>
+        <tr>
+          <th>Operator ICAO</th>
+          <td id="operatoricao"></td>
+        </tr>
+        <tr>
+          <th>Operator IATA</th>
+          <td id="operatoriata"></td>
+        </tr>
+        <tr>
+          <th>Owner</th>
+          <td id="owner"></td>
+        </tr>
+        <tr>
+          <th>Test Reg</th>
+          <td id="testreg"></td>
+        </tr>
+        <tr>
+          <th>Registered On</th>
+          <td id="registered"></td>
+        </tr>
+        <tr>
+          <th>Registered Until</th>
+          <td id="reguntil"></td>
+        </tr>
+        <tr>
+          <th>Status</th>
+          <td id="status"></td>
+        </tr>
+        <tr>
+          <th>Built On</th>
+          <td id="built"></td>
+        </tr>
+        <tr>
+          <th>First Flight Date</th>
+          <td id="firstflightdate"></td>
+        </tr>
+        <tr>
+          <th>Seat Configuration</th>
+          <td id="seatconfiguration"></td>
+        </tr>
+        <tr>
+          <th>Engines</th>
+          <td id="engines"></td>
+        </tr>
+        <tr>
+          <th>Modes</th>
+          <td id="modes"></td>
+        </tr>
+        <tr>
+          <th>ADSB</th>
+          <td id="adsb"></td>
+        </tr>
+        <tr>
+          <th>ACARS</th>
+          <td id="acars"></td>
+        </tr>
+        <tr>
+          <th>Notes</th>
+          <td id="notes"></td>
+        </tr>
+        <tr>
+          <th>Category Description</th>
+          <td id="categoryDescription"></td>
         </tr>
       </tbody>
     </table>
@@ -40,4 +140,8 @@
 
 {% block footer %}
 This is the Aircraft Footer
+{% endblock %}
+
+{% block scripts %}
+<script src="/js/aircraft_db/aircraft_db.js"></script>
 {% endblock %}
