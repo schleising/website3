@@ -1,0 +1,34 @@
+#aircraft_db_container {
+    background-color: turquoise;
+    padding: 5px;
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    overflow-y: auto;
+}
+
+#aircraft_controls {
+    background-color: brown;
+    padding: 5px;
+    display: flex;
+    flex-direction: row;
+    flex: 0 0 auto;
+    justify-content: left;
+    align-items: center;
+    /* overflow-y: auto; */
+}
+
+#input_tail_number {
+    min-width: 200px;
+    margin-left: 5px;
+    margin-right: 5px;
+}
+
+#aircraft_output {
+    background-color: pink;
+    padding: 5px;
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    overflow-y: auto;
+}
