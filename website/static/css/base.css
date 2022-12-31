@@ -15,8 +15,8 @@ body {
 }
 
 #header {
-  background-color: #F8F8F8;
-  /* color: aliceblue; */
+  background-color: cornflowerblue;
+  color: white;
   padding: 10px;
   display: flex;
   flex-direction: row;
@@ -32,7 +32,7 @@ body {
 }
 
 #sidebar {
-  background-color: #F8F8F8;
+  /* background-color: #F8F8F8; */
   padding: 10px;
   color: white;
   display: flex;
@@ -81,9 +81,9 @@ img {
 }
 
 #footer {
-  background-color: #F8F8F8;
+  background-color: cornflowerblue;
   padding: 10px;
-  /* color: white; */
+  color: white;
   display: flex;
   flex-direction: row;
 }
