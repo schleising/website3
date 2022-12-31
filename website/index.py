@@ -5,14 +5,14 @@ from fastapi.templating import Jinja2Templates
 from .database.database import Database
 from .database.models.item_model import ItemModel
 
-from .irca_db.router import irca_router
+from .aircraft_db.router import aircraft_router
 
 TEMPLATES = Jinja2Templates('/app/templates')
 
 app = FastAPI()
 
 # Include the IRCA database router
-app.include_router(irca_router)
+app.include_router(aircraft_router)
 
 # Get an instance of the Database class
 MONGODB = Database()

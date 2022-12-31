@@ -3,7 +3,7 @@ from typing import Union
 
 from pydantic import BaseModel
 
-class IrcaModel(BaseModel):
+class AircraftModel(BaseModel):
     icao24: str
     registration: str
     manufacturericao: str

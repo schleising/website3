@@ -7,4 +7,4 @@ mongodb = Database()
 mongodb.set_database('web_database')
 
 # Set the collection in use
-irca_collection = mongodb.get_collection('irca_collection')
+irca_collection = mongodb.get_collection('aircraft_collection')

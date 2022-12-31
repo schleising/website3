@@ -1,11 +1,11 @@
 from fastapi import APIRouter
 
-from .irca_model import IrcaModel
-from .irca_reader import IrcaReader
+from .aircraft_model import AircraftModel
+from .aircraft_reader import IrcaReader
 
-irca_router = APIRouter(prefix='/irca')
+aircraft_router = APIRouter(prefix='/aircraft')
 
-@irca_router.get('/', response_model=IrcaModel | None)
+@aircraft_router.get('/', response_model=AircraftModel | None)
 async def get_ac(tail_no: str | None = None):
     reader = IrcaReader()
 
