@@ -38,7 +38,7 @@ $ docker-compose up --build
 
 Once all images are built and their containers are running, follow the steps in Nginx Setup to get a secure TLS connection
 
-> :information: If you are developing locally then there is no need to follow the steps in Nginx Setup, just point your browser at [localhost:8010](http://localhost:8010)
+> :information_source: If you are developing locally then there is no need to follow the steps in Nginx Setup, just point your browser at [localhost:8010](http://localhost:8010)
 
 ### Nginx Setup
 
