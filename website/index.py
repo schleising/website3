@@ -3,7 +3,6 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
 from .database.database import Database
-from .database.models.item_model import ItemModel
 
 from .aircraft_db.router import aircraft_router
 
@@ -26,7 +25,6 @@ COLLECTION = MONGODB.get_collection('item_collection')
 # Gets the homepage
 @app.get('/', response_class=HTMLResponse)
 async def root(request: Request):
-    print('Hello')
     return TEMPLATES.TemplateResponse('index.html', {'request': request})
 
 # Close the connection when the app shuts down
