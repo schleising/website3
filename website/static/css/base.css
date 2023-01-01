@@ -45,6 +45,12 @@ h2 {
   flex: 0 0 auto;
 }
 
+@media (max-width: 400px) {
+  #sidebar {
+    display: none;
+  }
+}
+
 #content {
   /* background-color: teal; */
   /* color: white; */
