@@ -1,5 +1,5 @@
 #aircraft_db_container {
-    padding: 5px;
+    padding: 0.3rem;
     display: flex;
     flex-direction: column;
     flex: 1 1 auto;
@@ -7,7 +7,7 @@
 }
 
 #aircraft_controls {
-    padding: 5px;
+    padding: 0.3rem;
     display: flex;
     flex-direction: row;
     flex: 0 0 auto;
@@ -16,13 +16,13 @@
 }
 
 #input_tail_number {
-    width: 100px;
-    margin-left: 5px;
-    margin-right: 5px;
+    width: 7rem;
+    margin-left: 0.3rem;
+    margin-right: 0.3rem;
 }
 
 #aircraft_output {
-    padding: 5px;
+    padding: 0.3rem;
     display: flex;
     flex-direction: column;
     flex: 1 1 auto;

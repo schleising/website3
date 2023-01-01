@@ -5,7 +5,7 @@ updateSize();
 function updateSize() {
     document.getElementById("outer").style.height = window.innerHeight + "px";
 
-    if (window.innerWidth > 500) {
+    if (window.innerWidth > 550) {
         document.getElementById("sidebar").style.display = "flex";
         document.getElementById("hamburger").style.display = "none";
     } else {
