@@ -47,7 +47,7 @@ h2 {
   flex: 0 0 auto;
 }
 
-@media (max-width: 400px) {
+@media (max-width: 500px) {
   #sidebar {
     display: none;
   }
