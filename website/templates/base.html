@@ -26,9 +26,14 @@
       </div>
       <div id="main">
         <div id="sidebar">
-          <a href="/" class="link-secondary">Home</a>
-          <a href="/aircraft/" class="link-secondary">Aircraft DB</a>
-          {% block sidebar %}
+          <ul class="nav flex-column">
+            <li class="nav-item">
+              <a class="nav-link link-secondary" href="/">Home</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link link-secondary" href="/aircraft/">OpenSky Database</a>
+            </li>
+          </ul>          {% block sidebar %}
           {% endblock %}
         </div>
         <div id="content">
