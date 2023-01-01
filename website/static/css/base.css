@@ -9,7 +9,7 @@ body {
 #outer {
   /* background-color: yellowgreen; */
   padding: 5px;
-  height: 100vh;
+  /* height: 100vh; */
   display: flex;
   flex-direction: column;
 }
