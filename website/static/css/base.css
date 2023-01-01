@@ -7,9 +7,7 @@ body {
 }
 
 #outer {
-  /* background-color: yellowgreen; */
   padding: 5px;
-  /* height: 100vh; */
   display: flex;
   flex-direction: column;
 }
@@ -29,8 +27,6 @@ h2 {
 }
 
 #main {
-  /* background-color: turquoise; */
-  /* padding: 5px; */
   display: flex;
   flex-direction: row;
   flex: 1 1 auto;
@@ -38,7 +34,6 @@ h2 {
 }
 
 #sidebar {
-  /* background-color: #F8F8F8; */
   padding: 10px;
   color: white;
   display: flex;
@@ -48,8 +43,6 @@ h2 {
 }
 
 #content {
-  /* background-color: teal; */
-  /* color: white; */
   padding: 5px;
   display: flex;
   flex: 1 1 auto;
@@ -57,8 +50,6 @@ h2 {
 }
 
 #grid-wrapper {
-  /* background-color: darkorange; */
-  /* color: white; */
   padding: 5px;
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -68,7 +59,6 @@ h2 {
 }
 
 .box {
-  /* background-color: cornflowerblue; */
   padding: 5px;
   min-width: 0;
   min-height: 0;

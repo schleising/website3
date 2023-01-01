@@ -1,5 +1,4 @@
 #aircraft_db_container {
-    /* background-color: turquoise; */
     padding: 5px;
     display: flex;
     flex-direction: column;
@@ -8,14 +7,12 @@
 }
 
 #aircraft_controls {
-    /* background-color: brown; */
     padding: 5px;
     display: flex;
     flex-direction: row;
     flex: 0 0 auto;
     justify-content: left;
     align-items: center;
-    /* overflow-y: auto; */
 }
 
 #input_tail_number {
@@ -25,7 +22,6 @@
 }
 
 #aircraft_output {
-    /* background-color: pink; */
     padding: 5px;
     display: flex;
     flex-direction: column;
