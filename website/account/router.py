@@ -18,6 +18,20 @@ async def get_login_page(request: Request, result: str| None = None):
     # Render the login page
     return TEMPLATES.TemplateResponse('account/login.html', {'request': request, 'result': result})
 
+@account_router.get('/logout', response_class=HTMLResponse)
+async def get_logout_page(request: Request, result: str| None = None):
+    # Clear the user from the request
+    request.state.user = None
+
+    # Get the response
+    response = TEMPLATES.TemplateResponse('account/logout.html', {'request': request, 'result': result})
+
+    # Ensure the cookie gets deleted
+    response.delete_cookie('token')
+
+    # Render the logout page
+    return response
+
 @account_router.post('/token')
 async def login(form_data: OAuth2PasswordRequestForm = Depends()):
     # Check the username and password, if valid the user will be returned, if not it will be None

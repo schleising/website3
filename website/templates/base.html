@@ -29,7 +29,11 @@
           <nav class="nav flex-column">
             <a class="nav-link link-secondary" href="/">Home</a>
             <a class="nav-link link-secondary" href="/aircraft">OpenSky Database</a>
+            {% if request.state.user != None %}
+            <a class="nav-link link-secondary" href="/account/logout">Logout</a>
+            {% else %}
             <a class="nav-link link-secondary" href="/account/login">Login</a>
+            {% endif %}
             {% block sidebar %}
             {% endblock %}
           </nav>
