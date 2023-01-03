@@ -1,9 +1,13 @@
 from datetime import datetime, timedelta
 from typing import Dict, Optional
 
-from fastapi import Depends, FastAPI, HTTPException, Request
+from fastapi import Depends, Request, status
 from fastapi.security import OAuth2
 from fastapi.openapi.models import OAuthFlows as OAuthFlowsModel
+
+from starlette.responses import RedirectResponse
+
+from pymongo.errors import DuplicateKeyError
 
 from jose import JWTError, jwt
 
@@ -74,11 +78,11 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = CookieOAuth2PasswordBearer(tokenUrl="/account/token")
 
 
-def verify_password(plain_password, hashed_password) -> bool:
+def verify_password(plain_password: str, hashed_password: str) -> bool:
     # Veryfy the plain and hashed passwords match
     return pwd_context.verify(plain_password, hashed_password)
 
-def get_password_hash(password) -> str:
+def get_password_hash(password: str) -> str:
     # Get the hashed version of the plaintext password 
     return pwd_context.hash(password)
 
@@ -194,3 +198,63 @@ async def get_current_active_user(request: Request, current_user: User | None = 
     else:
         # If we have not got a user set request.state.user to None
         request.state.user = None
+
+async def create_new_user(firstname: str, lastname: str, username: str, password: str) -> User | None:
+    # Hash the password
+    hashed_password = get_password_hash(password)
+
+    # Create a new user object for the database with the hashed password
+    new_user = UserInDB(
+        first_name=firstname,
+        last_name=lastname,
+        username=username,
+        hashed_password=hashed_password,
+        disabled=False
+    )
+
+    # Check we have a collection
+    if user_collection is not None:
+        try:
+            # Insert the new user
+            result = await user_collection.insert_one(new_user.dict())
+        except DuplicateKeyError:
+            # If the username already exists return None
+            return None
+
+        # Get the new user
+        user = await get_user(username)
+
+        if user is not None:
+            # Return the user
+            return user
+        else:
+            # Return None
+            return None
+    else:
+            # Return None
+        return None
+
+def get_login_response(user: User) -> RedirectResponse:
+    # If the user is valid, create a JWT token
+    access_token_expires = timedelta(seconds=ACCESS_TOKEN_EXPIRE_SECONDS)
+
+    # Create the token
+    access_token = create_access_token(
+        data={"sub": user.username}, expires_delta=access_token_expires
+    )
+
+    # Create a redirect response to the login success page
+    response = RedirectResponse('/account/login_success', status_code=status.HTTP_303_SEE_OTHER)
+
+    # Set a cookie on the response with the contents as the JWT token
+    response.set_cookie(
+        key="token",
+        max_age=ACCESS_TOKEN_EXPIRE_SECONDS,
+        value=access_token,
+        secure=True,
+        httponly=True,
+        samesite='strict'
+    )
+
+    # Return the repsonse
+    return response

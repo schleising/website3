@@ -1,13 +1,11 @@
-from datetime import timedelta
-
 from fastapi import APIRouter, Request, Depends, status
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from starlette.responses import RedirectResponse
 
-from .admin import authenticate_user, create_access_token, ACCESS_TOKEN_EXPIRE_SECONDS
-from .user_model import User
+from .admin import authenticate_user, create_new_user, get_login_response
+from .user_model import User, CreateUserForm
 
 # Set the Jinja template location
 TEMPLATES = Jinja2Templates('/app/templates')
@@ -35,26 +33,8 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
         # Return the redirect response
         return response
 
-    # If the user is valid, create a JWT token
-    access_token_expires = timedelta(seconds=ACCESS_TOKEN_EXPIRE_SECONDS)
-
-    # Create the token
-    access_token = create_access_token(
-        data={"sub": user.username}, expires_delta=access_token_expires
-    )
-
-    # Create a redirect response to the login success page
-    response = RedirectResponse('/account/login_success', status_code=status.HTTP_303_SEE_OTHER)
-
-    # Set a cookie on the response with the contents as the JWT token
-    response.set_cookie(
-        key="token",
-        max_age=ACCESS_TOKEN_EXPIRE_SECONDS,
-        value=access_token,
-        secure=True,
-        httponly=True,
-        samesite='strict'
-    )
+    # Get the login response
+    response = get_login_response(user)
 
     # Return the response
     return response
@@ -68,6 +48,25 @@ async def login_success(request: Request):
 async def get_create_page(request: Request):
     # Render the create account page
     return TEMPLATES.TemplateResponse('account/create.html', {'request': request})
+
+@account_router.post('/create_user')
+async def create_user(request: Request, form_data: CreateUserForm = Depends()):
+    # Try to create the new user
+    user = await create_new_user(form_data.firstname, form_data.lastname, form_data.username, form_data.password)
+
+    if user is not None:
+        # Set the user as the Request,state,user object
+        request.state.user = user
+
+        # Get the login response
+        response = get_login_response(user)
+
+        # Return the response
+        return response
+    else:
+        # Redirect to the create page
+        # TODO: Fix this
+        return RedirectResponse('/account/create', status_code=status.HTTP_303_SEE_OTHER)
 
 @account_router.get('/protected')
 async def protected(request: Request) -> User | None:

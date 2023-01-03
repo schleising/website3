@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 
 {% block head %}
+<link rel="stylesheet" href="/css/account/account.css">
 {% endblock %}
 
 {% block header %}
@@ -8,10 +9,35 @@
 {% endblock %}
 
 {% block content %}
+<div id="login-text">
+  <h3>Create Account</h3>
+  <p>Please enter your name, email address and password to create an account</p>
+</div>
+<form class="row g-3" method="post" action="/account/create_user">
+  <div class="col-md-6">
+    <label for="firstname" class="form-label">First Name</label>
+    <input name="firstname" id="firstname" class="form-control" type="text" placeholder="First Name" autocomplete="given-name" required>
+  </div>
+  <div class="col-md-6">
+    <label for="lastname" class="form-label">Last Name</label>
+    <input name="lastname" id="lastname" class="form-control" type="text" placeholder="Last Name" autocomplete="family-name" required>
+  </div>
+  <div class="col-md-6">
+    <label for="username" class="form-label">Email</label>
+    <input name="username" id="username" class="form-control" type="email" placeholder="name@example.com" autocomplete="email" required>
+  </div>
+  <div class="col-md-6">
+    <label for="password" class="form-label">Password</label>
+    <input name="password" id="password" class="form-control" type="password" autocomplete="new-password" required>
+  </div>
+  <div class="col-12">
+    <button type="submit" class="btn btn-primary">Submit</button>
+  </div>
+</form>
 {% endblock %}
 
 {% block footer %}
-<footer>Create account</footer>
+<footer>Create Account</footer>
 {% endblock %}
 
 {% block scripts %}
