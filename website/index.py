@@ -9,6 +9,8 @@ from .account.admin import get_current_active_user
 
 from .aircraft_db.router import aircraft_router
 
+from .markdown.router import markdown_router
+
 # Set the base template location
 TEMPLATES = Jinja2Templates('/app/templates')
 
@@ -20,6 +22,9 @@ app.include_router(account_router)
 
 # Include the IRCA database router
 app.include_router(aircraft_router)
+
+# Include the markdown router
+app.include_router(markdown_router)
 
 # Get an instance of the Database class
 MONGODB = Database()

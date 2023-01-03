@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block head %}
+<link rel="stylesheet" href="/css/markdown/markdown.css">
+{% endblock %}
+
+{% block header %}
+<h3 class="header-text">Markdown Editor</h3>
+{% endblock %}
+
+{% block content %}
+<div id="markdown-container">
+  <h5>Live Markdown Editor</h5>
+  <div id="markdown-area">
+    <div id="markdown-editor" onkeyup="characterTyped(event)">
+      <textarea id="markdown-editor-textarea" class="markdown"></textarea>
+    </div>
+    <div id="markdown-output">
+      <textarea id="markdown-output-textarea" class="markdown" readonly></textarea>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block footer %}
+<footer>Markdown Editor</footer>
+{% endblock %}
+
+{% block scripts %}
+<script src="/js/markdown/markdown.js"></script>
+{% endblock %}

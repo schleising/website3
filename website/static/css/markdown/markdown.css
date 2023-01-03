@@ -1,0 +1,31 @@
+#markdown-container {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+}
+
+#markdown-area {
+    display: flex;
+    flex-direction: row;
+    flex: 1 1 auto;
+    height: 100%;
+}
+
+#markdown-editor {
+    padding: 0.25rem;
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+}
+
+#markdown-output {
+    padding: 0.25rem;
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+}
+
+textarea.markdown {
+    resize: none;
+    height: 100%;
+}
