@@ -46,6 +46,7 @@ h3.header-text {
   padding: 0.3rem;
   display: flex;
   flex: 1 1 auto;
+  flex-direction: column;
   overflow-y: auto;
 }
 

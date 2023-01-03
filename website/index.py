@@ -1,14 +1,22 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Depends
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
 from .database.database import Database
 
+from .account.router import account_router
+from .account.admin import get_current_active_user
+
 from .aircraft_db.router import aircraft_router
 
+# Set the base template location
 TEMPLATES = Jinja2Templates('/app/templates')
 
-app = FastAPI()
+# Instantiate the application object, ensure every request sets the user into Request.state.user
+app = FastAPI(dependencies=[Depends(get_current_active_user)])
+
+# Include the account router
+app.include_router(account_router)
 
 # Include the IRCA database router
 app.include_router(aircraft_router)

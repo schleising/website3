@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block head %}
+<link rel="stylesheet" href="/css/account/account.css">
+{% endblock %}
+
+{% block header %}
+<h3 class="header-text">Login</h3>
+{% endblock %}
+
+{% block content %}
+<div id="login-text">
+  <h3>Login</h3>
+  {% if login_failed %}
+    <p>Email or Password incorrect</p>
+  {% endif %}
+  <p>Please enter your email address and password</p>
+</div>
+<form class="row g-3" method="post" action="/account/token">
+  <div class="col-md-6">
+    <label for="username" class="form-label">Email</label>
+    <input name="username" id="username" class="form-control" type="email" placeholder="name@example.com" autocomplete="email" required>
+  </div>
+  <div class="col-md-6">
+    <label for="password" class="form-label">Password</label>
+    <input name="password" id="password" class="form-control" type="password" autocomplete="new-password" required>
+  </div>
+  <div class="col-12">
+    <button type="submit" class="btn btn-primary">Submit</button>
+  </div>
+</form>
+{% endblock %}
+
+{% block footer %}
+<footer>Login</footer>
+{% endblock %}
+
+{% block scripts %}
+{% endblock %}

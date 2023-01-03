@@ -1,0 +1,196 @@
+from datetime import datetime, timedelta
+from typing import Dict, Optional
+
+from fastapi import Depends, FastAPI, HTTPException, Request
+from fastapi.security import OAuth2
+from fastapi.openapi.models import OAuthFlows as OAuthFlowsModel
+
+from jose import JWTError, jwt
+
+from passlib.context import CryptContext
+
+from pydantic import BaseModel
+
+from .user_model import User, UserInDB
+
+from . import user_collection
+
+# to get a string like this run:
+# openssl rand -hex 32
+with open('/app/account/secret_key.txt', encoding='utf8') as secret_file:
+    SECRET_KEY = secret_file.read().strip()
+
+# Use the HS256 signing algorithm for the JWT token
+ALGORITHM = "HS256"
+
+# Expire the token (and cookie) after 3 days
+ACCESS_TOKEN_EXPIRE_SECONDS = 60 * 60 * 24 * 3
+
+# Class describing the token and token type
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+
+# Class for the token data
+class TokenData(BaseModel):
+    username: str | None = None
+
+# This class is a copy of the FastAPI OAuth2PasswordBearer to check for a cookie
+# rather than the Authorization header as this does not work in a web app
+class CookieOAuth2PasswordBearer(OAuth2):
+    def __init__(
+        self,
+        tokenUrl: str,
+        scheme_name: Optional[str] = None,
+        scopes: Optional[Dict[str, str]] = None,
+        description: Optional[str] = None,
+        auto_error: bool = True,
+    ):
+        if not scopes:
+            scopes = {}
+        flows = OAuthFlowsModel(password={"tokenUrl": tokenUrl, "scopes": scopes}) # type: ignore
+        super().__init__(
+            flows=flows,
+            scheme_name=scheme_name,
+            description=description,
+            auto_error=auto_error,
+        )
+
+    async def __call__(self, request: Request) -> Optional[str]:
+        scheme = 'bearer'
+        param = request.cookies.get('token')
+
+        if param is None or scheme.lower() != "bearer":
+            if self.auto_error:
+                return None
+            else:
+                return None
+        return param
+
+# Use bcrypt to hash the password
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+# Use the bespoke Cookie OAuth2 scheme
+oauth2_scheme = CookieOAuth2PasswordBearer(tokenUrl="/account/token")
+
+
+def verify_password(plain_password, hashed_password) -> bool:
+    # Veryfy the plain and hashed passwords match
+    return pwd_context.verify(plain_password, hashed_password)
+
+def get_password_hash(password) -> str:
+    # Get the hashed version of the plaintext password 
+    return pwd_context.hash(password)
+
+async def get_user_in_db(username: str) -> UserInDB | None:
+    if user_collection is not None:
+        # If the user collection exists try to get the user
+        dbuser = await user_collection.find_one({'username': username})
+
+        if dbuser is not None:
+            # If the user exists, return it with the hashed password
+            return UserInDB(**dbuser)
+        else:
+            # If the user does not exist return None
+            return None
+    else:
+        # If the collectiion does not exist, return None
+        return None
+
+async def get_user(username: str) -> User | None:
+    if user_collection is not None:
+        # If the user collection exists try to get the user
+        dbuser = await user_collection.find_one({'username': username})
+
+        if dbuser is not None:
+            # If the user exists, return it without the hashed password
+            return User(**dbuser)
+        else:
+            # If the user does not exist return None
+            return None
+    else:
+        # If the collectiion does not exist, return None
+        return None
+
+async def authenticate_user(username: str, password: str) -> User | None:
+    # Try to get the user
+    user = await get_user_in_db(username)
+
+    if user is None:
+        # Return None if the user is not found
+        return None
+    elif not verify_password(password, user.hashed_password):
+        # Return None if the password is not verified
+        return None
+    else:
+        # Return the valid User without the hashed password
+        return User(**user.dict())
+
+def create_access_token(data: dict, expires_delta: timedelta | None = None):
+    # Copy the data to be encoded
+    to_encode = data.copy()
+
+    # Set the expiry time to the requested time or 15 minutes if it is not set
+    if expires_delta:
+        expire = datetime.utcnow() + expires_delta
+    else:
+        expire = datetime.utcnow() + timedelta(minutes=15)
+
+    # Add this to the data to be encoded
+    to_encode.update({"exp": expire})
+
+    # Encode the JSON Web Token
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+
+    # Return the token
+    return encoded_jwt
+
+async def get_current_user(token: str | None = Depends(oauth2_scheme)) -> User | None:
+    # Check whether there is a token
+    if token is not None:
+        try:
+            # Attempt to decode the token
+            payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+
+            # If successfully decoded get the username
+            username: str = str(payload.get("sub"))
+
+            # If there is no username present return None
+            if username is None:
+                return None
+
+            # Set the username in the token data structure, not sure this is really needed
+            token_data = TokenData(username=username)
+        except JWTError:
+            # If the token could not be decoded return None
+            return None
+
+        # If the username is not present return None
+        if token_data.username is None:
+            return None
+        else:
+            # Get the user from the database
+            user = await get_user(username=token_data.username)
+
+        # If the user does not exist return None
+        if user is None:
+            return None
+
+        # Return the user
+        return user
+    else:
+        # Return None if there is no Token
+        return None
+
+async def get_current_active_user(request: Request, current_user: User | None = Depends(get_current_user)) -> None:
+    # Check whether we have got a user
+    if current_user is not None:
+        if current_user.disabled:
+            # If the user is disabled set request.state.user to None
+            request.state.user = None
+
+        # If the user exists set request.state.user to be the user
+        request.state.user = current_user
+    else:
+        # If we have not got a user set request.state.user to None
+        request.state.user = None
