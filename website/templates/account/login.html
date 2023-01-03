@@ -11,8 +11,8 @@
 {% block content %}
 <div id="login-text">
   <h3>Login</h3>
-  {% if login_failed %}
-    <p>Email or Password incorrect</p>
+  {% if result == 'login_failed' %}
+    <h5>Email or Password incorrect</h5>
   {% endif %}
   <p>Please enter your email address and password</p>
   <p>If you do not have an account, please <a href="/account/create">create one</a></p>

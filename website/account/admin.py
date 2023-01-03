@@ -234,7 +234,7 @@ async def create_new_user(firstname: str, lastname: str, username: str, password
             # Return None
         return None
 
-def get_login_response(user: User) -> RedirectResponse:
+def get_login_response(user: User, url: str) -> RedirectResponse:
     # If the user is valid, create a JWT token
     access_token_expires = timedelta(seconds=ACCESS_TOKEN_EXPIRE_SECONDS)
 
@@ -244,7 +244,7 @@ def get_login_response(user: User) -> RedirectResponse:
     )
 
     # Create a redirect response to the login success page
-    response = RedirectResponse('/account/login_success', status_code=status.HTTP_303_SEE_OTHER)
+    response = RedirectResponse(f'/account/{url}', status_code=status.HTTP_303_SEE_OTHER)
 
     # Set a cookie on the response with the contents as the JWT token
     response.set_cookie(
@@ -256,5 +256,5 @@ def get_login_response(user: User) -> RedirectResponse:
         samesite='strict'
     )
 
-    # Return the repsonse
+    # Return the reponse
     return response

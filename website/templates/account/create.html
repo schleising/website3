@@ -11,6 +11,9 @@
 {% block content %}
 <div id="login-text">
   <h3>Create Account</h3>
+  {% if result == 'create_failed' %}
+    <h5>User Creation Failed</h5>
+  {% endif %}
   <p>Please enter your name, email address and password to create an account</p>
 </div>
 <form class="row g-3" method="post" action="/account/create_user">

@@ -14,9 +14,9 @@ TEMPLATES = Jinja2Templates('/app/templates')
 account_router = APIRouter(prefix='/account')
 
 @account_router.get('/login', response_class=HTMLResponse)
-async def get_login_page(request: Request):
+async def get_login_page(request: Request, result: str| None = None):
     # Render the login page
-    return TEMPLATES.TemplateResponse('account/login.html', {'request': request, 'login_failed': False})
+    return TEMPLATES.TemplateResponse('account/login.html', {'request': request, 'result': result})
 
 @account_router.post('/token')
 async def login(form_data: OAuth2PasswordRequestForm = Depends()):
@@ -25,7 +25,7 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
 
     if user is None:
         # If the user has not beee authenticated, redirect back to the lgin page
-        response = RedirectResponse('/account/login', status_code=status.HTTP_303_SEE_OTHER)
+        response = RedirectResponse('/account/login?result=login_failed', status_code=status.HTTP_303_SEE_OTHER)
 
         # Ensure that the response deletes any cookie which may still be in the browser
         response.delete_cookie('token')
@@ -34,7 +34,7 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
         return response
 
     # Get the login response
-    response = get_login_response(user)
+    response = get_login_response(user, 'login_success')
 
     # Return the response
     return response
@@ -45,9 +45,9 @@ async def login_success(request: Request):
     return TEMPLATES.TemplateResponse('account/login_success.html', {'request': request})
 
 @account_router.get('/create', response_class=HTMLResponse)
-async def get_create_page(request: Request):
+async def get_create_page(request: Request, result: str | None = None):
     # Render the create account page
-    return TEMPLATES.TemplateResponse('account/create.html', {'request': request})
+    return TEMPLATES.TemplateResponse('account/create.html', {'request': request, 'result': result})
 
 @account_router.post('/create_user')
 async def create_user(request: Request, form_data: CreateUserForm = Depends()):
@@ -59,14 +59,18 @@ async def create_user(request: Request, form_data: CreateUserForm = Depends()):
         request.state.user = user
 
         # Get the login response
-        response = get_login_response(user)
+        response = get_login_response(user, 'create_success')
 
         # Return the response
         return response
     else:
         # Redirect to the create page
-        # TODO: Fix this
-        return RedirectResponse('/account/create', status_code=status.HTTP_303_SEE_OTHER)
+        return RedirectResponse('/account/create?result=create_failed', status_code=status.HTTP_303_SEE_OTHER)
+
+@account_router.get('/create_success', response_class=HTMLResponse)
+async def create_success(request: Request):
+    # Render the login success page
+    return TEMPLATES.TemplateResponse('account/create_success.html', {'request': request})
 
 @account_router.get('/protected')
 async def protected(request: Request) -> User | None:
