@@ -35,3 +35,77 @@ textarea.markdown {
     resize: none;
     height: 100%;
 }
+
+pre, .rst-content tt {
+    max-width: 100%;
+    background: #fff;
+    border: solid 1px #e1e4e5;
+    color: #333;
+    overflow-x: auto;
+}
+
+code.code-large, .rst-content tt.code-large {
+    font-size: 90%;
+}
+
+code {
+    padding: 2px 5px;
+    background: #fff;
+    border: solid 1px #e1e4e5;
+    color: #333;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+pre code {
+    display: block;
+    background: #F8F8F8;
+    border: none;
+    white-space: pre;
+    word-wrap: normal;
+    font-family: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    font-size: 12px;
+}
+
+a code {
+    color: #2FA4E7;
+}
+
+a:hover code, a:focus code {
+    color: #157AB5;
+}
+
+.admonition, details {
+    padding: 15px;
+    margin-bottom: 20px;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    text-align: left;
+}
+
+.admonition.note, details.note { /* csslint allow: adjoining-classes */
+    color: #2e6b89;
+    background-color: #e2f0f7;
+    border-color: #bce8f1;
+}
+
+.admonition.warning, details.warning { /* csslint allow: adjoining-classes */
+    color: #7a6032;
+    background-color: #fffae5;
+    border-color: #fbeed5;
+}
+
+.admonition.danger, details.danger { /* csslint allow: adjoining-classes */
+    color: #7f3130;
+    background-color: #fde3e3;
+    border-color: #eed3d7;
+}
+
+.admonition-title, summary {
+    font-weight: bold;
+    text-align: left;
+}
+
+.admonition>p:last-child, details>p:last-child {
+    margin-bottom: 0;
+}

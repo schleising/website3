@@ -25,6 +25,9 @@ async def websocket_endpoint(websocket: WebSocket):
         while True:
             data = await websocket.receive_text()
             data_to_convert = DataToConvert.parse_raw(data)
-            await websocket.send_text(markdown(data_to_convert.text))
+            await websocket.send_text(markdown(data_to_convert.text, extensions=[
+                'markdown.extensions.admonition',
+                'pymdownx.extra',
+            ]))
     except WebSocketDisconnect:
         print('Socket Closed')
