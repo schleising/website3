@@ -11,18 +11,24 @@
     height: 100%;
 }
 
+/* @media only screen and (max-width: 600px) {
+    #markdown-area {
+        flex-direction: column;
+    }
+} */
+
 #markdown-editor {
     padding: 0.25rem;
     display: flex;
     flex-direction: column;
-    flex: 1 1 auto;
+    flex: 1 1 0;
 }
 
 #markdown-output {
     padding: 0.25rem;
     display: flex;
     flex-direction: column;
-    flex: 1 1 auto;
+    flex: 1 1 0;
 }
 
 textarea.markdown {
