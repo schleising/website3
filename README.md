@@ -2,6 +2,8 @@
 
 Third attempt at a website using everything I've learned in 2 years
 
+<button>Button Test</button>
+
 ## Installation
 
 ### Prerequisites
