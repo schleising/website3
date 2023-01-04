@@ -1,6 +1,7 @@
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Request, WebSocket
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse
+from starlette.websockets import WebSocketDisconnect
 
 from markdown import markdown
 
@@ -16,6 +17,14 @@ markdown_router = APIRouter(prefix='/markdown')
 async def editor(request: Request):
     return TEMPLATES.TemplateResponse('/markdown/editor.html', {'request': request})
 
-@markdown_router.post('/convert/')
-async def convert(data_to_convert: DataToConvert):
-    return markdown(data_to_convert.text)
+@markdown_router.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    await websocket.accept()
+
+    try:
+        while True:
+            data = await websocket.receive_text()
+            data_to_convert = DataToConvert.parse_raw(data)
+            await websocket.send_text(markdown(data_to_convert.text))
+    except WebSocketDisconnect:
+        print('Socket Closed')

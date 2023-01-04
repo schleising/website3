@@ -1,20 +1,52 @@
-function characterTyped(event, user) {
-    var xmlhttp = new XMLHttpRequest();
-    var url = "/markdown/convert"
-    var body = {text: document.getElementById("markdown-editor-textarea").value}
-    xmlhttp.onreadystatechange = function() {
-        if (this.readyState == 4 && this.status == 200) {
-            var jsn = this.responseText;
-            callback(jsn);
+// Variable which will contain the websocket
+var ws
+
+// Add a callback for state changes
+document.addEventListener('readystatechange', readyStateChanged)
+
+// Disable the text entry box while the page loads
+document.getElementById("markdown-editor-textarea").disabled = true;
+
+function readyStateChanged(event) {
+    // Check the page has completely loaded
+    if (event.target.readyState === "complete") {
+
+        // Get the page URL
+        var url = document.URL;
+
+        // Replace the http or https with ws or wss respectively
+        if ( url.startsWith("https") ) {
+            url = url.replace("https", "wss");
+        } else if ( url.startsWith("http") ) {
+            url = url.replace("http", "ws");
         }
-    };
-    xmlhttp.open("POST", url, true);
-    xmlhttp.setRequestHeader("Content-Type", "application/json")
-    xmlhttp.send(JSON.stringify(body));
-}
 
-function callback(jsn) {
-    var data = JSON.parse(jsn)
+        // Append the ws to the URL
+        url = url + "ws";
+        
+        console.log(url);
 
-    document.getElementById("markdown-output").innerHTML = data
-}
+        // Create a new WebSocket
+        ws = new WebSocket(url);
+
+        // Setup callback for onmessage event
+        ws.onmessage = function(event) {
+            // When a message is received from the server, set it as the innerHTML value
+            document.getElementById("markdown-output").innerHTML = event.data;
+        };
+
+        // Enable the text input now that everything is ready
+        document.getElementById("markdown-editor-textarea").disabled = false;
+    }
+};
+
+function sendMessage(event) {
+    // Get the text from the text area and create a JSON object from it
+    var body = {text: document.getElementById("markdown-editor-textarea").value}
+
+    // Convert the JSON to a string and send it to the server
+    ws.send(JSON.stringify(body))
+
+    // Not sure why we need this...
+    event.preventDefault()
+};
