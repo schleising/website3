@@ -4,6 +4,10 @@ var ws
 // Add a callback for state changes
 document.addEventListener('readystatechange', readyStateChanged)
 
+document.getElementById("markdown-editor-textarea").addEventListener("keyup", function (event) {
+    sendMessage(event)
+});
+
 // Disable the text entry box while the page loads
 document.getElementById("markdown-editor-textarea").disabled = true;
 

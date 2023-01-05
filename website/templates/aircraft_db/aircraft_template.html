@@ -12,8 +12,8 @@
 <div id="aircraft_db_container">
   <div id="aircraft_controls">
     <label for="input_tail_number" class="form_label">Enter Tail Number</label>
-    <input class="form_control" onkeyup="checkForEnter(event, '/aircraft/tail_no/', 'input_tail_number', parseAircraftData)" id="input_tail_number">
-    <button type="submit" class="btn btn-primary" onclick="searchClicked('/aircraft/tail_no/', 'input_tail_number', parseAircraftData)">Search</button>
+    <input class="form_control" id="input_tail_number">
+    <button type="submit" class="btn btn-primary" id="search-button">Search</button>
   </div>
   <div id="aircraft_output">
     <table class="table table-striped">

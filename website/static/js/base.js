@@ -2,6 +2,10 @@ window.onresize = updateSize;
 
 updateSize();
 
+document.getElementById("hamburger-button").addEventListener("click", function(event) {
+    hamburgerClicked()
+});
+
 function updateSize() {
     document.getElementById("outer").style.height = window.innerHeight + "px";
 
@@ -15,7 +19,7 @@ function updateSize() {
 };
 
 function hamburgerClicked() {
-    sidebarElement = document.getElementById("sidebar")
+    sidebarElement = document.getElementById("sidebar");
 
     if (sidebarElement.style.display == "flex") {
         sidebarElement.style.display = "none";
@@ -26,19 +30,23 @@ function hamburgerClicked() {
 
 function checkForEnter(event, baseUrl, element, callback) {
     if (event.key == "Enter") {
-        searchClicked(baseUrl, element, callback)
+        searchClicked(baseUrl, element, callback);
     }
 };
 
 function searchClicked(baseUrl, element, callback) {
-    var xmlhttp = new XMLHttpRequest();
-    var url = baseUrl + document.getElementById(element).value
-    xmlhttp.onreadystatechange = function() {
-        if (this.readyState == 4 && this.status == 200) {
-            var jsn = this.responseText;
-            callback(jsn);
-        }
-    };
-    xmlhttp.open("GET", url, true);
-    xmlhttp.send();
+    value = document.getElementById(element).value;
+
+    if (value != '') {
+        var xmlhttp = new XMLHttpRequest();
+        var url = baseUrl + value;
+        xmlhttp.onreadystatechange = function() {
+            if (this.readyState == 4 && this.status == 200) {
+                var jsn = this.responseText;
+                callback(jsn);
+            }
+        };
+        xmlhttp.open("GET", url, true);
+        xmlhttp.send();
+    }
 };

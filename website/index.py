@@ -15,7 +15,9 @@ from .markdown.router import markdown_router
 TEMPLATES = Jinja2Templates('/app/templates')
 
 # Instantiate the application object, ensure every request sets the user into Request.state.user
-app = FastAPI(dependencies=[Depends(get_current_active_user)])
+app = FastAPI(dependencies=[
+        Depends(get_current_active_user),
+    ])
 
 # Include the account router
 app.include_router(account_router)
