@@ -4,12 +4,19 @@
     flex: 1 1 auto;
 }
 
-#markdown-controls {
+#markdown-header {
     display: flex;
     flex-direction: row;
     flex: 1 1 auto;
     align-items: center;
     justify-content: space-between;
+}
+#markdown-save {
+    display: flex;
+    flex-direction: row;
+    flex: 1 1 auto;
+    align-items: center;
+    justify-content: flex-end;
 }
 
 #markdown-area {
