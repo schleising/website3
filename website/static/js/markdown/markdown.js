@@ -9,16 +9,11 @@ document.addEventListener('readystatechange', readyStateChanged)
 
 // Add button event listener to clear text
 document.getElementById("clear-button").addEventListener('click', event => {
-    // Empty the data stor
-    if (storageAvailable('sessionStorage')) {
-        sessionStorage.setItem('markDownText', "")
-    }
-
     // Clear the test from the control
     document.getElementById("markdown-editor-textarea").value = ""
 
     // Send the updated data to the server
-    onSendMessage()
+    updateMarkdownText(event)
 });
 
 // Add a callback for key up
