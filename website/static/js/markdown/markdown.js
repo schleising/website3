@@ -9,6 +9,12 @@ document.addEventListener('readystatechange', readyStateChanged)
 
 // Add a callback for key up
 document.getElementById("markdown-editor-textarea").addEventListener("keyup", function (event) {
+    // If storage is available, save the text in the edit field
+    if (storageAvailable('sessionStorage')) {
+        sessionStorage.setItem('markDownText', document.getElementById("markdown-editor-textarea").value)
+    }
+
+    // Send the messsage, checking that the socket is open
     onSendMessage(event)
 });
 
@@ -25,6 +31,12 @@ function openWebSocket() {
         // When a message is received from the server, set it as the innerHTML value
         document.getElementById("markdown-output").innerHTML = event.data;
     };
+
+    // Add the event listener
+    ws.addEventListener('open', (event) => {
+        // Once the new socket is open send the message
+        sendMessage();
+    })
 };
 
 function readyStateChanged(event) {
@@ -46,6 +58,10 @@ function readyStateChanged(event) {
         // Append the ws to the URL
         url = url + "ws";
         
+        if (storageAvailable('sessionStorage')) {
+            document.getElementById("markdown-editor-textarea").value = sessionStorage.getItem('markDownText')
+        }
+        
         // Create the new socket
         openWebSocket();
 
@@ -62,12 +78,6 @@ function onSendMessage(event) {
     if (ws.readyState != WebSocket.OPEN) {
         // Open the new socket
         openWebSocket();
-
-        // Add the event listener
-        ws.addEventListener('open', (event) => {
-            // Once the new socket is open send the message
-            sendMessage();
-        })
     } else {
         // If the socket is already open, just send the message
         sendMessage();
