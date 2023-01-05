@@ -11,7 +11,10 @@
 
 {% block content %}
 <div id="markdown-container">
-  <h5>Live Markdown Editor</h5>
+  <div id="markdown-controls">
+    <h5 class="no-margin">Live Markdown Editor</h5>
+    <button class="btn btn-primary" id="clear-button">Clear</button>
+  </div>
   <div id="markdown-area">
     <div id="markdown-editor">
       <textarea id="markdown-editor-textarea" class="markdown"></textarea>

@@ -4,6 +4,14 @@
     flex: 1 1 auto;
 }
 
+#markdown-controls {
+    display: flex;
+    flex-direction: row;
+    flex: 1 1 auto;
+    align-items: center;
+    justify-content: space-between;
+}
+
 #markdown-area {
     display: flex;
     flex-direction: row;

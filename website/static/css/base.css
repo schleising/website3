@@ -26,6 +26,10 @@ h3.header-text {
   margin-left: 0.3rem;
 }
 
+.no-margin {
+  margin: 0rem;
+}
+
 #main {
   display: flex;
   flex-direction: row;

@@ -7,8 +7,24 @@ var url
 // Add a callback for state changes
 document.addEventListener('readystatechange', readyStateChanged)
 
+// Add button event listener to clear text
+document.getElementById("clear-button").addEventListener('click', event => {
+    // Empty the data stor
+    if (storageAvailable('sessionStorage')) {
+        sessionStorage.setItem('markDownText', "")
+    }
+
+    // Clear the test from the control
+    document.getElementById("markdown-editor-textarea").value = ""
+
+    // Send the updated data to the server
+    onSendMessage()
+});
+
 // Add a callback for key up
-document.getElementById("markdown-editor-textarea").addEventListener("keyup", function (event) {
+document.getElementById("markdown-editor-textarea").addEventListener("keyup", event => updateMarkdownText(event))
+
+function updateMarkdownText(event) {
     // If storage is available, save the text in the edit field
     if (storageAvailable('sessionStorage')) {
         sessionStorage.setItem('markDownText', document.getElementById("markdown-editor-textarea").value)
@@ -16,7 +32,7 @@ document.getElementById("markdown-editor-textarea").addEventListener("keyup", fu
 
     // Send the messsage, checking that the socket is open
     onSendMessage(event)
-});
+};
 
 // Disable the text entry box while the page loads
 document.getElementById("markdown-editor-textarea").disabled = true;
@@ -72,7 +88,7 @@ function readyStateChanged(event) {
 
 function onSendMessage(event) {
     // Not sure why we need this...
-    event.preventDefault();
+    // event.preventDefault();
 
     // If the socket is not open, open a new one and wait for it to be ready
     if (ws.readyState != WebSocket.OPEN) {
