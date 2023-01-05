@@ -15,7 +15,7 @@ function readyStateChanged(event) {
     // Check the page has completely loaded
     if (event.target.readyState === "complete") {
         // Accept tabs
-        textareAcceptTab("markdown-editor-textarea");
+        textareaAcceptTab("markdown-editor-textarea");
 
         // Get the page URL
         var url = document.URL;

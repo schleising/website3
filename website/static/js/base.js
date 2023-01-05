@@ -51,7 +51,7 @@ function searchClicked(baseUrl, element, callback) {
     }
 };
 
-function textareAcceptTab(id) {
+function textareaAcceptTab(id) {
     document.getElementById(id).addEventListener('keydown', function(e) {
         if (e.key == 'Tab') {
           e.preventDefault();
