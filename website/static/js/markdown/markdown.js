@@ -21,7 +21,7 @@ document.getElementById("clear-button").addEventListener('click', event => {
 
 // Add a callback for state changes
 document.addEventListener('readystatechange', event => {
-    if (event.target.readyState === Event "complete") {
+    if (event.target.readyState === "complete") {
         // Accept tabs
         textareaAcceptTab("markdown-editor-textarea");
 
@@ -81,7 +81,6 @@ function updateMarkdownText(event) {
 };
 
 function sendMessage(event) {
-    console.log(event)
     // Get the text from the text area and create a JSON object from it
     var body = {text: document.getElementById("markdown-editor-textarea").value};
 
