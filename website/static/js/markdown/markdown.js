@@ -1,9 +1,3 @@
-// Type of message being sent
-const MessageType = {
-    MarkdownMessage: 'MarkdownMessage',
-    SaveMessage: 'SaveMessage'
-};
-
 // Variable which will contain the websocket
 var ws;
 
@@ -26,10 +20,10 @@ document.getElementById("clear-button").addEventListener('click', event => {
 });
 
 // On save being clicked send a Save Message
-document.getElementById("save-button").addEventListener("click", event => checkSocketAndSendMessage(event, MessageType.SaveMessage));
+document.getElementById("save-button").addEventListener("click", event => checkSocketAndSendMessage(event));
 
 // Function to open a web socket
-function openWebSocket(messageType) {
+function openWebSocket() {
     // Create a new WebSocket
     ws = new WebSocket(url);
 
@@ -37,7 +31,7 @@ function openWebSocket(messageType) {
     ws.onmessage = event => document.getElementById("markdown-output").innerHTML = event.data;
 
     // Add the event listener
-    ws.addEventListener('open', event => sendMessage(event, messageType));
+    ws.addEventListener('open', event => sendMessage(event));
 };
 
 // Add a callback for state changes
@@ -45,6 +39,9 @@ document.addEventListener('readystatechange', event => {
     if (event.target.readyState === "complete") {
         // Accept tabs
         textareaAcceptTab("markdown-editor-textarea");
+
+        // Override paste
+        textareaOverridePaste("markdown-editor-textarea", updateMarkdownText);
 
         // Get the page URL
         url = document.URL;
@@ -65,7 +62,7 @@ document.addEventListener('readystatechange', event => {
         }
 
         // Create the new socket
-        openWebSocket(MessageType.MarkdownMessage);
+        openWebSocket();
 
         // Enable the text input now that everything is ready
         document.getElementById("markdown-editor-textarea").disabled = false;
@@ -79,30 +76,29 @@ function updateMarkdownText(event) {
     }
 
     // Send a markdown message
-    checkSocketAndSendMessage(event, MessageType.MarkdownMessage)
+    checkSocketAndSendMessage(event)
 };
 
-function checkSocketAndSendMessage(event, messageType) {
+function checkSocketAndSendMessage(event) {
     // Send the messsage, checking that the socket is open
     // If the socket is not open, open a new one and wait for it to be ready
     if (ws.readyState != WebSocket.OPEN) {
         // Open the new socket
-        openWebSocket(messageType);
+        openWebSocket();
     } else {
         // If the socket is already open, just send the message
-        sendMessage(event, messageType);
+        sendMessage(event, );
     }
 };
 
-function sendMessage(event, messageType) {
-    var body;
+function sendMessage(event) {
+    var saveData = false;
 
-    if (messageType === MessageType.MarkdownMessage) {
-        // Get the text from the text area and create a JSON object from it
-        body = {text: document.getElementById("markdown-editor-textarea").value};
-    } else if (messageType === MessageType.SaveMessage) {
-        body = {text: "Save"};
+    if (event.target.id === "save-button") {
+        saveData = true
     }
+    
+    body = {text: document.getElementById("markdown-editor-textarea").value, save_data: saveData, username: 'stephen@schleisng.net'};
 
     // Convert the JSON to a string and send it to the server
     ws.send(JSON.stringify(body));

@@ -1,7 +1,11 @@
+from enum import Enum
 from pydantic import BaseModel
 
-from ..account.user_model import User
+class MessageType(str, Enum):
+    MarkdownMessage = 'MarkdownMessage'
+    SaveMessage = 'SaveMessage'
 
 class DataToConvert(BaseModel):
-    # user: User
+    save_data: bool
     text: str
+    username: str | None
