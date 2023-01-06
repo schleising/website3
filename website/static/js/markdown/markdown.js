@@ -4,15 +4,32 @@ var ws;
 // Variable which will contain the websocket url
 var url;
 
+// Variable for the Data Saved toast
+var saveToast;
+
 // Disable the text entry box while the page loads
 document.getElementById("markdown-editor-textarea").disabled = true;
 
-// Add a callback for key up
+// Add a callback for key up in the title
+document.getElementById("title-input").addEventListener("keyup", event => {
+    // Save the title text
+    if (storageAvailable("sessionStorage")) {
+        sessionStorage.setItem("title", document.getElementById("title-input").value);
+    }
+});
+
+// Add a callback for key up in the textarea
 document.getElementById("markdown-editor-textarea").addEventListener("keyup", event => updateMarkdownText(event));
 
 // Add button event listener to clear text
 document.getElementById("clear-button").addEventListener('click', event => {
-    // Clear the test from the control
+    // Clear the text from the title
+    document.getElementById("title-input").value = "";
+
+    // Clear the title storage item
+    sessionStorage.setItem("title", "");
+
+    // Clear the test from the textarea, the session storage is cleared by updateMarkdownText
     document.getElementById("markdown-editor-textarea").value = "";
 
     // Send the updated data to the server
@@ -28,7 +45,18 @@ function openWebSocket() {
     ws = new WebSocket(url);
 
     // Setup callback for onmessage event
-    ws.onmessage = event => document.getElementById("markdown-output").innerHTML = event.data;
+    ws.onmessage = event => {
+        // Parse the message into a json object
+        data = JSON.parse(event.data)
+
+        // Add the formatted text to the control
+        document.getElementById("markdown-output").innerHTML = data.markdown_text;
+
+        // If the data has been saved to the db indicate this to the user
+        if (data.data_saved) {
+            saveToast.show();
+        }
+    };
 
     // Add the event listener
     ws.addEventListener('open', event => sendMessage(event));
@@ -56,10 +84,15 @@ document.addEventListener('readystatechange', event => {
         // Append the ws to the URL
         url = url + "ws";
 
-        // If storage is available get the saved text into the text area
+        // If storage is available get the saved text into the title and text area
         if (storageAvailable('sessionStorage')) {
+            document.getElementById("title-input").value = sessionStorage.getItem("title");
             document.getElementById("markdown-editor-textarea").value = sessionStorage.getItem('markDownText');
         }
+
+        // Get the toast object
+        var saveToastEl = document.getElementById('saveToast')
+        saveToast = bootstrap.Toast.getOrCreateInstance(saveToastEl) // Returns a Bootstrap toast instance
 
         // Create the new socket
         openWebSocket();
@@ -97,8 +130,16 @@ function sendMessage(event) {
     if (event.target.id === "save-button") {
         saveData = true
     }
-    
-    body = {text: document.getElementById("markdown-editor-textarea").value, save_data: saveData, username: 'stephen@schleisng.net'};
+
+    // Trim whitespace from the title field
+    document.getElementById("title-input").value = document.getElementById("title-input").value.trim()
+
+    // Create the message
+    body = {
+        title: document.getElementById("title-input").value,
+        text: document.getElementById("markdown-editor-textarea").value,
+        save_data: saveData
+    };
 
     // Convert the JSON to a string and send it to the server
     ws.send(JSON.stringify(body));

@@ -10,6 +10,7 @@
     flex: 1 1 auto;
     align-items: center;
     justify-content: space-between;
+    padding: 0.25rem;
 }
 #markdown-save {
     display: flex;
@@ -17,6 +18,19 @@
     flex: 1 1 auto;
     align-items: center;
     justify-content: flex-end;
+}
+
+#title-input-container {
+    display: flex;
+    flex-direction: row;
+    flex: 1 1 auto;
+    align-items: center;
+    padding: 0.25rem;
+}
+
+#title-input {
+    flex: 1 1 auto;
+    align-items: center;
 }
 
 #markdown-area {

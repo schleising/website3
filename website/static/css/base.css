@@ -65,3 +65,7 @@ h3.header-text {
 .btn-primary {
   background-color: cornflowerblue;
 }
+
+#toast-container {
+  z-index: 11
+}
