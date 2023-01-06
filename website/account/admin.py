@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 from typing import Dict, Optional
 
-from fastapi import Depends, Request, status
+from fastapi import Depends, Request, WebSocket, status
 from fastapi.security import OAuth2
 from fastapi.openapi.models import OAuthFlows as OAuthFlowsModel
 
@@ -71,11 +71,44 @@ class CookieOAuth2PasswordBearer(OAuth2):
                 return None
         return param
 
+# This class is a copy of the FastAPI OAuth2PasswordBearer to check for a cookie
+# rather than the Authorization header as this does not work in a web app
+class WsCookieOAuth2PasswordBearer(OAuth2):
+    def __init__(
+        self,
+        tokenUrl: str,
+        scheme_name: Optional[str] = None,
+        scopes: Optional[Dict[str, str]] = None,
+        description: Optional[str] = None,
+        auto_error: bool = True,
+    ):
+        if not scopes:
+            scopes = {}
+        flows = OAuthFlowsModel(password={"tokenUrl": tokenUrl, "scopes": scopes}) # type: ignore
+        super().__init__(
+            flows=flows,
+            scheme_name=scheme_name,
+            description=description,
+            auto_error=auto_error,
+        )
+
+    async def __call__(self, websocket: WebSocket) -> Optional[str]:
+        scheme = 'bearer'
+        param = websocket.cookies.get('token')
+
+        if param is None or scheme.lower() != "bearer":
+            if self.auto_error:
+                return None
+            else:
+                return None
+        return param
+
 # Use bcrypt to hash the password
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 # Use the bespoke Cookie OAuth2 scheme
 oauth2_scheme = CookieOAuth2PasswordBearer(tokenUrl="/account/token")
+ws_oauth2_scheme = WsCookieOAuth2PasswordBearer(tokenUrl="/account/token")
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
@@ -198,6 +231,59 @@ async def get_current_active_user(request: Request, current_user: User | None = 
     else:
         # If we have not got a user set request.state.user to None
         request.state.user = None
+
+async def ws_get_current_user(token: str | None = Depends(ws_oauth2_scheme)) -> User | None:
+    # Check whether there is a token
+    if token is not None:
+        try:
+            # Attempt to decode the token
+            payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+
+            # If successfully decoded get the username
+            username: str = str(payload.get("sub"))
+
+            # If there is no username present return None
+            if username is None:
+                return None
+
+            # Set the username in the token data structure, not sure this is really needed
+            token_data = TokenData(username=username)
+        except JWTError:
+            # If the token could not be decoded return None
+            return None
+
+        # If the username is not present return None
+        if token_data.username is None:
+            return None
+        else:
+            # Get the user from the database
+            user = await get_user(username=token_data.username)
+
+        # If the user does not exist return None
+        if user is None:
+            return None
+
+        # Return the user
+        return user
+    else:
+        # Return None if there is no Token
+        return None
+
+async def ws_get_current_active_user(websocket: WebSocket, current_user: User | None = Depends(ws_get_current_user)) -> User | None:
+    # Check whether we have got a user
+    if current_user is not None:
+        if current_user.disabled:
+            # If the user is disabled set request.state.user to None
+            websocket.state.user = None
+            return None
+
+        # If the user exists set request.state.user to be the user
+        websocket.state.user = current_user
+        return current_user
+    else:
+        # If we have not got a user set request.state.user to None
+        websocket.state.user = None
+        return None
 
 async def create_new_user(firstname: str, lastname: str, username: str, password: str) -> User | None:
     # Hash the password

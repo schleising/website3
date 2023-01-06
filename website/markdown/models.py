@@ -19,4 +19,4 @@ class MarkdownDataInDb(MarkdownData):
 
 class MarkdownResponse(BaseModel):
     markdown_text: str
-    data_saved: bool
+    data_saved: bool | None

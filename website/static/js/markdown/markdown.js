@@ -53,7 +53,12 @@ function openWebSocket() {
         document.getElementById("markdown-output").innerHTML = data.markdown_text;
 
         // If the data has been saved to the db indicate this to the user
-        if (data.data_saved) {
+        if (data.data_saved != null) {
+            if (data.data_saved == true) {
+                document.getElementById("toast-body").innerHTML = "Data Saved OK";
+            } else {
+                document.getElementById("toast-body").innerHTML = "Data NOT Saved";
+            }
             saveToast.show();
         }
     };
