@@ -34,12 +34,27 @@ function checkForEnter(event, baseUrl, element, callback) {
     }
 };
 
-function searchClicked(baseUrl, element, callback) {
-    value = document.getElementById(element).value;
+function searchClicked(baseUrl, id, callback) {
+    value = document.getElementById(id).value;
 
     if (value != '') {
         var xmlhttp = new XMLHttpRequest();
         var url = baseUrl + value;
+        xmlhttp.onreadystatechange = function() {
+            if (this.readyState == 4 && this.status == 200) {
+                var jsn = this.responseText;
+                callback(jsn);
+            }
+        };
+        xmlhttp.open("GET", url, true);
+        xmlhttp.send();
+    }
+};
+
+function blogLinkClicked(baseUrl, id, callback) {
+    if (id != '') {
+        var xmlhttp = new XMLHttpRequest();
+        var url = baseUrl + id;
         xmlhttp.onreadystatechange = function() {
             if (this.readyState == 4 && this.status == 200) {
                 var jsn = this.responseText;

@@ -11,6 +11,8 @@ from .aircraft_db.router import aircraft_router
 
 from .markdown.router import markdown_router
 
+from .blog.router import blog_router
+
 # Set the base template location
 TEMPLATES = Jinja2Templates('/app/templates')
 
@@ -27,6 +29,9 @@ app.include_router(aircraft_router)
 
 # Include the markdown router
 app.include_router(markdown_router)
+
+# Include the blog router
+app.include_router(blog_router)
 
 # Get an instance of the Database class
 MONGODB = Database()

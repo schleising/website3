@@ -1,6 +1,10 @@
 from datetime import datetime
 from enum import Enum
-from pydantic import BaseModel
+# from bson.objectid import ObjectId
+
+from pydantic import BaseModel, Field
+
+from ..database.models import PyObjectId
 
 class MessageType(str, Enum):
     MarkdownMessage = 'MarkdownMessage'
@@ -13,9 +17,17 @@ class MarkdownData(BaseModel):
 class MarkdownDataMessage(MarkdownData):
     save_data: bool
 
-class MarkdownDataInDb(MarkdownData):
+class MarkdownDataToDb(MarkdownData):
     username: str
     last_updated: datetime
+
+class MarkdownDataFromDb(MarkdownDataToDb):
+    id: PyObjectId = Field(default_factory=PyObjectId, alias='_id')
+
+    class Config:
+        allow_population_by_field_name = True
+        arbitrary_types_allowed = True
+        json_encoders = {PyObjectId: str}
 
 class MarkdownResponse(BaseModel):
     markdown_text: str

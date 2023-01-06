@@ -1,12 +1,13 @@
 from datetime import datetime
 
 from fastapi import APIRouter, Request, WebSocket, Depends
+from fastapi.encoders import jsonable_encoder
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse
 from starlette.websockets import WebSocketDisconnect
 
 from pymongo.results import UpdateResult
-from pymongo.errors import DuplicateKeyError
+from pymongo.errors import DuplicateKeyError, WriteError
 
 from markdown import markdown
 
@@ -15,7 +16,7 @@ from ..account.admin import ws_get_current_active_user
 
 from . import markdown_collection
 
-from .models import MarkdownDataMessage, MarkdownDataInDb, MarkdownResponse
+from .models import MarkdownDataMessage, MarkdownDataToDb, MarkdownResponse
 
 # Set the Jinja template location
 TEMPLATES = Jinja2Templates('/app/templates')
@@ -52,11 +53,11 @@ async def websocket_endpoint(websocket: WebSocket, user: User | None = Depends(w
             if data_to_convert.save_data and user is not None:
                 if markdown_collection is not None:
                     # Create a database type
-                    db_input = MarkdownDataInDb(**data_to_convert.dict(), username=user.username, last_updated=datetime.utcnow())
+                    db_input = MarkdownDataToDb(**data_to_convert.dict(), username=user.username, last_updated=datetime.utcnow())
 
                     try:
                         # Add the data to the database
-                        result: UpdateResult = await markdown_collection.replace_one({'title': data_to_convert.title, 'username': user.username}, db_input.dict(), upsert=True)
+                        result: UpdateResult = await markdown_collection.replace_one({'title': data_to_convert.title, 'username': user.username}, jsonable_encoder(db_input), upsert=True)
 
                         # If the transaction was successful, set data_savedd to True
                         if result.modified_count > 0 or result.upserted_id is not None:
@@ -64,6 +65,8 @@ async def websocket_endpoint(websocket: WebSocket, user: User | None = Depends(w
                         else:
                             data_saved = False
                     except DuplicateKeyError:
+                        data_saved = False
+                    except WriteError:
                         data_saved = False
 
             # Create a response message

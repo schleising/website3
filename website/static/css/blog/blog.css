@@ -1,0 +1,34 @@
+#blog-container {
+    /* background-color: aqua; */
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+}
+
+#blog-header {
+    /* background-color: blue; */
+    display: flex;
+    flex-direction: row;
+    flex: 0 1 auto;
+}
+
+#blog-area {
+    /* background-color: brown; */
+    display: flex;
+    flex-direction: row;
+    flex: 1 1 auto;
+}
+
+#blog-view {
+    /* background-color: burlywood; */
+    display: flex;
+    flex-direction: column;
+    flex: 8 1 auto;
+}
+
+#blog-list {
+    /* background-color: chartreuse; */
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+}

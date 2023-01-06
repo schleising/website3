@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block head %}
+<link rel="stylesheet" href="/css/blog/blog.css">
+<link rel="stylesheet" href="/css/markdown/markdown.css">
+<link rel="stylesheet" href="/css/markdown/styles.css">
+{% endblock %}
+
+{% block header %}
+<h3 class="header-text">Blog</h3>
+{% endblock %}
+
+{% block content %}
+<div id="blog-container">
+  <div id="blog-header">
+    <h3 class="no-margin" id="blog-title">Test</h3>
+  </div>
+  <div id="blog-area">
+    <div id="blog-view">
+    </div>
+    <div id="blog-list">
+      <nav class="nav flex-column" id="blog-list-nav">
+        {% for blog in blog_list %}
+        <a class="nav-link link-secondary" id="{{ blog.id }}">{{ blog.title }}</a>
+        {% endfor %}
+      </nav>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block footer %}
+<footer>Blog</footer>
+{% endblock %}
+
+{% block scripts %}
+<script src="/js/blog/blog.js"></script>
+{% endblock %}
