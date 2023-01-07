@@ -22,7 +22,7 @@
 #blog-view {
     display: flex;
     flex-direction: column;
-    flex: 4 1 0;
+    flex: 3 1 0;
     padding: 0.25rem;
 }
 
