@@ -19,6 +19,7 @@
     <div id="blog-view">
     </div>
     <div id="blog-list">
+      <p class="nav-link link-secondary">Blog Posts</p>
       <nav class="nav flex-column" id="blog-list-nav">
         {% for blog in blog_list %}
         <a class="nav-link link-secondary" id="{{ blog.id }}">{{ blog.title }}</a>

@@ -32,3 +32,13 @@
     flex: 1 1 0;
     padding: 0.25rem;
 }
+
+@media screen and (max-width: 63em) {
+    #blog-area {
+        flex-direction: column;
+    }
+
+    #blog-view {
+        flex: 0 1 auto;
+    }
+}
