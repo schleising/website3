@@ -9,7 +9,7 @@
     display: flex;
     flex-direction: column;
     flex: 3 1 0;
-    padding: 0.25rem;
+    padding: 0.25rem 10rem;
     overflow-y: auto;
 }
 
@@ -37,6 +37,12 @@
 .blog-link {
     cursor: pointer;
     user-select: none;
+}
+
+@media screen and (max-width: 80em) {
+    #blog-header-view {
+        padding: 0.25rem;
+    }
 }
 
 @media screen and (max-width: 40em) {
