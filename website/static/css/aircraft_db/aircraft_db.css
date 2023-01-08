@@ -28,3 +28,15 @@
     flex: 1 1 auto;
     overflow-y: auto;
 }
+
+@media screen and (max-width: 40em) {
+    #aircraft_controls {
+        flex-direction: column;
+        flex: 1 1 auto;
+        align-items: flex-start;
+    }
+
+    #aircraft_controls > * {
+        margin: 0.25em;
+    }
+}
