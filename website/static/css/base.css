@@ -69,3 +69,9 @@ h3.header-text {
 #toast-container {
   z-index: 11
 }
+
+img,
+picture,
+video {
+  max-width: 100%;
+}
