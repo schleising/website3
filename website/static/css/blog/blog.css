@@ -10,8 +10,11 @@
     flex-direction: column;
     flex: 3 1 0;
     padding: 0.25rem;
-    margin-bottom: 2rem;;
     overflow-y: auto;
+}
+
+.bottom-margin {
+    margin-bottom: 1.5rem;
 }
 
 #blog-area {
