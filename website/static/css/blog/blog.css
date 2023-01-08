@@ -41,6 +41,7 @@
 
 .blog-link {
     cursor: pointer;
+    user-select: none;
 }
 
 @media screen and (max-width: 40em) {
