@@ -1,7 +1,7 @@
 from datetime import date
 from typing import Union
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 class AircraftModel(BaseModel):
     icao24: str
@@ -31,3 +31,9 @@ class AircraftModel(BaseModel):
     acars: str
     notes: str
     categoryDescription: str
+
+class TailNumberLookup(BaseModel):
+    tail_no: str
+
+class TailNumbersResponse(BaseModel):
+    tail_numbers: list[str] = Field(default_factory=list)

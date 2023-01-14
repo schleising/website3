@@ -31,7 +31,9 @@ function hamburgerClicked() {
 function checkForEnter(event, baseUrl, element, callback) {
     if (event.key == "Enter") {
         searchClicked(baseUrl, element, callback);
+        return true;
     }
+    return false;
 };
 
 function searchClicked(baseUrl, id, callback) {
