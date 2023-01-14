@@ -125,7 +125,7 @@ function checkSocketAndSendMessage(event) {
         openWebSocket();
     } else {
         // If the socket is already open, just send the message
-        sendMessage(event, );
+        sendMessage(event);
     }
 };
 
