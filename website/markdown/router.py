@@ -47,6 +47,7 @@ async def websocket_endpoint(websocket: WebSocket, user: User | None = Depends(w
             converted_text = markdown(data_to_convert.text, extensions=[
                 'markdown.extensions.admonition',
                 'pymdownx.extra',
+                'md_mermaid',
             ])
 
             # Check whether the data should be saved to the DB

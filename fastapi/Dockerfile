@@ -3,7 +3,7 @@ FROM python:3.11-alpine as build
 
 # Install build-base and libffi headers
 RUN apk update && \
-    apk add build-base libffi-dev
+    apk add build-base libffi-dev git
 
 # Add the required packages, disabling cache to reduce the size of the image
 COPY ./requirements.txt /requirements.txt

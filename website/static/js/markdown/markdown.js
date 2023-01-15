@@ -39,6 +39,20 @@ document.getElementById("clear-button").addEventListener('click', event => {
 // On save being clicked send a Save Message
 document.getElementById("save-button").addEventListener("click", event => checkSocketAndSendMessage(event));
 
+function mermaidCallback(svgGraph) {
+    template = document.createElement("template");
+    svgGraph = svgGraph.trim();
+    template.innerHTML = svgGraph;
+    newElement = template.content.firstChild;
+
+    document.getElementById(newElement.id).innerHTML = svgGraph;
+}
+
+const htmlDecode = (input) => {
+    const doc = new DOMParser().parseFromString(input, "text/html");
+    return doc.documentElement.textContent;
+}
+  
 // Function to open a web socket
 function openWebSocket() {
     // Create a new WebSocket
@@ -47,10 +61,19 @@ function openWebSocket() {
     // Setup callback for onmessage event
     ws.onmessage = event => {
         // Parse the message into a json object
-        data = JSON.parse(event.data)
+        data = JSON.parse(event.data);
 
         // Add the formatted text to the control
         document.getElementById("markdown-output").innerHTML = data.markdown_text;
+
+        mermaidElements = document.getElementsByClassName("mermaid");
+
+        for (let index = 0; index < mermaidElements.length; index++) {
+            id = mermaidElements[index].id;
+            innerHTML = htmlDecode(mermaidElements[index].innerHTML);
+
+            mermaid.render(id, innerHTML, mermaidCallback);
+        }
 
         // If the data has been saved to the db indicate this to the user
         if (data.data_saved != null) {

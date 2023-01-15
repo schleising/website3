@@ -11,6 +11,7 @@ idna==3.4
 Jinja2==3.1.2
 Markdown==3.4.1
 MarkupSafe==2.1.1
+md-mermaid @ git+https://github.com/schleising/md_mermaid@e2076ca7bff9f7bb27ce73549e604d742de8af1c
 motor==3.1.1
 passlib==1.7.4
 pyasn1==0.4.8
