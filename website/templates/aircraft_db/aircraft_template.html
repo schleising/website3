@@ -12,10 +12,12 @@
 <div id="aircraft_db_container">
   <div id="aircraft_controls">
     <label for="input_tail_number" class="form_label">Enter Tail Number</label>
-    <input class="form_control" id="input_tail_number" list="tail-number-datalist">
-    <datalist id="tail-number-datalist">
-    </datalist>
-    <button type="submit" class="btn btn-primary" id="search-button">Search</button>
+    <div class="search-controls">
+      <input class="form_control" id="input_tail_number" list="tail-number-datalist">
+      <datalist id="tail-number-datalist">
+      </datalist>
+      <button type="submit" class="btn btn-primary" id="search-button">Search</button>
+    </div>
   </div>
   <div id="aircraft_output">
     <table class="table table-striped">

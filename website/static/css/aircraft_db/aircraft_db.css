@@ -15,6 +15,15 @@
     align-items: center;
 }
 
+.search-controls {
+    /* padding: 0.3rem; */
+    display: flex;
+    flex-direction: row;
+    flex: 0 0 auto;
+    justify-content: left;
+    align-items: center;
+}
+
 #input_tail_number {
     width: 10rem;
     margin-left: 0.3rem;
@@ -37,6 +46,6 @@
     }
 
     #aircraft_controls > * {
-        margin: 0.25em;
+        margin: 0.25rem;
     }
 }
