@@ -40,12 +40,23 @@ document.getElementById("clear-button").addEventListener('click', event => {
 document.getElementById("save-button").addEventListener("click", event => checkSocketAndSendMessage(event));
 
 function mermaidCallback(svgGraph) {
+    // Create a template to hold the svg
     template = document.createElement("template");
-    svgGraph = svgGraph.trim();
+
+    // Add the svg to the template
     template.innerHTML = svgGraph;
+
+    // Get the svg, which is now an element, from the template
     newElement = template.content.firstChild;
 
-    document.getElementById(newElement.id).innerHTML = svgGraph;
+    // Get the div element to insert the svg into, the ID is found by stripping the -svg from the svg ID
+    mermaidElement = document.getElementById(newElement.id.substring(0, newElement.id.length - 4))
+
+    // Clear the existing children from the mermaid div
+    mermaidElement.replaceChildren();
+
+    // Append the svg element as a child of the svg div
+    mermaidElement.appendChild(newElement);
 }
 
 const htmlDecode = (input) => {
@@ -66,13 +77,23 @@ function openWebSocket() {
         // Add the formatted text to the control
         document.getElementById("markdown-output").innerHTML = data.markdown_text;
 
+        // Get any divs whose class is mermaid
         mermaidElements = document.getElementsByClassName("mermaid");
 
+        // Loop through the mermaid divs
         for (let index = 0; index < mermaidElements.length; index++) {
+            // Get the ID
             id = mermaidElements[index].id;
+
+            // Get the markdown for the image
             innerHTML = htmlDecode(mermaidElements[index].innerHTML);
 
-            mermaid.render(id, innerHTML, mermaidCallback);
+            try {
+                // Render the image, append -svg to the ID so it doesn't trash the existing div
+                mermaid.mermaidAPI.render(id + "-svg", innerHTML, mermaidCallback);
+            } catch (e) {
+                // Ignore the parsing error as this will happen while building up the diagram
+            }
         }
 
         // If the data has been saved to the db indicate this to the user
@@ -121,6 +142,9 @@ document.addEventListener('readystatechange', event => {
         // Get the toast object
         var saveToastEl = document.getElementById('saveToast')
         saveToast = bootstrap.Toast.getOrCreateInstance(saveToastEl) // Returns a Bootstrap toast instance
+
+        // Initialise mermaid
+        mermaid.mermaidAPI.initialize({startOnLoad:true})
 
         // Create the new socket
         openWebSocket();
