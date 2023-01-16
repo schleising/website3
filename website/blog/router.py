@@ -43,6 +43,7 @@ async def get_blog(blog_id: str | None = None):
         markdown_data.text = markdown(markdown_data.text, extensions=[
             'markdown.extensions.admonition',
             'pymdownx.extra',
+            'md_mermaid',
         ])
 
         return markdown_data
