@@ -66,6 +66,11 @@ h3.header-text {
   background-color: cornflowerblue;
 }
 
+.btn-primary:disabled {
+  background-color: gainsboro;
+  border-color: gainsboro;
+}
+
 #toast-container {
   z-index: 11
 }
