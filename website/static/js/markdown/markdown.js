@@ -7,37 +7,43 @@ var url;
 // Variable for the Data Saved toast
 var saveToast;
 
+let saveButton = document.getElementById("save-button");
+let clearButton = document.getElementById("clear-button");
+let titleInput = document.getElementById("title-input");
+let textArea = document.getElementById("markdown-editor-textarea");
+let markdownOutput = document.getElementById("markdown-output");
+
 // Disable the text entry box while the page loads
-document.getElementById("markdown-editor-textarea").disabled = true;
+textArea.disabled = true;
 
 // Add a callback for key up in the title
-document.getElementById("title-input").addEventListener("keyup", event => {
+titleInput.addEventListener("keyup", event => {
     // Save the title text
     if (storageAvailable("sessionStorage")) {
-        sessionStorage.setItem("title", document.getElementById("title-input").value);
+        sessionStorage.setItem("title", titleInput.value);
     }
 });
 
 // Add a callback for key up in the textarea
-document.getElementById("markdown-editor-textarea").addEventListener("keyup", event => updateMarkdownText(event));
+textArea.addEventListener("keyup", event => updateMarkdownText(event));
 
 // Add button event listener to clear text
-document.getElementById("clear-button").addEventListener('click', event => {
+clearButton.addEventListener('click', event => {
     // Clear the text from the title
-    document.getElementById("title-input").value = "";
+    titleInput.value = "";
 
     // Clear the title storage item
     sessionStorage.setItem("title", "");
 
     // Clear the test from the textarea, the session storage is cleared by updateMarkdownText
-    document.getElementById("markdown-editor-textarea").value = "";
+    textArea.value = "";
 
     // Send the updated data to the server
     updateMarkdownText(event);
 });
 
 // On save being clicked send a Save Message
-document.getElementById("save-button").addEventListener("click", event => checkSocketAndSendMessage(event));
+saveButton.addEventListener("click", event => checkSocketAndSendMessage(event));
 
 function mermaidCallback(svgGraph) {
     // Create a template to hold the svg
@@ -75,7 +81,7 @@ function openWebSocket() {
         data = JSON.parse(event.data);
 
         // Add the formatted text to the control
-        document.getElementById("markdown-output").innerHTML = data.markdown_text;
+        markdownOutput.innerHTML = data.markdown_text;
 
         // Get any divs whose class is mermaid
         mermaidElements = document.getElementsByClassName("mermaid");
@@ -135,8 +141,8 @@ document.addEventListener('readystatechange', event => {
 
         // If storage is available get the saved text into the title and text area
         if (storageAvailable('sessionStorage')) {
-            document.getElementById("title-input").value = sessionStorage.getItem("title");
-            document.getElementById("markdown-editor-textarea").value = sessionStorage.getItem('markDownText');
+            titleInput.value = sessionStorage.getItem("title");
+            textArea.value = sessionStorage.getItem('markDownText');
         }
 
         // Get the toast object
@@ -150,14 +156,14 @@ document.addEventListener('readystatechange', event => {
         openWebSocket();
 
         // Enable the text input now that everything is ready
-        document.getElementById("markdown-editor-textarea").disabled = false;
+        textArea.disabled = false;
     }
 });
 
 function updateMarkdownText(event) {
     // If storage is available, save the text in the edit field
     if (storageAvailable('sessionStorage')) {
-        sessionStorage.setItem('markDownText', document.getElementById("markdown-editor-textarea").value);
+        sessionStorage.setItem('markDownText', textArea.value);
     }
 
     // Send a markdown message
@@ -184,12 +190,12 @@ function sendMessage(event) {
     }
 
     // Trim whitespace from the title field
-    document.getElementById("title-input").value = document.getElementById("title-input").value.trim()
+    titleInput.value = titleInput.value.trim()
 
     // Create the message
     body = {
-        title: document.getElementById("title-input").value,
-        text: document.getElementById("markdown-editor-textarea").value,
+        title: titleInput.value,
+        text: textArea.value,
         save_data: saveData
     };
 
