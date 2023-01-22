@@ -64,9 +64,6 @@ clearButton.addEventListener('click', event => {
     // Clear the text from the title
     titleInput.value = "";
 
-    // Clear the title storage item
-    sessionStorage.setItem("title", "");
-
     // Clear the test from the textarea, the session storage is cleared by updateMarkdownText
     textArea.value = "";
 
@@ -281,6 +278,7 @@ document.addEventListener('readystatechange', event => {
 function updateMarkdownText(event) {
     // If storage is available, save the text in the edit field
     if (storageAvailable('sessionStorage')) {
+        sessionStorage.setItem('title', titleInput.value);
         sessionStorage.setItem('markDownText', textArea.value);
     }
 
