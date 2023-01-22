@@ -34,11 +34,6 @@
     min-width: 10rem;
 }
 
-.blog-link {
-    cursor: pointer;
-    user-select: none;
-}
-
 @media screen and (max-width: 80em) {
     #blog-header-view {
         padding: 0.25rem;

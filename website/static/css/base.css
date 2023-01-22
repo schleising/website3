@@ -80,3 +80,8 @@ picture,
 video {
   max-width: 100%;
 }
+
+.blog-link {
+  cursor: pointer;
+  user-select: none;
+}
