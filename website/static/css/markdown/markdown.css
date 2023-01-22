@@ -13,12 +13,14 @@
     justify-content: space-between;
     padding: 0.25rem;
 }
-#markdown-save {
+
+#markdown-controls {
     display: flex;
     flex-direction: row;
     flex: 1 1 auto;
     align-items: center;
     justify-content: flex-end;
+    gap: 0.25rem;
 }
 
 #title-input-container {
@@ -42,12 +44,6 @@
     overflow-y: auto;
 }
 
-/* @media only screen and (max-width: 600px) {
-    #markdown-area {
-        flex-direction: column;
-    }
-} */
-
 #markdown-editor {
     padding: 0.25rem;
     display: flex;
@@ -67,6 +63,13 @@
 textarea.markdown {
     resize: none;
     height: 100%;
+}
+
+@media screen and (max-width: 40em) {
+    #markdown-header {
+        flex-direction: column;
+        row-gap: 0.25rem;
+    }
 }
 
 pre, .rst-content tt {
