@@ -1,14 +1,19 @@
 from datetime import datetime
 from enum import Enum
-# from bson.objectid import ObjectId
+from typing import Any
 
 from pydantic import BaseModel, Field
 
 from ..database.models import PyObjectId
 
-class MessageType(str, Enum):
-    MarkdownMessage = 'MarkdownMessage'
-    SaveMessage = 'SaveMessage'
+class MessageType(int, Enum):
+    MARKDOWN_UPDATE = 1
+    GET_BLOG_LIST = 2
+    GET_BLOG_TEXT = 3
+
+class BaseMessage(BaseModel):
+    message_type: int
+    body: dict[str, Any]
 
 class MarkdownData(BaseModel):
     title: str
@@ -32,3 +37,18 @@ class MarkdownDataFromDb(MarkdownDataToDb):
 class MarkdownResponse(BaseModel):
     markdown_text: str
     data_saved: bool | None
+
+class BlogId(BaseModel):
+    id: str
+    title: str
+
+class BlogList(BaseModel):
+    blog_ids: list[BlogId] = []
+
+class BlogRequest(BaseModel):
+    id: str
+
+class BlogResponse(BaseModel):
+    id: str = ''
+    title: str = ''
+    text: str = ''

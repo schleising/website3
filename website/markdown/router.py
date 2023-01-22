@@ -1,22 +1,14 @@
-from datetime import datetime
-
 from fastapi import APIRouter, Request, WebSocket, Depends
-from fastapi.encoders import jsonable_encoder
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse
 from starlette.websockets import WebSocketDisconnect
 
-from pymongo.results import UpdateResult
-from pymongo.errors import DuplicateKeyError, WriteError
-
-from markdown import markdown
-
 from ..account.user_model import User
 from ..account.admin import ws_get_current_active_user
 
-from . import markdown_collection
+from .models import BaseMessage, MessageType, MarkdownDataMessage, BlogRequest
 
-from .models import MarkdownDataMessage, MarkdownDataToDb, MarkdownResponse
+from .markdown import convert_to_markdown, get_blog_list, get_blog_text
 
 # Set the Jinja template location
 TEMPLATES = Jinja2Templates('/app/templates')
@@ -34,50 +26,38 @@ async def websocket_endpoint(websocket: WebSocket, user: User | None = Depends(w
 
     try:
         while True:
-            # Indicates whether data has been saved to the DB
-            data_saved = None
-
             # Wait for a message from the client
-            data = await websocket.receive_text()
+            recv = await websocket.receive_text()
 
-            # Get the message text into a Pydantic model
-            data_to_convert = MarkdownDataMessage.parse_raw(data)
+            # Get the message type
+            msg = BaseMessage.parse_raw(recv)
 
-            # Convert the markdown text to formatted text
-            converted_text = markdown(data_to_convert.text, extensions=[
-                'markdown.extensions.admonition',
-                'pymdownx.extra',
-                'md_mermaid',
-            ])
+            match msg.message_type:
+                case MessageType.MARKDOWN_UPDATE:
+                    # Get the message body into a markdown data message
+                    markdown_data_message = MarkdownDataMessage(**msg.body)
 
-            # Check whether the data should be saved to the DB
-            if data_to_convert.save_data and user is not None:
-                if markdown_collection is not None:
-                    # Create a database type
-                    db_input = MarkdownDataToDb(**data_to_convert.dict(), username=user.username, last_updated=datetime.utcnow())
+                    # Convert the markdown text to HTML
+                    response_body = await convert_to_markdown(markdown_data_message, user)
 
-                    try:
-                        # Add the data to the database
-                        result: UpdateResult = await markdown_collection.replace_one({'title': data_to_convert.title, 'username': user.username}, jsonable_encoder(db_input), upsert=True)
+                case MessageType.GET_BLOG_LIST:
+                    # Get the blog list
+                    response_body = await get_blog_list(user)
+                case MessageType.GET_BLOG_TEXT:
+                    # Get the request so we can get the ID
+                    blog_text_request = BlogRequest(**msg.body)
 
-                        # If the transaction was successful, set data_savedd to True
-                        if result.modified_count > 0 or result.upserted_id is not None:
-                            data_saved = True
-                        else:
-                            data_saved = False
-                    except DuplicateKeyError:
-                        data_saved = False
-                    except WriteError:
-                        data_saved = False
+                    # Get the blog title and text
+                    response_body = await get_blog_text(blog_text_request.id)
+                case _:
+                    # Raise a Not Implemented exception
+                    raise NotImplementedError
 
-            # Create a response message
-            responseMsg = MarkdownResponse(
-                markdown_text = converted_text,
-                data_saved = data_saved
-            )
+            # Generate the response message
+            response_msg = BaseMessage(message_type=msg.message_type, body=response_body.dict())
 
             # Send the response back to the client
-            await websocket.send_text(responseMsg.json())
+            await websocket.send_text(response_msg.json())
 
     except WebSocketDisconnect:
         print('Socket Closed')
