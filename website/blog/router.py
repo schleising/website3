@@ -25,12 +25,6 @@ async def get_aircraft_page(request: Request):
 
         blog_list = [MarkdownDataFromDb(**blog) for blog in blog_list]
 
-    for blog in blog_list:
-        print('*****************')
-        print(blog.id)
-        print(blog.title)
-        print('*****************')
-
     return TEMPLATES.TemplateResponse('blog/blog_template.html', {'request': request, 'blog_list': blog_list})
 
 @blog_router.get('/blog_id/{blog_id}', response_model=MarkdownDataToDb | None)
