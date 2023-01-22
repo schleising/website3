@@ -11,6 +11,7 @@ function populateBlogArea(jsn) {
     data = JSON.parse(jsn)
 
     document.getElementById("blog-title").innerHTML = data.title;
+    document.getElementById("blog-author").innerHTML = "Author: " + data.first_name + " " + data.last_name;
     document.getElementById("blog-view").innerHTML = data.text;
 
     // Get any divs whose class is mermaid

@@ -26,6 +26,10 @@ class MarkdownDataToDb(MarkdownData):
     username: str
     last_updated: datetime
 
+class BlogEntry(MarkdownDataToDb):
+    first_name: str = ""
+    last_name: str = ""
+
 class MarkdownDataFromDb(MarkdownDataToDb):
     id: PyObjectId = Field(default_factory=PyObjectId, alias='_id')
 
