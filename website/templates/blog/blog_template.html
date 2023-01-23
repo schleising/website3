@@ -4,7 +4,7 @@
 <link rel="stylesheet" href="/css/blog/blog.css">
 <link rel="stylesheet" href="/css/markdown/markdown.css">
 <link rel="stylesheet" href="/css/markdown/styles.css">
-{% block title %}<title>Blog</title>{% endblock %}
+{% block title %}<title>{% if blog_entry != None %}{{ blog_entry.title }}{% else %}Blog{% endif %}</title>{% endblock %}
 {% endblock %}
 
 {% block header %}
