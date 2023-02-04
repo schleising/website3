@@ -1,3 +1,8 @@
+.football-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+}
+
 .score-widget {
     display: flex;
     flex-direction: column;
@@ -37,4 +42,16 @@
 
 .team-badge {
     max-height: 1.25rem;
+}
+
+@media screen and (max-width: 80em) {
+    .football-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+@media screen and (max-width: 40em) {
+    .football-grid {
+        grid-template-columns: 1fr;
+    }
 }

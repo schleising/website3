@@ -10,6 +10,7 @@
 {% endblock %}
 
 {% block content %}
+<div class="football-grid">
 {% for match in matches %}
   <div class="score-widget">
     <div class="date-and-time">
@@ -32,6 +33,7 @@
     </div>
   </div>
 {% endfor %}
+</div>
 {% endblock %}
 
 {% block footer %}
