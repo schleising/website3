@@ -129,3 +129,4 @@ dmypy.json
 .pyre/
 website/database/db_server.txt
 website/account/secret_key.txt
+open-api-key.txt
