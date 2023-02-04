@@ -1,4 +1,6 @@
 from datetime import datetime
+import logging
+
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
@@ -14,14 +16,20 @@ football_router = APIRouter(prefix='/football')
 
 @football_router.get('/', response_class=HTMLResponse)
 async def get_aircraft_page(request: Request):
+    logging.info('Football')
     matches = await retreive_matches(datetime.today().replace(hour=0, minute=0, second=0, microsecond=0), datetime.today().replace(hour=23, minute=59, second=59, microsecond=0))
+    logging.info('Got matches')
     return TEMPLATES.TemplateResponse('football/match_template.html', {'request': request, 'matches': matches})
 
 async def retreive_matches(date_from: datetime, date_to: datetime) -> list[Match]:
     matches: list[Match] = []
 
+    logging.info(f'Getting Matches from {date_from} to {date_to}')
+
     if pl_matches is not None:
         matches:list[Match] = await get_data_by_date(pl_matches, 'utc_date', date_from, date_to, Match)
+    else:
+        logging.info('No DB connection')
 
     return matches
 

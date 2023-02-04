@@ -1,5 +1,6 @@
 from datetime import datetime
 from typing import Callable
+import logging
 
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase, AsyncIOMotorCollection
 from pydantic import BaseModel
@@ -54,5 +55,7 @@ async def get_data_by_date(collection: AsyncIOMotorCollection, field: str, date_
 
     for item in from_db:
         items.append(output_type(**item))
+
+    logging.info(f'Got {len(items)} matches')
 
     return items
