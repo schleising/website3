@@ -12,7 +12,7 @@
 {% block content %}
 <div class="football-grid">
 {% for match in matches %}
-  <div class="score-widget">
+  <div class="score-widget" id="{{ match.id }}">
     <div class="date-and-time">
       <div class="match-start">{{ match.utc_date }}</div>
       <div class="match-status">{{ match.status }}</div>
