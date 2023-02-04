@@ -36,6 +36,7 @@
           <p class="nav-link link-secondary">Welcome {% if request.state.user != None %}{{request.state.user.first_name}}{% else %}Guest{% endif %}</p>
           <nav class="nav flex-column">
             <a class="nav-link link-secondary" href="/">Home</a>
+            <a class="nav-link link-secondary" href="/football">Football</a>
             <a class="nav-link link-secondary" href="/aircraft">OpenSky Database</a>
             <a class="nav-link link-secondary" href="/blog">Blog</a>
             {% if request.state.user != None %}

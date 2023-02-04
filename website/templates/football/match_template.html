@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block head %}
+<link rel="stylesheet" href="/css/football/football.css">
+{% block title %}<title>Football</title>{% endblock %}
+{% endblock %}
+
+{% block header %}
+<h3 class="header-text">Today's Matches</h3>
+{% endblock %}
+
+{% block content %}
+{% for match in matches %}
+  <div class="score-widget">
+    <div class="date-and-time">
+      <div class="match-start">{{ match.utc_date }}</div>
+      <div class="match-status">{{ match.status }}</div>
+    </div>
+    <div class="team">
+      <div class="team-and-badge">
+        <img class="team-badge" src="{{ match.home_team.crest }}"></img>
+        <div class="home-team">{{ match.home_team.short_name }}</div>
+      </div>
+      <div class="home-team-score">{{ match.score.full_time.home }}</div>
+    </div>
+    <div class="team">
+      <div class="team-and-badge">
+        <img class="team-badge" src="{{ match.away_team.crest }}"></img>
+        <div class="away-team">{{ match.away_team.short_name }}</div>
+      </div>
+      <div class="away-team-score">{{ match.score.full_time.away }}</div>
+    </div>
+  </div>
+{% endfor %}
+{% endblock %}
+
+{% block footer %}
+<footer>Data sourced from <a href="https://www.football-data.org/" class="link-light" target="_blank">football-data.org</a></footer>
+{% endblock %}
+
+{% block scripts %}
+<script src="/js/football/football.js"></script>
+{% endblock %}

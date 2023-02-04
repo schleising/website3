@@ -1,4 +1,8 @@
+from datetime import datetime
+from typing import Callable
+
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase, AsyncIOMotorCollection
+from pydantic import BaseModel
 
 class Database:
     def __init__(self) -> None:
@@ -40,3 +44,15 @@ class Database:
             return self.current_db[collection_name]
         else:
             return None
+
+async def get_data_by_date(collection: AsyncIOMotorCollection, field: str, date_from: datetime, date_to: datetime, output_type: Callable) -> list:
+    items: list[BaseModel] = []
+
+    from_db_cursor = collection.find({ field: {'$gte': date_from, '$lt': date_to} })
+
+    from_db = await from_db_cursor.to_list(None)
+
+    for item in from_db:
+        items.append(output_type(**item))
+
+    return items

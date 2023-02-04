@@ -1,0 +1,40 @@
+.score-widget {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    margin: 0.5rem;
+    padding: 0.25rem;
+    border: 0.075rem;
+    border-style: solid;
+    border-color: black;
+    border-radius: 0.5rem;
+}
+
+.team {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    flex: 1 1 auto;
+}
+
+.date-and-time {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    flex: 1 1 auto;
+    font-size: 0.75rem;
+}
+
+.team-and-badge {
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-start;
+    align-items: center;
+    flex: 1 1 auto;
+    column-gap: 0.75rem;
+}
+
+.team-badge {
+    max-height: 1.25rem;
+}
