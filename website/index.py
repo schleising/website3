@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import FastAPI, Request, Depends
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
@@ -14,6 +16,9 @@ from .markdown.router import markdown_router
 from .blog.router import blog_router
 
 from .football.router import football_router
+
+# Initialise logging
+logging.basicConfig(format='Website: %(asctime)s - %(levelname)s - %(message)s', level=logging.INFO)
 
 # Set the base template location
 TEMPLATES = Jinja2Templates('/app/templates')
