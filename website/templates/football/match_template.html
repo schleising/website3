@@ -15,21 +15,21 @@
   <div class="score-widget" id="{{ match.id }}">
     <div class="date-and-time">
       <div class="match-start">{{ match.utc_date }}</div>
-      <div class="match-status">{{ match.status }}</div>
+      <div class="match-status"></div>
     </div>
     <div class="team">
       <div class="team-and-badge">
         <img class="team-badge" src="{{ match.home_team.crest }}"></img>
         <div class="home-team">{{ match.home_team.short_name }}</div>
       </div>
-      <div class="home-team-score">{{ match.score.full_time.home }}</div>
+      <div class="home-team-score"></div>
     </div>
     <div class="team">
       <div class="team-and-badge">
         <img class="team-badge" src="{{ match.away_team.crest }}"></img>
         <div class="away-team">{{ match.away_team.short_name }}</div>
       </div>
-      <div class="away-team-score">{{ match.score.full_time.away }}</div>
+      <div class="away-team-score"></div>
     </div>
   </div>
 {% endfor %}

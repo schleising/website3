@@ -41,10 +41,52 @@ function openWebSocket() {
         matches = JSON.parse(event.data);
 
         matches.matches.forEach(match => {
+            var status;
+            var home;
+            var away;
+
+            switch (match.status) {
+                case 'SCHEDULED':
+                case 'TIMED':
+                case 'AWARDED':
+                    status = 'Not Started';
+                    break;
+                case 'IN_PLAY':
+                    status = 'In Play';
+                    break;
+                case 'PAUSED':
+                    status = 'Half Time';
+                    break;
+                case 'FINISHED':
+                    status = 'Full Time';
+                    break;
+                case 'SUSPENDED':
+                    status = 'Suspended';
+                    break;
+                case 'POSTPONED':
+                    status = 'Postponed';
+                    break;
+                case 'CANCELLED':
+                    status = 'Cancelled';
+                    break;
+            }
+
+            if (match.score.full_time.home == null) {
+                home = 'TBD';
+            } else {
+                home = match.score.full_time.home;
+            }
+            
+            if (match.score.full_time.away == null) {
+                away = 'TBD';
+            } else {
+                away = match.score.full_time.away;
+            }
+            
             scoreWidget = document.getElementById(match.id);
-            scoreWidget.getElementsByClassName("match-status").innerHTML = match.status;
-            scoreWidget.getElementsByClassName("home-team-score").innerHTML = match.score.full_time.home;
-            scoreWidget.getElementsByClassName("away-team-score").innerHTML = match.score.full_time.away;
+            scoreWidget.getElementsByClassName("match-status")[0].innerHTML = status;
+            scoreWidget.getElementsByClassName("home-team-score")[0].innerHTML = home;
+            scoreWidget.getElementsByClassName("away-team-score")[0].innerHTML = away;
         });
     };
 
@@ -55,6 +97,7 @@ function openWebSocket() {
             clearInterval(intervalId);
         }
         intervalId = setInterval(checkSocketAndSendMessage, 1000);
+        checkSocketAndSendMessage();
     });
 };
 
