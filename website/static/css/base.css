@@ -81,7 +81,7 @@ video {
   max-width: 100%;
 }
 
-.blog-link {
+.navbar-link {
   cursor: pointer;
   user-select: none;
 }

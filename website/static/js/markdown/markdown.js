@@ -157,7 +157,7 @@ function updateBlogList(data) {
         linkEl = document.createElement("a");
 
         // Set the class list
-        linkEl.classList.add("nav-link", "link-secondary", "blog-link");
+        linkEl.classList.add("nav-link", "link-secondary", "navbar-link");
 
         // Set the ID
         linkEl.id = element.id;
