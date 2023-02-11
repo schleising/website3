@@ -1,6 +1,6 @@
-{% extends "base.html" %}
+{% extends "right-nav.html" %}
 
-{% block head %}
+{% block rnhead %}
 <link rel="stylesheet" href="/css/football/football.css">
 {% block title %}<title>Football</title>{% endblock %}
 {% endblock %}
@@ -9,7 +9,7 @@
 <h3 class="header-text">Today's Matches</h3>
 {% endblock %}
 
-{% block content %}
+{% block rncontent %}
 <div class="football-grid">
 {% for match in matches %}
   <div class="score-widget" id="{{ match.id }}">
@@ -34,6 +34,12 @@
   </div>
 {% endfor %}
 </div>
+{% endblock %}
+{% block rnnav %}
+<nav class="nav flex-column">
+  <a href="/football" class="nav-link link-secondary navbar-link">Live Scores</a>
+  <a href="/football/table" class="nav-link link-secondary navbar-link">Table</a>
+</nav>
 {% endblock %}
 
 {% block footer %}

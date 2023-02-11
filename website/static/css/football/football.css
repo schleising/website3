@@ -1,6 +1,7 @@
 .football-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
+    flex: 0 0 auto;
+    grid-template-columns: 1fr 1fr;
 }
 
 .score-widget {
@@ -44,14 +45,12 @@
     max-height: 1.25rem;
 }
 
-@media screen and (max-width: 80em) {
-    .football-grid {
-        grid-template-columns: 1fr 1fr;
-    }
-}
-
-@media screen and (max-width: 40em) {
+@media screen and (max-width: 50em) {
     .football-grid {
         grid-template-columns: 1fr;
+    }
+
+    .football-container {
+        flex-direction: column;
     }
 }
