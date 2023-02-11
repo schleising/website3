@@ -5,7 +5,6 @@ import logging
 from fastapi import APIRouter, Depends, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
-from fastapi.encoders import jsonable_encoder
 
 from ..database.database import get_data_by_date
 
