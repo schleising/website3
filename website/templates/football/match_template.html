@@ -14,22 +14,46 @@
 {% for match in matches %}
   <div class="score-widget" id="{{ match.id }}">
     <div class="date-and-time">
+      {% if  live_matches %}
       <div class="match-start">{{ match.utc_date.strftime('%H:%M') }}</div>
+      {% else %}
+      <div class="match-start">{{ match.utc_date.strftime('%A %d %B %H:%M') }}</div>
+      {% endif %}
+      {% if live_matches %}
       <div class="match-status"></div>
+      {% else %}
+      <div class="match-status">{{ match.status }}</div>
+      {% endif %}
     </div>
     <div class="team">
       <div class="team-and-badge">
         <img class="team-badge" src="{{ match.home_team.crest }}"></img>
         <div class="home-team">{{ match.home_team.short_name }}</div>
       </div>
+      {% if live_matches %}
       <div class="home-team-score"></div>
+      {% else %}
+        {% if match.score.full_time.home == None %}
+        <div class="home-team-score">TBD</div>
+        {% else %}
+        <div class="home-team-score">{{ match.score.full_time.home }}</div>
+        {% endif %}
+      {% endif %}
     </div>
     <div class="team">
       <div class="team-and-badge">
         <img class="team-badge" src="{{ match.away_team.crest }}"></img>
         <div class="away-team">{{ match.away_team.short_name }}</div>
       </div>
+      {% if live_matches %}
       <div class="away-team-score"></div>
+      {% else %}
+        {% if match.score.full_time.away == None %}
+        <div class="away-team-score">TBD</div>
+        {% else %}
+        <div class="away-team-score">{{ match.score.full_time.away }}</div>
+        {% endif %}
+      {% endif %}
     </div>
   </div>
 {% endfor %}
@@ -38,7 +62,17 @@
 {% block rnnav %}
 <nav class="nav flex-column">
   <a href="/football" class="nav-link link-secondary navbar-link">Live Scores</a>
-  <a href="/football/table" class="nav-link link-secondary navbar-link">Table</a>
+  <a href="/football/8" class="nav-link link-secondary navbar-link">August 2022</a>
+  <a href="/football/9" class="nav-link link-secondary navbar-link">September 2022</a>
+  <a href="/football/10" class="nav-link link-secondary navbar-link">October 2022</a>
+  <a href="/football/11" class="nav-link link-secondary navbar-link">November 2022</a>
+  <a href="/football/12" class="nav-link link-secondary navbar-link">December 2022</a>
+  <a href="/football/1" class="nav-link link-secondary navbar-link">January 2023</a>
+  <a href="/football/2" class="nav-link link-secondary navbar-link">February 2023</a>
+  <a href="/football/3" class="nav-link link-secondary navbar-link">March 2023</a>
+  <a href="/football/4" class="nav-link link-secondary navbar-link">April 2023</a>
+  <a href="/football/5" class="nav-link link-secondary navbar-link">May 2023</a>
+  <a href="/football/table" class="nav-link link-secondary navbar-link">Premier League Table</a>
 </nav>
 {% endblock %}
 
@@ -47,5 +81,7 @@
 {% endblock %}
 
 {% block scripts %}
+{% if live_matches %}
 <script src="/js/football/football.js"></script>
+{% endif %}
 {% endblock %}

@@ -45,12 +45,22 @@
     max-height: 1.25rem;
 }
 
-@media screen and (max-width: 50em) {
+@media screen and (max-width: 60em) {
+    .content-view {
+        padding: 0.25rem 5rem;
+    }
+
     .football-grid {
         grid-template-columns: 1fr;
     }
 
     .football-container {
         flex-direction: column;
+    }
+}
+
+@media screen and (max-width: 50em) {
+    .content-view {
+        padding: 0.25rem;
     }
 }

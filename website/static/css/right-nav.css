@@ -29,7 +29,7 @@
     }
 }
 
-@media screen and (max-width: 40em) {
+@media screen and (max-width: 42em) {
     .content-nav {
         flex-direction: column;
     }
