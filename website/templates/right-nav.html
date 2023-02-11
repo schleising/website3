@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+
+{% block head %}
+<link rel="stylesheet" href="/css/right-nav.css">
+{% endblock %}
+{% block rnhead %}
+{% endblock %}
+
+{% block content %}
+<div class="content-nav">
+  <div class="content-view">
+    {% block rncontent %}
+    {% endblock %}
+  </div>
+  <div class="nav-view">
+    {% block rnnav %}
+    {% endblock %}
+  </div>
+</div>
+{% endblock %}

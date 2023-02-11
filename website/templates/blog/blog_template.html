@@ -1,6 +1,6 @@
-{% extends "base.html" %}
+{% extends "right-nav.html" %}
 
-{% block head %}
+{% block rnhead %}
 <link rel="stylesheet" href="/css/blog/blog.css">
 <link rel="stylesheet" href="/css/markdown/markdown.css">
 <link rel="stylesheet" href="/css/markdown/styles.css">
@@ -11,36 +11,30 @@
 <h3 class="header-text">Blog</h3>
 {% endblock %}
 
-{% block content %}
-<div id="blog-container">
-  <div id="blog-area">
-    <div id="blog-header-view">
-      <h3 class="bottom-margin" id="blog-title">
-        {% if blog_entry != None %}
-          {{ blog_entry.title }}
-        {% endif %}
-      </h3>
-      <h6 class="bottom-margin" id="blog-author">
-        {% if blog_entry != None %}
-          Author: {{ first_name }} {{ last_name }}
-        {% endif %}
-      </h6>
-      <div id="blog-view">
-        {% if blog_html != None %}
-          {{ blog_html|safe }}
-        {% endif %}
-      </div>
-    </div>
-    <div id="blog-list">
-      <h3>Blog Posts</h3>
-      <nav class="nav flex-column" id="blog-list-nav">
-        {% for blog in blog_list %}
-          <a href="{{ blog.id }}" class="nav-link link-secondary blog-link" id="{{ blog.id }}">{{ blog.title }}</a>
-        {% endfor %}
-      </nav>
-    </div>
-  </div>
+{% block rncontent %}
+<h3 class="bottom-margin" id="blog-title">
+  {% if blog_entry != None %}
+    {{ blog_entry.title }}
+  {% endif %}
+</h3>
+<h6 class="bottom-margin" id="blog-author">
+  {% if blog_entry != None %}
+    Author: {{ first_name }} {{ last_name }}
+  {% endif %}
+</h6>
+<div id="blog-view">
+  {% if blog_html != None %}
+    {{ blog_html|safe }}
+  {% endif %}
 </div>
+{% endblock %}
+{% block rnnav %}
+<h3>Blog Posts</h3>
+<nav class="nav flex-column" id="blog-list-nav">
+  {% for blog in blog_list %}
+    <a href="{{ blog.id }}" class="nav-link link-secondary navbar-link" id="{{ blog.id }}">{{ blog.title }}</a>
+  {% endfor %}
+</nav>
 {% endblock %}
 
 {% block footer %}
