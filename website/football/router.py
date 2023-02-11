@@ -1,4 +1,4 @@
-from calendar import monthrange
+from calendar import monthrange, month_name
 from datetime import datetime
 import json
 import logging
@@ -22,7 +22,10 @@ football_router = APIRouter(prefix='/football')
 @football_router.get('/', response_class=HTMLResponse)
 async def get_live_matches(request: Request):
     matches = await retreive_matches(datetime.today().replace(hour=0, minute=0, second=0, microsecond=0), datetime.today().replace(hour=23, minute=59, second=59, microsecond=0))
-    return TEMPLATES.TemplateResponse('football/match_template.html', {'request': request, 'matches': matches, 'live_matches': True})
+    return TEMPLATES.TemplateResponse('football/match_template.html', {'request': request, 
+                                                                       'matches': matches, 
+                                                                       'title': 'Today', 
+                                                                       'live_matches': True})
 
 @football_router.get('/{month}', response_class=HTMLResponse)
 async def get_months_matches(month: int, request: Request):
@@ -38,7 +41,10 @@ async def get_months_matches(month: int, request: Request):
 
     matches = await retreive_matches(start_date, end_date)
 
-    return TEMPLATES.TemplateResponse('football/match_template.html', {'request': request, 'matches': matches, 'live_matches': False})
+    return TEMPLATES.TemplateResponse('football/match_template.html', {'request': request, 
+                                                                       'matches': matches, 
+                                                                       'title': month_name[month], 
+                                                                       'live_matches': False})
 
 async def retreive_matches(date_from: datetime, date_to: datetime) -> list[Match]:
     matches: list[Match] = []

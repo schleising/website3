@@ -2,11 +2,11 @@
 
 {% block rnhead %}
 <link rel="stylesheet" href="/css/football/football.css">
-{% block title %}<title>Football</title>{% endblock %}
+{% block title %}<title>Football - {{ title }}</title>{% endblock %}
 {% endblock %}
 
 {% block header %}
-<h3 class="header-text">Today's Matches</h3>
+<h3 class="header-text">{{ title }}'s Matches</h3>
 {% endblock %}
 
 {% block rncontent %}
@@ -17,7 +17,7 @@
       {% if  live_matches %}
       <div class="match-start">{{ match.utc_date.strftime('%H:%M') }}</div>
       {% else %}
-      <div class="match-start">{{ match.utc_date.strftime('%A %d %B %H:%M') }}</div>
+      <div class="match-start">{{ match.utc_date.strftime('%A %d %b %H:%M') }}</div>
       {% endif %}
       {% if live_matches %}
       <div class="match-status"></div>
