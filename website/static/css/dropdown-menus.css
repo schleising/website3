@@ -59,6 +59,10 @@ a.sub-level-nav {
         display: flex;
     }
 
+    .right-top-level-nav {
+        display: none;
+    }
+
     .sub-level-nav-container {
         display: none;
     }

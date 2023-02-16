@@ -45,8 +45,8 @@
     max-height: 1.25rem;
 }
 
-@media screen and (max-width: 60em) {
-    .content-view {
+@media screen and (max-width: 60rem) {
+    #content {
         padding: 0.25rem 5rem;
     }
 
@@ -59,8 +59,14 @@
     }
 }
 
-@media screen and (max-width: 50em) {
-    .content-view {
+@media screen and (max-width: 50rem) {
+    #content {
         padding: 0.25rem;
+    }
+}
+
+@media screen and (max-width: 40rem) {
+    .right-top-level-nav {
+        display: flex;
     }
 }
