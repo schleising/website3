@@ -40,7 +40,18 @@ a.sub-level-nav {
 }
 
 @media screen and (max-width: 40rem) {
+    #main {
+        flex-direction: column;
+        position: relative;
+    }
+
+    #content {
+        margin-top: 3rem;
+        padding: 0.25rem;
+    }
+    
     .main-nav {
+        position: absolute;
         width: 2.5rem;
     }
 
@@ -52,6 +63,14 @@ a.sub-level-nav {
         display: none;
     }
 
+    .main-nav:hover {
+        background-color: cornflowerblue;
+    }
+    
+    .main-nav:hover > .top-level-nav {
+        color: white;
+    }
+    
     .main-nav:hover .sub-level-nav-container {
         display: flex;
         background-color: cornflowerblue;
@@ -64,5 +83,10 @@ a.sub-level-nav {
     .sidebar {
         overflow-y: visible;
         padding: 0rem;
+    }
+
+    .right-nav {
+        top: 0rem;
+        right: 0rem;
     }
 }
