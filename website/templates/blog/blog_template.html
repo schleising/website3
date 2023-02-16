@@ -1,6 +1,6 @@
-{% extends "right-nav.html" %}
+{% extends "base.html" %}
 
-{% block rnhead %}
+{% block head %}
 <link rel="stylesheet" href="/css/blog/blog.css">
 <link rel="stylesheet" href="/css/markdown/markdown.css">
 <link rel="stylesheet" href="/css/markdown/styles.css">
@@ -11,7 +11,7 @@
 <h3 class="header-text">Blog</h3>
 {% endblock %}
 
-{% block rncontent %}
+{% block content %}
 <h3 class="bottom-margin" id="blog-title">
   {% if blog_entry != None %}
     {{ blog_entry.title }}
@@ -28,13 +28,10 @@
   {% endif %}
 </div>
 {% endblock %}
-{% block rnnav %}
-<h3>Blog Posts</h3>
-<nav class="nav flex-column" id="blog-list-nav">
+{% block sidebar %}
   {% for blog in blog_list %}
-    <a href="{{ blog.id }}" class="nav-link link-secondary navbar-link" id="{{ blog.id }}">{{ blog.title }}</a>
+    <a href="{{ blog.id }}" class="sub-level-nav" id="{{ blog.id }}">{{ blog.title }}</a>
   {% endfor %}
-</nav>
 {% endblock %}
 
 {% block footer %}

@@ -2,30 +2,8 @@ window.onresize = updateSize;
 
 updateSize();
 
-document.getElementById("hamburger-button").addEventListener("click", function(event) {
-    hamburgerClicked()
-});
-
 function updateSize() {
     document.getElementById("outer").style.height = window.innerHeight + "px";
-
-    if (window.innerWidth > 550) {
-        document.getElementById("sidebar").style.display = "flex";
-        document.getElementById("hamburger").style.display = "none";
-    } else {
-        document.getElementById("sidebar").style.display = "none";
-        document.getElementById("hamburger").style.display = "block";
-    }
-};
-
-function hamburgerClicked() {
-    sidebarElement = document.getElementById("sidebar");
-
-    if (sidebarElement.style.display == "flex") {
-        sidebarElement.style.display = "none";
-    } else {
-        sidebarElement.style.display = "flex";
-    }
 };
 
 function checkForEnter(event, baseUrl, element, callback) {
