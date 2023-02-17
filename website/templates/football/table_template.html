@@ -9,17 +9,6 @@
 {% block header %}
 <h3 class="header-text">{{ title }}</h3>
 {% endblock %}
-position: int
-team: Team
-played_games: int = Field(..., alias='playedGames')
-form: str
-won: int
-draw: int
-lost: int
-points: int
-goals_for: int = Field(..., alias='goalsFor')
-goals_against: int = Field(..., alias='goalsAgainst')
-goal_difference: int = Field(..., alias='goalDifference')
 
 {% block content %}
 <div class="table-container">
