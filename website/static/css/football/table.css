@@ -20,7 +20,12 @@
     padding: 0.5rem 1rem;
 }
 
-tr:hover > .team-data {
+.sticky-header {
+    position: sticky;
+    top: -0.25rem;
+}
+
+.team-row:hover > .team-data {
     background-color: #a4c0f4;
 }
 
