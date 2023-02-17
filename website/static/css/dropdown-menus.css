@@ -39,7 +39,7 @@ a.sub-level-nav {
     width: max-content;
 }
 
-@media screen and (max-width: 40rem) {
+@media screen and (max-width: 42rem) {
     #main {
         flex-direction: column;
         position: relative;

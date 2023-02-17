@@ -33,7 +33,7 @@
     text-align: right;
 }
 
-@media screen and (max-width: 60rem) {
+@media screen and (max-width: 65rem) {
     .data {
         padding: 0.5rem 0.75rem;
     }
@@ -43,7 +43,7 @@
     }
 }
 
-@media screen and (max-width: 40rem) {
+@media screen and (max-width: 52rem) {
     .data {
         padding: 0.25rem 0.5rem;
     }
