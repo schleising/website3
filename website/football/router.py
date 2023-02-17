@@ -27,7 +27,7 @@ async def get_live_matches(request: Request):
                                                                        'title': 'Today', 
                                                                        'live_matches': True})
 
-@football_router.get('/{month}', response_class=HTMLResponse)
+@football_router.get('/matches/{month}', response_class=HTMLResponse)
 async def get_months_matches(month: int, request: Request):
     if month > 5:
         year = 2022
