@@ -12,8 +12,8 @@ from ..database.database import get_data_by_date
 from ..account.user_model import User
 from ..account.admin import ws_get_current_active_user
 
-from .models import Match, MatchList
-from . import pl_matches
+from .models import Match, MatchList, TableItem
+from . import pl_matches, pl_table
 
 TEMPLATES = Jinja2Templates('/app/templates')
 
@@ -45,6 +45,17 @@ async def get_months_matches(month: int, request: Request):
                                                                        'matches': matches, 
                                                                        'title': month_name[month], 
                                                                        'live_matches': False})
+
+@football_router.get('/table/', response_class=HTMLResponse)
+async def get_table(request: Request):
+    table_list: list[TableItem] = []
+
+    if pl_table is not None:
+        table_cursor = pl_table.find({})
+
+        table_list = await table_cursor.to_list(None)
+
+    return TEMPLATES.TemplateResponse('football/table_template.html', {'request': request, 'title': 'Premier League Table', 'table_list': table_list})
 
 async def retreive_matches(date_from: datetime, date_to: datetime) -> list[Match]:
     matches: list[Match] = []

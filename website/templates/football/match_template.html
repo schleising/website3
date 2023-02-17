@@ -1,5 +1,10 @@
 {% extends "football/football-base.html" %}
 
+{% block head %}
+<link rel="stylesheet" href="/css/football/football.css">
+{% block title %}<title>Football - {{ title }}</title>{% endblock %}
+{% endblock %}
+
 {% block header %}
 <h3 class="header-text">{{ title }}'s Matches</h3>
 {% endblock %}

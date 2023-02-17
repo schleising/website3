@@ -1,0 +1,64 @@
+{% extends "football/football-base.html" %}
+
+{% block head %}
+<link rel="stylesheet" href="/css/football/football.css">
+<link rel="stylesheet" href="/css/football/table.css">
+{% block title %}<title>Football - {{ title }}</title>{% endblock %}
+{% endblock %}
+
+{% block header %}
+<h3 class="header-text">{{ title }}</h3>
+{% endblock %}
+position: int
+team: Team
+played_games: int = Field(..., alias='playedGames')
+form: str
+won: int
+draw: int
+lost: int
+points: int
+goals_for: int = Field(..., alias='goalsFor')
+goals_against: int = Field(..., alias='goalsAgainst')
+goal_difference: int = Field(..., alias='goalDifference')
+
+{% block content %}
+<div class="table-container">
+  <table>
+    <thead>
+      <tr class="header-row">
+        <th class="header-data data">Pos</th>
+        <th class="header-data data">Team</th>
+        <th class="header-data data">Pld</th>
+        <th class="header-data data medium-table">W</th>
+        <th class="header-data data medium-table">D</th>
+        <th class="header-data data medium-table">L</th>
+        <th class="header-data data large-table">F</th>
+        <th class="header-data data large-table">A</th>
+        <th class="header-data data">GD</th>
+        <th class="header-data data">Pts</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for table_item in table_list %}
+      <tr class="team-row">
+        <td class="team-data data">{{ table_item.position }}</td>
+        <td class="team-data data">
+          <div class="team-and-badge">
+            <img class="team-badge" src="{{ table_item.team.crest }}"></img>
+            <div class="home-team">{{ table_item.team.short_name }}</div>
+          </div>
+        </td>
+        <td class="team-data data">{{ table_item.played_games }}</td>
+        <td class="team-data data medium-table">{{ table_item.won }}</td>
+        <td class="team-data data medium-table">{{ table_item.draw }}</td>
+        <td class="team-data data medium-table">{{ table_item.lost }}</td>
+        <td class="team-data data large-table">{{ table_item.goals_for }}</td>
+        <td class="team-data data large-table">{{ table_item.goals_against }}</td>
+        <td class="team-data data">{{ table_item.goal_difference }}</td>
+        <td class="team-data data">{{ table_item.points }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

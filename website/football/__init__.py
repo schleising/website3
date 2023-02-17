@@ -8,3 +8,6 @@ mongodb.set_database('web_database')
 
 # Set the collection in use
 pl_matches = mongodb.get_collection('pl_matches')
+
+# Set the collection in use
+pl_table = mongodb.get_collection('pl_table')

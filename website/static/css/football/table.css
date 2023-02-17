@@ -1,0 +1,50 @@
+.table-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 0.25rem;
+}
+
+.header-data {
+    color: white;
+    background-color: cornflowerblue;
+    text-align: left;
+}
+
+.team-data {
+    color: black;
+    background-color: #bbd0f7;
+    text-align: left;
+}
+
+.data {
+    padding: 0.5rem 1rem;
+}
+
+tr:hover > .team-data {
+    background-color: #a4c0f4;
+}
+
+@media screen and (max-width: 60rem) {
+    .data {
+        padding: 0.5rem 0.75rem;
+    }
+
+    .large-table {
+        display: none;
+    }
+}
+
+@media screen and (max-width: 40rem) {
+    .data {
+        padding: 0.25rem 0.5rem;
+    }
+
+    .medium-table {
+        display: none;
+    }
+
+    .large-table {
+        display: none;
+    }
+}
