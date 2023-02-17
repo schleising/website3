@@ -46,6 +46,10 @@
     width: 1.25rem;
 }
 
+.team-name {
+    white-space: nowrap;
+}
+
 @media screen and (max-width: 60rem) {
     #content {
         padding: 0.25rem 5rem;

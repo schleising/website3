@@ -45,17 +45,17 @@ goal_difference: int = Field(..., alias='goalDifference')
         <td class="team-data data">
           <div class="team-and-badge">
             <img class="team-badge" src="{{ table_item.team.crest }}"></img>
-            <div class="home-team">{{ table_item.team.short_name }}</div>
+            <div class="team-name">{{ table_item.team.short_name }}</div>
           </div>
         </td>
-        <td class="team-data data">{{ table_item.played_games }}</td>
-        <td class="team-data data medium-table">{{ table_item.won }}</td>
-        <td class="team-data data medium-table">{{ table_item.draw }}</td>
-        <td class="team-data data medium-table">{{ table_item.lost }}</td>
-        <td class="team-data data large-table">{{ table_item.goals_for }}</td>
-        <td class="team-data data large-table">{{ table_item.goals_against }}</td>
-        <td class="team-data data">{{ table_item.goal_difference }}</td>
-        <td class="team-data data">{{ table_item.points }}</td>
+        <td class="team-data data right-align">{{ table_item.played_games }}</td>
+        <td class="team-data data medium-table right-align">{{ table_item.won }}</td>
+        <td class="team-data data medium-table right-align">{{ table_item.draw }}</td>
+        <td class="team-data data medium-table right-align">{{ table_item.lost }}</td>
+        <td class="team-data data large-table right-align">{{ table_item.goals_for }}</td>
+        <td class="team-data data large-table right-align">{{ table_item.goals_against }}</td>
+        <td class="team-data data right-align">{{ table_item.goal_difference }}</td>
+        <td class="team-data data right-align">{{ table_item.points }}</td>
       </tr>
       {% endfor %}
     </tbody>

@@ -14,7 +14,6 @@
 .team-data {
     color: black;
     background-color: #bbd0f7;
-    text-align: left;
 }
 
 .data {
@@ -23,6 +22,10 @@
 
 tr:hover > .team-data {
     background-color: #a4c0f4;
+}
+
+.right-align {
+    text-align: right;
 }
 
 @media screen and (max-width: 60rem) {
