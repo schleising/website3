@@ -42,7 +42,8 @@
 }
 
 .team-badge {
-    max-height: 1.25rem;
+    height: 1.25rem;
+    width: 1.25rem;
 }
 
 @media screen and (max-width: 60rem) {
