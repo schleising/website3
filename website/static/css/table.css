@@ -33,10 +33,6 @@
     background-color: hsl(219, 79%, 96%);
 }
 
-.right-align {
-    text-align: right;
-}
-
 @media screen and (max-width: 65rem) {
     .data {
         padding: 0.5rem 0.75rem;
