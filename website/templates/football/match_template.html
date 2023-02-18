@@ -10,6 +10,7 @@
 {% endblock %}
 
 {% block content %}
+{% if matches|length > 0 %}
 <div class="football-grid">
 {% for match in matches %}
   <div class="score-widget" id="{{ match.id }}">
@@ -58,4 +59,11 @@
   </div>
 {% endfor %}
 </div>
+{% else %}
+{% if live_matches %}
+<h3>No Live Matches Today</h3>
+{% else %}
+<h3>No Matches for {{ title }}</h3>  
+{% endif %}
+{% endif %}
 {% endblock %}
