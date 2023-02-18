@@ -13,7 +13,7 @@
 
 .team-data {
     color: black;
-    background-color: #bbd0f7;
+    background-color: #e8effc;
 }
 
 .data {
@@ -26,7 +26,7 @@
 }
 
 .team-row:hover > .team-data {
-    background-color: #a4c0f4;
+    background-color: #d1dffa;
 }
 
 .right-align {
