@@ -56,7 +56,7 @@
     white-space: nowrap;
 }
 
-@media screen and (max-width: 60rem) {
+@media screen and (max-width: 50rem) {
     #content {
         padding: 0.25rem 5rem;
     }
