@@ -1,5 +1,5 @@
 #aircraft_db_container {
-    padding: 0.3rem;
+    margin: 0.25rem;
     display: flex;
     flex-direction: column;
     flex: 1 1 auto;
@@ -7,7 +7,7 @@
 }
 
 #aircraft_controls {
-    padding: 0.3rem;
+    margin: 0.25rem;
     display: flex;
     flex-direction: row;
     flex: 0 0 auto;
@@ -16,7 +16,6 @@
 }
 
 .search-controls {
-    /* padding: 0.3rem; */
     display: flex;
     flex-direction: row;
     flex: 0 0 auto;
@@ -26,12 +25,12 @@
 
 #input_tail_number {
     width: 10rem;
-    margin-left: 0.3rem;
-    margin-right: 0.3rem;
+    margin-left: 0.25rem;
+    margin-right: 0.25rem;
 }
 
 #aircraft_output {
-    padding: 0.3rem;
+    margin: 0.25rem;
     display: flex;
     flex-direction: column;
     flex: 1 1 auto;
