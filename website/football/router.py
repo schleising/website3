@@ -51,7 +51,7 @@ async def get_table(request: Request):
     table_list: list[TableItem] = []
 
     if pl_table is not None:
-        table_cursor = pl_table.find({})
+        table_cursor = pl_table.find({}).sort('position')
 
         table_list = await table_cursor.to_list(None)
 
