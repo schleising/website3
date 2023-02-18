@@ -25,6 +25,10 @@
     top: -0.25rem;
 }
 
+.data-row {
+    border: 0.25rem solid white;
+}
+
 .data-row:hover > .row-data {
     background-color: hsl(219, 79%, 96%);
 }

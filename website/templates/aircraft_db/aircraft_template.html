@@ -2,6 +2,7 @@
 
 {% block head %}
 <link rel="stylesheet" href="/css/aircraft_db/aircraft_db.css">
+<link rel="stylesheet" href="/css/table.css">
 {% block title %}<title>Aircraft DB</title>{% endblock %}
 {% endblock %}
 
@@ -21,121 +22,121 @@
     </div>
   </div>
   <div id="aircraft_output">
-    <table class="table table-striped">
-      <thead>
-        <tr>
-          <th>Property</th>
-          <th>Value</th>
+    <table>
+      <thead class="sticky-header">
+        <tr class="header-row">
+          <th class="header-data data">Property</th>
+          <th class="header-data data">Value</th>
         </tr>
       </thead>
       <tbody>
-        <tr>
-          <th>Tail Number</th>
-          <td id="registration"></td>
+        <tr class="data-row">
+          <th class="row-data data">Tail Number</th>
+          <td class="row-data data" id="registration"></td>
         </tr>
-        <tr>
-          <th>Mode S</th>
-          <td id="icao24"></td>
+        <tr class="data-row">
+          <th class="row-data data">Mode S</th>
+          <td class="row-data data" id="icao24"></td>
         </tr>
-        <tr>
-          <th>Manufacturer ICAO</th>
-          <td id="manufacturericao"></td>
+        <tr class="data-row">
+          <th class="row-data data">Manufacturer ICAO</th>
+          <td class="row-data data" id="manufacturericao"></td>
         </tr>
-        <tr>
-          <th>Manufacturer Name</th>
-          <td id="manufacturername"></td>
+        <tr class="data-row">
+          <th class="row-data data">Manufacturer Name</th>
+          <td class="row-data data" id="manufacturername"></td>
         </tr>
-        <tr>
-          <th>Model</th>
-          <td id="model"></td>
+        <tr class="data-row">
+          <th class="row-data data">Model</th>
+          <td class="row-data data" id="model"></td>
         </tr>
-        <tr>
-          <th>Type Code</th>
-          <td id="typecode"></td>
+        <tr class="data-row">
+          <th class="row-data data">Type Code</th>
+          <td class="row-data data" id="typecode"></td>
         </tr>
-        <tr>
-          <th>Serial Number</th>
-          <td id="serialnumber"></td>
+        <tr class="data-row">
+          <th class="row-data data">Serial Number</th>
+          <td class="row-data data" id="serialnumber"></td>
         </tr>
-        <tr>
-          <th>Line Number</th>
-          <td id="linenumber"></td>
+        <tr class="data-row">
+          <th class="row-data data">Line Number</th>
+          <td class="row-data data" id="linenumber"></td>
         </tr>
-        <tr>
-          <th>ICAO Aircraft Type</th>
-          <td id="icaoaircrafttype"></td>
+        <tr class="data-row">
+          <th class="row-data data">ICAO Aircraft Type</th>
+          <td class="row-data data" id="icaoaircrafttype"></td>
         </tr>
-        <tr>
-          <th>Operator</th>
-          <td id="operator"></td>
+        <tr class="data-row">
+          <th class="row-data data">Operator</th>
+          <td class="row-data data" id="operator"></td>
         </tr>
-        <tr>
-          <th>Operator Call Sign</th>
-          <td id="operatorcallsign"></td>
+        <tr class="data-row">
+          <th class="row-data data">Operator Call Sign</th>
+          <td class="row-data data" id="operatorcallsign"></td>
         </tr>
-        <tr>
-          <th>Operator ICAO</th>
-          <td id="operatoricao"></td>
+        <tr class="data-row">
+          <th class="row-data data">Operator ICAO</th>
+          <td class="row-data data" id="operatoricao"></td>
         </tr>
-        <tr>
-          <th>Operator IATA</th>
-          <td id="operatoriata"></td>
+        <tr class="data-row">
+          <th class="row-data data">Operator IATA</th>
+          <td class="row-data data" id="operatoriata"></td>
         </tr>
-        <tr>
-          <th>Owner</th>
-          <td id="owner"></td>
+        <tr class="data-row">
+          <th class="row-data data">Owner</th>
+          <td class="row-data data" id="owner"></td>
         </tr>
-        <tr>
-          <th>Test Reg</th>
-          <td id="testreg"></td>
+        <tr class="data-row">
+          <th class="row-data data">Test Reg</th>
+          <td class="row-data data" id="testreg"></td>
         </tr>
-        <tr>
-          <th>Registered On</th>
-          <td id="registered"></td>
+        <tr class="data-row">
+          <th class="row-data data">Registered On</th>
+          <td class="row-data data" id="registered"></td>
         </tr>
-        <tr>
-          <th>Registered Until</th>
-          <td id="reguntil"></td>
+        <tr class="data-row">
+          <th class="row-data data">Registered Until</th>
+          <td class="row-data data" id="reguntil"></td>
         </tr>
-        <tr>
-          <th>Status</th>
-          <td id="status"></td>
+        <tr class="data-row">
+          <th class="row-data data">Status</th>
+          <td class="row-data data" id="status"></td>
         </tr>
-        <tr>
-          <th>Built On</th>
-          <td id="built"></td>
+        <tr class="data-row">
+          <th class="row-data data">Built On</th>
+          <td class="row-data data" id="built"></td>
         </tr>
-        <tr>
-          <th>First Flight Date</th>
-          <td id="firstflightdate"></td>
+        <tr class="data-row">
+          <th class="row-data data">First Flight Date</th>
+          <td class="row-data data" id="firstflightdate"></td>
         </tr>
-        <tr>
-          <th>Seat Configuration</th>
-          <td id="seatconfiguration"></td>
+        <tr class="data-row">
+          <th class="row-data data">Seat Configuration</th>
+          <td class="row-data data" id="seatconfiguration"></td>
         </tr>
-        <tr>
-          <th>Engines</th>
-          <td id="engines"></td>
+        <tr class="data-row">
+          <th class="row-data data">Engines</th>
+          <td class="row-data data" id="engines"></td>
         </tr>
-        <tr>
-          <th>Modes</th>
-          <td id="modes"></td>
+        <tr class="data-row">
+          <th class="row-data data">Modes</th>
+          <td class="row-data data" id="modes"></td>
         </tr>
-        <tr>
-          <th>ADSB</th>
-          <td id="adsb"></td>
+        <tr class="data-row">
+          <th class="row-data data">ADSB</th>
+          <td class="row-data data" id="adsb"></td>
         </tr>
-        <tr>
-          <th>ACARS</th>
-          <td id="acars"></td>
+        <tr class="data-row">
+          <th class="row-data data">ACARS</th>
+          <td class="row-data data" id="acars"></td>
         </tr>
-        <tr>
-          <th>Notes</th>
-          <td id="notes"></td>
+        <tr class="data-row">
+          <th class="row-data data">Notes</th>
+          <td class="row-data data" id="notes"></td>
         </tr>
-        <tr>
-          <th>Category Description</th>
-          <td id="categoryDescription"></td>
+        <tr class="data-row">
+          <th class="row-data data">Category Description</th>
+          <td class="row-data data" id="categoryDescription"></td>
         </tr>
       </tbody>
     </table>
