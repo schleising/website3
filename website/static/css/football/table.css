@@ -11,7 +11,7 @@
     text-align: left;
 }
 
-.team-data {
+.row-data {
     color: black;
     background-color: hsl(219, 79%, 98%);
 }
@@ -25,7 +25,7 @@
     top: -0.25rem;
 }
 
-.team-row:hover > .team-data {
+.data-row:hover > .row-data {
     background-color: hsl(219, 79%, 96%);
 }
 

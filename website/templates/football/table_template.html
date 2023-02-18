@@ -29,22 +29,22 @@
     </thead>
     <tbody>
       {% for table_item in table_list %}
-      <tr class="team-row">
-        <td class="team-data data">{{ table_item.position }}</td>
-        <td class="team-data data">
+      <tr class="data-row">
+        <td class="row-data data">{{ table_item.position }}</td>
+        <td class="row-data data">
           <div class="team-and-badge">
             <img class="team-badge" src="{{ table_item.team.crest }}"></img>
             <div class="team-name">{{ table_item.team.short_name }}</div>
           </div>
         </td>
-        <td class="team-data data right-align">{{ table_item.played_games }}</td>
-        <td class="team-data data medium-table right-align">{{ table_item.won }}</td>
-        <td class="team-data data medium-table right-align">{{ table_item.draw }}</td>
-        <td class="team-data data medium-table right-align">{{ table_item.lost }}</td>
-        <td class="team-data data large-table right-align">{{ table_item.goals_for }}</td>
-        <td class="team-data data large-table right-align">{{ table_item.goals_against }}</td>
-        <td class="team-data data right-align">{{ table_item.goal_difference }}</td>
-        <td class="team-data data right-align">{{ table_item.points }}</td>
+        <td class="row-data data right-align">{{ table_item.played_games }}</td>
+        <td class="row-data data medium-table right-align">{{ table_item.won }}</td>
+        <td class="row-data data medium-table right-align">{{ table_item.draw }}</td>
+        <td class="row-data data medium-table right-align">{{ table_item.lost }}</td>
+        <td class="row-data data large-table right-align">{{ table_item.goals_for }}</td>
+        <td class="row-data data large-table right-align">{{ table_item.goals_against }}</td>
+        <td class="row-data data right-align">{{ table_item.goal_difference }}</td>
+        <td class="row-data data right-align">{{ table_item.points }}</td>
       </tr>
       {% endfor %}
     </tbody>
