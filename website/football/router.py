@@ -6,6 +6,7 @@ import logging
 from fastapi import APIRouter, Depends, Request, WebSocket, WebSocketDisconnect, Path
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
+from pymongo import ASCENDING
 
 from ..database.database import get_data_by_date
 
@@ -51,7 +52,7 @@ async def get_table(request: Request):
     table_list: list[TableItem] = []
 
     if pl_table is not None:
-        table_cursor = pl_table.find({}).sort('position')
+        table_cursor = pl_table.find({}).sort('position', ASCENDING)
 
         table_list = await table_cursor.to_list(None)
 

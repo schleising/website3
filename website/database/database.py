@@ -3,6 +3,7 @@ from typing import Callable
 import logging
 
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
+from pymongo import ASCENDING
 from pydantic import BaseModel
 
 # Type alias to avoid Pylance errors
@@ -49,10 +50,10 @@ class Database:
         else:
             return None
 
-async def get_data_by_date(collection: AIOMDB, field: str, date_from: datetime, date_to: datetime, output_type: Callable) -> list:
+async def get_data_by_date(collection: AIOMDB, date_field: str, date_from: datetime, date_to: datetime, output_type: Callable) -> list:
     items: list[BaseModel] = []
 
-    from_db_cursor = collection.find({ field: {'$gte': date_from, '$lt': date_to} })
+    from_db_cursor = collection.find({ date_field: {'$gte': date_from, '$lt': date_to} }).sort(date_field, ASCENDING)
 
     from_db = await from_db_cursor.to_list(None)
 
