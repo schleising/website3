@@ -3,7 +3,7 @@ from datetime import datetime
 import json
 import logging
 
-from fastapi import APIRouter, Depends, Request, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Depends, Request, WebSocket, WebSocketDisconnect, Path
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
@@ -28,7 +28,7 @@ async def get_live_matches(request: Request):
                                                                        'live_matches': True})
 
 @football_router.get('/matches/{month}', response_class=HTMLResponse)
-async def get_months_matches(month: int, request: Request):
+async def get_months_matches( request: Request, month: int = Path(ge=1, le=12)):
     if month > 5:
         year = 2022
     else:

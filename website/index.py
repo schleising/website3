@@ -2,6 +2,7 @@ import logging
 
 from fastapi import FastAPI, Request, Depends
 from fastapi.responses import HTMLResponse
+from fastapi.exceptions import RequestValidationError
 from fastapi.templating import Jinja2Templates
 
 from .database.database import Database
@@ -51,6 +52,10 @@ MONGODB.set_database('item_database')
 
 # Set the collection in use
 COLLECTION = MONGODB.get_collection('item_collection')
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request, exc):
+    return TEMPLATES.TemplateResponse('error.html', {'request': request, 'error_str': str(exc)}, status_code=400)
 
 # Gets the homepage
 @app.get('/', response_class=HTMLResponse)
