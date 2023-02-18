@@ -30,7 +30,7 @@ a.sub-level-nav {
 
 .sub-level-nav:hover {
     color: dimgrey;
-    background-color: #bbd0f7;
+    background-color: hsl(219, 79%, 94%);;
 }
 
 .sub-level-nav-container {
@@ -73,12 +73,12 @@ a.sub-level-nav {
     }
 
     .main-nav:hover {
-        background-color: #d1dffa;
+        background-color: hsl(219, 79%, 96%);;
     }
     
     .main-nav:hover .sub-level-nav-container {
         display: flex;
-        background-color: #d1dffa;
+        background-color: hsl(219, 79%, 96%);;
     }
 
     .sidebar {
