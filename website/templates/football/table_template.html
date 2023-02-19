@@ -33,11 +33,13 @@
         <td class="row-data data position">
           <div>{{ table_item.position }}</div>
           {% if table_item.has_started %}
+          <div class="live-position">
             {% if table_item.has_finished %}
-            <div class="live-position done">DONE</div>
+            FULL
             {% else %}
-            <div class="live-position live">LIVE</div>
+            LIVE
             {% endif %}
+          </div>
           {% endif %}
         </td>
         <td class="row-data data">
