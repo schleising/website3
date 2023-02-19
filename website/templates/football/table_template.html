@@ -37,7 +37,11 @@
             {% if table_item.has_finished %}
             FULL
             {% else %}
-            LIVE
+              {% if table_item.is_halftime %}
+              HALF
+              {% else %}
+              LIVE
+              {% endif %}
             {% endif %}
           </div>
           {% endif %}
