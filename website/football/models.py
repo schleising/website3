@@ -34,6 +34,21 @@ class MatchStatus(str, Enum):
             case _:
                 return 'Error'
 
+    @property
+    def has_started(self) -> bool:
+        match self:
+            case MatchStatus.scheduled | MatchStatus.timed | MatchStatus.postponed | MatchStatus.cancelled | MatchStatus.awarded:
+                return False
+            case MatchStatus.in_play | MatchStatus.paused | MatchStatus.finished | MatchStatus.suspended:
+                return True
+            
+    @property
+    def has_finished(self) -> bool:
+        if self == MatchStatus.finished:
+            return True
+        else:
+            return False
+
 class Filters(BaseModel):
     season: str
 
@@ -86,6 +101,10 @@ class TableItem(BaseModel):
     class Config:
         allow_population_by_field_name = True
 
+class LiveTableItem(TableItem):
+    has_started: bool = False
+    has_finished: bool = False
+
 class Standing(BaseModel):
     stage: str
     type: str
@@ -101,9 +120,9 @@ class Table(BaseModel):
 
 class ResultSet(BaseModel):
     count: int
-    first: str
-    last: str
-    played: int
+    first: str | None
+    last: str | None
+    played: int | None
 
 class FullTime(BaseModel):
     home: int | None
