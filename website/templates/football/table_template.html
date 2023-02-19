@@ -30,7 +30,16 @@
     <tbody>
       {% for table_item in table_list %}
       <tr class="data-row">
-        <td class="row-data data">{{ table_item.position }}</td>
+        <td class="row-data data position">
+          <div>{{ table_item.position }}</div>
+          {% if table_item.has_started %}
+            {% if table_item.has_finished %}
+            <div class="live-position done">DONE</div>
+            {% else %}
+            <div class="live-position live">LIVE</div>
+            {% endif %}
+          {% endif %}
+        </td>
         <td class="row-data data">
           <div class="team-and-badge">
             <img class="team-badge" src="{{ table_item.team.crest }}"></img>

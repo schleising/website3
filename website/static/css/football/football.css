@@ -56,6 +56,30 @@
     white-space: nowrap;
 }
 
+.position {
+    display: flex;
+    flex-direction: row;
+    flex: 0 0 0;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.live-position {
+    font-size: 0.5rem;
+    padding: 0.1rem 0.2rem;
+    margin-left: 0.25rem;
+}
+
+.live {
+    color: white;
+    background-color: hsl(219, 79%, 75%);
+}
+
+.done {
+    color: white;
+    background-color: hsl(219, 79%, 75%);
+}
+
 @media screen and (max-width: 50rem) {
     #content {
         padding: 0.25rem 5rem;
