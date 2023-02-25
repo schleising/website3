@@ -14,7 +14,8 @@ services:
       - nginx_conf:/etc/nginx:rw
       - letsencrypt_conf:/etc/letsencrypt:rw
     restart: always
-
+    extra_hosts:
+        - "host.docker.internal:host-gateway"
   fastapi:
     build: fastapi
     depends_on:
