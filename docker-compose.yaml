@@ -16,6 +16,7 @@ services:
     restart: always
     extra_hosts:
         - "host.docker.internal:host-gateway"
+
   fastapi:
     build: fastapi
     depends_on:
@@ -24,6 +25,8 @@ services:
       - ./website:/app:ro
       - socket_volume:/socket:rw
     restart: always
+    extra_hosts:
+        - "host.docker.internal:host-gateway"
 
   backend:
     build: backend
@@ -32,6 +35,8 @@ services:
     volumes:
       - ./backend/src:/src:ro
     restart: always
+    extra_hosts:
+        - "host.docker.internal:host-gateway"
 
   mongodb:
     image: mongo:4.4.18

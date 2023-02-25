@@ -127,6 +127,7 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
-website/database/db_server.txt
+
+# Ignore secret key files
 website/account/secret_key.txt
 open-api-key.txt
