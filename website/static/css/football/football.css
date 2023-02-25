@@ -54,6 +54,12 @@
 
 .team-name {
     white-space: nowrap;
+    text-decoration: none;
+    color: black;
+}
+
+.team-name:hover {
+    color: hsl(0, 0%, 40%);
 }
 
 .position {

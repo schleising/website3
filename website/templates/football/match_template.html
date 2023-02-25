@@ -26,7 +26,7 @@
     <div class="team">
       <div class="team-and-badge">
         <img class="team-badge" src="{{ match.home_team.crest }}"></img>
-        <div class="team-name">{{ match.home_team.short_name }}</div>
+        <a class="team-name" href="/football/matches/team/{{ match.home_team.id }}">{{ match.home_team.short_name }}</a>
       </div>
       {% if live_matches %}
       <div class="home-team-score"></div>
@@ -41,7 +41,7 @@
     <div class="team">
       <div class="team-and-badge">
         <img class="team-badge" src="{{ match.away_team.crest }}"></img>
-        <div class="team-name">{{ match.away_team.short_name }}</div>
+        <a class="team-name" href="/football/matches/team/{{ match.away_team.id }}">{{ match.away_team.short_name }}</a>
       </div>
       {% if live_matches %}
       <div class="away-team-score"></div>

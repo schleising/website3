@@ -2,6 +2,7 @@ from calendar import monthrange, month_name
 from datetime import datetime
 import json
 import logging
+from typing import Any
 
 from fastapi import APIRouter, Depends, Request, WebSocket, WebSocketDisconnect, Path
 from fastapi.responses import HTMLResponse
@@ -47,6 +48,15 @@ async def get_months_matches( request: Request, month: int = Path(ge=1, le=12)):
                                                                        'title': month_name[month], 
                                                                        'live_matches': False})
 
+@football_router.get('/matches/team/{team_id}', response_class=HTMLResponse)
+async def get_teams_matches( request: Request, team_id: int):
+    team_name, matches = await retreive_team_matches(team_id)
+
+    return TEMPLATES.TemplateResponse('football/match_template.html', {'request': request, 
+                                                                       'matches': matches, 
+                                                                       'title': team_name, 
+                                                                       'live_matches': False})
+
 @football_router.get('/table/', response_class=HTMLResponse)
 async def get_table(request: Request):
     table_list: list[TableItem] = []
@@ -64,11 +74,31 @@ async def retreive_matches(date_from: datetime, date_to: datetime) -> list[Match
     logging.info(f'Getting Matches from {date_from} to {date_to}')
 
     if pl_matches is not None:
-        matches:list[Match] = await get_data_by_date(pl_matches, 'utc_date', date_from, date_to, Match)
+        matches: list[Match] = await get_data_by_date(pl_matches, 'utc_date', date_from, date_to, Match)
     else:
         logging.info('No DB connection')
 
     return matches
+
+async def retreive_team_matches(team_id: int) -> tuple[str, list[Match]]:
+    team_name = 'Unknown'
+    matches: list[Match] = []
+
+    if pl_matches is not None:
+        from_db_cursor = pl_matches.find({ '$or': [{ 'home_team.id': team_id }, {'away_team.id': team_id}]}).sort('utc_date', ASCENDING)
+
+        from_db = await from_db_cursor.to_list(None)
+
+        for item in from_db:
+            matches.append(Match(**item))
+
+    # Get the team name from the table db
+    if pl_table is not None:
+        team_dict: dict[str, Any] = await pl_table.find_one({'team.id': team_id})
+        item = TableItem(**team_dict)
+        team_name = item.team.short_name
+
+    return (team_name, matches)
 
 @football_router.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket, user: User | None = Depends(ws_get_current_active_user)):

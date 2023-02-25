@@ -48,7 +48,7 @@
         <td class="row-data data">
           <div class="team-and-badge">
             <img class="team-badge" src="{{ table_item.team.crest }}"></img>
-            <div class="team-name">{{ table_item.team.short_name }}</div>
+            <a class="team-name" href="/football/matches/team/{{ table_item.team.id }}">{{ table_item.team.short_name }}</a>
           </div>
         </td>
         <td class="row-data data right-align">{{ table_item.played_games }}</td>
