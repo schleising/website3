@@ -13,9 +13,9 @@
   <div class="score-widget" id="{{ match.id }}">
     <div class="date-and-time">
       {% if  live_matches %}
-      <div class="match-start">{{ match.utc_date.strftime('%H:%M') }}</div>
+      <div class="match-start">{{ match.local_date.strftime('%H:%M %Z') }}</div>
       {% else %}
-      <div class="match-start">{{ match.utc_date.strftime('%A %d %b %H:%M') }}</div>
+      <div class="match-start">{{ match.local_date.strftime('%A %d %b %H:%M %Z') }}</div>
       {% endif %}
       {% if live_matches %}
       <div class="match-status"></div>

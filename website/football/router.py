@@ -3,11 +3,14 @@ from datetime import datetime
 import json
 import logging
 from typing import Any
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from fastapi import APIRouter, Depends, Request, WebSocket, WebSocketDisconnect, Path
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from pymongo import ASCENDING
+
+import requests
 
 from ..database.database import get_data_by_date
 
@@ -21,9 +24,32 @@ TEMPLATES = Jinja2Templates('/app/templates')
 
 football_router = APIRouter(prefix='/football')
 
+def update_match_timezone(matches: list[Match], request: Request) -> list[Match]:
+    if request.client is not None:
+        client_ip = request.client.host
+        logging.info(f'CLIENT IP: {client_ip}')
+        timezone = requests.get(f'https://ipapi.co/{client_ip}/timezone/').text
+    else:
+        logging.info('NO CLIENT IP')
+        timezone = request.get('timeZone', 'Europe/London')
+
+    logging.info(f'TIMEZONE: {timezone}')
+
+    try:
+        local_tz = ZoneInfo(timezone)
+    except ZoneInfoNotFoundError:
+        logging.error(f'Timezone {timezone} not valid')
+        local_tz = ZoneInfo('Europe/London')
+
+    for match in matches:
+        match.local_date = match.utc_date.astimezone(local_tz)
+
+    return matches
+
 @football_router.get('/', response_class=HTMLResponse)
 async def get_live_matches(request: Request):
     matches = await retreive_matches(datetime.today().replace(hour=0, minute=0, second=0, microsecond=0), datetime.today().replace(hour=23, minute=59, second=59, microsecond=0))
+    matches = update_match_timezone(matches, request)
     return TEMPLATES.TemplateResponse('football/match_template.html', {'request': request, 
                                                                        'matches': matches, 
                                                                        'title': 'Today', 
@@ -42,6 +68,7 @@ async def get_months_matches( request: Request, month: int = Path(ge=1, le=12)):
     end_date = datetime(year, month, last_day_of_month, 23, 59, 59)
 
     matches = await retreive_matches(start_date, end_date)
+    matches = update_match_timezone(matches, request)
 
     return TEMPLATES.TemplateResponse('football/match_template.html', {'request': request, 
                                                                        'matches': matches, 
@@ -51,6 +78,7 @@ async def get_months_matches( request: Request, month: int = Path(ge=1, le=12)):
 @football_router.get('/matches/team/{team_id}', response_class=HTMLResponse)
 async def get_teams_matches( request: Request, team_id: int):
     team_name, matches = await retreive_team_matches(team_id)
+    matches = update_match_timezone(matches, request)
 
     return TEMPLATES.TemplateResponse('football/match_template.html', {'request': request, 
                                                                        'matches': matches, 
