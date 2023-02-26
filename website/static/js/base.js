@@ -1,6 +1,13 @@
-window.onresize = updateSize;
-
-updateSize();
+// Add a callback for state changes
+document.addEventListener('readystatechange', event => {
+    if (event.target.readyState === "complete") {
+        // Set updateSize as the window resize handler
+        window.onresize = updateSize;
+        
+        // Call updateSize when the document is loaded
+        updateSize();
+    }
+});
 
 function updateSize() {
     document.getElementById("outer").style.height = window.innerHeight + "px";
