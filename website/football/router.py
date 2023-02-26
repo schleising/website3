@@ -25,8 +25,9 @@ TEMPLATES = Jinja2Templates('/app/templates')
 football_router = APIRouter(prefix='/football')
 
 def update_match_timezone(matches: list[Match], request: Request) -> list[Match]:
-    if request.client is not None:
-        client_ip = request.client.host
+    client_ip = request.headers.get('x-real-ip')
+
+    if client_ip is not None:
         logging.info(f'CLIENT IP: {client_ip}')
         timezone = requests.get(f'https://ipapi.co/{client_ip}/timezone/').text
     else:
