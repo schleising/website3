@@ -25,22 +25,7 @@ TEMPLATES = Jinja2Templates('/app/templates')
 football_router = APIRouter(prefix='/football')
 
 def update_match_timezone(matches: list[Match], request: Request) -> list[Match]:
-    client_ip = request.headers.get('x-real-ip')
-
-    if client_ip is not None:
-        logging.info(f'CLIENT IP: {client_ip}')
-        timezone = requests.get(f'https://ipapi.co/{client_ip}/timezone/').text
-    else:
-        logging.info('NO CLIENT IP')
-        timezone = request.get('timeZone', 'Europe/London')
-
-    logging.info(f'TIMEZONE: {timezone}')
-
-    try:
-        local_tz = ZoneInfo(timezone)
-    except ZoneInfoNotFoundError:
-        logging.error(f'Timezone {timezone} not valid')
-        local_tz = ZoneInfo('Europe/London')
+    local_tz = ZoneInfo('Europe/London')
 
     for match in matches:
         match.local_date = match.utc_date.astimezone(local_tz)
