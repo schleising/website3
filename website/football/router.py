@@ -3,14 +3,12 @@ from datetime import datetime
 import json
 import logging
 from typing import Any
-from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, Request, WebSocket, WebSocketDisconnect, Path
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from pymongo import ASCENDING
-
-import requests
 
 from ..database.database import get_data_by_date
 
