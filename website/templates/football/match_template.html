@@ -15,7 +15,7 @@
       {% if  live_matches %}
       <div class="match-start">{{ match.local_date.strftime('%H:%M %Z') }}</div>
       {% else %}
-      <div class="match-start">{{ match.local_date.strftime('%A %d %b %H:%M %Z') }}</div>
+      <div class="match-start">{{ match.local_date.strftime('%a %d %b %H:%M %Z') }}</div>
       {% endif %}
       {% if live_matches %}
       <div class="match-status"></div>
