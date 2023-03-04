@@ -79,15 +79,59 @@
 }
 
 .winning {
-    background-color: mediumseagreen;
+    background-color: rgba(60, 179, 113, 1);
+    animation-name: winning-animation;
 }
 
 .drawing {
-    background-color: gray;
+    background-color: rgba(128, 128, 128, 1);
+    animation-name: drawing-animation;
 }
 
 .losing {
-    background-color: red;
+    background-color: rgba(255, 0, 0, 1);
+    animation-name: losing-animation;
+}
+
+.in-play {
+    animation-duration: 2.5s;
+    animation-iteration-count: infinite;
+}
+
+@keyframes winning-animation {
+    0% {
+        background-color: rgba(60, 179, 113, 1);
+    }
+    50% {
+        background-color: rgba(60, 179, 113, 0.5);
+    }
+    100% {
+        background-color: rgba(60, 179, 113, 1);
+    }
+}
+
+@keyframes drawing-animation {
+    0% {
+        background-color: rgba(128, 128, 128, 1);
+    }
+    50% {
+        background-color: rgba(128, 128, 128, 0.5);
+    }
+    100% {
+        background-color: rgba(128, 128, 128, 1);
+    }
+}
+
+@keyframes losing-animation {
+    0% {
+        background-color: rgba(255, 0, 0, 1);
+    }
+    50% {
+        background-color: rgba(255, 0, 0, 0.5);
+    }
+    100% {
+        background-color: rgba(255, 0, 0, 1);
+    }
 }
 
 @media screen and (max-width: 50rem) {
