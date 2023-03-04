@@ -32,7 +32,7 @@
       <div class="home-team-score"></div>
       {% else %}
         {% if match.score.full_time.home == None %}
-        <div class="home-team-score">TBD</div>
+        <div class="home-team-score">-</div>
         {% else %}
         <div class="home-team-score">{{ match.score.full_time.home }}</div>
         {% endif %}
@@ -47,7 +47,7 @@
       <div class="away-team-score"></div>
       {% else %}
         {% if match.score.full_time.away == None %}
-        <div class="away-team-score">TBD</div>
+        <div class="away-team-score">-</div>
         {% else %}
         <div class="away-team-score">{{ match.score.full_time.away }}</div>
         {% endif %}

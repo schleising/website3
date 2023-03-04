@@ -72,13 +72,13 @@ function openWebSocket() {
             }
 
             if (match.score.full_time.home == null) {
-                home = 'TBD';
+                home = '-';
             } else {
                 home = match.score.full_time.home;
             }
             
             if (match.score.full_time.away == null) {
-                away = 'TBD';
+                away = '-';
             } else {
                 away = match.score.full_time.away;
             }
