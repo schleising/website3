@@ -71,6 +71,7 @@
 }
 
 .live-position {
+    white-space: nowrap;
     font-size: 0.6rem;
     padding: 0.05rem 0.2rem;
     margin-left: 0.5rem;
