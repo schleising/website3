@@ -32,16 +32,8 @@
         <td class="row-data data position">
           <div>{{ table_item.position }}</div>
           {% if table_item.has_started %}
-          <div class="live-position">
-            {% if table_item.has_finished %}
-            FULL
-            {% else %}
-              {% if table_item.is_halftime %}
-              HALF
-              {% else %}
-              LIVE
-              {% endif %}
-            {% endif %}
+          <div class="{{ table_item.css_class }}">
+            {{ table_item.score_string }}
           </div>
           {% endif %}
         </td>
