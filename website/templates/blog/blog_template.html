@@ -8,6 +8,8 @@
 {% block title %}<title>{% if blog_entry != None %}{{ blog_entry.title }}{% else %}Blog{% endif %}</title>{% endblock %}
 {% endblock %}
 
+{% block canonical %}https://www.schleising.net/blog/{{ blog_entry.id }}{% endblock %}
+
 {% block header %}
 <h3 class="header-text">Blog</h3>
 {% endblock %}
