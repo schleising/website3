@@ -11,11 +11,6 @@
     padding: 0.75rem;
 }
 
-.right-align {
-    align-self: flex-end;
-    text-align: right;
-}
-
 a.top-level-nav {
     text-decoration: none;
 }
