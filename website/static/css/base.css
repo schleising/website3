@@ -89,3 +89,8 @@ video {
     align-self: flex-end;
     text-align: right;
 }
+
+.centre-align {
+    align-self: center;
+    text-align: center;
+}
