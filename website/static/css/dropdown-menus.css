@@ -13,6 +13,7 @@
 
 .right-align {
     align-self: flex-end;
+    text-align: right;
 }
 
 a.top-level-nav {
@@ -38,10 +39,6 @@ a.sub-level-nav {
     flex-direction: column;
     z-index: 1;
     width: max-content;
-}
-
-.right-align {
-    text-align: right;
 }
 
 @media screen and (max-width: 42rem) {
