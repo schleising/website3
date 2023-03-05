@@ -1,91 +1,91 @@
 *, ::before, ::after {
-  box-sizing: border-box;
+    box-sizing: border-box;
 }
 
 body {
-  margin: 0rem;
+    margin: 0rem;
 }
 
 #outer {
-  padding: 0.3rem;
-  display: flex;
-  flex-direction: column;
+    padding: 0.3rem;
+    display: flex;
+    flex-direction: column;
 }
 
 #header {
-  background-color: cornflowerblue;
-  color: white;
-  padding: 0.75rem 0.5rem;
-  display: flex;
-  flex-direction: row;
-  align-items: center;
+    background-color: cornflowerblue;
+    color: white;
+    padding: 0.75rem 0.5rem;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
 }
 
 h3.header-text {
-  margin: 0.25rem;
+    margin: 0.25rem;
 }
 
 .no-margin {
-  margin: 0rem;
+    margin: 0rem;
 }
 
 #main {
-  display: flex;
-  flex-direction: row;
-  flex: 1 1 auto;
-  overflow-y: auto;
+    display: flex;
+    flex-direction: row;
+    flex: 1 1 auto;
+    overflow-y: auto;
 }
 
 .sidebar {
-  color: white;
-  display: flex;
-  flex-direction: column;
-  overflow-y: auto;
-  flex: 0 0 auto;
+    color: white;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    flex: 0 0 auto;
 }
 
 #content {
-  padding: 0.75rem;
-  margin: 0.25rem;
-  display: flex;
-  flex: 1 1 auto;
-  flex-direction: column;
-  overflow-y: auto;
+    padding: 0.75rem;
+    margin: 0.25rem;
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    overflow-y: auto;
 }
 
 #footer {
-  background-color: cornflowerblue;
-  padding: 0.5rem;
-  color: white;
-  display: flex;
-  flex-direction: row;
+    background-color: cornflowerblue;
+    padding: 0.5rem;
+    color: white;
+    display: flex;
+    flex-direction: row;
 }
 
 .btn-primary {
-  background-color: cornflowerblue;
+    background-color: cornflowerblue;
 }
 
 .btn-primary:disabled {
-  background-color: gainsboro;
-  border-color: gainsboro;
+    background-color: gainsboro;
+    border-color: gainsboro;
 }
 
 #toast-container {
-  z-index: 11
+    z-index: 11
 }
 
 img,
 picture,
 video {
-  max-width: 100%;
+    max-width: 100%;
 }
 
 .navbar-link {
-  cursor: pointer;
-  user-select: none;
+    cursor: pointer;
+    user-select: none;
 }
 
 .right-align {
-  align-self: flex-end;
-  text-align: right;
+    align-self: flex-end;
+    text-align: right;
 }
