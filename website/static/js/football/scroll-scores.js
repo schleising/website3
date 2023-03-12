@@ -17,7 +17,7 @@ document.addEventListener('readystatechange', event => {
                 // Get the match status text
                 matchStatus = matchStatusDivs[0].innerHTML;
 
-                // If it is the first Not Started of In Play break out of the loop
+                // If it is the first Not Started or In Play break out of the loop
                 if (matchStatus === "Not Started" || matchStatus === "In Play") {
                     break;
                 }
@@ -32,7 +32,7 @@ document.addEventListener('readystatechange', event => {
             // Get the widget to scroll to
             widgetToScrollTo = scoreWidgets[index];
     
-            // Scroll the widget to the vertical centre of the view (this is the containing div, not the centre of the screen)
+            // Scroll the widget to the vertical centre of the view (this is the containing div, not the screen)
             widgetToScrollTo.scrollIntoView({behaviour: "smooth", block: "center", inline: "nearest"});
         }
     }
