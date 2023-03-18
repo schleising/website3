@@ -37,7 +37,7 @@
     background-color: hsl(219, 79%, 96%);
 }
 
-@media screen and (max-width: 65rem) {
+@media screen and (max-width: 75rem) {
     .data {
         padding: 0.5rem 0.75rem;
     }
@@ -47,7 +47,7 @@
     }
 }
 
-@media screen and (max-width: 52rem) {
+@media screen and (max-width: 63rem) {
     .data {
         padding: 0.25rem 0.5rem;
     }

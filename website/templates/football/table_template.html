@@ -24,6 +24,7 @@
         <th class="header-data data centre-align large-table">A</th>
         <th class="header-data data centre-align">GD</th>
         <th class="header-data data centre-align">Pts</th>
+        <th class="header-data data centre-align medium-table">Form</th>
       </tr>
     </thead>
     <tbody>
@@ -51,6 +52,13 @@
         <td class="row-data data large-table right-align">{{ table_item.goals_against }}</td>
         <td class="row-data data right-align">{{ table_item.goal_difference }}</td>
         <td class="row-data data right-align">{{ table_item.points }}</td>
+        <td class="row-data data medium-table right-align">
+          <div class="form-container">
+            {% for form_item in table_item.form_list %}
+              <div class="form-character {{ form_item.css_class }}">{{ form_item.character }}</div>
+            {% endfor %}
+          </div>
+        </td>
       </tr>
       {% endfor %}
     </tbody>
