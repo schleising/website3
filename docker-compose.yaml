@@ -39,7 +39,7 @@ services:
         - "host.docker.internal:host-gateway"
 
   mongodb:
-    image: mongo:4.4.18
+    image: mongo
     ports:
       - 27017:27017
     volumes:
