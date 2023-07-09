@@ -4,7 +4,7 @@ FROM nginx
 # Install Cron and Certbot
 # Don't install recommended packages and clear download cache to reduce the size of the image and build time
 RUN apt update && \
-    apt install -y --no-install-recommends cron python3-certbot-nginx && \
+    apt install -y --no-install-recommends cron python3-certbot-nginx vim && \
     rm -rf /var/lib/apt/lists/*
 
 # Set up Cron to run the certbot renewal once a day
