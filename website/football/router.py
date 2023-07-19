@@ -42,9 +42,9 @@ async def get_live_matches(request: Request):
 @football_router.get('/matches/{month}', response_class=HTMLResponse)
 async def get_months_matches( request: Request, month: int = Path(ge=1, le=12)):
     if month > 5:
-        year = 2022
-    else:
         year = 2023
+    else:
+        year = 2024
 
     _, last_day_of_month = monthrange(year, month)
 

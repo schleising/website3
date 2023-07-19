@@ -7,7 +7,7 @@ mongodb = Database()
 mongodb.set_database('web_database')
 
 # Set the collection in use
-pl_matches = mongodb.get_collection('pl_matches')
+pl_matches = mongodb.get_collection('pl_matches_2023_2024')
 
 # Set the collection in use
 pl_table = mongodb.get_collection('live_pl_table')
