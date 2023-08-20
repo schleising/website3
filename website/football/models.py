@@ -201,3 +201,15 @@ class Matches(BaseModel):
 
 class MatchList(BaseModel):
     matches: list[Match]
+
+# Simplified match type for gpt4
+class SimplifiedMatch(BaseModel):
+    status: str
+    start_time_iso: str
+    home_team: str
+    home_team_score: int | None = None
+    away_team: str
+    away_team_score: int | None = None
+
+class SimplifiedMatchList(BaseModel):
+    matches: list[SimplifiedMatch]

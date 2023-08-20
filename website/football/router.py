@@ -15,7 +15,7 @@ from ..database.database import get_data_by_date
 from ..account.user_model import User
 from ..account.admin import ws_get_current_active_user
 
-from .models import Match, MatchList, TableItem
+from .models import Match, MatchList, TableItem, SimplifiedMatch, SimplifiedMatchList
 from . import pl_matches, pl_table
 
 TEMPLATES = Jinja2Templates('/app/templates')
@@ -111,6 +111,30 @@ async def retreive_team_matches(team_id: int) -> tuple[str, list[Match]]:
         team_name = item.team.short_name
 
     return (team_name, matches)
+
+@football_router.get('/api/', response_model=SimplifiedMatchList)
+async def get_simplified_matches(request: Request) -> SimplifiedMatchList:
+    # Get todays matches from the database
+    matches = await retreive_matches(datetime.today().replace(hour=0, minute=0, second=0, microsecond=0), datetime.today().replace(hour=23, minute=59, second=59, microsecond=0))
+
+    # Create a list of simplified matches
+    simplified_matches: SimplifiedMatchList = SimplifiedMatchList(matches = [])
+
+    # Convert the matches to the simplified version
+    for match in matches:
+        simplified_matches.matches.append(
+            SimplifiedMatch(
+                status = str(match.status),
+                start_time_iso = match.utc_date.astimezone(tz=ZoneInfo('Europe/London')).isoformat(),
+                home_team = match.home_team.name,
+                home_team_score = match.score.full_time.home,
+                away_team = match.away_team.name,
+                away_team_score = match.score.full_time.away
+            )
+        )
+
+    # Return the simplified matches
+    return simplified_matches
 
 @football_router.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket, user: User | None = Depends(ws_get_current_active_user)):
