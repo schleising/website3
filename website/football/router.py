@@ -76,7 +76,7 @@ async def get_table(request: Request):
     if pl_table is not None:
         table_cursor = pl_table.find({}).sort('position', ASCENDING)
 
-        table_list = await table_cursor.to_list(None)
+        table_list = [TableItem(**table_item) async for table_item in table_cursor]
 
     return TEMPLATES.TemplateResponse('football/table_template.html', {'request': request, 'title': 'Premier League Table', 'table_list': table_list})
 
@@ -94,21 +94,22 @@ async def retreive_matches(date_from: datetime, date_to: datetime) -> list[Match
 
 async def retreive_team_matches(team_id: int) -> tuple[str, list[Match]]:
     team_name = 'Unknown'
-    matches: list[Match] = []
 
     if pl_matches is not None:
         from_db_cursor = pl_matches.find({ '$or': [{ 'home_team.id': team_id }, {'away_team.id': team_id}]}).sort('utc_date', ASCENDING)
 
-        from_db = await from_db_cursor.to_list(None)
-
-        for item in from_db:
-            matches.append(Match(**item))
+        matches = [Match(**item) async for item in from_db_cursor]
+    else:
+        matches: list[Match] = []
 
     # Get the team name from the table db
     if pl_table is not None:
-        team_dict: dict[str, Any] = await pl_table.find_one({'team.id': team_id})
-        item = TableItem(**team_dict)
-        team_name = item.team.short_name
+        team_dict: dict[str, Any] | None = await pl_table.find_one({'team.id': team_id})
+        logging.debug(f'Team Dict: {team_dict}')
+
+        if team_dict is not None:
+            item = TableItem(**team_dict)
+            team_name = item.team.short_name
 
     return (team_name, matches)
 

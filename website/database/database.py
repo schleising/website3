@@ -51,14 +51,9 @@ class Database:
             return None
 
 async def get_data_by_date(collection: AIOMDB, date_field: str, date_from: datetime, date_to: datetime, output_type: Callable) -> list:
-    items: list[BaseModel] = []
-
     from_db_cursor = collection.find({ date_field: {'$gte': date_from, '$lt': date_to} }).sort(date_field, ASCENDING)
 
-    from_db = await from_db_cursor.to_list(None)
-
-    for item in from_db:
-        items.append(output_type(**item))
+    items = [BaseModel(**item) async for item in from_db_cursor]
 
     logging.info(f'Got {len(items)} matches')
 

@@ -59,11 +59,8 @@ async def get_blog_list(user: User | None) -> BlogList:
         # Get all blogs
         blog_cursor = markdown_collection.find({})
 
-        # Convert the cursor to a list
-        blog_list = await blog_cursor.to_list(None)
-
         # Convert the list to a Markdown Data From DB type, so we can check the user
-        blog_list = [MarkdownDataFromDb(**blog_id) for blog_id in blog_list]
+        blog_list = [MarkdownDataFromDb(**blog_id) async for blog_id in blog_cursor]
 
         # Filter out posts which are not by this user
         blog_list = [BlogId(id=str(blog_id.id), title=blog_id.title) for blog_id in blog_list if blog_id.username == user.username]

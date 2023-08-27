@@ -11,22 +11,19 @@ from ..account import user_collection
 from ..account.user_model import User
 
 async def get_blog_list() -> list[MarkdownDataFromDb]:
-    # Create an empty list
-    blog_list = []
-
     # Check we have connected to the database
     if blog_collection is not None:
         # Get all blog entries
         blog_cursor = blog_collection.find({})
 
-        # Convert the cursor to a list
-        blog_list = await blog_cursor.to_list(None)
-
         # Convert the list to a list of Markdown Data from DB objects
-        blog_list = [MarkdownDataFromDb(**blog) for blog in blog_list]
+        blog_list = [MarkdownDataFromDb(**blog) async for blog in blog_cursor]
 
         # Sort the blog list by date
         blog_list = sorted(blog_list, key=lambda blog: blog.last_updated, reverse=True)
+    else:
+        # Return an empty list
+        blog_list: list[MarkdownDataFromDb] = []
 
     return blog_list
 
