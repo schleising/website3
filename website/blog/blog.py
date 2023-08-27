@@ -1,10 +1,11 @@
+from bson import ObjectId
 from markdown import markdown
 
 from . import blog_collection
 
 from ..markdown.models import MarkdownDataFromDb
 
-from ..database.models import PyObjectId
+from ..database.models import ObjectIdPydanticAnnotation
 
 from ..account import user_collection
 
@@ -31,7 +32,7 @@ async def get_blog_by_id(id: str) -> MarkdownDataFromDb | None:
     # Check we are connected to the database
     if blog_collection is not None:
         # Get the blog
-        item_db = await blog_collection.find_one({'_id': PyObjectId(id)})
+        item_db = await blog_collection.find_one({'_id': ObjectId(id)})
 
         if item_db is not None:
             # Convert the blog to a Markdown Data from DB object

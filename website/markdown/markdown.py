@@ -1,4 +1,5 @@
 from datetime import datetime
+from bson import ObjectId
 
 from pymongo.results import UpdateResult
 from pymongo.errors import DuplicateKeyError, WriteError
@@ -8,8 +9,6 @@ from markdown import markdown
 from fastapi.encoders import jsonable_encoder
 
 from ..account.user_model import User
-
-from ..database.models import PyObjectId
 
 from .models import MarkdownDataMessage, MarkdownResponse, MarkdownDataToDb, MarkdownDataFromDb, BlogId, BlogList, BlogResponse
 
@@ -30,7 +29,7 @@ async def convert_to_markdown(data_to_convert: MarkdownDataMessage, user: User |
     if data_to_convert.save_data and user is not None:
         if markdown_collection is not None:
             # Create a database type
-            db_input = MarkdownDataToDb(**data_to_convert.dict(), username=user.username, last_updated=datetime.utcnow())
+            db_input = MarkdownDataToDb(**data_to_convert.model_dump(), username=user.username, last_updated=datetime.utcnow())
 
             try:
                 # Add the data to the database
@@ -74,7 +73,7 @@ async def get_blog_list(user: User | None) -> BlogList:
 async def get_blog_text(blog_id: str) -> BlogResponse:
     if markdown_collection is not None:
         # Get the blog entry
-        item_db = await markdown_collection.find_one({'_id': PyObjectId(blog_id)})
+        item_db = await markdown_collection.find_one({'_id': ObjectId(blog_id)})
 
         # Convert it to a response
         if item_db is not None:

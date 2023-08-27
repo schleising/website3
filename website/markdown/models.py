@@ -1,10 +1,11 @@
 from datetime import datetime
 from enum import Enum
-from typing import Any
+from typing import Annotated, Any
+from bson import ObjectId
 
 from pydantic import BaseModel, Field
 
-from ..database.models import PyObjectId
+from ..database.models import ObjectIdPydanticAnnotation
 
 class MessageType(int, Enum):
     MARKDOWN_UPDATE = 1
@@ -31,12 +32,7 @@ class BlogEntry(MarkdownDataToDb):
     last_name: str = ""
 
 class MarkdownDataFromDb(MarkdownDataToDb):
-    id: PyObjectId = Field(default_factory=PyObjectId, alias='_id')
-
-    class Config:
-        allow_population_by_field_name = True
-        arbitrary_types_allowed = True
-        json_encoders = {PyObjectId: str}
+    id: Annotated[ObjectId, ObjectIdPydanticAnnotation] = Field(..., alias='_id')
 
 class MarkdownResponse(BaseModel):
     markdown_text: str
