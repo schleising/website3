@@ -31,7 +31,14 @@ async def get_blog_by_id(id: str) -> MarkdownDataFromDb | None:
     # Check we are connected to the database
     if blog_collection is not None:
         # Get the blog
-        blog = MarkdownDataFromDb(**await blog_collection.find_one({'_id': PyObjectId(id)}))
+        item_db = await blog_collection.find_one({'_id': PyObjectId(id)})
+
+        if item_db is not None:
+            # Convert the blog to a Markdown Data from DB object
+            blog = MarkdownDataFromDb(**item_db)
+        else:
+            # Set the blog to None
+            blog = None
 
         # Return the blog
         return blog
@@ -57,8 +64,14 @@ def get_blog_html(current_blog: MarkdownDataFromDb | None) -> str | None:
 async def get_blog_author(current_blog: MarkdownDataFromDb | None) -> tuple[str, str]:
     # Check we have a connection to the database
     if user_collection is not None and current_blog is not None:
-        # Get the user
-        user = User(**await user_collection.find_one({'username': current_blog.username}))
+        # Get the user from the database
+        user_db = await user_collection.find_one({'username': current_blog.username})
+
+        # Convert the user to a User object
+        if user_db is not None:
+            user = User(**user_db)
+        else:
+            user = None
 
         # Return the first and last names
         if user is not None:

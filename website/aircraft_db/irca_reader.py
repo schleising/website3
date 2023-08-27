@@ -8,7 +8,14 @@ class IrcaReader:
     async def get_ac_by_tail_no(self, tail_no: str) -> AircraftModel | None:
         if irca_collection is not None:
             # Get the aircraft with the registration field equal to the requested tail number
-            ac: AircraftModel | None = await irca_collection.find_one({'registration': tail_no})
+            ac_db = await irca_collection.find_one({'registration': tail_no})
+
+            # If we got an aircraft, convert it to an AircraftModel
+            if ac_db is not None:
+                ac = AircraftModel(**ac_db)
+            else:
+                ac = None
+
             return ac
         else:
             return None

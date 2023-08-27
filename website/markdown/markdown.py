@@ -74,10 +74,13 @@ async def get_blog_list(user: User | None) -> BlogList:
 async def get_blog_text(blog_id: str) -> BlogResponse:
     if markdown_collection is not None:
         # Get the blog entry
-        item = await markdown_collection.find_one({'_id': PyObjectId(blog_id)})
+        item_db = await markdown_collection.find_one({'_id': PyObjectId(blog_id)})
 
         # Convert it to a response
-        markdown_data = BlogResponse(**item)
+        if item_db is not None:
+            markdown_data = BlogResponse(**item_db)
+        else:
+            markdown_data = BlogResponse()
 
         # Return the response
         return markdown_data

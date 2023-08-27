@@ -1,10 +1,8 @@
-from fastapi import APIRouter, Request, WebSocket, Depends
+import logging
+from fastapi import APIRouter, Request, WebSocket
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse
 from starlette.websockets import WebSocketDisconnect
-
-from ..account.user_model import User
-from ..account.admin import ws_get_current_active_user
 
 from .models import BaseMessage, MessageType, MarkdownDataMessage, BlogRequest
 
@@ -21,8 +19,13 @@ async def editor(request: Request):
     return TEMPLATES.TemplateResponse('/markdown/editor.html', {'request': request})
 
 @markdown_router.websocket("/ws")
-async def websocket_endpoint(websocket: WebSocket, user: User | None = Depends(ws_get_current_active_user)):
+async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
+
+    # Get the current user
+    user = websocket.state.user
+
+    logging.debug(f'MD Websocket User: {user}')
 
     try:
         while True:

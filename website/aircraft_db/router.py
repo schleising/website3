@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Request, WebSocket, Depends
+from fastapi import APIRouter, Request, WebSocket
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from starlette.websockets import WebSocketDisconnect
@@ -8,9 +8,6 @@ from bson.regex import Regex
 from .aircraft_model import AircraftModel, TailNumberLookup, TailNumbersResponse
 from .aircraft_reader import IrcaReader
 from . import irca_collection
-
-from ..account.user_model import User
-from ..account.admin import ws_get_current_active_user
 
 TEMPLATES = Jinja2Templates('/app/templates')
 
@@ -30,7 +27,7 @@ async def get_ac(tail_no: str | None = None):
         return ac
 
 @aircraft_router.websocket("/ws")
-async def websocket_endpoint(websocket: WebSocket, user: User | None = Depends(ws_get_current_active_user)):
+async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
 
     try:

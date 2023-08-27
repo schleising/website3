@@ -5,15 +5,12 @@ import logging
 from typing import Any
 from zoneinfo import ZoneInfo
 
-from fastapi import APIRouter, Depends, Request, WebSocket, WebSocketDisconnect, Path
+from fastapi import APIRouter, Request, WebSocket, WebSocketDisconnect, Path
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from pymongo import ASCENDING
 
 from ..database.database import get_data_by_date
-
-from ..account.user_model import User
-from ..account.admin import ws_get_current_active_user
 
 from .models import Match, MatchList, LiveTableItem, SimplifiedMatch, SimplifiedMatchList
 from . import pl_matches, pl_table
@@ -32,6 +29,7 @@ def update_match_timezone(matches: list[Match], request: Request) -> list[Match]
 
 @football_router.get('/', response_class=HTMLResponse)
 async def get_live_matches(request: Request):
+    logging.debug(f'/football/: {request}')
     matches = await retreive_matches(datetime.today().replace(hour=0, minute=0, second=0, microsecond=0), datetime.today().replace(hour=23, minute=59, second=59, microsecond=0))
     matches = update_match_timezone(matches, request)
     return TEMPLATES.TemplateResponse('football/match_template.html', {'request': request, 
@@ -104,11 +102,13 @@ async def retreive_team_matches(team_id: int) -> tuple[str, list[Match]]:
 
     # Get the team name from the table db
     if pl_table is not None:
-        team_dict: dict[str, Any] | None = await pl_table.find_one({'team.id': team_id})
-        logging.debug(f'Team Dict: {team_dict}')
+        # Get the team dict from the table db
+        team_dict_db = await pl_table.find_one({'team.id': team_id})
 
-        if team_dict is not None:
-            item = LiveTableItem(**team_dict)
+        logging.debug(f'Team Dict: {team_dict_db}')
+
+        if team_dict_db is not None:
+            item = LiveTableItem(**team_dict_db)
             team_name = item.team.short_name
 
     return (team_name, matches)
@@ -138,7 +138,7 @@ async def get_simplified_matches(request: Request) -> SimplifiedMatchList:
     return simplified_matches
 
 @football_router.websocket("/ws")
-async def websocket_endpoint(websocket: WebSocket, user: User | None = Depends(ws_get_current_active_user)):
+async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
 
     logging.info('Football Websocket Opened')
