@@ -15,7 +15,7 @@ from ..database.database import get_data_by_date
 from ..account.user_model import User
 from ..account.admin import ws_get_current_active_user
 
-from .models import Match, MatchList, TableItem, SimplifiedMatch, SimplifiedMatchList
+from .models import Match, MatchList, LiveTableItem, SimplifiedMatch, SimplifiedMatchList
 from . import pl_matches, pl_table
 
 TEMPLATES = Jinja2Templates('/app/templates')
@@ -71,12 +71,12 @@ async def get_teams_matches( request: Request, team_id: int):
 
 @football_router.get('/table/', response_class=HTMLResponse)
 async def get_table(request: Request):
-    table_list: list[TableItem] = []
+    table_list: list[LiveTableItem] = []
 
     if pl_table is not None:
         table_cursor = pl_table.find({}).sort('position', ASCENDING)
 
-        table_list = [TableItem(**table_item) async for table_item in table_cursor]
+        table_list = [LiveTableItem(**table_item) async for table_item in table_cursor]
 
     return TEMPLATES.TemplateResponse('football/table_template.html', {'request': request, 'title': 'Premier League Table', 'table_list': table_list})
 
@@ -108,7 +108,7 @@ async def retreive_team_matches(team_id: int) -> tuple[str, list[Match]]:
         logging.debug(f'Team Dict: {team_dict}')
 
         if team_dict is not None:
-            item = TableItem(**team_dict)
+            item = LiveTableItem(**team_dict)
             team_name = item.team.short_name
 
     return (team_name, matches)
