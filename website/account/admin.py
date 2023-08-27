@@ -134,7 +134,7 @@ async def authenticate_user(username: str, password: str) -> User | None:
         return None
     else:
         # Return the valid User without the hashed password
-        return User(**user.dict())
+        return User(**user.model_dump())
 
 def create_access_token(data: dict, expires_delta: timedelta | None = None):
     # Copy the data to be encoded
@@ -225,7 +225,7 @@ async def create_new_user(firstname: str, lastname: str, username: str, password
     if user_collection is not None:
         try:
             # Insert the new user
-            result = await user_collection.insert_one(new_user.dict())
+            await user_collection.insert_one(new_user.model_dump())
         except DuplicateKeyError:
             # If the username already exists return None
             return None

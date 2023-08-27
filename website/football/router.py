@@ -158,7 +158,7 @@ async def websocket_endpoint(websocket: WebSocket):
 
                 match_list = MatchList(matches = matches)
 
-                await websocket.send_text(match_list.json())
+                await websocket.send_text(match_list.model_dump_json())
 
     except WebSocketDisconnect:
         logging.info('Football Socket Closed')

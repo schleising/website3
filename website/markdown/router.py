@@ -57,10 +57,10 @@ async def websocket_endpoint(websocket: WebSocket):
                     raise NotImplementedError
 
             # Generate the response message
-            response_msg = BaseMessage(message_type=msg.message_type, body=response_body.dict())
+            response_msg = BaseMessage(message_type=msg.message_type, body=response_body.model_dump())
 
             # Send the response back to the client
-            await websocket.send_text(response_msg.json())
+            await websocket.send_text(response_msg.model_dump_json())
 
     except WebSocketDisconnect:
         print('Socket Closed')

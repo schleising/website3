@@ -57,7 +57,7 @@ async def websocket_endpoint(websocket: WebSocket):
                         response_msg.tail_numbers.append(aircraft.registration)
 
             # Send the response back to the client
-            await websocket.send_text(response_msg.json())
+            await websocket.send_text(response_msg.model_dump_json())
 
     except WebSocketDisconnect:
         print('Socket Closed')
