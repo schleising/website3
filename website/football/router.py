@@ -127,9 +127,9 @@ async def get_simplified_matches(request: Request) -> SimplifiedMatchList:
             SimplifiedMatch(
                 status = str(match.status),
                 start_time_iso = match.utc_date.astimezone(tz=ZoneInfo('Europe/London')).isoformat(),
-                home_team = match.home_team.short_name,
+                home_team = str(match.home_team.short_name),
                 home_team_score = match.score.full_time.home,
-                away_team = match.away_team.short_name,
+                away_team = str(match.away_team.short_name),
                 away_team_score = match.score.full_time.away
             )
         )
