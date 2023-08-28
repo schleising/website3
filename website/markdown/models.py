@@ -36,7 +36,7 @@ class MarkdownDataFromDb(MarkdownDataToDb):
 
 class MarkdownResponse(BaseModel):
     markdown_text: str
-    data_saved: bool | None
+    data_saved: bool | None = None
 
 class BlogId(BaseModel):
     id: str
