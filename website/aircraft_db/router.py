@@ -36,7 +36,7 @@ async def websocket_endpoint(websocket: WebSocket):
             data = await websocket.receive_text()
 
             # Parse the data into a model
-            tail_no_msg = TailNumberLookup.parse_raw(data)
+            tail_no_msg = TailNumberLookup.model_validate_json(data)
 
             # Create a regex to search the database
             tail_no_regex = Regex(f'^{tail_no_msg.tail_no.upper()}')

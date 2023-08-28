@@ -33,7 +33,7 @@ async def websocket_endpoint(websocket: WebSocket):
             recv = await websocket.receive_text()
 
             # Get the message type
-            msg = BaseMessage.parse_raw(recv)
+            msg = BaseMessage.model_validate_json(recv)
 
             match msg.message_type:
                 case MessageType.MARKDOWN_UPDATE:
