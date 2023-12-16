@@ -21,7 +21,7 @@
 }
 
 .data {
-    padding: 0.5rem 1rem;
+    padding: 0.25rem 1rem;
 }
 
 .sticky-header {
@@ -39,7 +39,7 @@
 
 @media screen and (max-width: 75rem) {
     .data {
-        padding: 0.5rem 0.75rem;
+        padding: 0.25rem 0.75rem;
     }
 
     .large-table {
@@ -49,7 +49,7 @@
 
 @media screen and (max-width: 63rem) {
     .data {
-        padding: 0.25rem 0.5rem;
+        padding: 0.05rem 0.5rem;
     }
 
     .medium-table {
