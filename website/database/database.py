@@ -52,6 +52,6 @@ async def get_data_by_date(collection: AsyncIOMotorCollection, date_field: str, 
 
     items = [output_type(**item) async for item in from_db_cursor]
 
-    logging.info(f'Got {len(items)} matches')
+    logging.debug(f'Got {len(items)} matches')
 
     return items

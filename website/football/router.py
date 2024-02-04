@@ -81,12 +81,12 @@ async def get_table(request: Request):
 async def retreive_matches(date_from: datetime, date_to: datetime) -> list[Match]:
     matches: list[Match] = []
 
-    logging.info(f'Getting Matches from {date_from} to {date_to}')
+    logging.debug(f'Getting Matches from {date_from} to {date_to}')
 
     if pl_matches is not None:
         matches: list[Match] = await get_data_by_date(pl_matches, 'utc_date', date_from, date_to, Match)
     else:
-        logging.info('No DB connection')
+        logging.error('No DB connection')
 
     return matches
 
@@ -152,9 +152,9 @@ async def websocket_endpoint(websocket: WebSocket):
             msg = json.loads(recv)
 
             if msg['messageType'] == 'get_scores':
-                logging.info('Football Websocket')
+                logging.debug('Football Websocket')
                 matches = await retreive_matches(datetime.today().replace(hour=0, minute=0, second=0, microsecond=0), datetime.today().replace(hour=23, minute=59, second=59, microsecond=0))
-                logging.info('Got matches')
+                logging.debug('Got matches')
 
                 match_list = MatchList(matches = matches)
 
