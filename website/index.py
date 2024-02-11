@@ -1,4 +1,5 @@
 import logging
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request, Depends
 from fastapi.responses import HTMLResponse
@@ -19,15 +20,39 @@ from .blog.router import blog_router
 from .football.router import football_router
 
 # Initialise logging
-logging.basicConfig(format='Website: %(asctime)s - %(levelname)s - %(message)s', level=logging.INFO)
+logging.basicConfig(
+    format="Website: %(asctime)s - %(levelname)s - %(message)s", level=logging.INFO
+)
 
 # Set the base template location
-TEMPLATES = Jinja2Templates('/app/templates')
+TEMPLATES = Jinja2Templates("/app/templates")
+
+# Get an instance of the Database class
+MONGODB = Database()
+
+# Set the database in use
+MONGODB.set_database("item_database")
+
+# Set the collection in use
+COLLECTION = MONGODB.get_collection("item_collection")
+
+
+# Close the connection when the app shuts down
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    yield
+    print("Closing DB Connection")
+    MONGODB.client.close()
+    print("Closed DB Connection")
+
 
 # Instantiate the application object, ensure every request sets the user into Request.state.user
-app = FastAPI(dependencies=[
+app = FastAPI(
+    dependencies=[
         Depends(get_current_active_user),
-    ])
+    ],
+    lifespan=lifespan,
+)
 
 # Include the account router
 app.include_router(account_router)
@@ -44,27 +69,15 @@ app.include_router(blog_router)
 # Include the blog router
 app.include_router(football_router)
 
-# Get an instance of the Database class
-MONGODB = Database()
-
-# Set the database in use
-MONGODB.set_database('item_database')
-
-# Set the collection in use
-COLLECTION = MONGODB.get_collection('item_collection')
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request, exc):
-    return TEMPLATES.TemplateResponse('error.html', {'request': request, 'error_str': str(exc)}, status_code=400)
+    return TEMPLATES.TemplateResponse(
+        "error.html", {"request": request, "error_str": str(exc)}, status_code=400
+    )
+
 
 # Gets the homepage
-@app.get('/', response_class=HTMLResponse)
+@app.get("/", response_class=HTMLResponse)
 async def root(request: Request):
-    return TEMPLATES.TemplateResponse('index.html', {'request': request})
-
-# Close the connection when the app shuts down
-@app.on_event('shutdown')
-def close_db_connection() -> None:
-    print('Closing DB Connection')
-    MONGODB.client.close()
-    print('Closed DB Connection')
+    return TEMPLATES.TemplateResponse("index.html", {"request": request})
