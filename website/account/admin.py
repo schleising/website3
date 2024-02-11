@@ -24,7 +24,7 @@ from . import user_collection
 
 # to get a string like this run:
 # openssl rand -hex 32
-with open('/app/account/secret_key.txt', encoding='utf8') as secret_file:
+with open('/app/secrets/secret_key.txt', encoding='utf8') as secret_file:
     SECRET_KEY = secret_file.read().strip()
 
 # Use the HS256 signing algorithm for the JWT token

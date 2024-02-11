@@ -129,5 +129,4 @@ dmypy.json
 .pyre/
 
 # Ignore secret key files
-website/account/secret_key.txt
-open-api-key.txt
+website/secrets/*
