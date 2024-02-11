@@ -5,15 +5,17 @@ import logging
 from typing import Any
 from zoneinfo import ZoneInfo
 
-from fastapi import APIRouter, Request, WebSocket, WebSocketDisconnect, Path
+from fastapi import APIRouter, Request, WebSocket, WebSocketDisconnect, Path, Response, status
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
+
 from pymongo import ASCENDING
+from pymongo.errors import DuplicateKeyError
 
 from ..database.database import get_data_by_date
 
 from .models import Match, MatchList, LiveTableItem, SimplifiedMatch, SimplifiedMatchList
-from . import pl_matches, pl_table
+from . import pl_matches, pl_table, football_push
 
 TEMPLATES = Jinja2Templates('/app/templates')
 
@@ -162,3 +164,38 @@ async def websocket_endpoint(websocket: WebSocket):
 
     except WebSocketDisconnect:
         logging.info('Football Socket Closed')
+
+# Endpoint to subscribe to push notifications
+@football_router.post('/subscribe', status_code=201)
+async def subscribe(request: Request, response: Response):
+    data = await request.json()
+    logging.debug(data)
+
+    # Insert the subscription into the database
+    if football_push is not None:
+        try:
+            result = await football_push.insert_one(data)
+        except DuplicateKeyError as ex:
+            logging.error(f'Error inserting subscription: {ex}')
+            response.status_code = status.HTTP_400_BAD_REQUEST
+            return {'status': 'error', 'message': 'Subscription already exists'}
+
+    logging.debug(result)
+
+    # Send a 201 response
+    return {'status': 'success'}
+
+# Endpoint to unsubscribe from push notifications
+@football_router.delete('/unsubscribe', status_code=200)
+async def unsubscribe(request: Request):
+    data = await request.json()
+    logging.debug(data)
+
+    # Remove the subscription from the database
+    if football_push is not None:
+        result = await football_push.delete_one(data)
+
+    logging.debug(result)
+
+    # Send a 200 response
+    return {'status': 'success'}

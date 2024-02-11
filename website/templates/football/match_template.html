@@ -4,6 +4,10 @@
 
 {% block header %}
 <h3 class="header-text">{{ title }}'s Matches</h3>
+{% if live_matches %}
+<button class="btn btn-primary" id="subscribe-button">Subscribe</button>
+{% else %}
+{% endif %}
 {% endblock %}
 
 {% block content %}

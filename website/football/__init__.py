@@ -11,3 +11,6 @@ pl_matches = mongodb.get_collection('pl_matches_2023_2024')
 
 # Set the collection in use
 pl_table = mongodb.get_collection('live_pl_table')
+
+# Set the collection for push subscriptions
+football_push = mongodb.get_collection('football_push_subscriptions')

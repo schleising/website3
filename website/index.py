@@ -19,7 +19,7 @@ from .blog.router import blog_router
 from .football.router import football_router
 
 # Initialise logging
-logging.basicConfig(format='Website: %(asctime)s - %(levelname)s - %(message)s', level=logging.ERROR)
+logging.basicConfig(format='Website: %(asctime)s - %(levelname)s - %(message)s', level=logging.INFO)
 
 # Set the base template location
 TEMPLATES = Jinja2Templates('/app/templates')
