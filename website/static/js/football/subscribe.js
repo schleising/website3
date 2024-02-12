@@ -1,27 +1,21 @@
 subscribeButton = document.getElementById('subscribe-button');
 
-// Disable all buttons until the service worker is ready
-subscribeButton.disabled = true;
-
 function setButtonState() {
     // Set the button state according to the push registration
     // Get the active service worker
     navigator.serviceWorker.getRegistration('/js/football/service-worker.js')
-        .then(function (registration) {
-            registration.pushManager.getSubscription()
-                .then(function (subscription) {
-                    if (subscription == null) {
-                        console.log('No subscription object found');
-                        subscribeButton.textContent = 'Subscribe';
-                        subscribeButton.onclick = subscribe;
-                    } else {
-                        console.log('Subscription object found:', subscription);
-                        subscribeButton.textContent = 'Unsubscribe';
-                        subscribeButton.onclick = unsubscribe;
-                    }
+        .then((registration) => registration.pushManager.getSubscription())
+        .then((subscription) => {
+            if (subscription == null) {
+                subscribeButton.textContent = 'Subscribe';
+                subscribeButton.onclick = subscribe;
+            } else {
+                subscribeButton.textContent = 'Unsubscribe';
+                subscribeButton.onclick = unsubscribe;
+            }
 
-                    subscribeButton.disabled = false;
-                });
+            subscribeButton.hidden = false;
+            subscribeButton.disabled = false;
         });
 }
 
@@ -29,18 +23,14 @@ function setButtonState() {
 document.addEventListener('DOMContentLoaded', function () {
     // Check if the browser supports service workers
     if ('serviceWorker' in navigator) {
-        console.log('Service Worker is supported, registering...');
-
-        // Register the service worker
-        registration = navigator.serviceWorker.register('/js/football/service-worker.js');
-
         // Add event listener for the service worker to be ready
-        registration.then(function (registration) {
-            console.log('Service Worker registered:', registration);
+        navigator.serviceWorker.register('/js/football/service-worker.js')
+            .then(() => {
+                console.log('Service Worker registered');
 
-            // Set the button state according to the push registration
-            setButtonState();
-        });
+                // Set the button state according to the push registration
+                setButtonState();
+            });
 
     } else {
         console.warn('Service Worker is not supported');
@@ -67,13 +57,8 @@ function urlBase64ToUint8Array(base64String) {
 // Function to send the subscription object to your server
 function sendSubscriptionToServer(subscription) {
     if (subscription == null) {
-        console.error('Subscription object is null');
         return;
     }
-
-    // Send an HTTP request to your server with the subscription object
-    // You would typically use fetch or another AJAX method here
-    console.log('Sending subscription to server:', subscription);
 
     // Send the subscription object to the subscribe endpoint
     fetch('/football/subscribe', {
@@ -96,17 +81,12 @@ function subscribe() {
     if ('serviceWorker' in navigator && 'PushManager' in window) {
         // Register the service worker
         navigator.serviceWorker.getRegistration('/js/football/service-worker.js')
-            .then(function (registration) {
-                console.log('Service Worker registered:', registration);
-
-                // Request permission for push notifications
-                return registration.pushManager.subscribe({
-                    userVisibleOnly: true,
-                    applicationServerKey: urlBase64ToUint8Array('BAE-ATyX2xQGdyv9W5vcsI7qzA1FSui3UYNHgKFSKMmR12_7L9xQcVcDz8JbweMOTWb7npz6VMQMQC1BUylu00E')
-                });
-            })
-            .then(function (subscription) {
-                console.log('Push subscription object:', subscription);
+            .then((registration) => registration.pushManager.subscribe({
+                userVisibleOnly: true,
+                applicationServerKey: urlBase64ToUint8Array('BAE-ATyX2xQGdyv9W5vcsI7qzA1FSui3UYNHgKFSKMmR12_7L9xQcVcDz8JbweMOTWb7npz6VMQMQC1BUylu00E')
+            }))
+            .then((subscription) => {
+                console.log('Push registration successful');
 
                 // Send the subscription object to your server for storage
                 sendSubscriptionToServer(subscription);
@@ -114,7 +94,7 @@ function subscribe() {
                 // Set the button state according to the push registration
                 setButtonState();
             })
-            .catch(function (error) {
+            .catch((error) => {
                 console.error('Service Worker registration failed:', error);
             });
     } else {
@@ -124,13 +104,8 @@ function subscribe() {
 
 function unsubscribePushNotification(subscription) {
     if (subscription == null) {
-        console.error('Subscription object is null');
         return;
     }
-
-    // Send an HTTP request to your server with the subscription object
-    // You would typically use fetch or another AJAX method here
-    console.log('Sending unsubscription to server:', subscription);
 
     // Send the subscription object to the unsubscribe endpoint
     fetch('/football/unsubscribe', {
@@ -152,15 +127,10 @@ function unsubscribe() {
     // Get the active service worker
     navigator.serviceWorker.getRegistration('/js/football/service-worker.js')
         .then(function (registration) {
-            console.log('Service Worker registration:', registration);
-
             // Unsubscribe from push notifications
             registration.pushManager.getSubscription()
                 .then(function (subscription) {
-                    console.log('Push subscription object:', subscription);
-
                     if (subscription == null) {
-                        console.log('No subscription object found');
                         return;
                     }
 
@@ -168,9 +138,8 @@ function unsubscribe() {
                     unsubscribePushNotification(subscription);
 
                     return subscription.unsubscribe()
-                        .then(function (success) {
-                            console.log('Unsubscribed from push notifications:', success);
-
+                        .then(function () {
+                            console.log('Push unsubscription successful');
                             // Set the button state according to the push registration
                             setButtonState();
                         });
