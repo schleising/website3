@@ -186,7 +186,7 @@ async def subscribe(request: Request, response: Response):
     return {'status': 'success'}
 
 # Endpoint to unsubscribe from push notifications
-@football_router.delete('/unsubscribe', status_code=200)
+@football_router.delete('/unsubscribe', status_code=204)
 async def unsubscribe(request: Request):
     data = await request.json()
     logging.debug(data)
@@ -197,5 +197,5 @@ async def unsubscribe(request: Request):
 
     logging.debug(result)
 
-    # Send a 200 response
+    # Send a 204 response
     return {'status': 'success'}

@@ -16,25 +16,30 @@ function setButtonState() {
 
             subscribeButton.hidden = false;
             subscribeButton.disabled = false;
+        })
+        .catch((error) => {
+            console.error("Failed to get Service Worker or Push Subscription", error);
+
+            subscribeButton.hidden = true;
+            subscribeButton.disabled = true;
         });
 }
 
 // Add event listener for the page to be ready to use
-document.addEventListener('DOMContentLoaded', function () {
+document.addEventListener('DOMContentLoaded', () => {
     // Check if the browser supports service workers
     if ('serviceWorker' in navigator) {
-        // Add event listener for the service worker to be ready
+        // Create the service worker and register it
         navigator.serviceWorker.register('/js/football/service-worker.js')
-            .then(() => {
-                console.log('Service Worker registered');
-
-                // Set the button state according to the push registration
-                setButtonState();
-            });
+            .then(() => { console.log('Service Worker registered'); })
+            .catch((error) => { console.error("Failed to register service worker", error); });
 
     } else {
         console.warn('Service Worker is not supported');
     }
+
+    // Set the button state according to the push registration
+    setButtonState();
 });
 
 // Function to convert base64 string to Uint8Array
@@ -55,19 +60,27 @@ function urlBase64ToUint8Array(base64String) {
 }
 
 // Function to send the subscription object to your server
-function sendSubscriptionToServer(subscription) {
+async function sendSubscriptionToServer(subscription) {
     if (subscription == null) {
         return;
     }
 
     // Send the subscription object to the subscribe endpoint
-    fetch('/football/subscribe', {
+    result = await fetch('/football/subscribe', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
         },
         body: JSON.stringify(subscription)
     });
+
+    if (result.status != 201) {
+        // Unsubscribe the user from push notifications
+        await subscription.unsubscribe();
+        throw new Error('Failed to send subscription to server', result);
+    }
+
+    return subscription;
 }
 
 function subscribe() {
@@ -85,36 +98,46 @@ function subscribe() {
                 userVisibleOnly: true,
                 applicationServerKey: urlBase64ToUint8Array('BAE-ATyX2xQGdyv9W5vcsI7qzA1FSui3UYNHgKFSKMmR12_7L9xQcVcDz8JbweMOTWb7npz6VMQMQC1BUylu00E')
             }))
-            .then((subscription) => {
-                console.log('Push registration successful');
-
-                // Send the subscription object to your server for storage
-                sendSubscriptionToServer(subscription);
+            .then((subscription) => sendSubscriptionToServer(subscription))
+            .then(() => {
+                console.log('Push subscription successful');
 
                 // Set the button state according to the push registration
                 setButtonState();
             })
             .catch((error) => {
-                console.error('Service Worker registration failed:', error);
+                console.error('Push subscription failed:', error);
+
+                // Set the button state according to the push registration
+                setButtonState();
             });
     } else {
         console.warn('Push messaging is not supported');
+
+        // Set the button state according to the push registration
+        setButtonState();
     }
 }
 
-function unsubscribePushNotification(subscription) {
+async function unsubscribePushNotification(subscription) {
     if (subscription == null) {
         return;
     }
 
     // Send the subscription object to the unsubscribe endpoint
-    fetch('/football/unsubscribe', {
+    result = await fetch('/football/unsubscribe', {
         method: 'DELETE',
         headers: {
             'Content-Type': 'application/json'
         },
         body: JSON.stringify(subscription)
     });
+
+    if (result.status != 204) {
+        throw new Error('Failed to send unsubscription to server', result);
+    }
+
+    return subscription;
 }
 
 function unsubscribe() {
@@ -126,26 +149,19 @@ function unsubscribe() {
 
     // Get the active service worker
     navigator.serviceWorker.getRegistration('/js/football/service-worker.js')
-        .then(function (registration) {
-            // Unsubscribe from push notifications
-            registration.pushManager.getSubscription()
-                .then(function (subscription) {
-                    if (subscription == null) {
-                        return;
-                    }
+        .then((registration) => registration.pushManager.getSubscription())
+        .then((subscription) => unsubscribePushNotification(subscription))
+        .then((subscription) => subscription.unsubscribe())
+        .then(() => {
+            console.log('Push unsubscription successful');
 
-                    // Send the subscription object to your server for deletion
-                    unsubscribePushNotification(subscription);
-
-                    return subscription.unsubscribe()
-                        .then(function () {
-                            console.log('Push unsubscription successful');
-                            // Set the button state according to the push registration
-                            setButtonState();
-                        });
-                });
+            // Set the button state according to the push registration
+            setButtonState();
         })
-        .catch(function (error) {
+        .catch((error) => {
             console.error('Push unsubscription failed:', error);
-        });
+
+            // Set the button state according to the push registration
+            setButtonState();
+    });
 }
