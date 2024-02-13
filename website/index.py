@@ -19,6 +19,8 @@ from .blog.router import blog_router
 
 from .football.router import football_router
 
+from .tools.router import tools_router
+
 # Initialise logging
 logging.basicConfig(
     format="Website: %(asctime)s - %(levelname)s - %(message)s", level=logging.INFO
@@ -69,6 +71,8 @@ app.include_router(blog_router)
 # Include the blog router
 app.include_router(football_router)
 
+# Include the tools router
+app.include_router(tools_router)
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request, exc):
