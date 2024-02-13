@@ -1,9 +1,11 @@
 subscribeButton = document.getElementById('subscribe-button');
 
+const serviceWorkerPath = '/js/football/service-worker.js';
+
 function setButtonState() {
     // Set the button state according to the push registration
     // Get the active service worker
-    navigator.serviceWorker.getRegistration('/js/football/service-worker.js')
+    navigator.serviceWorker.ready
         .then((registration) => registration.pushManager.getSubscription())
         .then((subscription) => {
             if (subscription == null) {
@@ -28,14 +30,14 @@ function setButtonState() {
 // Function to update the registration of the service worker or register it if it does not exist
 async function updateServiceWorkerRegistration() {
     // Get the active service worker
-    registration = await navigator.serviceWorker.getRegistration('/js/football/service-worker.js');
+    registration = await navigator.serviceWorker.getRegistration(serviceWorkerPath);
 
     if (registration != null) {
         console.log('Service Worker already registered, updating...');
-        return registration.update();
+        return await registration.update();
     } else {
         console.log('Service Worker not registered, registering...');
-        return navigator.serviceWorker.register('/js/football/service-worker.js');
+        return await navigator.serviceWorker.register(serviceWorkerPath);
     }
 }
 
@@ -45,8 +47,13 @@ document.addEventListener('DOMContentLoaded', () => {
     if ('serviceWorker' in navigator) {
         // Create the service worker and register it
         updateServiceWorkerRegistration()
-            .then(() => {
-                console.log('Service Worker registered successfully');
+            .then(() => navigator.serviceWorker.ready)
+            .then((registration) => {
+                console.log('Service Worker DOM:', registration.active);
+                registration.active.postMessage({
+                    type: 'update-page',
+                    page: window.location.href
+                })
 
                 // Set the button state according to the push registration
                 setButtonState();
@@ -54,13 +61,12 @@ document.addEventListener('DOMContentLoaded', () => {
             .catch((error) => {
                 console.error('Service Worker registration failed:', error);
             });
-
     } else {
         console.warn('Service Worker is not supported');
     }
 
     // Set the button state according to the push registration
-    setButtonState();
+    // setButtonState();
 });
 
 // Function to convert base64 string to Uint8Array
@@ -112,7 +118,7 @@ function subscribe() {
     // Check if the browser supports service workers and push notifications
     if ('serviceWorker' in navigator && 'PushManager' in window) {
         // Register the service worker
-        navigator.serviceWorker.getRegistration('/js/football/service-worker.js')
+        navigator.serviceWorker.ready
             .then((registration) => registration.pushManager.subscribe({
                 userVisibleOnly: true,
                 applicationServerKey: urlBase64ToUint8Array('BAE-ATyX2xQGdyv9W5vcsI7qzA1FSui3UYNHgKFSKMmR12_7L9xQcVcDz8JbweMOTWb7npz6VMQMQC1BUylu00E')
@@ -182,5 +188,5 @@ function unsubscribe() {
 
             // Set the button state according to the push registration
             setButtonState();
-    });
+        });
 }
