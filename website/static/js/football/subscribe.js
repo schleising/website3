@@ -100,8 +100,6 @@ async function sendSubscriptionToServer(subscription) {
         await subscription.unsubscribe();
         throw new Error('Failed to send subscription to server', result);
     }
-
-    return subscription;
 }
 
 function subscribe() {
@@ -158,7 +156,8 @@ async function unsubscribePushNotification(subscription) {
         throw new Error('Failed to send unsubscription to server', result);
     }
 
-    return subscription;
+    // Unsubscribe the user from push notifications
+    await subscription.unsubscribe();
 }
 
 function unsubscribe() {
@@ -172,7 +171,6 @@ function unsubscribe() {
     navigator.serviceWorker.getRegistration('/js/football/service-worker.js')
         .then((registration) => registration.pushManager.getSubscription())
         .then((subscription) => unsubscribePushNotification(subscription))
-        .then((subscription) => subscription.unsubscribe())
         .then(() => {
             console.log('Push unsubscription successful');
 
