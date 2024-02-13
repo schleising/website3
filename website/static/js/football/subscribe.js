@@ -25,14 +25,35 @@ function setButtonState() {
         });
 }
 
+// Function to update the registration of the service worker or register it if it does not exist
+async function updateServiceWorkerRegistration() {
+    // Get the active service worker
+    registration = await navigator.serviceWorker.getRegistration('/js/football/service-worker.js');
+
+    if (registration != null) {
+        console.log('Service Worker already registered, updating...');
+        return registration.update();
+    } else {
+        console.log('Service Worker not registered, registering...');
+        return navigator.serviceWorker.register('/js/football/service-worker.js');
+    }
+}
+
 // Add event listener for the page to be ready to use
 document.addEventListener('DOMContentLoaded', () => {
     // Check if the browser supports service workers
     if ('serviceWorker' in navigator) {
         // Create the service worker and register it
-        navigator.serviceWorker.register('/js/football/service-worker.js')
-            .then(() => { console.log('Service Worker registered'); })
-            .catch((error) => { console.error("Failed to register service worker", error); });
+        updateServiceWorkerRegistration()
+            .then(() => {
+                console.log('Service Worker registered successfully');
+
+                // Set the button state according to the push registration
+                setButtonState();
+            })
+            .catch((error) => {
+                console.error('Service Worker registration failed:', error);
+            });
 
     } else {
         console.warn('Service Worker is not supported');
