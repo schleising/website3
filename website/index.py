@@ -43,9 +43,9 @@ COLLECTION = MONGODB.get_collection("item_collection")
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     yield
-    print("Closing DB Connection")
+    logging.debug("Closing DB Connection")
     MONGODB.client.close()
-    print("Closed DB Connection")
+    logging.info("Closed DB Connection")
 
 
 # Instantiate the application object, ensure every request sets the user into Request.state.user
