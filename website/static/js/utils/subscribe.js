@@ -60,13 +60,13 @@ document.addEventListener('DOMContentLoaded', () => {
             })
             .catch((error) => {
                 console.error('Service Worker registration failed:', error);
+
+                // Set the button state according to the push registration
+                setButtonState();
             });
     } else {
         console.warn('Service Worker is not supported');
     }
-
-    // Set the button state according to the push registration
-    // setButtonState();
 });
 
 // Function to convert base64 string to Uint8Array
@@ -92,8 +92,21 @@ async function sendSubscriptionToServer(subscription) {
         return;
     }
 
+    // Get the current page URL
+    const url = new URL(window.location.href);
+
+    // Add a trailing slash to the URL if it does not have one
+    if (!url.pathname.endsWith('/')) {
+        url.pathname += '/';
+    }
+
+    // Add subscribe endpoint to the URL
+    url.pathname += 'subscribe';
+
+    console.log('Subscribe URL:', url.href);
+
     // Send the subscription object to the subscribe endpoint
-    result = await fetch('/football/subscribe', {
+    result = await fetch(url.href, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
@@ -149,8 +162,21 @@ async function unsubscribePushNotification(subscription) {
         return;
     }
 
+    // Get the current page URL
+    const url = new URL(window.location.href);
+
+    // Add a trailing slash to the URL if it does not have one
+    if (!url.pathname.endsWith('/')) {
+        url.pathname += '/';
+    }
+
+    // Add unsubscribe endpoint to the URL
+    url.pathname += 'unsubscribe';
+
+    console.log('Unsubscribe URL:', url.href);
+
     // Send the subscription object to the unsubscribe endpoint
-    result = await fetch('/football/unsubscribe', {
+    result = await fetch(url.href, {
         method: 'DELETE',
         headers: {
             'Content-Type': 'application/json'
@@ -174,7 +200,7 @@ function unsubscribe() {
     subscribeButton.textContent = 'Unsubscribing...';
 
     // Get the active service worker
-    navigator.serviceWorker.getRegistration('/js/football/service-worker.js')
+    navigator.serviceWorker.getRegistration(serviceWorkerPath)
         .then((registration) => registration.pushManager.getSubscription())
         .then((subscription) => unsubscribePushNotification(subscription))
         .then(() => {

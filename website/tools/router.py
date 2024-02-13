@@ -3,13 +3,17 @@ import logging
 import json
 from pathlib import Path
 
-from fastapi import APIRouter, Request, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Request, Response, WebSocket, WebSocketDisconnect, status
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
+
+from pymongo.errors import DuplicateKeyError
 
 from .converter.database.database import DatabaseTools
 from .converter.messages.messages import ConvertingFilesMessage, ConvertingFileData, ConvertedFilesMessage, StatisticsMessage, MessageTypes, Message
 from .converter.utils.utils import calculate_time_remaining
+
+from .converter.database import push_collection
 
 # Initialise the database
 database_tools = DatabaseTools()
@@ -19,9 +23,6 @@ TEMPLATES = Jinja2Templates('/app/templates/tools')
 
 # Instantiate the application object, ensure every request sets the user into Request.state.user
 tools_router = APIRouter(prefix='/tools')
-
-# Mount the static files
-# tools_router.mount('/static', StaticFiles(directory='/app/static'), name='static')
 
 # Gets the homepage
 @tools_router.get('/converter', response_class=HTMLResponse)
@@ -171,3 +172,38 @@ async def websocket_endpoint(websocket: WebSocket):
     except WebSocketDisconnect:
         # Log the disconnection
         logging.info('Websocket Closed')
+
+# Endpoint to subscribe to push notifications
+@tools_router.post('/converter/subscribe', status_code=201)
+async def subscribe(request: Request, response: Response):
+    data = await request.json()
+    logging.debug(data)
+
+    # Insert the subscription into the database
+    if push_collection is not None:
+        try:
+            result = await push_collection.insert_one(data)
+        except DuplicateKeyError as ex:
+            logging.error(f'Error inserting subscription: {ex}')
+            response.status_code = status.HTTP_400_BAD_REQUEST
+            return {'status': 'error', 'message': 'Subscription already exists'}
+
+    logging.debug(result)
+
+    # Send a 201 response
+    return {'status': 'success'}
+
+# Endpoint to unsubscribe from push notifications
+@tools_router.delete('/converter/unsubscribe', status_code=204)
+async def unsubscribe(request: Request):
+    data = await request.json()
+    logging.debug(data)
+
+    # Remove the subscription from the database
+    if push_collection is not None:
+        result = await push_collection.delete_one(data)
+
+    logging.debug(result)
+
+    # Send a 204 response
+    return {'status': 'success'}

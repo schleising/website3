@@ -10,7 +10,24 @@
 }
 
 .header {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
     padding: 0.25rem;
+}
+
+#subscribe-button {
+    background-color: hsl(219, 79%, 94%);
+    border: 0.075rem;
+    border-style: solid;
+    border-color: silver;
+    border-radius: 0.5rem;
+    padding: 0.25rem 0.5rem;
+    font-size: 1rem;
+}
+
+#subscribe-button:disabled {
+    background-color: hsl(219, 79%, 98%);
 }
 
 .main {
