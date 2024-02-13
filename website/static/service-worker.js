@@ -1,3 +1,5 @@
+self.page = null;
+
 self.addEventListener('push', function (event) {
     console.log('Push received:', event);
 
@@ -24,14 +26,23 @@ self.addEventListener('message', function (event) {
 
     if (event.data.type === 'update-page') {
         self.page = event.data.page;
-        self.addEventListener('notificationclick', function (event) {
-            console.log('Notification clicked:', event);
-        
-            event.notification.close();
-        
-            event.waitUntil(
-                clients.openWindow(self.page)
-            );
-        });
     }
+});
+
+self.addEventListener('notificationclick', function (event) {
+    console.log('Notification clicked:', event);
+
+    // Close the notification
+    event.notification.close();
+
+    // Check if there is a page to open
+    if (self.page == null) {
+        console.warn('No page to open');
+        return;
+    }
+
+    // Open the page that was set by the client
+    event.waitUntil(
+        clients.openWindow(self.page)
+    );
 });

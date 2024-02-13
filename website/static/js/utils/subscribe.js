@@ -1,6 +1,6 @@
 subscribeButton = document.getElementById('subscribe-button');
 
-const serviceWorkerPath = '/js/football/service-worker.js';
+const serviceWorkerPath = '/service-worker.js';
 
 function setButtonState() {
     // Set the button state according to the push registration
