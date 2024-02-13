@@ -4,6 +4,7 @@ import logging
 
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase, AsyncIOMotorCollection
 from pymongo import ASCENDING
+from bson.codec_options import CodecOptions
 
 class Database:
     def __init__(self) -> None:
@@ -29,7 +30,7 @@ class Database:
 
         return self.current_db
 
-    def get_collection(self, collection_name: str, db_name: str | None = None) -> AsyncIOMotorCollection | None:
+    def get_collection(self, collection_name: str, db_name: str | None = None, tz_aware: bool = False) -> AsyncIOMotorCollection | None:
         """Gets a collection object given the name of the collection and, optionally, the name of the database
 
         Args:
@@ -41,9 +42,15 @@ class Database:
         """
         if db_name is not None:
             self.current_db = self.client[db_name]
-            return self.current_db[collection_name]
+            if tz_aware:
+                return self.current_db.get_collection(collection_name, codec_options=CodecOptions(tz_aware=True))
+            else:
+                return self.current_db.get_collection(collection_name)
         elif self.current_db is not None:
-            return self.current_db[collection_name]
+            if tz_aware:
+                return self.current_db.get_collection(collection_name, codec_options=CodecOptions(tz_aware=True))
+            else:
+                return self.current_db.get_collection(collection_name)
         else:
             return None
 

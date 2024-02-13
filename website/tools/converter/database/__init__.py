@@ -7,7 +7,7 @@ mongodb = Database()
 mongodb.set_database('media')
 
 # Set the media collection
-media_collection = mongodb.get_collection('media_collection')
+media_collection = mongodb.get_collection('media_collection', tz_aware=True)
 
 # Set the push notification collection
 push_collection = mongodb.get_collection('push_subscriptions')
