@@ -46,3 +46,8 @@ self.addEventListener('notificationclick', function (event) {
         clients.openWindow(self.page)
     );
 });
+
+// Add a fetch event listener to the service worker
+self.addEventListener('fetch', function (event) {
+    console.log('Fetch event:', event);
+});

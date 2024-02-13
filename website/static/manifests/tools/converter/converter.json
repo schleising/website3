@@ -1,0 +1,22 @@
+{
+    "name": "Converter",
+    "icons": [
+        {
+            "src": "/icons/tools/converter/android-chrome-192x192.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "/icons/tools/converter/android-chrome-512x512.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        },
+        {
+            "src": "/icons/tools/converter/apple-touch-icon.png",
+            "sizes": "180x180",
+            "type": "image/png"
+        }
+    ],
+    "start_url": "/tools/converter",
+    "display": "standalone"
+}
