@@ -20,26 +20,32 @@ from .converter.database import push_collection
 database_tools = DatabaseTools()
 
 # Set the base template location
-TEMPLATES = Jinja2Templates('/app/templates/tools')
+TEMPLATES = Jinja2Templates('/app/templates')
 
 # Dependency to get the user from the request state and return a 404 if the user is not logged in or can't use the tools
 async def check_user_can_use_tools(request: HTTPConnection) -> None:
     logging.debug(f"Checking user can use tools: {request.state.user}")
 
     if request.state.user is None or not request.state.user.can_use_tools:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Page not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
 
 # Instantiate the router object, ensure every request checks the user can use the tools
 tools_router = APIRouter(prefix='/tools', dependencies=[Depends(check_user_can_use_tools)])
 
-# Gets the homepage
+# Gets the Tools page
+@tools_router.get('/', response_class=HTMLResponse)
+async def tools_root(request: Request):
+    logging.info('Tools page requested')
+    return TEMPLATES.TemplateResponse('tools/tools.html', {'request': request})
+
+# Gets the Converter
 @tools_router.get('/converter', response_class=HTMLResponse)
-async def root(request: Request):
+async def converter(request: Request):
     logging.info('Converter page requested')
-    return TEMPLATES.TemplateResponse('converter/converter.html', {'request': request})
+    return TEMPLATES.TemplateResponse('tools/converter/converter.html', {'request': request})
 
 @tools_router.websocket("/converter/ws")
-async def websocket_endpoint(websocket: WebSocket):
+async def converter_websocket(websocket: WebSocket):
     # Accept the websocket connection
     await websocket.accept()
 

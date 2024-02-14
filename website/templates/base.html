@@ -41,6 +41,9 @@
               <a class="sub-level-nav" href="/blog">Blog</a>
               {% if request.state.user != None %}
               <a class="sub-level-nav" href="/markdown">Markdown Editor</a>
+              {% if request.state.user.can_use_tools %}
+              <a class="sub-level-nav" href="/tools">Tools</a>
+              {% endif %}
               <a class="sub-level-nav" href="/account/logout">Logout</a>
               {% else %}
               <a class="sub-level-nav" href="/account/login">Login</a>
