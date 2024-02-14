@@ -35,7 +35,7 @@ tools_router = APIRouter(prefix='/tools', dependencies=[Depends(check_user_can_u
 # Gets the homepage
 @tools_router.get('/converter', response_class=HTMLResponse)
 async def root(request: Request):
-    logging.info('Cpnverter page requested')
+    logging.info('Converter page requested')
     return TEMPLATES.TemplateResponse('converter/index.html', {'request': request})
 
 @tools_router.websocket("/converter/ws")
