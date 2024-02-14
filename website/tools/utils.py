@@ -1,5 +1,15 @@
 from datetime import datetime, UTC
+import logging
 
+from fastapi import HTTPException, status
+from starlette.requests import HTTPConnection
+
+# Dependency to get the user from the request state and return a 404 if the user is not logged in or can't use the tools
+async def check_user_can_use_tools(request: HTTPConnection) -> None:
+    logging.debug(f"Checking user can use tools: {request.state.user}")
+
+    if request.state.user is None or not request.state.user.can_use_tools:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
 
 def calculate_time_remaining(start_time: datetime | None, progress: float) -> str:
     """Calculate the time remaining for a conversion.
