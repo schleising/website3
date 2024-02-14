@@ -259,7 +259,7 @@ def get_login_response(user: User, url: str) -> RedirectResponse:
         value=access_token,
         secure=True,
         httponly=True,
-        samesite='strict'
+        samesite='lax'
     )
 
     # Return the reponse
