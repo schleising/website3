@@ -30,9 +30,6 @@ with open('/app/secrets/secret_key.txt', encoding='utf8') as secret_file:
 # Use the HS256 signing algorithm for the JWT token
 ALGORITHM = "HS256"
 
-# Expire the token (and cookie) after 3 days
-ACCESS_TOKEN_EXPIRE_SECONDS = 60 * 60 * 24 * 3
-
 # Class describing the token and token type
 class Token(BaseModel):
     access_token: str
@@ -245,7 +242,7 @@ async def create_new_user(firstname: str, lastname: str, username: str, password
 
 def get_login_response(user: User, url: str) -> RedirectResponse:
     # If the user is valid, create a JWT token
-    access_token_expires = timedelta(seconds=ACCESS_TOKEN_EXPIRE_SECONDS)
+    access_token_expires = timedelta(seconds=user.token_expiry) if user.token_expiry is not None else None
 
     # Create the token
     access_token = create_access_token(
@@ -258,7 +255,7 @@ def get_login_response(user: User, url: str) -> RedirectResponse:
     # Set a cookie on the response with the contents as the JWT token
     response.set_cookie(
         key="token",
-        max_age=ACCESS_TOKEN_EXPIRE_SECONDS,
+        max_age=user.token_expiry,
         value=access_token,
         secure=True,
         httponly=True,

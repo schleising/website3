@@ -10,6 +10,7 @@ class User(BaseModel):
     last_name: str
     disabled: bool
     can_use_tools: bool = False
+    token_expiry: Optional[int] = 60 * 60 * 24 * 3
 
 # The class as stored in the database with added salted and hashed password
 class UserInDB(User):
