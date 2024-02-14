@@ -9,6 +9,7 @@ class User(BaseModel):
     first_name: str
     last_name: str
     disabled: bool
+    can_use_tools: bool = False
 
 # The class as stored in the database with added salted and hashed password
 class UserInDB(User):

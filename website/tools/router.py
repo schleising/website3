@@ -3,9 +3,10 @@ import logging
 import json
 from pathlib import Path
 
-from fastapi import APIRouter, Request, Response, WebSocket, WebSocketDisconnect, status
+from fastapi import APIRouter, Request, Response, WebSocket, WebSocketDisconnect, Depends, HTTPException, status
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
+from starlette.requests import HTTPConnection
 
 from pymongo.errors import DuplicateKeyError
 
@@ -21,8 +22,15 @@ database_tools = DatabaseTools()
 # Set the base template location
 TEMPLATES = Jinja2Templates('/app/templates/tools')
 
+# Dependency to get the user from the request state and return a 404 if the user is not logged in or can't use the tools
+async def check_user_can_use_tools(request: HTTPConnection) -> None:
+    logging.debug(f"Checking user can use tools: {request.state.user}")
+
+    if request.state.user is None or not request.state.user.can_use_tools:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Page not found")
+
 # Instantiate the application object, ensure every request sets the user into Request.state.user
-tools_router = APIRouter(prefix='/tools')
+tools_router = APIRouter(prefix='/tools', dependencies=[Depends(check_user_can_use_tools)])
 
 # Gets the homepage
 @tools_router.get('/converter', response_class=HTMLResponse)
