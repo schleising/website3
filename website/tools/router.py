@@ -29,7 +29,7 @@ async def check_user_can_use_tools(request: HTTPConnection) -> None:
     if request.state.user is None or not request.state.user.can_use_tools:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Page not found")
 
-# Instantiate the application object, ensure every request sets the user into Request.state.user
+# Instantiate the router object, ensure every request checks the user can use the tools
 tools_router = APIRouter(prefix='/tools', dependencies=[Depends(check_user_can_use_tools)])
 
 # Gets the homepage
