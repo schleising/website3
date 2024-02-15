@@ -1,5 +1,3 @@
-self.page = null;
-
 self.addEventListener('push', function (event) {
     console.log('Push received:', event);
 
@@ -21,15 +19,6 @@ self.addEventListener('push', function (event) {
     event.waitUntil(
         self.registration.showNotification(title, options)
     );
-});
-
-// On reciept of a message from the client, update the page that should be shown when the notification is clicked
-self.addEventListener('message', function (event) {
-    console.log('Service Worker received message:', event);
-
-    if (event.data.type === 'update-page') {
-        self.page = event.data.page;
-    }
 });
 
 self.onnotificationclick = (event) => {

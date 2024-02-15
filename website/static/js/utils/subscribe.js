@@ -50,10 +50,6 @@ document.addEventListener('DOMContentLoaded', () => {
             .then(() => navigator.serviceWorker.ready)
             .then((registration) => {
                 console.log('Service Worker DOM:', registration.active);
-                registration.active.postMessage({
-                    type: 'update-page',
-                    page: window.location.href
-                })
 
                 // Set the button state according to the push registration
                 setButtonState();
