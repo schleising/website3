@@ -12,7 +12,10 @@ self.addEventListener('push', function (event) {
     var options = {
         body: data.body || 'This is a push notification.',
         icon: data.icon,
-        badge: data.badge
+        badge: data.badge,
+        data: {
+            url: data.url || '/'
+        }
     };
 
     event.waitUntil(
@@ -29,23 +32,25 @@ self.addEventListener('message', function (event) {
     }
 });
 
-self.addEventListener('notificationclick', function (event) {
-    console.log('Notification clicked:', event);
-
-    // Close the notification
+self.onnotificationclick = (event) => {
+    console.log("On notification click: ", event.notification.tag);
     event.notification.close();
 
-    // Check if there is a page to open
-    if (self.page == null) {
-        console.warn('No page to open');
-        return;
-    }
-
-    // Open the page that was set by the client
+    // This looks to see if the current is already open and
+    // focuses if it is
     event.waitUntil(
-        clients.openWindow(self.page)
+        clients
+            .matchAll({
+                type: "window",
+            })
+            .then((clientList) => {
+                for (const client of clientList) {
+                    if (client.url === event.notification.data.url && "focus" in client) return client.focus();
+                }
+                if (clients.openWindow) return clients.openWindow(event.notification.data.url);
+            }),
     );
-});
+};
 
 // Add a fetch event listener to the service worker
 self.addEventListener('fetch', function (event) {
