@@ -18,5 +18,10 @@
         }
     ],
     "start_url": "/tools/converter",
-    "display": "standalone"
+    "display": "standalone",
+    "background_color": "#f6f9fe",
+    "theme_color": "#f6f9fe",
+    "orientation": "portrait",
+    "scope": "/tools/converter",
+    "description": "Client to track video file conversion progress"
 }
