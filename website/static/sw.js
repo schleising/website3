@@ -13,7 +13,8 @@ self.addEventListener('push', function (event) {
         badge: data.badge,
         data: {
             url: data.url || '/'
-        }
+        },
+        requireInteraction: data.requireInteraction || false
     };
 
     event.waitUntil(

@@ -1,6 +1,6 @@
 subscribeButton = document.getElementById('subscribe-button');
 
-const serviceWorkerPath = '/service-worker.js';
+const serviceWorkerPath = '/sw.js';
 
 function setButtonState() {
     // Set the button state according to the push registration
@@ -30,14 +30,14 @@ function setButtonState() {
 // Function to update the registration of the service worker or register it if it does not exist
 async function updateServiceWorkerRegistration() {
     // Get the active service worker
-    registration = await navigator.serviceWorker.getRegistration(serviceWorkerPath);
+    registration = await navigator.serviceWorker.getRegistration(serviceWorkerScope);
 
     if (registration != null) {
         console.log('Service Worker already registered, updating...');
         return await registration.update();
     } else {
         console.log('Service Worker not registered, registering...');
-        return await navigator.serviceWorker.register(serviceWorkerPath);
+        return await navigator.serviceWorker.register(serviceWorkerPath, {scope: serviceWorkerScope});
     }
 }
 
@@ -196,7 +196,7 @@ function unsubscribe() {
     subscribeButton.textContent = 'Unsubscribing...';
 
     // Get the active service worker
-    navigator.serviceWorker.getRegistration(serviceWorkerPath)
+    navigator.serviceWorker.ready
         .then((registration) => registration.pushManager.getSubscription())
         .then((subscription) => unsubscribePushNotification(subscription))
         .then(() => {
