@@ -129,4 +129,4 @@ dmypy.json
 .pyre/
 
 # Ignore secret key files
-website/secrets/*
+website/secrets/
