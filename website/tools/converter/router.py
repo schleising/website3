@@ -22,7 +22,7 @@ database_tools = DatabaseTools()
 TEMPLATES = Jinja2Templates('/app/templates')
 
 # Instantiate the router object, ensure every request checks the user can use the tools
-converter_router = APIRouter(prefix='/converter', dependencies=[Depends(check_user_can_use_tools)])
+converter_router = APIRouter(prefix='/converter')
 
 # Gets the Converter
 @converter_router.get('/', response_class=HTMLResponse)
