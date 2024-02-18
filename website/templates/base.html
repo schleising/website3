@@ -36,17 +36,17 @@
             <div class="top-level-nav">☰</div>
             <div class="sub-level-nav-container">
               <a class="sub-level-nav" href="/">Home</a>
-              <a class="sub-level-nav" href="/football">Football</a>
-              <a class="sub-level-nav" href="/aircraft">OpenSky Database</a>
-              <a class="sub-level-nav" href="/blog">Blog</a>
+              <a class="sub-level-nav" href="/football/">Football</a>
+              <a class="sub-level-nav" href="/aircraft/">OpenSky Database</a>
+              <a class="sub-level-nav" href="/blog/">Blog</a>
               {% if request.state.user != None %}
-              <a class="sub-level-nav" href="/markdown">Markdown Editor</a>
+              <a class="sub-level-nav" href="/markdown/">Markdown Editor</a>
               {% if request.state.user.can_use_tools %}
-              <a class="sub-level-nav" href="/tools">Tools</a>
+              <a class="sub-level-nav" href="/tools/">Tools</a>
               {% endif %}
-              <a class="sub-level-nav" href="/account/logout">Logout</a>
+              <a class="sub-level-nav" href="/account/logout/">Logout</a>
               {% else %}
-              <a class="sub-level-nav" href="/account/login">Login</a>
+              <a class="sub-level-nav" href="/account/login/">Login</a>
               {% endif %}
             </div>
           </div>

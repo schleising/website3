@@ -8,7 +8,7 @@
 {% block title %}<title>{% if blog_entry != None %}{{ blog_entry.title }}{% else %}Blog{% endif %}</title>{% endblock %}
 {% endblock %}
 
-{% block canonical %}https://www.schleising.net/blog/{{ blog_entry.id }}{% endblock %}
+{% block canonical %}https://www.schleising.net/blog/{{ blog_entry.id }}/{% endblock %}
 
 {% block header %}
 <h3 class="header-text">Blog</h3>
@@ -33,7 +33,7 @@
 {% endblock %}
 {% block sidebar %}
   {% for blog in blog_list %}
-    <a href="{{ blog.id }}" class="sub-level-nav" id="{{ blog.id }}">{{ blog.title }}</a>
+    <a href="{{ blog.id }}/" class="sub-level-nav" id="{{ blog.id }}">{{ blog.title }}</a>
   {% endfor %}
 {% endblock %}
 

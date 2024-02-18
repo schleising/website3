@@ -30,7 +30,7 @@ async def converter(request: Request):
     logging.info('Converter page requested')
     return TEMPLATES.TemplateResponse('tools/converter/converter.html', {'request': request})
 
-@converter_router.websocket("/ws")
+@converter_router.websocket("/ws/")
 async def converter_websocket(websocket: WebSocket):
     # Accept the websocket connection
     await websocket.accept()
@@ -174,7 +174,7 @@ async def converter_websocket(websocket: WebSocket):
         logging.info('Websocket Closed')
 
 # Endpoint to subscribe to push notifications
-@converter_router.post('/subscribe', status_code=201)
+@converter_router.post('/subscribe/', status_code=201)
 async def subscribe(request: Request, response: Response):
     data = await request.json()
     logging.debug(data)
@@ -194,7 +194,7 @@ async def subscribe(request: Request, response: Response):
     return {'status': 'success'}
 
 # Endpoint to unsubscribe from push notifications
-@converter_router.delete('/unsubscribe', status_code=204)
+@converter_router.delete('/unsubscribe/', status_code=204)
 async def unsubscribe(request: Request):
     data = await request.json()
     logging.debug(data)

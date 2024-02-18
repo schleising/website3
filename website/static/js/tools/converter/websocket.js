@@ -31,7 +31,7 @@ document.addEventListener('readystatechange', event => {
         }
 
         // Append the ws to the URL
-        url = url + "ws";
+        url = url + "ws/";
 
         console.log("URL: " + url)
 

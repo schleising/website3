@@ -18,7 +18,7 @@ markdown_router = APIRouter(prefix='/markdown')
 async def editor(request: Request):
     return TEMPLATES.TemplateResponse('/markdown/editor.html', {'request': request})
 
-@markdown_router.websocket("/ws")
+@markdown_router.websocket("/ws/")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
 

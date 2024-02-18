@@ -252,7 +252,7 @@ document.addEventListener('readystatechange', event => {
         }
 
         // Append the ws to the URL
-        url = url + "ws";
+        url = url + "ws/";
 
         // If storage is available get the saved text into the title and text area
         if (storageAvailable('sessionStorage')) {

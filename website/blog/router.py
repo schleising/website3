@@ -35,7 +35,7 @@ async def get_aircraft_page(request: Request):
         'last_name': last_name
     })
 
-@blog_router.get('/{blog_id}', response_class=HTMLResponse)
+@blog_router.get('/{blog_id}/', response_class=HTMLResponse)
 async def get_blog_page(request: Request, blog_id: str):
     # Get the blog list
     blog_list = await get_blog_list()

@@ -97,7 +97,7 @@ async function sendSubscriptionToServer(subscription) {
     }
 
     // Add subscribe endpoint to the URL
-    url.pathname += 'subscribe';
+    url.pathname += 'subscribe/';
 
     console.log('Subscribe URL:', url.href);
 
@@ -167,7 +167,7 @@ async function unsubscribePushNotification(subscription) {
     }
 
     // Add unsubscribe endpoint to the URL
-    url.pathname += 'unsubscribe';
+    url.pathname += 'unsubscribe/';
 
     console.log('Unsubscribe URL:', url.href);
 

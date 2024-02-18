@@ -18,7 +18,7 @@ document.addEventListener('readystatechange', event => {
         }
 
         // Append the ws to the URL
-        url = url + "ws";
+        url = url + "ws/";
 
         // Create the new socket
         openWebSocket();

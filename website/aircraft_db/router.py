@@ -26,7 +26,7 @@ async def get_ac(tail_no: str | None = None):
         ac = await reader.get_ac_by_tail_no(tail_no.upper())
         return ac
 
-@aircraft_router.websocket("/ws")
+@aircraft_router.websocket("/ws/")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
 

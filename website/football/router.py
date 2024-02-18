@@ -39,7 +39,7 @@ async def get_live_matches(request: Request):
                                                                        'title': 'Today', 
                                                                        'live_matches': True})
 
-@football_router.get('/matches/{month}', response_class=HTMLResponse)
+@football_router.get('/matches/{month}/', response_class=HTMLResponse)
 async def get_months_matches( request: Request, month: int = Path(ge=1, le=12)):
     if month > 5:
         year = 2023
@@ -59,7 +59,7 @@ async def get_months_matches( request: Request, month: int = Path(ge=1, le=12)):
                                                                        'title': month_name[month], 
                                                                        'live_matches': False})
 
-@football_router.get('/matches/team/{team_id}', response_class=HTMLResponse)
+@football_router.get('/matches/team/{team_id}/', response_class=HTMLResponse)
 async def get_teams_matches( request: Request, team_id: int):
     team_name, matches = await retreive_team_matches(team_id)
     matches = update_match_timezone(matches, request)
@@ -139,7 +139,7 @@ async def get_simplified_matches(request: Request) -> SimplifiedMatchList:
     # Return the simplified matches
     return simplified_matches
 
-@football_router.websocket("/ws")
+@football_router.websocket("/ws/")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
 
@@ -166,7 +166,7 @@ async def websocket_endpoint(websocket: WebSocket):
         logging.info('Football Socket Closed')
 
 # Endpoint to subscribe to push notifications
-@football_router.post('/subscribe', status_code=201)
+@football_router.post('/subscribe/', status_code=201)
 async def subscribe(request: Request, response: Response):
     data = await request.json()
     logging.debug(data)
@@ -186,7 +186,7 @@ async def subscribe(request: Request, response: Response):
     return {'status': 'success'}
 
 # Endpoint to unsubscribe from push notifications
-@football_router.delete('/unsubscribe', status_code=204)
+@football_router.delete('/unsubscribe/', status_code=204)
 async def unsubscribe(request: Request):
     data = await request.json()
     logging.debug(data)
