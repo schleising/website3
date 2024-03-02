@@ -15,9 +15,14 @@
     padding: 0.5rem;
     border: 0.025rem solid silver;
     border-radius: 0.5rem;
-    background-color: hsl(219, 79%, 92%);
+    background-color: hsl(219, 79%, 78%);
     max-width: min-content;
     white-space: normal;
+}
+
+.file-stats-popup-header {
+    color: white;
+    margin-bottom: 0.5rem;
 }
 
 .file-stats-popup-body {
@@ -30,7 +35,7 @@
     align-items: center;
     justify-content: space-between;
     flex: 1 1 auto;
-    column-gap: 0.25rem;
+    column-gap: 0.5rem;
 }
 
 .file-stats-popup-col {
@@ -39,7 +44,7 @@
     flex: 1;
     padding: 0.25rem;
     border-radius: 0.5rem;
-    background-color: hsl(219, 79%, 88%);
+    background-color: hsl(219, 79%, 94%);
 }
 
 .file-stats-popup-data {
