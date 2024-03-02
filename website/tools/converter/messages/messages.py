@@ -1,5 +1,6 @@
-from pydantic import BaseModel
 from enum import Enum
+
+from pydantic import BaseModel
 
 class MessageTypes(str, Enum):
     CONVERTING_FILES = "converting_files"
@@ -20,8 +21,14 @@ class ConvertingFilesMessage(BaseModel):
     converting_files: list[ConvertingFileData]
 
 class ConvertedFileData(BaseModel):
+    file_data_id: str
     filename: str
-    percentage_saved: float
+    start_conversion_time: str
+    end_conversion_time: str
+    total_conversion_time: str
+    pre_conversion_size: str
+    current_size: str
+    percentage_saved: int
 
 class ConvertedFilesMessage(BaseModel):
     converted_files: list[ConvertedFileData]

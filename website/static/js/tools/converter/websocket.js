@@ -258,13 +258,17 @@ function openWebSocket() {
                     // Loop through the filenames
                     for (i = 0; i < filesConverted.converted_files.length; i++) {
                         // Append a new key / value element to the converted-files element
-                        appendKeyValueElement(
+                        wrapperElement = appendKeyValueElement(
                             document.getElementById("converted-files"),
                             filesConverted.converted_files[i].filename,
                             filesConverted.converted_files[i].percentage_saved.toFixed(0) + "%",
                             ["filename"],
-                            []
+                            [],
+                            filesConverted.converted_files[i].file_data_id
                         );
+
+                        // Add a popover to the wrapper element
+                        addPopover(wrapperElement, filesConverted.converted_files[i]);
                     }
                 }
                 break;

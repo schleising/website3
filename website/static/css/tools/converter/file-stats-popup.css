@@ -1,0 +1,61 @@
+:popover-open {
+    border: none;
+    padding: 0;
+    border-radius: 0.5rem;
+}
+
+::backdrop {
+    backdrop-filter: blur(0.1rem);
+}
+
+.file-stats-popup-container {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    padding: 0.25rem;
+    border: 0.025rem solid silver;
+    border-radius: 0.5rem;
+    background-color: hsl(219, 79%, 98%);
+    color: gray;
+    max-width: min-content;
+    white-space: normal;
+}
+
+.file-stats-popup-body {
+    display: flex;
+}
+
+.file-stats-popup-row {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    flex: 1 1 auto;
+    column-gap: 0.25rem;
+}
+
+.file-stats-popup-col {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    padding: 0.25rem;
+    border-radius: 0.5rem;
+    background-color: hsl(219, 79%, 96%);
+}
+
+.file-stats-popup-data {
+    padding: 0.25rem;;
+}
+
+.file-stats-popup-key {
+    font-size: 0.75rem;
+    margin: 0;
+    white-space: nowrap;
+}
+
+.file-stats-popup-value {
+    font-weight: bold;
+    font-size: 0.75rem;
+    margin: 0;
+    white-space: nowrap;
+}
