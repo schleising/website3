@@ -12,11 +12,10 @@
     display: flex;
     flex-direction: column;
     flex: 1 1 auto;
-    padding: 0.25rem;
+    padding: 0.5rem;
     border: 0.025rem solid silver;
     border-radius: 0.5rem;
-    background-color: hsl(219, 79%, 98%);
-    color: gray;
+    background-color: hsl(219, 79%, 92%);
     max-width: min-content;
     white-space: normal;
 }
@@ -40,7 +39,7 @@
     flex: 1;
     padding: 0.25rem;
     border-radius: 0.5rem;
-    background-color: hsl(219, 79%, 96%);
+    background-color: hsl(219, 79%, 88%);
 }
 
 .file-stats-popup-data {
@@ -48,14 +47,14 @@
 }
 
 .file-stats-popup-key {
-    font-size: 0.75rem;
+    font-size: 0.92rem;
     margin: 0;
     white-space: nowrap;
 }
 
 .file-stats-popup-value {
     font-weight: bold;
-    font-size: 0.75rem;
+    font-size: 0.92rem;
     margin: 0;
     white-space: nowrap;
 }

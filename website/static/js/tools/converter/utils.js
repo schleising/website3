@@ -51,7 +51,7 @@ function addPopover(element, data) {
     fileStatsPopupContainer.appendChild(fileStatsPopupHeader);
 
     // Create the popup header
-    var fileStatsPopupTitle = document.createElement("h6");
+    var fileStatsPopupTitle = document.createElement("h4");
     fileStatsPopupTitle.innerHTML = data.filename;
 
     fileStatsPopupHeader.appendChild(fileStatsPopupTitle);
