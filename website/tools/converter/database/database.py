@@ -46,6 +46,8 @@ class DatabaseTools:
 
         if hours == 0:
             total_conversion_time_string = f"{minutes} minutes"
+        elif hours == 1:
+            total_conversion_time_string = f"1 hour {minutes} minutes"
         elif minutes == 0:
             total_conversion_time_string = f"{hours} hours"
         else:
