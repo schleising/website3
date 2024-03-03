@@ -316,19 +316,13 @@ function openWebSocket() {
                                 key = "Total Conversion Time: ";
                                 break;
                             case 'total_size_before_conversion_tb':
-                                key = "Total Size Before Conversion: ";
-                                value = value + " TB";
-                                break;
+                                continue;
                             case 'total_size_after_conversion_tb':
-                                key = "Total Size After Conversion: ";
-                                value = value + " TB";
-                                break;
+                                continue;
                             case 'films_converted':
-                                key = "Films Converted: ";
-                                break;
+                                continue;
                             case 'films_to_convert':
-                                key = "Films to Convert: ";
-                                break;
+                                continue;
                             case 'conversion_errors':
                                 key = "Conversion Errors: ";
                                 break;
@@ -339,12 +333,6 @@ function openWebSocket() {
                                 console.log("Unknown key: " + key);
                         }
 
-                        // Create the statistics element
-                        appendKeyValueElement(document.getElementById("statistics"), key, value);
-                    }
-
-                    // Loop through the conversions by backend
-                    for ([key, value] of Object.entries(statistics.conversions_by_backend)) {
                         // Create the statistics element
                         appendKeyValueElement(document.getElementById("statistics"), key, value);
                     }

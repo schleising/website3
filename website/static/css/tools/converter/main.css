@@ -51,6 +51,19 @@
     padding: 0.25rem;
 }
 
+.stats-container {
+    display: flex;
+    flex-direction: column;
+    flex: 1 0 0;
+    justify-content: flex-start;
+    align-items: flex-start;
+    height: 100%;
+    background-color: hsl(219, 79%, 88%);
+    margin: 0.25rem;
+    margin-bottom: 0.5rem;
+    padding: 0.25rem;
+}
+
 .container-border {
     border: 0.075rem;
     border-style: solid;
@@ -178,5 +191,11 @@
 
     .data-value-left {
         text-align: right;
+    }
+
+    .stats-container {
+        margin-bottom: 0.5rem;
+        flex: 0 1 auto;
+        height: auto;
     }
 }
