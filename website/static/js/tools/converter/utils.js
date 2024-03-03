@@ -193,6 +193,20 @@ function addPopover(element, data) {
     element.appendChild(popoverElement);
 
     element.addEventListener("click", function() {
-        popoverElement.showPopover();
+        // If the popover is already visible, hide it, otherwise show it
+        if (popoverElement.matches(".open")) {
+            popoverElement.classList.remove("open");
+            popoverElement.hidePopover();
+        }
+        else {
+            // Hide any other open popovers
+            var openPopovers = document.querySelectorAll(".open");
+            openPopovers.forEach(function(popover) {
+                popover.classList.remove("open");
+                popover.hidePopover();
+            });
+            popoverElement.classList.add("open");
+            popoverElement.showPopover();
+        }
     });
 }
