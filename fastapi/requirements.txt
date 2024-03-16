@@ -1,5 +1,8 @@
+aiohttp==3.9.3
+aiosignal==1.3.1
 annotated-types==0.6.0
 anyio==4.3.0
+attrs==23.2.0
 certifi==2024.2.2
 cffi==1.16.0
 charset-normalizer==3.3.2
@@ -8,21 +11,23 @@ cryptography==42.0.5
 dnspython==2.6.1
 ecdsa==0.18.0
 fastapi==0.110.0
+frozenlist==1.4.1
 h11==0.14.0
 http_ece==1.2.0
 idna==3.6
 Jinja2==3.1.3
-Markdown==3.5.2
+Markdown==3.6
 MarkupSafe==2.1.5
 md_mermaid @ git+https://github.com/schleising/md_mermaid@e2076ca7bff9f7bb27ce73549e604d742de8af1c
 motor==3.3.2
 motor-types==1.0.0b4
+multidict==6.0.5
 notify-run @ git+https://github.com/notify-run/notify.run.git@0b37558d54fda52d382a72cef05c05856c605c7b#subdirectory=py_client
 passlib==1.7.4
 py-vapid==1.9.0
 pyasn1==0.5.1
 pycparser==2.21
-pydantic==2.6.3
+pydantic==2.6.4
 pydantic_core==2.16.3
 Pygments==2.17.2
 pymdown-extensions==10.7.1
@@ -30,7 +35,7 @@ pymongo==4.6.2
 PyQRCode==1.2.1
 python-jose==3.3.0
 python-multipart==0.0.9
-pywebpush==1.14.1
+pywebpush==2.0.0
 PyYAML==6.0.1
 requests==2.31.0
 rsa==4.9
@@ -41,3 +46,4 @@ typing_extensions==4.10.0
 urllib3==2.2.1
 uvicorn==0.28.0
 websockets==12.0
+yarl==1.9.4
