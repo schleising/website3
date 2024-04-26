@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <link type="text/css" rel="stylesheet" href="/css/tools/transcoder/reset.css" />
+  <link type="text/css" rel="stylesheet" href="/css/tools/transcoder/main.css" />
+  <link rel="icon" type="image/ico" sizes="48x48" href="/icons/tools/converter/favicon-48x48.ico" />
+  <title>Transcoder</title>
+</head>
+<body>
+  <div class="outer">
+    <div class="header">
+      <h2>Transcode Details</h2>
+    </div>
+    <div class="no-transcode" id="no-transcode">
+      <h3>No transcode in progress</h3>
+    </div>
+    <div class="progress-area container-border" id="progress-area">
+      <div class="details-container">
+        <div class="key-value-wrapper">
+          <div class="data-key">Filename:</div>
+          <div class="data-value-left" id="filename"></div>
+        </div>
+        <div class="key-value-wrapper">
+          <div class="data-key">Speed:</div>
+          <div class="data-value-left" id="speed"></div>
+        </div>
+        <div class="key-value-wrapper">          
+          <div class="data-key">Time Remaining:</div>
+          <div class="data-value-left" id="time-remaining"></div>
+        </div>
+        <div class="key-value-wrapper">
+          <div class="data-key">Estimated Finish Time:</div>
+          <div class="data-value-left" id="finish-time"></div>
+        </div>
+        <div class="key-value-wrapper">
+          <div class="data-key">Progress:</div>
+          <div class="data-value-left" id="progress-value">0%</div>
+        </div>
+      </div>
+      <div class="conversion-progress">
+        <progress id="file-progress" value="0" max="100"></progress>
+      </div>
+    </div>
+  </div>
+  <script src="/js/tools/transcoder/transcoder.js"></script>
+</body>
+</html>

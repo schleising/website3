@@ -7,6 +7,7 @@ from fastapi.templating import Jinja2Templates
 from .utils import check_user_can_use_tools
 
 from .converter.router import converter_router
+from .transcoder.router import transcoder_router
 
 # Set the base template location
 TEMPLATES = Jinja2Templates('/app/templates')
@@ -16,6 +17,9 @@ tools_router = APIRouter(prefix='/tools', dependencies=[Depends(check_user_can_u
 
 # Add the converter router
 tools_router.include_router(converter_router)
+
+# Add the transcoder router
+tools_router.include_router(transcoder_router)
 
 # Gets the Tools page
 @tools_router.get('/', response_class=HTMLResponse)
