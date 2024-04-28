@@ -1,3 +1,20 @@
+// Path to the service worker script
+const serviceWorkerPath = '/sw.js';
+
+// Function to update the registration of the service worker or register it if it does not exist
+async function updateServiceWorkerRegistration() {
+    // Get the active service worker
+    registration = await navigator.serviceWorker.getRegistration(serviceWorkerScope);
+
+    if (registration != null) {
+        console.log('Service Worker already registered, updating...');
+        return await registration.update();
+    } else {
+        console.log('Service Worker not registered, registering...');
+        return await navigator.serviceWorker.register(serviceWorkerPath, {scope: serviceWorkerScope});
+    }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     // Set a one second timer to request progress information from the server
     setInterval(() => {
@@ -60,4 +77,19 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('progress-area').style.display = 'none';
         });
     }, 1000);
+
+    // Check if the browser supports service workers
+    if ('serviceWorker' in navigator) {
+        // Create the service worker and register it
+        updateServiceWorkerRegistration()
+            .then(() => navigator.serviceWorker.ready)
+            .then((registration) => {
+                console.log('Service Worker DOM:', registration.active);
+            })
+            .catch((error) => {
+                console.error('Service Worker registration failed:', error);
+            });
+    } else {
+        console.warn('Service Worker is not supported');
+    }
 });

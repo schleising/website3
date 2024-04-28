@@ -1,0 +1,30 @@
+{
+    "name": "Transcoder",
+    "icons": [
+        {
+            "src": "/icons/tools/transcoder/android-chrome-144x144.png",
+            "sizes": "144x144",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "/icons/tools/transcoder/android-chrome-192x192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "/icons/tools/transcoder/android-chrome-512x512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any"
+        }
+    ],
+    "start_url": "/tools/transcoder",
+    "display": "standalone",
+    "background_color": "#edf2fd",
+    "theme_color": "#edf2fd",
+    "orientation": "portrait",
+    "scope": "/tools/transcoder",
+    "description": "Client to track video file conversion progress"
+}

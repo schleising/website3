@@ -1,0 +1,1 @@
+const serviceWorkerScope = '/tools/transcoder/';
