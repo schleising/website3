@@ -62,3 +62,8 @@ input, button, textarea, select {
 #root, #__next {
     isolation: isolate;
 }
+
+p {
+    margin: 0;
+    padding: 0;
+}
