@@ -40,10 +40,11 @@
 .log-grid {
     display: grid;
     grid-template-columns: auto 1fr auto;
-    gap: 0.5rem;
+    row-gap: 0.25rem;
+    column-gap: 0.5rem;
 }
 
-p.last-logged {
+.log-grid > p {
     align-content: center;
 }
 
