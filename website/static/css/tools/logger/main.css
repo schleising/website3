@@ -4,6 +4,7 @@
     flex-direction: column;
     justify-content: flex-start;
     align-items: flex-start;
+    background-color: hsl(219, 79%, 96%);
     height: 100vh;
 }
 
@@ -37,4 +38,8 @@ button {
     border-color: silver;
     border-radius: 0.5rem;
     background-color: hsl(219, 79%, 98%);
+}
+
+button.event-logger {
+    font-size: 1.5rem;
 }
