@@ -28,6 +28,10 @@ class Log(BaseModel):
     log_date: datetime | str
 
 
+class LogWithCount(Log):
+    count: int
+
+
 # Gets the Logger page
 @logger_router.get("/", response_class=HTMLResponse)
 async def logger(request: Request):
@@ -44,13 +48,18 @@ async def logger(request: Request):
     last_logs = []
     for event in event_types:
         if event_log_collection is not None:
-            last_log = await event_log_collection.find_one({"event": event}, sort=[("log_date", -1)])
-            if last_log is not None:
-                last_logs.append(last_log)
+            last_log_from_db = await event_log_collection.find_one(
+                {"event": event}, sort=[("log_date", -1)]
+            )
+
+            if last_log_from_db is not None:
+                last_log = Log(**last_log_from_db)
+                log_count = await event_log_collection.count_documents({"event": event})
+                last_logs.append(LogWithCount(event=last_log.event, log_date=last_log.log_date, count=log_count))
             else:
-                last_logs.append(Log(event=event, log_date='Never'))
+                last_logs.append(LogWithCount(event=event, log_date="Never", count=0))
         else:
-            last_logs.append(Log(event=event, log_date='Never'))
+            last_logs.append(LogWithCount(event=event, log_date="Never", count=0))
 
     return TEMPLATES.TemplateResponse(
         "tools/logger/logger.html", {"request": request, "last_logs": last_logs}
@@ -126,8 +135,21 @@ async def log_event(request: Request):
         # Insert the new event log into the database
         result = await event_log_collection.insert_one(log.model_dump())
 
+        # Get the count of logs for the event type
+        log_count = await event_log_collection.count_documents({"event": event})
+
+        # Create a LogWithCount object
+        log_with_count = LogWithCount(event=log.event, log_date=log.log_date, count=log_count)
+
         # Log the result of the insert operation
         logging.info(f"New event log inserted: {result.inserted_id}")
+
+        # Return a 201 status code to indicate the resource was created
+        return JSONResponse(
+            content=json.loads(log_with_count.model_dump_json()),
+            status_code=201,
+            headers={"Content-Type": "application/json"},
+        )
     else:
         # Return a 500 status code to indicate an internal server error
         return JSONResponse(
@@ -135,10 +157,3 @@ async def log_event(request: Request):
             status_code=500,
             headers={"Content-Type": "application/json"},
         )
-
-    # Return a 201 status code to indicate the resource was created
-    return JSONResponse(
-        content=json.loads(log.model_dump_json()),
-        status_code=201,
-        headers={"Content-Type": "application/json"},
-    )

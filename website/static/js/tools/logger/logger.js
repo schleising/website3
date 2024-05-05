@@ -109,8 +109,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 })
                 .then((data) => {
-                    // Get the element with the event value
-                    const date_element = document.getElementById(data.event);
+                    // Get the date element with the event value
+                    const date_element = document.getElementById(data.event + '-date');
                     date = new Date(data.log_date);
 
                     // Update the element with the new date
@@ -122,6 +122,12 @@ document.addEventListener('DOMContentLoaded', () => {
                         hour: '2-digit',
                         minute: '2-digit' 
                     });
+
+                    // Get the count element with the event value
+                    const count_element = document.getElementById(data.event + '-count');
+
+                    // Update the element with the new count
+                    count_element.innerText = data.count;
                 })
                 .catch((error) => {
                     console.error('Failed to add event:', error);
