@@ -8,6 +8,7 @@ from .utils import check_user_can_use_tools
 
 from .converter.router import converter_router
 from .transcoder.router import transcoder_router
+from .logger.router import logger_router
 
 # Set the base template location
 TEMPLATES = Jinja2Templates('/app/templates')
@@ -20,6 +21,9 @@ tools_router.include_router(converter_router)
 
 # Add the transcoder router
 tools_router.include_router(transcoder_router)
+
+# Add the logger router
+tools_router.include_router(logger_router)
 
 # Gets the Tools page
 @tools_router.get('/', response_class=HTMLResponse)

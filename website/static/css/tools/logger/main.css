@@ -1,0 +1,40 @@
+.outer {
+    padding: 0.5rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: flex-start;
+    height: 100vh;
+}
+
+.container {
+    margin-bottom: 0.5rem;
+    padding: 0.5rem;
+    border: 0.075rem;
+    border-style: solid;
+    border-color: silver;
+    border-radius: 0.5rem;
+    background-color: hsl(219, 79%, 90%);
+    width: 100%;
+}
+
+.log-area {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 0.5rem;
+}
+
+p.last-logged {
+    margin: 0;
+    padding: 0;
+    align-content: center;
+}
+
+button {
+    padding: 0.075rem 0.5rem;
+    border: 0.075rem;
+    border-style: solid;
+    border-color: silver;
+    border-radius: 0.5rem;
+    background-color: hsl(219, 79%, 98%);
+}

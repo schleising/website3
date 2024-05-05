@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <link type="text/css" rel="stylesheet" href="/css/tools/logger/reset.css" />
+  <link type="text/css" rel="stylesheet" href="/css/tools/logger/main.css" />
+  <link rel="icon" type="image/ico" sizes="48x48" href="/icons/tools/logger/favicon-48x48.ico" />
+  <link rel="manifest" href="/manifests/tools/logger/logger.webmanifest" />
+  <title>Logger</title>
+</head>
+<body>
+  <div class="outer">
+    <div class="add-event container">
+      <label for="event">New Event Type:</label>
+      <input type="text" id="event" name="type" />
+      <button id="add-event">Add</button>
+    </div>
+    <div class="log-area container">
+      <h4>Event</h4>
+      <h4>Last Logged</h4>
+      {% for log in last_logs %}
+        <button class="event-logger" data-type="{{ log.event }}">{{ log.event }}</button>
+        <p class="last-logged" data-type="{{ log.event }}" id="{{ log.event }}">{{ log.log_date }}{% if log.log_date != "Never" %}Z{% endif %}</p>
+      {% endfor %}
+    </div>
+  </div>
+  <script src="/js/tools/logger/scope.js"></script>
+  <script src="/js/tools/logger/logger.js"></script>
+</body>
+</html>
