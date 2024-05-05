@@ -9,7 +9,8 @@
 }
 
 .container {
-    margin-bottom: 0.5rem;
+    margin-top: 0.25rem;
+    margin-bottom: 0.25rem;
     padding: 0.5rem;
     border: 0.075rem;
     border-style: solid;
@@ -24,6 +25,7 @@
     flex-direction: row;
     justify-content: flex-start;
     align-items: center;
+    flex: 0 0 auto;
 }
 
 .add-event > * {
@@ -31,6 +33,11 @@
 }
 
 .log-area {
+    flex: 1 1 auto;
+    overflow-y: scroll;
+}
+
+.log-grid {
     display: grid;
     grid-template-columns: auto 1fr;
     gap: 0.5rem;
