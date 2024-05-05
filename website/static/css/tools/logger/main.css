@@ -19,6 +19,18 @@
     width: 100%;
 }
 
+.add-event {
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-start;
+    align-items: center;
+    width: 100%;
+}
+
+.add-event > * {
+    margin-right: 0.25rem;
+}
+
 .log-area {
     display: grid;
     grid-template-columns: auto 1fr;
@@ -42,4 +54,10 @@ button {
 
 button.event-logger {
     font-size: 1.5rem;
+}
+
+@media screen and (max-width: 768px) {
+    .add-event {
+        justify-content: center;
+    }
 }
