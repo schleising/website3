@@ -65,24 +65,42 @@ document.addEventListener('DOMContentLoaded', () => {
                 },
                 body: JSON.stringify({ event: value })
             })
-                .then((response) => {
-                    if (response.ok) {
-                        // Clear the input value
-                        document.getElementById('event').value = '';
+            .then((response) => {
+                if (response.ok) {
+                    // Clear the input value
+                    document.getElementById('event').value = '';
 
-                        // Get the response as JSON
-                        return response.json();
-                    } else {
-                        console.error('Failed to add event:', response.status);
-                    }
-                })
-                .then((_) => {
-                    // Refresh the page to update the list of events
-                    location.reload();
-                })
-                .catch((error) => {
-                    console.error('Failed to add event:', error);
-                });
+                    // Get the response as JSON
+                    return response.json();
+                } else {
+                    // Throw an error to catch the error
+                    throw new Error('Event type already exists');
+                }
+            })
+            .then((_) => {
+                // Refresh the page to update the list of events
+                location.reload();
+            })
+            .catch((error) => {
+                console.error('Failed to add event (catch):', error);
+
+                // Get the error element
+                const error_element = document.getElementById('error-message');
+
+                // Update the element with the error message
+                error_element.innerText = error;
+
+                // Show the error message
+                errorPopover = document.getElementById('error-popover');
+
+                // Show the error popover
+                errorPopover.showPopover();
+
+                // Hide the error popover after 3 seconds
+                setTimeout(() => {
+                    errorPopover.hidePopover();
+                }, 3000);
+            });
         }
     });
 

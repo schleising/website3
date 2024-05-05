@@ -62,6 +62,19 @@ button.event-logger {
     font-size: 1.5rem;
 }
 
+.error-popover {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 100;
+    padding: 0.5rem;
+    border: 0.075rem;
+    border-style: solid;
+    border-color: red;
+    border-radius: 0.5rem;
+    background-color: hsl(0, 79%, 96%);
+}
+
 @media screen and (max-width: 768px) {
     .add-event {
         justify-content: center;

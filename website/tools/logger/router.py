@@ -83,6 +83,17 @@ async def create_logging_type(request: Request):
         # Create a new event type
         event = Event(event=event)
 
+        # Check the event type does not already exist
+        event_type = await event_collection.find_one({"event": event.event})
+
+        # If the event type already exists, return a 400 status code
+        if event_type is not None:
+            return JSONResponse(
+                content={"error": "Event type already exists"},
+                status_code=400,
+                headers={"Content-Type": "application/json"},
+            )
+
         # Insert the new event type into the database
         result = await event_collection.insert_one(event.model_dump())
 
@@ -91,7 +102,7 @@ async def create_logging_type(request: Request):
 
         # Return a 201 status code to indicate the resource was created
         return JSONResponse(
-            content={"type": event},
+            content={"type": event.event},
             status_code=201,
             headers={"Content-Type": "application/json"},
         )
