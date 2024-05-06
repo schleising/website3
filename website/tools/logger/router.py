@@ -253,6 +253,19 @@ async def edit_event_type(event_id: str, request: Request):
     # Log the edit event type request
     logging.info(f"Edit event type requested: {event}")
 
+    # Check that the event type exists
+    if event_collection is not None:
+        # Check the event type exists
+        event_type = await event_collection.find_one({"event": event})
+
+        # If the event type does not exist, return a 404 status code
+        if event_type is None:
+            return JSONResponse(
+                content={"error": "Event type does not exist"},
+                status_code=404,
+                headers={"Content-Type": "application/json"},
+            )
+
     # Update the event type in the database
     if event_log_collection is not None:
         # Create a new event type
