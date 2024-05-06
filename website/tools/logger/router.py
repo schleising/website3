@@ -263,6 +263,18 @@ async def edit_event_type(event_id: str, request: Request):
             {"_id": ObjectId(event_id)}, {"$set": {"event": event.event}}
         )
 
+        # Check if the event type was updated
+        if result.modified_count == 0:
+            # Log an error if the event type was not found
+            logging.error(f"Event not found: {event_id}")
+
+            # Return a 404 status code to indicate the resource was not found
+            return JSONResponse(
+                content={"error": "Event not found"},
+                status_code=404,
+                headers={"Content-Type": "application/json"},
+            )
+
         # Log the result of the update operation
         logging.info(f"Event type updated: {result.modified_count}")
 
@@ -290,6 +302,18 @@ async def delete_event(event_id: str, request: Request):
     if event_log_collection is not None:
         # Delete the event type from the database
         result = await event_log_collection.delete_one({"_id": ObjectId(event_id)})
+
+        # Check if the event was deleted
+        if result.deleted_count == 0:
+            # Log an error if the event was not found
+            logging.error(f"Event not found: {event_id}")
+
+            # Return a 404 status code to indicate the resource was not found
+            return JSONResponse(
+                content={"error": "Event not found"},
+                status_code=404,
+                headers={"Content-Type": "application/json"},
+            )
 
         # Log the result of the delete operation
         logging.info(f"Event deleted: {result.deleted_count}")
