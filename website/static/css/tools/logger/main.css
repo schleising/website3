@@ -33,19 +33,28 @@
 }
 
 .log-area {
+    padding: 0rem 0.5rem 0.25rem;
+    margin-bottom: 0rem;
     flex: 1 1 auto;
     overflow-y: scroll;
 }
 
 .log-grid {
     display: grid;
-    grid-template-columns: auto 1fr auto;
+    grid-template-columns: auto 1fr auto auto;
     row-gap: 0.25rem;
     column-gap: 0.5rem;
 }
 
 .log-grid > p {
     align-content: center;
+}
+
+.grid-header {
+    padding: 0.25rem 0rem;
+    background-color: hsl(219, 79%, 90%);
+    position: sticky;
+    top: 0rem;
 }
 
 button {
