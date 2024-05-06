@@ -143,6 +143,18 @@ button.event-logger {
     background-color: hsl(0, 79%, 96%);
 }
 
+.button-div {
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-start;
+    align-items: center;
+    padding-top: 0.25rem;
+}
+
+.button-div > * {
+    margin-right: 0.25rem;
+}
+
 @media screen and (max-width: 768px) {
     .add-event {
         justify-content: center;
