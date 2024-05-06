@@ -21,7 +21,7 @@
       <div class="log-grid">
         <h4>Event</h4>
         <h4>Last Logged</h4>
-        <h4>Count</h4>
+        <h4>24 Hrs</h4>
         {% for log in last_logs %}
           <button class="event-logger" data-type="{{ log.event }}">{{ log.event }}</button>
           <p class="last-logged" data-type="{{ log.event }}" id="{{ log.event }}-date">{{ log.log_date }}{% if log.log_date != "Never" %}Z{% endif %}</p>

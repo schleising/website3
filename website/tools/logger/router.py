@@ -1,4 +1,4 @@
-from datetime import datetime, UTC
+from datetime import datetime, timedelta, UTC
 import json
 import logging
 
@@ -48,17 +48,32 @@ async def logger(request: Request):
     last_logs = []
     for event in event_types:
         if event_log_collection is not None:
+            # Get the last log entry for the event type
             last_log_from_db = await event_log_collection.find_one(
                 {"event": event}, sort=[("log_date", -1)]
             )
 
             if last_log_from_db is not None:
+                # Create a Log object from the last log entry
                 last_log = Log(**last_log_from_db)
-                log_count = await event_log_collection.count_documents({"event": event})
+
+                # Get the count of logs for the event type in the last 24 hours
+                log_count = await event_log_collection.count_documents(
+                    {
+                        "event": event,
+                        "log_date": {
+                            "$gte": datetime.now().astimezone(UTC) - timedelta(days=1),
+                        },
+                    }
+                )
+
+                # Create a LogWithCount object to include the count of logs
                 last_logs.append(LogWithCount(event=last_log.event, log_date=last_log.log_date, count=log_count))
             else:
+                # If there are no logs for the event type, create a LogWithCount object with a count of 0
                 last_logs.append(LogWithCount(event=event, log_date="Never", count=0))
         else:
+            # If the collection does not exist, create a LogWithCount object with a count of 0
             last_logs.append(LogWithCount(event=event, log_date="Never", count=0))
 
     return TEMPLATES.TemplateResponse(
@@ -146,8 +161,15 @@ async def log_event(request: Request):
         # Insert the new event log into the database
         result = await event_log_collection.insert_one(log.model_dump())
 
-        # Get the count of logs for the event type
-        log_count = await event_log_collection.count_documents({"event": event})
+        # Get the count of logs for the event type in the last 24 hours
+        log_count = await event_log_collection.count_documents(
+            {
+                "event": event,
+                "log_date": {
+                    "$gte": datetime.now().astimezone(UTC) - timedelta(days=1),
+                },
+            }
+        )
 
         # Create a LogWithCount object
         log_with_count = LogWithCount(event=log.event, log_date=log.log_date, count=log_count)
