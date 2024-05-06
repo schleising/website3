@@ -81,11 +81,34 @@ document.addEventListener('DOMContentLoaded', () => {
                             } else {
                                 // Log the error
                                 console.error('Failed to edit event:', response);
+
+                                // Throw an error to catch the error
+                                throw new Error('New event type does not exist');
                             }
                         })
                         .catch((error) => {
+                            // Close the popover
+                            popover.hidePopover();
+
                             // Log the error
-                            console.error('Failed to edit event:', error);
+                            console.error('Failed to edit event (catch):', error);
+
+                            // Get the error element
+                            const error_element = document.getElementById('error-message');
+
+                            // Update the element with the error message
+                            error_element.innerText = error;
+
+                            // Show the error message
+                            errorPopover = document.getElementById('error-popover');
+
+                            // Show the error popover
+                            errorPopover.showPopover();
+
+                            // Hide the error popover after 3 seconds
+                            setTimeout(() => {
+                                errorPopover.hidePopover();
+                            }, 3000);
                         });
                 }
             });
@@ -123,11 +146,34 @@ document.addEventListener('DOMContentLoaded', () => {
                         } else {
                             // Log the error
                             console.error('Failed to delete event:', response);
+
+                            // Throw an error to catch the error
+                            throw new Error('Failed to delete event');
                         }
                     })
                     .catch((error) => {
+                        // Close the popover
+                        popover.hidePopover();
+
                         // Log the error
-                        console.error('Failed to delete event:', error);
+                        console.error('Failed to delete event (catch):', error);
+
+                        // Get the error element
+                        const error_element = document.getElementById('error-message');
+
+                        // Update the element with the error message
+                        error_element.innerText = error;
+
+                        // Show the error message
+                        errorPopover = document.getElementById('error-popover');
+
+                        // Show the error popover
+                        errorPopover.showPopover();
+
+                        // Hide the error popover after 3 seconds
+                        setTimeout(() => {
+                            errorPopover.hidePopover();
+                        }, 3000);
                     });
             });
 
