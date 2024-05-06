@@ -1,12 +1,17 @@
 from datetime import datetime, timedelta, UTC
 import json
 import logging
+from typing import Annotated
+
+from bson import ObjectId
 
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+
+from ...database.models import ObjectIdPydanticAnnotation
 
 from . import event_collection, event_log_collection
 
@@ -30,6 +35,10 @@ class Log(BaseModel):
 
 class LogWithCount(Log):
     count: int
+
+
+class LogWithID(Log):
+    id: Annotated[ObjectId, ObjectIdPydanticAnnotation] = Field(..., alias='_id')
 
 
 # Gets the Logger page
@@ -68,7 +77,13 @@ async def logger(request: Request):
                 )
 
                 # Create a LogWithCount object to include the count of logs
-                last_logs.append(LogWithCount(event=last_log.event, log_date=last_log.log_date, count=log_count))
+                last_logs.append(
+                    LogWithCount(
+                        event=last_log.event,
+                        log_date=last_log.log_date,
+                        count=log_count,
+                    )
+                )
             else:
                 # If there are no logs for the event type, create a LogWithCount object with a count of 0
                 last_logs.append(LogWithCount(event=event, log_date="Never", count=0))
@@ -172,7 +187,9 @@ async def log_event(request: Request):
         )
 
         # Create a LogWithCount object
-        log_with_count = LogWithCount(event=log.event, log_date=log.log_date, count=log_count)
+        log_with_count = LogWithCount(
+            event=log.event, log_date=log.log_date, count=log_count
+        )
 
         # Log the result of the insert operation
         logging.info(f"New event log inserted: {result.inserted_id}")
@@ -181,6 +198,106 @@ async def log_event(request: Request):
         return JSONResponse(
             content=json.loads(log_with_count.model_dump_json()),
             status_code=201,
+            headers={"Content-Type": "application/json"},
+        )
+    else:
+        # Return a 500 status code to indicate an internal server error
+        return JSONResponse(
+            content={"error": "Internal server error"},
+            status_code=500,
+            headers={"Content-Type": "application/json"},
+        )
+
+
+# Handler for the stats page
+@logger_router.get("/stats/{event_type}", response_class=HTMLResponse)
+async def stats(event_type: str, request: Request):
+    logging.info(f"Logger stats page requested for {event_type}")
+
+    # Get a list of logs for the event type in descending order
+    logs = []
+    if event_log_collection is not None:
+        logs_from_db = event_log_collection.find({"event": event_type}).sort(
+            "log_date", -1
+        )
+        logs = [LogWithID(**log).model_dump() async for log in logs_from_db]
+
+    # Return a template response
+    return TEMPLATES.TemplateResponse(
+        "tools/logger/stats.html",
+        {"request": request, "event": event_type, "logs": logs},
+    )
+
+
+# Handler for the charts page
+@logger_router.get("/charts/{event_type}", response_class=HTMLResponse)
+async def charts(event_type: str, request: Request):
+    logging.info(f"Logger charts page requested for {event_type}")
+
+    # Return a 404 response
+    return JSONResponse(
+        content={"error": "Not found"},
+        status_code=404,
+        headers={"Content-Type": "application/json"},
+    )
+
+# Handler for an edit event type request
+@logger_router.put("/edit/{event_id}", response_class=JSONResponse)
+async def edit_event_type(event_id: str, request: Request):
+    # Get the JSON data from the request
+    data = await request.json()
+
+    # Get the event type from the JSON data
+    event = data["event"]
+
+    # Log the edit event type request
+    logging.info(f"Edit event type requested: {event}")
+
+    # Update the event type in the database
+    if event_log_collection is not None:
+        # Create a new event type
+        event = Event(event=event)
+
+        # Update the event type in the database
+        result = await event_log_collection.update_one(
+            {"_id": ObjectId(event_id)}, {"$set": {"event": event.event}}
+        )
+
+        # Log the result of the update operation
+        logging.info(f"Event type updated: {result.modified_count}")
+
+        # Return a 201 status code to indicate the resource was updated
+        return JSONResponse(
+            content={"type": event.event},
+            status_code=201,
+            headers={"Content-Type": "application/json"},
+        )
+    else:
+        # Return a 500 status code to indicate an internal server error
+        return JSONResponse(
+            content={"error": "Internal server error"},
+            status_code=500,
+            headers={"Content-Type": "application/json"},
+        )
+    
+# Handler for a delete event request
+@logger_router.delete("/delete/{event_id}", response_class=JSONResponse)
+async def delete_event(event_id: str, request: Request):
+    # Log the delete event request
+    logging.info(f"Delete event requested: {event_id}")
+
+    # Delete the event type from the database
+    if event_log_collection is not None:
+        # Delete the event type from the database
+        result = await event_log_collection.delete_one({"_id": ObjectId(event_id)})
+
+        # Log the result of the delete operation
+        logging.info(f"Event deleted: {result.deleted_count}")
+
+        # Return a 204 status code to indicate the resource was deleted
+        return JSONResponse(
+            content={},
+            status_code=204,
             headers={"Content-Type": "application/json"},
         )
     else:

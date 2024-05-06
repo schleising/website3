@@ -1,0 +1,42 @@
+{% extends '/tools/logger/logger-base.html' %}
+
+{% block title %}
+<title>Logger - Stats</title>
+{% endblock title %}
+
+{% block body %}
+<h1>{{ event }} - Stats</h1>
+<div class="container log-area">
+  <div class="stats-grid">
+    <h4 class="grid-header">Log Time</h4>
+    <h4 class="grid-header">Edit</h4>
+    {% for log in logs %}
+      <p class="log-time">{{ log.log_date }}Z</p>
+      <div class="stats-link-container">
+        <button class="stats-button stats-edit-button" id="edit-{{ log.id }}" data-id="{{ log.id }}">✎</button>
+        <button class="stats-button stats-delete-button" id="delete-{{ log.id }}" data-id="{{ log.id }}">✕</button>
+      </div>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="edit-popover" id="edit-popover" popover>
+  <h3>Change Event Type</h3>
+  <label for="edit-event">Event:</label>
+  <input type="text" id="edit-event" name="type" />
+  <button id="edit-event-button">Change</button>
+  <button id="cancel-edit">Cancel</button>
+</div>
+
+<div class="delete-popover" id="delete-popover" popover>
+  <h3>Delete Log</h3>
+  <p>Are you sure you want to delete this log?</p>
+  <button id="delete-log">Delete</button>
+  <button id="cancel-delete">Cancel</button>
+</div>
+
+{% endblock body %}
+
+{% block scripts %}
+<script src="/js/tools/logger/stats.js"></script>
+{% endblock scripts %}

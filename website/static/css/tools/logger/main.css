@@ -50,6 +50,17 @@
     align-content: center;
 }
 
+.stats-grid {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    row-gap: 0.25rem;
+    column-gap: 0.5rem;
+}
+
+.stats-grid > p {
+    align-content: center;
+}
+
 .grid-header {
     padding: 0.25rem 0rem;
     background-color: hsl(219, 79%, 90%);
@@ -70,7 +81,56 @@ button.event-logger {
     font-size: 1.5rem;
 }
 
+.stats-link-container {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-around;
+    align-items: center;
+}
+
+.stats-link {
+    text-decoration: none;
+    color: black;
+    font-size: 1.5rem;
+    padding-left: 0.125rem;
+    padding-right: 0.125rem;
+}
+
+.stats-button {
+    color: black;
+    font-size: 1.5rem;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+    margin-right: 0.25rem;
+}
+
 .error-popover {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 100;
+    padding: 0.5rem;
+    border: 0.075rem;
+    border-style: solid;
+    border-color: red;
+    border-radius: 0.5rem;
+    background-color: hsl(0, 79%, 96%);
+}
+
+.edit-popover {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 100;
+    padding: 0.5rem;
+    border: 0.075rem;
+    border-style: solid;
+    border-color: blue;
+    border-radius: 0.5rem;
+    background-color: hsl(219, 79%, 96%);
+}
+
+.delete-popover {
     position: absolute;
     top: 0;
     left: 0;
