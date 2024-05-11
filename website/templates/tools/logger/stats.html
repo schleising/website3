@@ -16,10 +16,13 @@
         <button class="stats-button stats-edit-button" id="edit-{{ log.id }}" data-id="{{ log.id }}">✎</button>
         <button class="stats-button stats-delete-button" id="delete-{{ log.id }}" data-id="{{ log.id }}">✕</button>
       </div>
-    {% endfor %}
+      {% endfor %}
+    </div>
   </div>
-</div>
+  
+{% endblock body %}
 
+{% block popovers %}
 <div class="edit-popover" id="edit-popover" popover>
   <h3>Change Event Type</h3>
   <div>
@@ -45,7 +48,7 @@
   <p class="error-message" id="error-message"></p>
 </div>
 
-{% endblock body %}
+{% endblock popovers %}
 
 {% block scripts %}
 <script src="/js/tools/logger/stats.js"></script>
