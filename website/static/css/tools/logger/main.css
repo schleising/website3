@@ -5,9 +5,6 @@
     justify-content: flex-start;
     align-items: flex-start;
     background-color: hsl(219, 79%, 96%);
-    height: 100vh;
-    max-height: -webkit-fill-available;
-    max-height: -moz-available;
 }
 
 .container {

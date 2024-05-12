@@ -15,7 +15,7 @@
 </head>
 
 <body>
-  <div class="outer">
+  <div class="outer" id="outer">
     {% block body %}
     {% endblock body %}
   </div>
@@ -24,6 +24,7 @@
   {% endblock popovers %}
 
   <script src="/js/tools/logger/scope.js"></script>
+  <script src="/js/utils/outerResize.js"></script>
   {% block scripts %}
   {% endblock scripts %}
 </body>
