@@ -11,15 +11,15 @@
     <h4 class="grid-header">Log Time</h4>
     <h4 class="grid-header">Edit</h4>
     {% for log in logs %}
-      <p class="log-time">{{ log.log_date }}Z</p>
-      <div class="stats-link-container">
-        <button class="stats-button stats-edit-button" id="edit-{{ log.id }}" data-id="{{ log.id }}">✎</button>
-        <button class="stats-button stats-delete-button" id="delete-{{ log.id }}" data-id="{{ log.id }}">✕</button>
-      </div>
-      {% endfor %}
+    <p class="log-time">{{ log.log_date }}Z</p>
+    <div class="stats-link-container">
+      <button class="stats-button stats-edit-button" id="edit-{{ log.id }}" data-id="{{ log.id }}">✎</button>
+      <button class="stats-button stats-delete-button" id="delete-{{ log.id }}" data-id="{{ log.id }}">✕</button>
     </div>
+    {% endfor %}
   </div>
-  
+</div>
+
 {% endblock body %}
 
 {% block popovers %}
