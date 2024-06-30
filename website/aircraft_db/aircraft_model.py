@@ -1,36 +1,37 @@
-from datetime import date
-from typing import Union
-
 from pydantic import BaseModel, Field
 
 class AircraftModel(BaseModel):
     icao24: str
-    registration: str
-    manufacturericao: str
-    manufacturername: str
-    model: str
-    typecode: str
-    serialnumber: str
-    linenumber: str
-    icaoaircrafttype: str
-    operator: str
-    operatorcallsign: str
-    operatoricao: str
-    operatoriata: str
-    owner: str
-    testreg: str
-    registered: Union[date, str]
-    reguntil: Union[date, str]
-    status: str
-    built: Union[date, str]
-    firstflightdate: Union[date, str]
-    seatconfiguration: str
-    engines: str
-    modes: str
-    adsb: str
+    timestamp: str
     acars: str
-    notes: str
+    adsb: str
+    built: str
     categoryDescription: str
+    country: str
+    engines: str
+    firstFlightDate: str
+    firstSeen: str
+    icaoAircraftClass: str
+    lineNumber: str
+    manufacturerIcao: str
+    manufacturerName: str
+    model: str
+    modes: str
+    nextReg: str
+    operator: str
+    operatorCallsign: str
+    operatorIata: str
+    operatorIcao: str
+    owner: str
+    prevReg: str
+    regUntil: str
+    registered: str
+    registration: str
+    selCal: str
+    serialNumber: str
+    status: str
+    typecode: str
+    vdl: str
 
 class TailNumberLookup(BaseModel):
     tail_no: str
