@@ -36,8 +36,8 @@ class DatabaseTools:
             total_conversion_time = timedelta(milliseconds=0)
         else:
             # Times in Mon Jul 19 12:43 format
-            start_time = file_data.start_conversion_time.strftime("%a %b %d %H:%M")
-            end_time = file_data.end_conversion_time.strftime("%a %b %d %H:%M")
+            start_time = file_data.start_conversion_time.isoformat()
+            end_time = file_data.end_conversion_time.isoformat()
             total_conversion_time = (file_data.end_conversion_time - file_data.start_conversion_time)
 
         # Convert the total conversion time to a string in the format "HH hours MM minutes"

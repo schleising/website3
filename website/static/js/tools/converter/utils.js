@@ -149,7 +149,12 @@ function addPopover(element, data) {
 
     newElement = document.createElement("p");
     newElement.classList.add("file-stats-popup-value");
-    newElement.innerText = data.start_conversion_time;
+    startDate = new Date(data.start_conversion_time);
+    // Convert the date to a string in the format "Wed Jan 01"
+    dateString = startDate.toDateString().split(" ").slice(0, 3).join(" ");
+    // Convert the time to a string in the format "12:00"
+    timeString = startDate.toTimeString().split(":").slice(0, 2).join(":");
+    newElement.innerText = dateString + " " + timeString;
 
     startTimeElement.appendChild(newElement);
 
@@ -167,7 +172,12 @@ function addPopover(element, data) {
 
     newElement = document.createElement("p");
     newElement.classList.add("file-stats-popup-value");
-    newElement.innerText = data.end_conversion_time;
+    endDate = new Date(data.end_conversion_time);
+    // Convert the date to a string in the format "Wed Jan 01"
+    dateString = endDate.toDateString().split(" ").slice(0, 3).join(" ");
+    // Convert the time to a string in the format "12:00"
+    timeString = endDate.toTimeString().split(":").slice(0, 2).join(":");
+    newElement.innerText = dateString + " " + timeString;
 
     newSizeElement.appendChild(newElement);
 
