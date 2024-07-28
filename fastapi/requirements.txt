@@ -38,7 +38,7 @@ pycparser==2.22
 pydantic==2.8.2
 pydantic_core==2.20.1
 Pygments==2.18.0
-pymdown-extensions==10.8.1
+pymdown-extensions==10.9
 pymongo==4.8.0
 PyQRCode==1.2.1
 python-dotenv==1.0.1
