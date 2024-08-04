@@ -1,5 +1,10 @@
+p.monitor-title {
+    margin: 0;
+}
+
 p.monitor-data {
     margin: 0;
+    align-self: flex-end;
 }
 
 .outer {
@@ -38,6 +43,5 @@ p.monitor-data {
     display: grid;
     grid-template-columns: 1fr 1fr;
     column-gap: 1rem;
-    row-gap: 0.25rem;
     padding: 0.25rem;
 }
