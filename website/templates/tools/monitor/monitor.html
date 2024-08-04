@@ -19,15 +19,15 @@
     {% for data in sensor_data.data %}
     <div class="data-container">
       <div class="data">
-        <p class="monitor-title">Device</p>
+        <p class="monitor-title">Device:</p>
         <p class="monitor-data" id="device-{{ data.device_name }}">{{ data.device_name }}</p>
-        <p class="monitor-title">Time</p>
+        <p class="monitor-title">Time:</p>
         <p class="monitor-data" id="time-{{ data.device_name }}">{{ data.timestamp }}</p>
-        <p class="monitor-title">Status</p>
+        <p class="monitor-title">Status:</p>
         <p class="monitor-data" id="online-{{ data.device_name }}">{{ data.online }}</p>
-        <p class="monitor-title">Temperature</p>
+        <p class="monitor-title">Temperature:</p>
         <p class="monitor-data" id="temperature-{{ data.device_name }}">{{ data.temperature }}</p>
-        <p class="monitor-title">Humidity</p>
+        <p class="monitor-title">Humidity:</p>
         <p class="monitor-data" id="humidity-{{ data.device_name }}">{{ data.humidity }}</p>
       </div>
     </div>
