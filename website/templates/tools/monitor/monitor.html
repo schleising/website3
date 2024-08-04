@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <link type="text/css" rel="stylesheet" href="/css/tools/monitor/reset.css" />
+  <link type="text/css" rel="stylesheet" href="/css/tools/monitor/monitor.css" />
+  <link rel="icon" type="image/ico" sizes="48x48" href="/icons/tools/monitor/favicon-48x48.ico" />
+  <link rel="manifest" href="/manifests/tools/monitor/monitor.webmanifest" />
+  <title>Home Monitor</title>
+</head>
+
+<body>
+  <div class="outer">
+    <div class="header">
+      <h2>Home Monitor</h2>
+    </div>
+    {% for data in sensor_data.data %}
+    <div class="data-container">
+      <div class="data">
+        <p class="monitor-data">Device</p>
+        <p class="monitor-data" id="device-{{ data.device_name }}">{{ data.device_name }}</p>
+        <p class="monitor-data">Time</p>
+        <p class="monitor-data" id="time-{{ data.device_name }}">{{ data.timestamp }}</p>
+        <p class="monitor-data">Online</p>
+        <p class="monitor-data" id="online-{{ data.device_name }}">{{ data.online }}</p>
+        <p class="monitor-data">Temperature</p>
+        <p class="monitor-data" id="temperature-{{ data.device_name }}">{{ data.temperature }}</p>
+        <p class="monitor-data">Humidity</p>
+        <p class="monitor-data" id="humidity-{{ data.device_name }}">{{ data.humidity }}</p>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  <script src="/js/tools/monitor/monitor.js"></script>
+  <script src="/js/tools/monitor/scope.js"></script>
+  <script src="/js/utils/subscribe.js"></script>
+</body>
+
+</html>
