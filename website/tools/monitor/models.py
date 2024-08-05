@@ -74,13 +74,11 @@ class SensorData(BaseModel):
     humidity: float
 
 
-class SensorDataMessage(BaseModel):
-    device_name: str
-    timestamp: str
-    online: str
-    temperature: str
-    humidity: str
+# The message to send sensor data to the client
+class SensorDataMessage(SensorData):
+    device_id: str
 
 
+# The data points to send to the client
 class SensorDataPoints(BaseModel):
     data: list[SensorDataMessage]

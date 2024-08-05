@@ -1,11 +1,12 @@
 import logging
+from datetime import timezone
 
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 
 from . import sensor_data_collection
-from .models import SensorDataPoints, SensorDataMessage, SensorData
+from .models import SensorDataPoints, SensorData, SensorDataMessage
 
 # Set the base template location
 TEMPLATES = Jinja2Templates("/app/templates")
@@ -25,7 +26,7 @@ async def monitor(request: Request) -> HTMLResponse:
 
 
 # Endpoint to get the monitor data
-@monitor_router.get("/latest_data", response_class=JSONResponse)
+@monitor_router.get("/latest_data/", response_class=JSONResponse)
 async def latest_data() -> SensorDataPoints:
     logging.info("Monitor data requested")
 
@@ -56,10 +57,11 @@ async def get_data() -> SensorDataPoints:
             data=[
                 SensorDataMessage(
                     device_name=data.device_name,
-                    timestamp=data.timestamp.strftime("%H:%M"),
-                    online="Online" if data.online else "Offline",
-                    temperature=f"{data.temperature:.1f}°C",
-                    humidity=f"{data.humidity:.1f}%",
+                    timestamp=data.timestamp.astimezone(timezone.utc),
+                    online=data.online,
+                    temperature=data.temperature,
+                    humidity=data.humidity,
+                    device_id=data.device_name.lower().replace(" ", "-"),
                 )
                 for data in latest_data
             ]
