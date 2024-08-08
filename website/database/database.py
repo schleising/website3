@@ -43,9 +43,9 @@ class Database:
         if db_name is not None:
             self.current_db = self.client[db_name]
             if tz_aware:
-                return self.current_db.get_collection(collection_name, codec_options=CodecOptions(tz_aware=True))
+                return self.current_db.get_collection(collection_name, codec_options=CodecOptions(tz_aware=True)) if self.current_db is not None else None
             else:
-                return self.current_db.get_collection(collection_name)
+                return self.current_db.get_collection(collection_name) if self.current_db is not None else None
         elif self.current_db is not None:
             if tz_aware:
                 return self.current_db.get_collection(collection_name, codec_options=CodecOptions(tz_aware=True))
