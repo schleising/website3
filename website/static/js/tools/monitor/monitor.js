@@ -280,8 +280,8 @@ function drawTemperatureData(context, deviceId, deviceData, minHeight, maxHeight
     let canvas = document.getElementById('canvas-' + deviceId);
 
     canvas.addEventListener('mousemove', function (event) {
-        const rect = canvas.getBoundingClientRect();
-        const x = event.clientX - rect.left;
+        // Get the x value of the mouse position
+        const x = event.clientX;
 
         // Work out the intercept of the path with a vertical line at x
         for (let y = minHeight; y < maxHeight; y++) {
