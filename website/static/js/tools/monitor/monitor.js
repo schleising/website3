@@ -181,7 +181,7 @@ function drawChart(deviceId, deviceData) {
     drawTicks(context, deviceData, minTime, maxTime, minTemp, maxTemp);
 
     // Draw the temperature data on the grid in temperature and time scaling to the canvas
-    drawTemperatureData(context, deviceData);
+    drawTemperatureData(context, deviceId, deviceData, inset, height - inset);
 }
 
 function drawGrid(context, minTime, maxTime, minTemp, maxTemp) {
@@ -261,7 +261,7 @@ function drawTicks(context, deviceData, minTime, maxTime, minTemp, maxTemp) {
     }
 }
 
-function drawTemperatureData(context, deviceData) {
+function drawTemperatureData(context, deviceId, deviceData, minHeight, maxHeight) {
     // Set the line width for the temperature data
     context.lineWidth = 1;
 
@@ -269,10 +269,38 @@ function drawTemperatureData(context, deviceData) {
     context.strokeStyle = 'cornflowerblue';
 
     // Draw the temperature data
-    context.beginPath();
-    context.moveTo(scaleAndTranslateX(new Date(deviceData[0].timestamp).getTime()), scaleAndTranslateY(deviceData[0].temp));
+    let path = new Path2D();
+    path.moveTo(scaleAndTranslateX(new Date(deviceData[0].timestamp).getTime()), scaleAndTranslateY(deviceData[0].temp));
     for (let i = 1; i < deviceData.length; i++) {
-        context.lineTo(scaleAndTranslateX(new Date(deviceData[i].timestamp).getTime()), scaleAndTranslateY(deviceData[i].temp));
+        path.lineTo(scaleAndTranslateX(new Date(deviceData[i].timestamp).getTime()), scaleAndTranslateY(deviceData[i].temp));
     }
-    context.stroke();
+    context.stroke(path);
+
+    // Get the canvas element and add event listeners for the mouse move and leave events
+    let canvas = document.getElementById('canvas-' + deviceId);
+
+    canvas.addEventListener('mousemove', function (event) {
+        const rect = canvas.getBoundingClientRect();
+        const x = event.clientX - rect.left;
+
+        // Work out the intercept of the path with a vertical line at x
+        for (let y = minHeight; y < maxHeight; y++) {
+            if (context.isPointInStroke(path, x, y)) {
+                // Populate the time and temperature values with the values at the mouse position
+                // Convert the x and y values back to the original time and temperature values
+                const time = (x - xTrans) / xScale;
+                const temp = (y - yTrans) / yScale;
+                document.getElementById("time-" + deviceId).innerText = new Date(time).toLocaleString([], { weekday: 'short', month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+                document.getElementById("temperature-" + deviceId).innerText = temp.toFixed(1) + '°C';
+                break;
+            }
+        }
+    });
+
+    canvas.addEventListener('mouseleave', function (_) {
+        // Reset the time and temperature values to the last values in the device data array
+        document.getElementById("time-" + deviceId).innerText = new Date(deviceData[deviceData.length - 1].timestamp).toLocaleString([], { weekday: 'short', month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+        document.getElementById("temperature-" + deviceId).innerText = deviceData[deviceData.length - 1].temp.toFixed(1) + '°C';
+    });
+
 }
