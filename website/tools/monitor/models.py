@@ -82,3 +82,21 @@ class SensorDataMessage(SensorData):
 # The data points to send to the client
 class SensorDataPoints(BaseModel):
     data: list[SensorDataMessage]
+
+
+# Timeseries data point
+class TimeseriesDataPoint(BaseModel):
+    timestamp: str
+    temp: float
+    humidity: float
+
+
+# Timeseries data
+class TimeseriesData(BaseModel):
+    device_id: str
+    data: list[TimeseriesDataPoint]
+
+
+# Timeseries data response
+class TimeseriesDataResponse(BaseModel):
+    data: list[TimeseriesData]

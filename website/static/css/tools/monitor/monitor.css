@@ -46,3 +46,8 @@ p.monitor-data {
     column-gap: 1rem;
     padding: 0.25rem;
 }
+
+.chart-canvas {
+    width: 100%;
+    grid-column: span 2;
+}
