@@ -141,7 +141,7 @@ function drawChart(deviceId, deviceData) {
     canvas.height = height;
 
     // Make the background white
-    context.fillStyle = 'white';
+    context.fillStyle = '#e4ecfc';
     context.fillRect(0, 0, canvas.width, canvas.height);
 
     const inset = 30;
