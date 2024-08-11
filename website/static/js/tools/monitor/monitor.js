@@ -48,6 +48,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Fetch the time series temperature data
     fetchTemperatureData();
+
+    // Update the temperature data every 5 seconds
+    setInterval(fetchTemperatureData, 5000);
 });
 
 // Add event listener for the page to be resized
