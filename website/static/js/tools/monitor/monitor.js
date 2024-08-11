@@ -143,7 +143,8 @@ function drawChart(deviceId, deviceData) {
     canvas.width = width;
     canvas.height = height;
 
-    // Make the background white
+    // Clear the canvas and make the background cornflower blue
+    context.clearRect(0, 0, canvas.width, canvas.height);
     context.fillStyle = '#e4ecfc';
     context.fillRect(0, 0, canvas.width, canvas.height);
 
