@@ -200,14 +200,22 @@ function drawTicks(context, deviceData, minTime, maxTime, minTemp, maxTemp) {
     const tickLength = 10;
 
     // Set the font for the ticks and lower the font weight
-    context.font = 'lighter 0.65rem Helvetica';
+    context.font = '0.65rem Helvetica';
 
     // Set the colour of the text to black
-    context.fillStyle = '#202020';
+    context.fillStyle = '#333';
+
+    // Store the last time tick
+    let lastTimeTick = new Date(deviceData[0].timestamp).getHours();
 
     // Draw the hourly data ticks
     for (let i = 0; i < deviceData.length; i++) {
         const t = new Date(deviceData[i].timestamp);
+
+        if (t.getHours() == lastTimeTick) {
+            continue;
+        }
+
         const x = scaleAndTranslateX(t.getTime());
         context.beginPath();
         context.moveTo(x, scaleAndTranslateY(minTemp));
@@ -216,6 +224,7 @@ function drawTicks(context, deviceData, minTime, maxTime, minTemp, maxTemp) {
         hourText = t.getHours();
         hourWidth = context.measureText(hourText).width;
         context.fillText(hourText, x - (hourWidth / 2), scaleAndTranslateY(minTemp) + tickLength + 15);
+        lastTimeTick = t.getHours();
     }
 
     // Draw the hourly temperature data ticks with the min and max temperatures
@@ -230,26 +239,30 @@ function drawTicks(context, deviceData, minTime, maxTime, minTemp, maxTemp) {
         context.lineTo(scaleAndTranslateX(minTime) - tickLength, y);
         context.stroke();
 
+        tempText = minTemp + i;
+        tempHeight = context.measureText(tempText).actualBoundingBoxAscent - context.measureText(tempText).actualBoundingBoxDescent;
+        context.fillText(tempText, scaleAndTranslateX(minTime) - tickLength - 15, y + (tempHeight / 2));
+
+        if (i == 0) {
+            // Skip the first temperature tick as it is the same as the y-axis
+            continue;
+        }
+
         // Set the colour of the grid to grey and draw a thin line at the temperature tick
         context.strokeStyle = '#ddd';
         context.beginPath();
         context.moveTo(scaleAndTranslateX(minTime), y);
         context.lineTo(scaleAndTranslateX(maxTime), y);
         context.stroke();
-
-
-        tempText = minTemp + i;
-        tempHeight = context.measureText(tempText).actualBoundingBoxAscent - context.measureText(tempText).actualBoundingBoxDescent;
-        context.fillText(tempText, scaleAndTranslateX(minTime) - tickLength - 15, y + (tempHeight / 2));
     }
 }
 
 function drawTemperatureData(context, deviceData) {
     // Set the line width for the temperature data
-    context.lineWidth = 1.5;
+    context.lineWidth = 1;
 
     // Set the colour of the temperature data to red
-    context.strokeStyle = '#ff0000';
+    context.strokeStyle = 'cornflowerblue';
 
     // Draw the temperature data
     context.beginPath();
