@@ -17,7 +17,7 @@
       <h2>Home Monitor</h2>
     </div>
     {% for data in sensor_data.data %}
-    <div class="data-container" id="data-container">
+    <div class="data-container" id="data-container-{{ data.device_id }}">
       <div class="data">
         <p class="monitor-title">Device:</p>
         <p class="monitor-data" id="device-{{ data.device_id }}"></p>
@@ -29,7 +29,8 @@
         <p class="monitor-data" id="temperature-{{ data.device_id }}"></p>
         <p class="monitor-title">Humidity:</p>
         <p class="monitor-data" id="humidity-{{ data.device_id }}"></p>
-        <canvas id="canvas-{{ data.device_id }}" class="chart-canvas"></canvas>
+        <div class="canvas-container" id="canvas-container-{{ data.device_id }}"">
+        </div>
       </div>
     </div>
     {% endfor %}

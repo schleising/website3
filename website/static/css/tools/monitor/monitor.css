@@ -45,9 +45,14 @@ p.monitor-data {
     grid-template-columns: auto auto;
     column-gap: 1rem;
     padding: 0.25rem;
+    width: 100%;
+}
+
+.canvas-container {
+    width: 100%;
+    grid-column: span 2;
 }
 
 .chart-canvas {
     width: 100%;
-    grid-column: span 2;
 }

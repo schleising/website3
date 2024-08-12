@@ -3,11 +3,6 @@ const serviceWorkerPath = '/sw.js';
 // The chart data to be fetched from the server
 var deviceData = null;
 
-// Scale and translation factors for the x and y axes
-var xScale = 0;
-var yScale = 0;
-var xTrans = 0;
-var yTrans = 0;
 
 // Function to update the registration of the service worker or register it if it does not exist
 async function updateServiceWorkerRegistration() {
@@ -120,23 +115,36 @@ function convertRemToPixels(rem) {
 }
 
 // Scale and translate the x value to the canvas
-function scaleAndTranslateX(time) {
+function scaleAndTranslateX(time, xScale, xTrans) {
     return time * xScale + xTrans;
 }
 
 // Scale and translate the y value to the canvas
-function scaleAndTranslateY(temp) {
+function scaleAndTranslateY(temp, yScale, yTrans) {
     return temp * yScale + yTrans;
 }
 
 // Draw the grid and the chart
 function drawChart(deviceId, deviceData) {
+    // Get the canvas container and delete the old canvas
+    const canvasContainer = document.getElementById('canvas-container-' + deviceId);
+    canvasContainer.childNodes.forEach(child => {
+        canvasContainer.removeChild(child);
+    });
+
+    // Create a new canvas element
+    const canvas = document.createElement('canvas');
+    
+    // Append the new canvas to the canvas container
+    canvasContainer.appendChild(canvas);
+    canvas.id = 'canvas-' + deviceId;
+    canvas.classList.add('chart-canvas');
+
     // Get the canvas and context
-    const canvas = document.getElementById('canvas-' + deviceId);
     const context = canvas.getContext('2d');
 
-    // Get the width and height of the main div
-    const width = document.getElementById("data-container").offsetWidth;
+    // Get the width of the canvas container
+    const width = document.getElementById('canvas-container-' + deviceId).offsetWidth;
     const height = width * 0.5625;
 
     // Set the canvas width and height to the main div width and height * 0.5625
@@ -144,7 +152,6 @@ function drawChart(deviceId, deviceData) {
     canvas.height = height;
 
     // Clear the canvas and make the background cornflower blue
-    context.clearRect(0, 0, canvas.width, canvas.height);
     context.fillStyle = '#e4ecfc';
     context.fillRect(0, 0, canvas.width, canvas.height);
 
@@ -167,24 +174,24 @@ function drawChart(deviceId, deviceData) {
     const tempDiff = maxTemp - minTemp;
 
     // Calculate the x and y scaling factors
-    xScale = gridWidth / timeDiff;
-    yScale = -gridHeight / tempDiff;
+    const xScale = gridWidth / timeDiff;
+    const yScale = -gridHeight / tempDiff;
 
     // Calculate the x and x translation factors after scaling
-    xTrans = -minTime * xScale + inset;
-    yTrans = -maxTemp * yScale + inset;
+    const xTrans = -minTime * xScale + inset;
+    const yTrans = -maxTemp * yScale + inset;
 
     // Draw the grid in temperature and time scaling to the canvas
-    drawGrid(context, minTime, maxTime, minTemp, maxTemp);
+    drawGrid(context, minTime, maxTime, minTemp, maxTemp, xScale, xTrans, yScale, yTrans);
 
     // Draw the ticks on the grid in temperature and time scaling to the canvas
-    drawTicks(context, deviceData, minTime, maxTime, minTemp, maxTemp);
+    drawTicks(context, deviceData, minTime, maxTime, minTemp, maxTemp, xScale, xTrans, yScale, yTrans);
 
     // Draw the temperature data on the grid in temperature and time scaling to the canvas
-    drawTemperatureData(context, deviceId, deviceData, inset, height - inset);
+    drawTemperatureData(context, deviceId, deviceData, inset, height - inset, xScale, xTrans, yScale, yTrans);
 }
 
-function drawGrid(context, minTime, maxTime, minTemp, maxTemp) {
+function drawGrid(context, minTime, maxTime, minTemp, maxTemp, xScale, xTrans, yScale, yTrans) {
     // Set the line width for the grid
     context.lineWidth = 0.75;
 
@@ -193,13 +200,13 @@ function drawGrid(context, minTime, maxTime, minTemp, maxTemp) {
 
     // Draw graph axes
     context.beginPath();
-    context.moveTo(scaleAndTranslateX(minTime), scaleAndTranslateY(maxTemp));
-    context.lineTo(scaleAndTranslateX(minTime), scaleAndTranslateY(minTemp));
-    context.lineTo(scaleAndTranslateX(maxTime), scaleAndTranslateY(minTemp));
+    context.moveTo(scaleAndTranslateX(minTime, xScale, xTrans), scaleAndTranslateY(maxTemp, yScale, yTrans));
+    context.lineTo(scaleAndTranslateX(minTime, xScale, xTrans), scaleAndTranslateY(minTemp, yScale, yTrans));
+    context.lineTo(scaleAndTranslateX(maxTime, xScale, xTrans), scaleAndTranslateY(minTemp, yScale, yTrans));
     context.stroke();
 }
 
-function drawTicks(context, deviceData, minTime, maxTime, minTemp, maxTemp) {
+function drawTicks(context, deviceData, minTime, maxTime, minTemp, maxTemp, xScale, xTrans, yScale, yTrans) {
     // Set the tick length to be the minimum of 10 and 1% of the width
     const tickLength = 10;
 
@@ -220,14 +227,14 @@ function drawTicks(context, deviceData, minTime, maxTime, minTemp, maxTemp) {
             continue;
         }
 
-        const x = scaleAndTranslateX(t.getTime());
+        const x = scaleAndTranslateX(t.getTime(), xScale, xTrans);
         context.beginPath();
-        context.moveTo(x, scaleAndTranslateY(minTemp));
-        context.lineTo(x, scaleAndTranslateY(minTemp) + tickLength);
+        context.moveTo(x, scaleAndTranslateY(minTemp, yScale, yTrans));
+        context.lineTo(x, scaleAndTranslateY(minTemp, yScale, yTrans) + tickLength);
         context.stroke();
         hourText = t.getHours();
         hourWidth = context.measureText(hourText).width;
-        context.fillText(hourText, x - (hourWidth / 2), scaleAndTranslateY(minTemp) + tickLength + 15);
+        context.fillText(hourText, x - (hourWidth / 2), scaleAndTranslateY(minTemp, yScale, yTrans) + tickLength + 15);
         lastTimeTick = t.getHours();
     }
 
@@ -237,15 +244,15 @@ function drawTicks(context, deviceData, minTime, maxTime, minTemp, maxTemp) {
     for (let i = 0; i <= temperatureSteps; i++) {
         // Set the colour of the grid to black
         context.strokeStyle = '#222';
-        const y = scaleAndTranslateY(minTemp + i);
+        const y = scaleAndTranslateY(minTemp + i, yScale, yTrans);
         context.beginPath();
-        context.moveTo(scaleAndTranslateX(minTime), y);
-        context.lineTo(scaleAndTranslateX(minTime) - tickLength, y);
+        context.moveTo(scaleAndTranslateX(minTime, xScale, xTrans), y);
+        context.lineTo(scaleAndTranslateX(minTime, xScale, xTrans) - tickLength, y);
         context.stroke();
 
         tempText = minTemp + i;
         tempHeight = context.measureText(tempText).actualBoundingBoxAscent - context.measureText(tempText).actualBoundingBoxDescent;
-        context.fillText(tempText, scaleAndTranslateX(minTime) - tickLength - 15, y + (tempHeight / 2));
+        context.fillText(tempText, scaleAndTranslateX(minTime, xScale, xTrans) - tickLength - 15, y + (tempHeight / 2));
 
         if (i == 0) {
             // Skip the first temperature tick as it is the same as the y-axis
@@ -255,13 +262,13 @@ function drawTicks(context, deviceData, minTime, maxTime, minTemp, maxTemp) {
         // Set the colour of the grid to grey and draw a thin line at the temperature tick
         context.strokeStyle = '#ddd';
         context.beginPath();
-        context.moveTo(scaleAndTranslateX(minTime), y);
-        context.lineTo(scaleAndTranslateX(maxTime), y);
+        context.moveTo(scaleAndTranslateX(minTime, xScale, xTrans), y);
+        context.lineTo(scaleAndTranslateX(maxTime, xScale, xTrans), y);
         context.stroke();
     }
 }
 
-function drawTemperatureData(context, deviceId, deviceData, minHeight, maxHeight) {
+function drawTemperatureData(context, deviceId, deviceData, minHeight, maxHeight, xScale, xTrans, yScale, yTrans) {
     // Set the line width for the temperature data
     context.lineWidth = 1;
 
@@ -270,18 +277,18 @@ function drawTemperatureData(context, deviceId, deviceData, minHeight, maxHeight
 
     // Draw the temperature data
     let path = new Path2D();
-    path.moveTo(scaleAndTranslateX(new Date(deviceData[0].timestamp).getTime()), scaleAndTranslateY(deviceData[0].temp));
+    path.moveTo(scaleAndTranslateX(new Date(deviceData[0].timestamp).getTime(), xScale, xTrans), scaleAndTranslateY(deviceData[0].temp, yScale, yTrans));
     for (let i = 1; i < deviceData.length; i++) {
-        path.lineTo(scaleAndTranslateX(new Date(deviceData[i].timestamp).getTime()), scaleAndTranslateY(deviceData[i].temp));
+        path.lineTo(scaleAndTranslateX(new Date(deviceData[i].timestamp).getTime(), xScale, xTrans), scaleAndTranslateY(deviceData[i].temp, yScale, yTrans));
     }
     context.stroke(path);
 
     // Get the canvas element and add event listeners for the mouse move and leave events
-    let canvas = document.getElementById('canvas-' + deviceId);
+    const canvas = document.getElementById('canvas-' + deviceId);
 
     canvas.addEventListener('mousemove', function (event) {
         // Get the x value of the mouse position
-        const x = event.clientX;
+        const x = event.offsetX;
 
         // Work out the intercept of the path with a vertical line at x
         for (let y = minHeight; y < maxHeight; y++) {
