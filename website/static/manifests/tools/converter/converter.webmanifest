@@ -26,11 +26,11 @@
             "purpose": "maskable"
         }
     ],
-    "start_url": "/tools/converter",
+    "start_url": "/tools/converter/",
     "display": "standalone",
     "background_color": "#edf2fd",
     "theme_color": "#edf2fd",
     "orientation": "portrait",
-    "scope": "/tools/converter",
+    "scope": "/tools/converter/",
     "description": "Client to track video file conversion progress"
 }
