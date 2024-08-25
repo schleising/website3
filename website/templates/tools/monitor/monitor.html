@@ -29,7 +29,9 @@
         <p class="monitor-data" id="temperature-{{ data.device_id }}"></p>
         <p class="monitor-title">Humidity:</p>
         <p class="monitor-data" id="humidity-{{ data.device_id }}"></p>
-        <div class="canvas-container" id="canvas-container-{{ data.device_id }}"">
+        <div class="svg-container" id="svg-container-{{ data.device_id }}"">
+          <svg id="chart-{{ data.device_id }}" class="chart-svg" xmlns="http://www.w3.org/2000/svg" xmlns: xlink="http://www.w3.org/1999/xlink">
+          </svg>
         </div>
       </div>
     </div>

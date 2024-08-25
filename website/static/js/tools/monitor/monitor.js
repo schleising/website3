@@ -1,8 +1,22 @@
 const serviceWorkerPath = '/sw.js';
 
 // The chart data to be fetched from the server
+/**
+ * @type {Array<{device_id: string, data: Array<{timestamp: string, temp: number, humidity: number}>}>}
+ */
 var deviceData = null;
 
+/**
+ * @type {Map<string, DOMMatrix>} 
+ */
+var transformationMatrices = new Map();
+
+// Scale the time data by 1000 to convert from milliseconds to seconds
+const timeScale = 1000;
+
+// x and y border padding
+const xPadding = 30;
+const yPadding = 50;
 
 // Function to update the registration of the service worker or register it if it does not exist
 async function updateServiceWorkerRegistration() {
@@ -46,21 +60,112 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Update the temperature data every 5 seconds
     setInterval(fetchTemperatureData, 5000);
+
+    // Add event listener for the page to be resized
+    window.addEventListener('resize', () => {
+        // Draw the device data if it exists
+        if (deviceData != null) {
+            updateCharts();
+        }
+    });
+
+    // Add event listenter for each mouse / touch move on each svg element
+    document.querySelectorAll('svg').forEach(svg => {
+        // Add event listener for mouse move on each svg element
+        svg.addEventListener('mousemove', (event) => {
+            // Get the clientX and clientY of the mouse event
+            const clientX = event.clientX;
+            const clientY = event.clientY;
+
+            // Handle the move event
+            handleMoveEvent(svg, clientX, clientY);
+        });
+
+        // Add event listener for touch move on each svg element
+        svg.addEventListener('touchmove', (event) => {
+            // Get the clientX and clientY of the touch event
+            const clientX = event.touches[0].clientX;
+            const clientY = event.touches[0].clientY;
+
+            // Handle the move event
+            handleMoveEvent(svg, clientX, clientY);
+        }, { passive: true });
+
+        // Add event listener for mouse leave on each svg element
+        svg.addEventListener('mouseleave', () => {
+            // Remove the circle on mouse leave
+            const circle = svg.querySelector('.temperature-circle');
+            if (circle != null) {
+                circle.remove();
+            }
+        });
+
+        // Add event listener for touch end on each svg element
+        svg.addEventListener('touchend', () => {
+            // Remove the circle on touch end
+            const circle = svg.querySelector('.temperature-circle');
+            if (circle != null) {
+                circle.remove();
+            }
+        });
+    });
 });
 
-// Add event listener for the page to be resized
-window.addEventListener('resize', () => {
-    // Draw the device data if it exists
-    if (deviceData != null) {
-        drawDeviceData();
-    }
-});
+function handleMoveEvent(svg, clientX, clientY) {
+    // Draw a circle on the polyline closest to the mouse position in the x axis
+    // Get the closest point to the mouse position
+    // Get the mouse position in the SVG element
+    const point = svg.createSVGPoint();
+    point.x = clientX;
+    point.y = clientY;
+    const mousePosition = point.matrixTransform(svg.getScreenCTM().inverse());
 
-// Function draw the device data on the canvas
-function drawDeviceData() {
-    for (let i = 0; i < deviceData.length; i++) {
-        drawChart(deviceData[i].device_id, deviceData[i].data);
+    // Get the device id from the svg id by stripping the "svg-container-" prefix
+    const device_id = svg.id.split("-")[1] + "-" + svg.id.split("-")[2];
+
+    // Get the child polyline element
+    const polyline = svg.querySelector('.temperature');
+
+    // Iterate over the length of the polyline and get the closest point to the mouse position in the x axis
+    let closestPoint = null;
+    let closestDistance = Number.MAX_VALUE;
+
+    for (let i = 0; i < polyline.points.length; i++) {
+        const p = polyline.points[i];
+        const distance = Math.abs(p.x - mousePosition.x);
+
+        if (distance < closestDistance) {
+            closestPoint = p;
+            closestDistance = distance;
+        }
     }
+
+    // Draw a circle on the closest point
+    const circle = svg.querySelector('.temperature-circle');
+    if (circle != null) {
+        circle.remove();
+    }
+
+    const newCircle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+    newCircle.setAttribute("class", "temperature-circle");
+    newCircle.setAttribute("cx", closestPoint.x);
+    newCircle.setAttribute("cy", closestPoint.y);
+    newCircle.setAttribute("r", 5);
+    newCircle.setAttribute("fill", "red");
+    svg.appendChild(newCircle);
+
+    // Update the temperature and time data labels
+    const temperature = document.getElementById("temperature-" + device_id);
+    const time = document.getElementById("time-" + device_id);
+
+    // Transform the point to the original coordinates
+    const matrix = transformationMatrices.get(device_id);
+    const originalPoint = matrix.inverse().transformPoint(closestPoint);
+
+    // Set the temperature and time data
+    temperature.innerText = originalPoint.y.toFixed(1) + "°C";
+    time.innerText = new Date(originalPoint.x * timeScale)
+        .toLocaleString([], { weekday: 'short', month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit' });
 }
 
 // Fetch the latest temperature data from the server every 5 seconds and update the page
@@ -75,7 +180,8 @@ async function fetchSensorData() {
                 document.getElementById("device-" + element.device_id).innerText = element.device_name;
 
                 // Update the time data in Tue, 01 Jan, 21:54 format
-                timeString = new Date(element.timestamp).toLocaleString([], { weekday: 'short', month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+                timeString = new Date(element.timestamp)
+                    .toLocaleString([], { weekday: 'short', month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit' });
                 document.getElementById("time-" + element.device_id).innerText = timeString;
 
                 // Update the status data
@@ -102,212 +208,292 @@ async function fetchTemperatureData() {
         .then(response_data => {
             // Update the temperature data
             deviceData = response_data.data;
-            drawDeviceData();
+            drawCharts();
         })
         .catch(error => {
             console.error('Error fetching temperature data:', error);
-        }
-        );
+        });
 }
 
-function convertRemToPixels(rem) {
-    return rem * parseFloat(getComputedStyle(document.documentElement).fontSize);
-}
+// Function to draw the charts of the temperature data
+function drawCharts() {
+    // Loop through the device data and draw the charts
+    deviceData.forEach(element => {
+        // Get the device data
+        const device_id = element.device_id;
+        const data = element.data;
 
-// Scale and translate the x value to the canvas
-function scaleAndTranslateX(time, xScale, xTrans) {
-    return time * xScale + xTrans;
-}
-
-// Scale and translate the y value to the canvas
-function scaleAndTranslateY(temp, yScale, yTrans) {
-    return temp * yScale + yTrans;
-}
-
-// Draw the grid and the chart
-function drawChart(deviceId, deviceData) {
-    // Get the canvas container and delete the old canvas
-    const canvasContainer = document.getElementById('canvas-container-' + deviceId);
-    canvasContainer.childNodes.forEach(child => {
-        canvasContainer.removeChild(child);
+        // Draw the chart
+        drawChart(device_id, data);
     });
-
-    // Create a new canvas element
-    const canvas = document.createElement('canvas');
-    
-    // Append the new canvas to the canvas container
-    canvasContainer.appendChild(canvas);
-    canvas.id = 'canvas-' + deviceId;
-    canvas.classList.add('chart-canvas');
-
-    // Get the canvas and context
-    const context = canvas.getContext('2d');
-
-    // Get the width of the canvas container
-    const width = document.getElementById('canvas-container-' + deviceId).offsetWidth;
-    const height = width * 0.5625;
-
-    // Set the canvas width and height to the main div width and height * 0.5625
-    canvas.width = width;
-    canvas.height = height;
-
-    // Clear the canvas and make the background cornflower blue
-    context.fillStyle = '#e4ecfc';
-    context.fillRect(0, 0, canvas.width, canvas.height);
-
-    const inset = 30;
-    const gridWidth = width - 2 * inset;
-    const gridHeight = height - 2 * inset;
-
-    // Get the minimum and maximum time as milliseconds since epoch
-    const minTime = new Date(deviceData[0].timestamp).getTime();
-    const maxTime = new Date(deviceData[deviceData.length - 1].timestamp).getTime();
-
-    // Get the difference in time in milliseconds
-    const timeDiff = maxTime - minTime;
-
-    // Get the minimum and maximum temperature floor and ceiling
-    const minTemp = Math.floor(Math.min(...deviceData.map(data => data.temp)));
-    const maxTemp = Math.ceil(Math.max(...deviceData.map(data => data.temp)));
-
-    // Get the difference in temperature
-    const tempDiff = maxTemp - minTemp;
-
-    // Calculate the x and y scaling factors
-    const xScale = gridWidth / timeDiff;
-    const yScale = -gridHeight / tempDiff;
-
-    // Calculate the x and x translation factors after scaling
-    const xTrans = -minTime * xScale + inset;
-    const yTrans = -maxTemp * yScale + inset;
-
-    // Draw the grid in temperature and time scaling to the canvas
-    drawGrid(context, minTime, maxTime, minTemp, maxTemp, xScale, xTrans, yScale, yTrans);
-
-    // Draw the ticks on the grid in temperature and time scaling to the canvas
-    drawTicks(context, deviceData, minTime, maxTime, minTemp, maxTemp, xScale, xTrans, yScale, yTrans);
-
-    // Draw the temperature data on the grid in temperature and time scaling to the canvas
-    drawTemperatureData(context, deviceId, deviceData, inset, height - inset, xScale, xTrans, yScale, yTrans);
 }
 
-function drawGrid(context, minTime, maxTime, minTemp, maxTemp, xScale, xTrans, yScale, yTrans) {
-    // Set the line width for the grid
-    context.lineWidth = 0.75;
+// Function to update the charts of the temperature data
+function updateCharts() {
+    // Loop through the device data and update the charts
+    deviceData.forEach(element => {
+        // Get the device data
+        const device_id = element.device_id;
+        const data = element.data;
 
-    // Set the colour of the grid to black
-    context.strokeStyle = '#202020';
-
-    // Draw graph axes
-    context.beginPath();
-    context.moveTo(scaleAndTranslateX(minTime, xScale, xTrans), scaleAndTranslateY(maxTemp, yScale, yTrans));
-    context.lineTo(scaleAndTranslateX(minTime, xScale, xTrans), scaleAndTranslateY(minTemp, yScale, yTrans));
-    context.lineTo(scaleAndTranslateX(maxTime, xScale, xTrans), scaleAndTranslateY(minTemp, yScale, yTrans));
-    context.stroke();
+        // Update the chart
+        updateChart(device_id, data);
+    });
 }
 
-function drawTicks(context, deviceData, minTime, maxTime, minTemp, maxTemp, xScale, xTrans, yScale, yTrans) {
-    // Set the tick length to be the minimum of 10 and 1% of the width
-    const tickLength = 10;
+// Function to get the transformation matrix of the chart
+/**
+ * @param {string} device_id
+ * @param {Array<{timestamp: string, temp: number, humidity: number}>} data
+ */
+function setTransformationMatrix(device_id, data) {
+    // Get the chart svg element
+    const svgContainer = document.getElementById("svg-container-" + device_id);
 
-    // Set the font for the ticks and lower the font weight
-    context.font = '0.65rem Helvetica';
+    // Get the width of the SVG container
+    const width = svgContainer.clientWidth;
 
-    // Set the colour of the text to black
-    context.fillStyle = '#333';
+    // Set the height of the SVG container to maintain a 16:9 aspect ratio
+    const height = (width * 9 / 16);
+    svgContainer.style.height = height + "px";
 
-    // Store the last time tick
-    let lastTimeTick = new Date(deviceData[0].timestamp).getHours();
+    // Get the minimum and maximum temperature values
+    const minTemp = Math.floor(Math.min(...data.map(d => d.temp)));
+    const maxTemp = Math.ceil(Math.max(...data.map(d => d.temp)));
 
-    // Draw the hourly data ticks
-    for (let i = 0; i < deviceData.length; i++) {
-        const t = new Date(deviceData[i].timestamp);
+    // Get the minimum and maximum timestamp values
+    const minTimestamp = new Date(data[0].timestamp).getTime() / timeScale;
+    const maxTimestamp = new Date(data[data.length - 1].timestamp).getTime() / timeScale;
 
-        if (t.getHours() == lastTimeTick) {
-            continue;
-        }
+    // Get the x and y translation needed to move the top left corner to the origin
+    const xTranslation = -minTimestamp;
+    const yTranslation = -maxTemp;
 
-        const x = scaleAndTranslateX(t.getTime(), xScale, xTrans);
-        context.beginPath();
-        context.moveTo(x, scaleAndTranslateY(minTemp, yScale, yTrans));
-        context.lineTo(x, scaleAndTranslateY(minTemp, yScale, yTrans) + tickLength);
-        context.stroke();
-        hourText = t.getHours();
-        hourWidth = context.measureText(hourText).width;
-        context.fillText(hourText, x - (hourWidth / 2), scaleAndTranslateY(minTemp, yScale, yTrans) + tickLength + 15);
-        lastTimeTick = t.getHours();
+    // Get the x and y scale needed to fit the data in the SVG container
+    const xScale = (width - 2 * xPadding) / (maxTimestamp - minTimestamp);
+    const yScale = (height - 2 * yPadding) / (maxTemp - minTemp);
+
+    // Create the transformation matrix
+    const matrix = new DOMMatrix()
+        .translateSelf(xPadding, yPadding)
+        .scaleSelf(xScale, -yScale)
+        .translateSelf(xTranslation, yTranslation);
+
+    // Set the transformation matrix
+    transformationMatrices.set(device_id, matrix);
+}
+
+// Function to draw the chart of the temperature data
+function drawChart(device_id, data) {
+    // Set the transformation matrix of the chart
+    setTransformationMatrix(device_id, data);
+
+    // Get the chart svg element
+    const svg = document.getElementById("chart-" + device_id);
+
+    // Remove all existing children of the SVG element
+    while (svg.firstChild) {
+        svg.removeChild(svg.firstChild);
     }
 
-    // Draw the hourly temperature data ticks with the min and max temperatures
-    temperatureSteps = Math.ceil(maxTemp - minTemp);
+    // Set the width and height of the SVG element
+    svg.setAttribute("width", "100%");
+    svg.setAttribute("height", "100%");
 
-    for (let i = 0; i <= temperatureSteps; i++) {
-        // Set the colour of the grid to black
-        context.strokeStyle = '#222';
-        const y = scaleAndTranslateY(minTemp + i, yScale, yTrans);
-        context.beginPath();
-        context.moveTo(scaleAndTranslateX(minTime, xScale, xTrans), y);
-        context.lineTo(scaleAndTranslateX(minTime, xScale, xTrans) - tickLength, y);
-        context.stroke();
-
-        tempText = minTemp + i;
-        tempHeight = context.measureText(tempText).actualBoundingBoxAscent - context.measureText(tempText).actualBoundingBoxDescent;
-        context.fillText(tempText, scaleAndTranslateX(minTime, xScale, xTrans) - tickLength - 15, y + (tempHeight / 2));
-
-        if (i == 0) {
-            // Skip the first temperature tick as it is the same as the y-axis
-            continue;
-        }
-
-        // Set the colour of the grid to grey and draw a thin line at the temperature tick
-        context.strokeStyle = '#ddd';
-        context.beginPath();
-        context.moveTo(scaleAndTranslateX(minTime, xScale, xTrans), y);
-        context.lineTo(scaleAndTranslateX(maxTime, xScale, xTrans), y);
-        context.stroke();
-    }
-}
-
-function drawTemperatureData(context, deviceId, deviceData, minHeight, maxHeight, xScale, xTrans, yScale, yTrans) {
-    // Set the line width for the temperature data
-    context.lineWidth = 1;
-
-    // Set the colour of the temperature data to red
-    context.strokeStyle = 'cornflowerblue';
+    // Draw the grid
+    drawGrid(svg, device_id, data);
 
     // Draw the temperature data
-    let path = new Path2D();
-    path.moveTo(scaleAndTranslateX(new Date(deviceData[0].timestamp).getTime(), xScale, xTrans), scaleAndTranslateY(deviceData[0].temp, yScale, yTrans));
-    for (let i = 1; i < deviceData.length; i++) {
-        path.lineTo(scaleAndTranslateX(new Date(deviceData[i].timestamp).getTime(), xScale, xTrans), scaleAndTranslateY(deviceData[i].temp, yScale, yTrans));
+    drawTemperature(svg, device_id, data);
+}
+
+/**
+ * Function to draw the grid for the chart
+ * @param {SVGElement} svg
+ * @param {string} device_id
+ * @param {Array<{timestamp: string, temp: number, humidity: number}>} data
+ * @returns {void}
+ */
+function drawGrid(svg, device_id, data) {
+    // Get the transformation matrix of the chart
+    const matrix = transformationMatrices.get(device_id);
+
+    // Get the minimum and maximum temperature values
+    const minTemp = Math.floor(Math.min(...data.map(d => d.temp)));
+    const maxTemp = Math.ceil(Math.max(...data.map(d => d.temp)));
+
+    // Get the minimum and maximum timestamp values
+    const minTimestamp = new Date(data[0].timestamp).getTime() / timeScale;
+    const maxTimestamp = new Date(data[data.length - 1].timestamp).getTime() / timeScale;
+
+    // Create the top left, bottom left and bottom right corners of the grid
+    const topLeft = matrix.transformPoint(new DOMPoint(minTimestamp, maxTemp));
+    const bottomLeft = matrix.transformPoint(new DOMPoint(minTimestamp, minTemp));
+    const bottomRight = matrix.transformPoint(new DOMPoint(maxTimestamp, minTemp));
+
+    // Remove the existing grid if it exists
+    const existingGrid = document.getElementById("grid-" + device_id);
+    if (existingGrid != null) {
+        svg.removeChild(existingGrid);
     }
-    context.stroke(path);
 
-    // Get the canvas element and add event listeners for the mouse move and leave events
-    const canvas = document.getElementById('canvas-' + deviceId);
+    // Create the grid group
+    const grid = document.createElementNS("http://www.w3.org/2000/svg", "g");
+    grid.setAttribute("class", "grid");
+    grid.setAttribute("id", "grid-" + device_id);
+    svg.appendChild(grid);
 
-    canvas.addEventListener('mousemove', function (event) {
-        // Get the x value of the mouse position
-        const x = event.offsetX;
+    // Create a polyline for the axes
+    const axes = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
+    axes.setAttribute("class", "axes");
+    axes.setAttribute("id", "axes-" + device_id);
+    axes.setAttribute("fill", "none");
+    axes.setAttribute("stroke", "black");
+    axes.setAttribute("stroke-width", "1");
+    axes.setAttribute("points", `${topLeft.x},${topLeft.y} ${bottomLeft.x},${bottomLeft.y} ${bottomRight.x},${bottomRight.y}`);
+    grid.appendChild(axes);
 
-        // Work out the intercept of the path with a vertical line at x
-        for (let y = minHeight; y < maxHeight; y++) {
-            if (context.isPointInStroke(path, x, y)) {
-                // Populate the time and temperature values with the values at the mouse position
-                // Convert the x and y values back to the original time and temperature values
-                const time = (x - xTrans) / xScale;
-                const temp = (y - yTrans) / yScale;
-                document.getElementById("time-" + deviceId).innerText = new Date(time).toLocaleString([], { weekday: 'short', month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit' });
-                document.getElementById("temperature-" + deviceId).innerText = temp.toFixed(1) + '°C';
-                break;
-            }
-        }
-    });
+    // Create the x axis labels
+    const xLabels = document.createElementNS("http://www.w3.org/2000/svg", "g");
+    xLabels.setAttribute("class", "x-labels");
+    xLabels.setAttribute("id", "x-labels-" + device_id);
+    grid.appendChild(xLabels);
 
-    canvas.addEventListener('mouseleave', function (_) {
-        // Reset the time and temperature values to the last values in the device data array
-        document.getElementById("time-" + deviceId).innerText = new Date(deviceData[deviceData.length - 1].timestamp).toLocaleString([], { weekday: 'short', month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit' });
-        document.getElementById("temperature-" + deviceId).innerText = deviceData[deviceData.length - 1].temp.toFixed(1) + '°C';
-    });
+    // Create the y axis labels
+    const yLabels = document.createElementNS("http://www.w3.org/2000/svg", "g");
+    yLabels.setAttribute("class", "y-labels");
+    yLabels.setAttribute("id", "y-labels-" + device_id);
+    grid.appendChild(yLabels);
 
+    // Create the x axis grid lines
+    const xGrid = document.createElementNS("http://www.w3.org/2000/svg", "g");
+    xGrid.setAttribute("class", "x-grid");
+    xGrid.setAttribute("id", "x-grid-" + device_id);
+    grid.appendChild(xGrid);
+
+    // Create the y axis grid lines
+    const yGrid = document.createElementNS("http://www.w3.org/2000/svg", "g");
+    yGrid.setAttribute("class", "y-grid");
+    yGrid.setAttribute("id", "y-grid-" + device_id);
+    grid.appendChild(yGrid);
+
+    // Create the x axis ticks and labels, one tick per hour
+    const xTickInterval = 60 * 60 * 1000 / timeScale;
+    const xTickStart = Math.ceil(minTimestamp / xTickInterval) * xTickInterval;
+    const xTickEnd = Math.floor(maxTimestamp / xTickInterval) * xTickInterval;
+    for (let xTick = xTickStart; xTick <= xTickEnd; xTick += xTickInterval) {
+        // Get the transformed x position of the tick
+        const x = matrix.transformPoint(new DOMPoint(xTick, minTemp)).x;
+
+        // Create the x axis tick
+        const tick = document.createElementNS("http://www.w3.org/2000/svg", "line");
+        tick.setAttribute("class", "x-tick");
+        tick.setAttribute("x1", x);
+        tick.setAttribute("y1", bottomLeft.y);
+        tick.setAttribute("x2", x);
+        tick.setAttribute("y2", bottomLeft.y + 5);
+        tick.setAttribute("stroke", "black");
+        tick.setAttribute("stroke-width", "1");
+        xGrid.appendChild(tick);
+
+        // Create the x axis label
+        const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        label.setAttribute("class", "x-label");
+        label.setAttribute("x", x);
+        label.setAttribute("y", bottomLeft.y + 20);
+        label.setAttribute("text-anchor", "middle");
+        label.setAttribute("font-size", "10");
+        label.textContent = new Date(xTick * timeScale).toLocaleTimeString([], { hour: '2-digit' });
+        xLabels.appendChild(label);
+    }
+
+    // Add the x axis label
+    const xLabel = document.createElementNS("http://www.w3.org/2000/svg", "text");
+    xLabel.setAttribute("class", "x-label");
+    xLabel.setAttribute("x", bottomRight.x);
+    xLabel.setAttribute("y", bottomRight.y + 40);
+    xLabel.setAttribute("text-anchor", "end");
+    xLabel.setAttribute("font-size", "12");
+    xLabel.textContent = "Time";
+    xLabels.appendChild(xLabel);
+
+    // Create the y axis ticks and labels, one tick per degree
+    const yTickInterval = 1;
+    const yTickStart = Math.ceil(minTemp / yTickInterval) * yTickInterval;
+    const yTickEnd = Math.floor(maxTemp / yTickInterval) * yTickInterval;
+
+    for (let yTick = yTickStart; yTick <= yTickEnd; yTick += yTickInterval) {
+        // Get the transformed y position of the tick
+        const y = matrix.transformPoint(new DOMPoint(minTimestamp, yTick)).y;
+
+        // Create the y axis tick
+        const tick = document.createElementNS("http://www.w3.org/2000/svg", "line");
+        tick.setAttribute("class", "y-tick");
+        tick.setAttribute("x1", topLeft.x);
+        tick.setAttribute("y1", y);
+        tick.setAttribute("x2", topLeft.x - 5);
+        tick.setAttribute("y2", y);
+        tick.setAttribute("stroke", "black");
+        tick.setAttribute("stroke-width", "1");
+        yGrid.appendChild(tick);
+
+        // Create the y axis label
+        const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        label.setAttribute("class", "y-label");
+        label.setAttribute("x", topLeft.x - 10);
+        label.setAttribute("y", y + 5);
+        label.setAttribute("text-anchor", "end");
+        label.setAttribute("font-size", "10");
+        label.textContent = yTick;
+        yLabels.appendChild(label);
+    }
+
+    // Add the y axis label
+    const yLabel = document.createElementNS("http://www.w3.org/2000/svg", "text");
+    yLabel.setAttribute("class", "y-label");
+    yLabel.setAttribute("x", topLeft.x - 30);
+    yLabel.setAttribute("y", topLeft.y - 10);
+    yLabel.setAttribute("text-anchor", "start");
+    yLabel.setAttribute("font-size", "12");
+    yLabel.textContent = "Temperature (°C)";
+    yLabels.appendChild(yLabel);
+}
+
+function updateChart(device_id, data) {
+    // Set the transformation matrix of the chart
+    setTransformationMatrix(device_id, data);
+
+    // Get the chart svg element
+    const svg = document.getElementById("chart-" + device_id);
+
+    // Draw the grid
+    drawGrid(svg, device_id, data);
+
+    // Update the temperature data
+    drawTemperature(svg, device_id, data);
+}
+
+// Function to draw the temperature data on the chart
+function drawTemperature(svg, device_id, data) {
+    // Get the transformation matrix of the chart
+    const matrix = transformationMatrices.get(device_id);
+
+    // Get the temperature data points
+    const points = data.map(d => matrix.transformPoint(new DOMPoint(new Date(d.timestamp).getTime() / timeScale, d.temp)));
+
+    // Remove the existing temperature data if it exists
+    const existingTemperature = document.getElementById("temperature-line-" + device_id);
+    if (existingTemperature != null) {
+        svg.removeChild(existingTemperature);
+    }
+
+    // Create the temperature data path
+    const temperature = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
+    temperature.setAttribute("class", "temperature");
+    temperature.setAttribute("id", "temperature-line-" + device_id);
+    temperature.setAttribute("fill", "none");
+    temperature.setAttribute("stroke", "dodgerblue");
+    temperature.setAttribute("stroke-width", "1");
+    temperature.setAttribute("points", points.map(p => `${p.x},${p.y}`).join(" "));
+    svg.appendChild(temperature);
 }

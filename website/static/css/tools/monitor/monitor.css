@@ -48,7 +48,7 @@ p.monitor-data {
     width: 100%;
 }
 
-.canvas-container {
+.svg-container {
     width: 100%;
     grid-column: span 2;
 }
