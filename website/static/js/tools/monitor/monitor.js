@@ -16,7 +16,7 @@ const timeScale = 1000;
 
 // x and y border padding
 const xPadding = 30;
-const yPadding = 50;
+const yPadding = 40;
 
 // Function to update the registration of the service worker or register it if it does not exist
 async function updateServiceWorkerRegistration() {
@@ -378,7 +378,7 @@ function drawGrid(svg, device_id, data) {
     grid.appendChild(yGrid);
 
     // Create the x axis ticks and labels, one tick per hour
-    const xTickInterval = 60 * 60 * 1000 / timeScale;
+    const xTickInterval = 2 * 60 * 60 * 1000 / timeScale;
     const xTickStart = Math.ceil(minTimestamp / xTickInterval) * xTickInterval;
     const xTickEnd = Math.floor(maxTimestamp / xTickInterval) * xTickInterval;
     for (let xTick = xTickStart; xTick <= xTickEnd; xTick += xTickInterval) {
@@ -402,7 +402,7 @@ function drawGrid(svg, device_id, data) {
         label.setAttribute("x", x);
         label.setAttribute("y", bottomLeft.y + 20);
         label.setAttribute("text-anchor", "middle");
-        label.setAttribute("font-size", "10");
+        label.setAttribute("font-size", "12");
         label.textContent = new Date(xTick * timeScale).toLocaleTimeString([], { hour: '2-digit' });
         xLabels.appendChild(label);
     }
@@ -443,7 +443,7 @@ function drawGrid(svg, device_id, data) {
         label.setAttribute("x", topLeft.x - 10);
         label.setAttribute("y", y + 5);
         label.setAttribute("text-anchor", "end");
-        label.setAttribute("font-size", "10");
+        label.setAttribute("font-size", "12");
         label.textContent = yTick;
         yLabels.appendChild(label);
     }
@@ -452,7 +452,7 @@ function drawGrid(svg, device_id, data) {
     const yLabel = document.createElementNS("http://www.w3.org/2000/svg", "text");
     yLabel.setAttribute("class", "y-label");
     yLabel.setAttribute("x", topLeft.x - 30);
-    yLabel.setAttribute("y", topLeft.y - 10);
+    yLabel.setAttribute("y", topLeft.y - 20);
     yLabel.setAttribute("text-anchor", "start");
     yLabel.setAttribute("font-size", "12");
     yLabel.textContent = "Temperature (°C)";
