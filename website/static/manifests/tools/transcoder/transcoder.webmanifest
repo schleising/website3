@@ -26,5 +26,6 @@
     "theme_color": "#edf2fd",
     "orientation": "portrait",
     "scope": "/tools/transcoder/",
+    "id": "/tools/transcoder/",
     "description": "Client to track video file conversion progress"
 }

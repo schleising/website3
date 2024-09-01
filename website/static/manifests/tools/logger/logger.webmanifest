@@ -32,5 +32,6 @@
     "theme_color": "#edf2fd",
     "orientation": "portrait",
     "scope": "/tools/logger/",
+    "id": "/tools/logger/",
     "description": "Event logger to log various events throughout the day"
 }

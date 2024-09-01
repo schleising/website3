@@ -32,5 +32,6 @@
     "theme_color": "#edf2fd",
     "orientation": "portrait",
     "scope": "/tools/monitor/",
+    "id": "/tools/monitor/",
     "description": "Monitor home's temperature and humidity"
 }

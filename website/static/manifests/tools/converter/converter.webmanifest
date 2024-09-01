@@ -32,5 +32,6 @@
     "theme_color": "#edf2fd",
     "orientation": "portrait",
     "scope": "/tools/converter/",
+    "id": "/tools/converter/",
     "description": "Client to track video file conversion progress"
 }
