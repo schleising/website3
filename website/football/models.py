@@ -251,5 +251,20 @@ class SimplifiedMatch(BaseModel):
     away_team: str
     away_team_score: int | None = None
 
-class SimplifiedMatchList(BaseModel):
+# Simplified table row for gpt4
+class SimplifiedTableRow(BaseModel):
+    position: int
+    team: str
+    played: int
+    won: int
+    drawn: int
+    lost: int
+    goals_for: int
+    goals_against: int
+    goal_difference: int
+    points: int
+
+# Simplified football data for gpt4
+class SimplifiedFootballData(BaseModel):
     matches: list[SimplifiedMatch]
+    table: list[SimplifiedTableRow]

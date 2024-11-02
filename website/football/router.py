@@ -14,7 +14,7 @@ from pymongo.errors import DuplicateKeyError
 
 from ..database.database import get_data_by_date
 
-from .models import Match, MatchList, LiveTableItem, SimplifiedMatch, SimplifiedMatchList
+from .models import Match, MatchList, LiveTableItem, SimplifiedMatch, SimplifiedTableRow, SimplifiedFootballData
 from . import pl_matches, pl_table, football_push
 
 TEMPLATES = Jinja2Templates('/app/templates')
@@ -115,17 +115,20 @@ async def retreive_team_matches(team_id: int) -> tuple[str, list[Match]]:
 
     return (team_name, matches)
 
-@football_router.get('/api/', response_model=SimplifiedMatchList)
-async def get_simplified_matches(request: Request) -> SimplifiedMatchList:
+@football_router.get('/api/', response_model=SimplifiedFootballData)
+async def get_simplified_matches(request: Request) -> SimplifiedFootballData:
     # Get todays matches from the database
     matches = await retreive_matches(datetime.today().replace(hour=0, minute=0, second=0, microsecond=0), datetime.today().replace(hour=23, minute=59, second=59, microsecond=0))
 
     # Create a list of simplified matches
-    simplified_matches: SimplifiedMatchList = SimplifiedMatchList(matches = [])
+    simplified_football_data: SimplifiedFootballData = SimplifiedFootballData(
+        matches = [],
+        table = []
+    )
 
     # Convert the matches to the simplified version
     for match in matches:
-        simplified_matches.matches.append(
+        simplified_football_data.matches.append(
             SimplifiedMatch(
                 status = str(match.status),
                 start_time_iso = match.utc_date.astimezone(tz=ZoneInfo('Europe/London')).isoformat(),
@@ -136,8 +139,31 @@ async def get_simplified_matches(request: Request) -> SimplifiedMatchList:
             )
         )
 
-    # Return the simplified matches
-    return simplified_matches
+    table_list: list[LiveTableItem] = []
+
+    if pl_table is not None:
+        table_cursor = pl_table.find({}).sort('position', ASCENDING)
+
+        table_list = [LiveTableItem(**table_item) async for table_item in table_cursor]
+
+        for table_item in table_list:
+            simplified_football_data.table.append(
+                SimplifiedTableRow(
+                    position = table_item.position,
+                    team = table_item.team.short_name,
+                    played = table_item.played_games,
+                    won = table_item.won,
+                    drawn = table_item.draw,
+                    lost = table_item.lost,
+                    goals_for = table_item.goals_for,
+                    goals_against = table_item.goals_against,
+                    goal_difference = table_item.goal_difference,
+                    points = table_item.points
+                )
+            )
+
+    # Return the simplified football data
+    return simplified_football_data
 
 @football_router.websocket("/ws/")
 async def websocket_endpoint(websocket: WebSocket):
