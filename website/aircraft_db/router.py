@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Request, WebSocket
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
+from pydantic import ValidationError
 from starlette.websockets import WebSocketDisconnect
 
 from bson.regex import Regex
@@ -35,8 +36,13 @@ async def websocket_endpoint(websocket: WebSocket):
             # Wait for a message from the client
             data = await websocket.receive_text()
 
-            # Parse the data into a model
-            tail_no_msg = TailNumberLookup.model_validate_json(data)
+            try:
+                # Parse the data into a model
+                tail_no_msg = TailNumberLookup.model_validate_json(data)
+            except ValidationError as e:
+                print(f"Failed to parse the tail number lookup message. Exception: {e}")
+                print(e.json(indent=2))
+                continue
 
             # Create a regex to search the database
             tail_no_regex = Regex(f'^{tail_no_msg.tail_no.upper()}')

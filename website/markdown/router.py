@@ -2,6 +2,7 @@ import logging
 from fastapi import APIRouter, Request, WebSocket
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse
+from pydantic import ValidationError
 from starlette.websockets import WebSocketDisconnect
 
 from .models import BaseMessage, MessageType, MarkdownDataMessage, BlogRequest
@@ -32,8 +33,13 @@ async def websocket_endpoint(websocket: WebSocket):
             # Wait for a message from the client
             recv = await websocket.receive_text()
 
-            # Get the message type
-            msg = BaseMessage.model_validate_json(recv)
+            try:
+                # Get the message type
+                msg = BaseMessage.model_validate_json(recv)
+            except ValidationError as e:
+                logging.error(f"Failed to parse the message. Exception: {e}")
+                logging.error(e.json(indent=2))
+                continue
 
             match msg.message_type:
                 case MessageType.MARKDOWN_UPDATE:
