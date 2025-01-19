@@ -15,9 +15,9 @@ document.addEventListener('readystatechange', event => {
         url = document.URL;
 
         // Replace the http or https with ws or wss respectively
-        if ( url.startsWith("https") ) {
+        if (url.startsWith("https")) {
             url = url.replace("https", "wss");
-        } else if ( url.startsWith("http") ) {
+        } else if (url.startsWith("http")) {
             url = url.replace("http", "ws");
         }
 
@@ -52,14 +52,14 @@ function openWebSocket() {
                     status = 'Not Started';
                     break;
                 case 'IN_PLAY':
-                    status = 'In Play';
-
-                    if (match.minutes != null) {
-                        status = status + ' - ' + match.minutes;
+                    if (match.minute != null) {
+                        status = match.minute + '\'';
 
                         if (match.injury_time != null) {
-                            status = status + ' + ' + match.injury_time;
+                            status = status.slice(0, -1) + '+' + match.injury_time + '\'';
                         }
+                    } else {
+                        status = 'In Play';
                     }
 
                     break;
@@ -85,13 +85,13 @@ function openWebSocket() {
             } else {
                 home = match.score.full_time.home;
             }
-            
+
             if (match.score.full_time.away == null) {
                 away = '-';
             } else {
                 away = match.score.full_time.away;
             }
-            
+
             scoreWidget = document.getElementById(match.id);
             scoreWidget.getElementsByClassName("match-status")[0].innerHTML = status;
             scoreWidget.getElementsByClassName("home-team-score")[0].innerHTML = home;
