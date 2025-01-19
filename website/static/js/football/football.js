@@ -53,6 +53,15 @@ function openWebSocket() {
                     break;
                 case 'IN_PLAY':
                     status = 'In Play';
+
+                    if (match.minutes != null) {
+                        status = status + ' - ' + match.minutes;
+
+                        if (match.injury_time != null) {
+                            status = status + ' + ' + match.injury_time;
+                        }
+                    }
+
                     break;
                 case 'PAUSED':
                     status = 'Half Time';
