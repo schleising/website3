@@ -15,6 +15,11 @@ services:
     stop_signal: SIGQUIT
     extra_hosts:
         - "host.docker.internal:host-gateway"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   fastapi:
     build: fastapi
@@ -26,6 +31,11 @@ services:
     restart: always
     extra_hosts:
         - "host.docker.internal:host-gateway"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   backend:
     build: backend
@@ -36,6 +46,11 @@ services:
     restart: always
     extra_hosts:
         - "host.docker.internal:host-gateway"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   mongodb:
     image: mongo
@@ -46,6 +61,11 @@ services:
       - db_volume:/data/db:rw
       - db_conf:/data/configdb
     restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
 volumes:
   socket_volume:
