@@ -53,6 +53,9 @@ async def get_data() -> SensorDataPoints:
         # Convert the data to a list
         latest_data = [SensorData(**item["data"]) async for item in latest_data_db if item["data"]["device_name"] != "Office Thermometer"]
 
+        # Sort the data by device_name
+        latest_data.sort(key=lambda x: x.device_name)
+
         # Create a message for each data point
         latest_data_messages = SensorDataPoints(
             data=[
