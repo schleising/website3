@@ -120,8 +120,8 @@ function handleMoveEvent(svg, clientX, clientY) {
     point.y = clientY;
     const mousePosition = point.matrixTransform(svg.getScreenCTM().inverse());
 
-    // Get the device id from the svg id by stripping the "svg-container-" prefix
-    const device_id = svg.id.split("-")[1] + "-" + svg.id.split("-")[2];
+    // Get the device id from the svg id by stripping the "chart-" prefix
+    const device_id = svg.id.split("-").slice(1).join("-");
 
     // Get the child polyline element
     const polyline = svg.querySelector('.temperature');
@@ -160,6 +160,14 @@ function handleMoveEvent(svg, clientX, clientY) {
 
     // Transform the point to the original coordinates
     const matrix = transformationMatrices.get(device_id);
+
+    // Check if the transformation matrix exists
+    if (matrix == null) {
+        console.error("Transformation matrix not found for device:", device_id);
+        return;
+    }
+
+    // Get the original point
     const originalPoint = matrix.inverse().transformPoint(closestPoint);
 
     // Set the temperature and time data

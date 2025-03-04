@@ -37,20 +37,21 @@ async def latest_data() -> SensorDataPoints:
 async def get_data() -> SensorDataPoints:
     # Get the latest data
     if sensor_data_collection is not None:
-        # Get the most recent two data points ignoring the _id field
-        latest_data_db = (
-            sensor_data_collection.find(
-                {},
+        # Get the most recent entry for each device_name sorted by device_name
+        latest_data_db = sensor_data_collection.aggregate(
+            [
+                {"$sort": {"device_name": 1, "timestamp": -1}},
                 {
-                    "_id": 0,
+                    "$group": {
+                        "_id": "$device_name",
+                        "data": {"$first": "$$ROOT"},
+                    }
                 },
-            )
-            .sort([("timestamp", -1)])
-            .limit(2)
+            ]
         )
 
         # Convert the data to a list
-        latest_data = [SensorData(**data) async for data in latest_data_db]
+        latest_data = [SensorData(**item["data"]) async for item in latest_data_db if item["data"]["device_name"] != "Office Thermometer"]
 
         # Create a message for each data point
         latest_data_messages = SensorDataPoints(
@@ -78,11 +79,16 @@ async def get_data() -> SensorDataPoints:
 async def timeseries() -> TimeseriesDataResponse:
     logging.info("Timeseries data requested")
 
-    if sensors_collection is None or sensor_data_collection is None:
+    if sensor_data_collection is None:
         return TimeseriesDataResponse(data=[])
 
     # Get the device names
-    device_names: list[str] = await sensors_collection.distinct("deviceName")
+    device_names: list[str] = await sensor_data_collection.distinct("device_name")
+
+    # Remove the Office Thermometer from the list
+    device_names.remove("Office Thermometer")
+
+    logging.debug(f"Device names: {device_names}")
 
     # Create a list to store the timeseries data
     timeseries_data: list[TimeseriesData] = []
