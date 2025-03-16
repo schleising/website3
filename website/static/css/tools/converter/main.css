@@ -29,6 +29,17 @@
     background-color: hsl(219, 79%, 92%);
 }
 
+.retry-button {
+    background-color: hsl(219, 79%, 79%);
+    margin: 0rem 0.25rem;
+    border: 0.075rem;
+    border-style: solid;
+    border-color: silver;
+    border-radius: 0.5rem;
+    padding: 0rem 0.5rem;
+    font-size: 1rem;
+}
+
 .main {
     display: flex;
     flex-direction: row;

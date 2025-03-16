@@ -3,7 +3,7 @@ import logging
 import json
 from pathlib import Path
 
-from fastapi import APIRouter, Request, Response, WebSocket, WebSocketDisconnect, Depends, status
+from fastapi import APIRouter, Request, Response, WebSocket, WebSocketDisconnect, status
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
@@ -11,7 +11,7 @@ from pymongo.errors import DuplicateKeyError
 
 from .database.database import DatabaseTools
 from .messages.messages import ConvertingFilesMessage, ConvertingFileData, ConvertedFilesMessage, StatisticsMessage, MessageTypes, Message
-from ..utils import calculate_time_remaining, check_user_can_use_tools
+from ..utils import calculate_time_remaining
 
 from .database import push_collection
 
@@ -163,6 +163,13 @@ async def converter_websocket(websocket: WebSocket):
 
                         # Set the last statistics message
                         last_statistics_message = statistics
+
+                case "retry":
+                    # Log the retry
+                    logging.debug('Retry received')
+
+                    # Retry the conversion
+                    await database_tools.retry_conversion_errors()
 
                 case _:
                     # Log an error

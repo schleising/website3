@@ -288,32 +288,32 @@ function openWebSocket() {
                     for ([key, value] of Object.entries(statistics)) {
                         switch (key) {
                             case 'total_files':
-                                key = "Total Files: ";
+                                label = "Total Files: ";
                                 break;
                             case 'total_converted':
-                                key = "Total Files Converted: ";
+                                label = "Total Files Converted: ";
                                 break;
                             case 'total_to_convert':
-                                key = "Total Files to Convert: ";
+                                label = "Total Files to Convert: ";
                                 break;
                             case 'gigabytes_before_conversion':
-                                key = "GB Before Conversion: ";
+                                label = "GB Before Conversion: ";
                                 value = value + " GB";
                                 break;
                             case 'gigabytes_after_conversion':
-                                key = "GB After Conversion: ";
+                                label = "GB After Conversion: ";
                                 value = value + " GB";
                                 break;
                             case 'gigabytes_saved':
-                                key = "GB Saved: ";
+                                label = "GB Saved: ";
                                 value = value + " GB";
                                 break;
                             case 'percentage_saved':
-                                key = "Percentage Saved: ";
+                                label = "Percentage Saved: ";
                                 value = value + "%";
                                 break;
                             case 'total_conversion_time':
-                                key = "Total Conversion Time: ";
+                                label = "Total Conversion Time: ";
                                 break;
                             case 'total_size_before_conversion_tb':
                                 continue;
@@ -324,7 +324,7 @@ function openWebSocket() {
                             case 'films_to_convert':
                                 continue;
                             case 'conversion_errors':
-                                key = "Conversion Errors: ";
+                                label = "Conversion Errors: ";
                                 break;
                             case 'conversions_by_backend':
                                 // Ignore this key, we will loop through the values later
@@ -334,12 +334,45 @@ function openWebSocket() {
                         }
 
                         // Create the statistics element
-                        appendKeyValueElement(document.getElementById("statistics"), key, value);
+                        appendKeyValueElement(document.getElementById("statistics"), label, value, [], [], key);
                     }
+                }
+
+                // Check whether there are any conversion errors
+                if (statistics.conversion_errors > 0) {
+                    // Get the conversion errors element
+                    conversionErrorsElement = document.getElementById("conversion_errors-value");
+
+                    // Check whether we got the conversion errors element
+                    if (conversionErrorsElement == null) {
+                        console.error("Could not find conversion errors element");
+                        return;
+                    }
+
+                    // Create a button element
+                    retryButton = document.createElement("button");
+                    retryButton.className = "retry-button";
+                    retryButton.innerText = "Retry";
+
+                    // Set the onclick function of the retry button
+                    retryButton.onclick = function() {
+                        // Create the message
+                        msg = {
+                            messageType: 'retry'
+                        };
+
+                        // Convert the JSON to a string and send it to the server
+                        ws.send(JSON.stringify(msg));
+                    };
+
+                    // Append the retry button to the conversion errors element
+                    conversionErrorsElement.appendChild(retryButton);
                 }
                 break;
             default:
                 console.log("Unknown message type received: " + event.data.messageType);
+
+            
         }
     };
 

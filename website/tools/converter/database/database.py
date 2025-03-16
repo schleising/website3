@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from pymongo import DESCENDING
+from pymongo import DESCENDING, UpdateOne
 
 from .models import FileData, ConvertedFileDataFromDb
 from ..messages.messages import StatisticsMessage, ConvertedFileData
@@ -30,15 +30,20 @@ class DatabaseTools:
         ) * 100
 
         # Calculate the total conversion time
-        if file_data.start_conversion_time is None or file_data.end_conversion_time is None:
-            start_time = 'Unknown'
-            end_time = 'Unknown'
+        if (
+            file_data.start_conversion_time is None
+            or file_data.end_conversion_time is None
+        ):
+            start_time = "Unknown"
+            end_time = "Unknown"
             total_conversion_time = timedelta(milliseconds=0)
         else:
             # Times in Mon Jul 19 12:43 format
             start_time = file_data.start_conversion_time.isoformat()
             end_time = file_data.end_conversion_time.isoformat()
-            total_conversion_time = (file_data.end_conversion_time - file_data.start_conversion_time)
+            total_conversion_time = (
+                file_data.end_conversion_time - file_data.start_conversion_time
+            )
 
         # Convert the total conversion time to a string in the format "HH hours MM minutes"
         hours = total_conversion_time.seconds // 3600
@@ -55,12 +60,14 @@ class DatabaseTools:
 
         # Create a ConvertedFileData object
         return ConvertedFileData(
-            file_data_id=f'file-{count}',
+            file_data_id=f"file-{count}",
             filename=Path(file_data.filename).name,
             start_conversion_time=start_time,
             end_conversion_time=end_time,
             total_conversion_time=total_conversion_time_string,
-            pre_conversion_size=self._human_readable_file_size(file_data.pre_conversion_size),
+            pre_conversion_size=self._human_readable_file_size(
+                file_data.pre_conversion_size
+            ),
             current_size=self._human_readable_file_size(file_data.current_size),
             percentage_saved=round(compression_percentage),
         )
@@ -343,3 +350,27 @@ class DatabaseTools:
 
         # Return the StatisticsMessage
         return statistics_message
+
+    async def retry_conversion_errors(self) -> bool:
+        if media_collection is None:
+            return False
+
+        # Get the file names of the files that have conversion errors
+        files_with_errors = media_collection.find(
+            {"conversion_error": True}, projection=["filename"]
+        )
+
+        # Create a list of UpdateOne objects to set the conversion_error field to False
+        update_requests = [
+            UpdateOne(
+                {"filename": file_data["filename"]},
+                {"$set": {"conversion_error": False}},
+            )
+            async for file_data in files_with_errors
+        ]
+
+        # Update the documents in the database
+        result = await media_collection.bulk_write(update_requests)
+
+        # Return True if the update was successful
+        return result.acknowledged

@@ -1,4 +1,4 @@
-function appendKeyValueElement(element, key, value, additionalKeyClass = [], additionalValueClass = []) {
+function appendKeyValueElement(element, key, value, additionalKeyClass = [], additionalValueClass = [], id = "") {
     // Create wrapper element
     var wrapperElement = document.createElement("div");
     wrapperElement.classList.add("key-value-wrapper");
@@ -14,6 +14,11 @@ function appendKeyValueElement(element, key, value, additionalKeyClass = [], add
     // Create value element
     var valueElement = document.createElement("div");
     valueElement.classList.add("data-value");
+
+    if (id.length > 0) {
+        keyElement.id = id + "-key";
+        valueElement.id = id + "-value";
+    }
 
     if (additionalValueClass.length > 0) {
         valueElement.classList.add(...additionalValueClass);
