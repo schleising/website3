@@ -3,7 +3,7 @@
     flex-direction: column;
     justify-content: space-between;
     align-items: stretch;
-    height: 100vh;
+    min-height: 100vh;
     padding: 0.25rem;
     background-color: hsl(219, 79%, 96%);
 }
