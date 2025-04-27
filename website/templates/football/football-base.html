@@ -28,10 +28,13 @@
 {% block scripts %}
 {% if live_matches %}
 <script src="/js/football/football.js"></script>
+<script src="/js/football/visibility_refresh.js"></script>
 <script src="/js/football/scope.js"></script>
 <script src="/js/utils/subscribe.js"></script>
 {% endif %}
 {% if matches|length > 0 %}
-{% endif %}
 <script src="/js/football/scroll-scores.js"></script>
+{% endif %}
+{% block football_scripts %}
+{% endblock %}
 {% endblock %}
