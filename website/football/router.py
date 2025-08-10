@@ -28,6 +28,7 @@ from .models import (
     SimplifiedMatch,
     SimplifiedTableRow,
     SimplifiedFootballData,
+    TableItem,
 )
 from . import pl_matches, pl_table, football_push
 
@@ -160,6 +161,66 @@ async def retreive_team_matches(team_id: int) -> tuple[str, list[Match]]:
             team_name = item.team.short_name
 
     return (team_name, matches)
+
+
+@football_router.get("/bet/", response_class=HTMLResponse)
+async def get_bet_page(request: Request):
+    # Get the number of points for Liverpool, Chelsea and Tottenham
+    liverpool_points = 0
+    chelsea_points = 0
+    tottenham_points = 0
+
+    if pl_table is not None:
+        table_cursor = pl_table.find({})
+
+        async for table_item in table_cursor:
+            team_details = TableItem.model_validate(table_item)
+            if team_details.team.short_name == "Liverpool":
+                liverpool_points = team_details.points
+            elif team_details.team.short_name == "Chelsea":
+                chelsea_points = team_details.points
+            elif team_details.team.short_name == "Tottenham":
+                tottenham_points = team_details.points
+
+    # Get the total owed by each person, £5 per point, Steve supports Liverpool, Tim supports Chelsea, and Thommo supports Tottenham
+    steve_vs_tim = (liverpool_points - chelsea_points) * 5
+    steve_vs_thommo = (liverpool_points - tottenham_points) * 5
+    tim_vs_thommo = (chelsea_points - tottenham_points) * 5
+
+    # Create the strings in the form Steve owes Tim £5, Steve owes Thommo £5, Tim owes Thommo £5
+    if steve_vs_tim > 0:
+        steve_vs_tim_text = f"Tim owes Steve £{steve_vs_tim}"
+    elif steve_vs_tim < 0:
+        steve_vs_tim_text = f"Steve owes Tim £{-steve_vs_tim}"
+    else:
+        steve_vs_tim_text = "Steve and Tim are even"
+
+    if steve_vs_thommo > 0:
+        steve_vs_thommo_text = f"Thommo owes Steve £{steve_vs_thommo}"
+    elif steve_vs_thommo < 0:
+        steve_vs_thommo_text = f"Steve owes Thommo £{-steve_vs_thommo}"
+    else:
+        steve_vs_thommo_text = "Steve and Thommo are even"
+
+    if tim_vs_thommo > 0:
+        tim_vs_thommo_text = f"Thommo owes Tim £{tim_vs_thommo}"
+    elif tim_vs_thommo < 0:
+        tim_vs_thommo_text = f"Tim owes Thommo £{-tim_vs_thommo}"
+    else:
+        tim_vs_thommo_text = "Tim and Thommo are even"
+
+    return TEMPLATES.TemplateResponse(
+        "football/bet_template.html",
+        {
+            "request": request,
+            "liverpool_points": liverpool_points,
+            "chelsea_points": chelsea_points,
+            "tottenham_points": tottenham_points,
+            "steve_vs_tim": steve_vs_tim_text,
+            "steve_vs_thommo": steve_vs_thommo_text,
+            "tim_vs_thommo": tim_vs_thommo_text,
+        },
+    )
 
 
 @football_router.get("/api/", response_model=SimplifiedFootballData)
