@@ -19,13 +19,13 @@ http_ece==1.2.1
 idna==3.10
 Jinja2==3.1.6
 Markdown==3.8.2
-markdown-it-py==3.0.0
+markdown-it-py==4.0.0
 MarkupSafe==3.0.2
 md_mermaid @ git+https://github.com/schleising/md_mermaid@e2076ca7bff9f7bb27ce73549e604d742de8af1c
 mdurl==0.1.2
 motor==3.7.1
 motor-types==1.0.0b4
-multidict==6.6.3
+multidict==6.6.4
 notify-run @ git+https://github.com/notify-run/notify.run.git@0b37558d54fda52d382a72cef05c05856c605c7b#subdirectory=py_client
 passlib==1.7.4
 propcache==0.3.2
