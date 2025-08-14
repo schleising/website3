@@ -22,6 +22,8 @@ from pymongo.errors import DuplicateKeyError
 from ..database.database import get_data_by_date
 
 from .models import (
+    FootballBetData,
+    FootballBetList,
     Match,
     MatchList,
     LiveTableItem,
@@ -165,62 +167,90 @@ async def retreive_team_matches(team_id: int) -> tuple[str, list[Match]]:
 
 @football_router.get("/bet/", response_class=HTMLResponse)
 async def get_bet_page(request: Request):
+    return TEMPLATES.TemplateResponse(
+        "football/bet_template.html", {"request": request}
+    )
+
+
+@football_router.get("/bet/data", response_model=FootballBetList)
+async def get_bet_data(request: Request):
+    # Get the bet data for the current user
+    bet_data = FootballBetList(bets=[])
+
     # Get the number of points for Liverpool, Chelsea and Tottenham
     liverpool_points = 0
     chelsea_points = 0
     tottenham_points = 0
 
-    if pl_table is not None:
-        table_cursor = pl_table.find({})
+    if pl_table is None:
+        return bet_data
 
-        async for table_item in table_cursor:
-            team_details = TableItem.model_validate(table_item)
-            if team_details.team.short_name == "Liverpool":
-                liverpool_points = team_details.points
-            elif team_details.team.short_name == "Chelsea":
-                chelsea_points = team_details.points
-            elif team_details.team.short_name == "Tottenham":
-                tottenham_points = team_details.points
+    table_cursor = pl_table.find({})
 
-    # Get the total owed by each person, £5 per point, Steve supports Liverpool, Tim supports Chelsea, and Thommo supports Tottenham
-    steve_vs_tim = (liverpool_points - chelsea_points) * 5
-    steve_vs_thommo = (liverpool_points - tottenham_points) * 5
-    tim_vs_thommo = (chelsea_points - tottenham_points) * 5
+    async for table_item in table_cursor:
+        team_details = TableItem.model_validate(table_item)
+        if team_details.team.short_name == "Liverpool":
+            liverpool_points = team_details.points
+        elif team_details.team.short_name == "Chelsea":
+            chelsea_points = team_details.points
+        elif team_details.team.short_name == "Tottenham":
+            tottenham_points = team_details.points
 
-    # Create the strings in the form Steve owes Tim £5, Steve owes Thommo £5, Tim owes Thommo £5
-    if steve_vs_tim > 0:
-        steve_vs_tim_text = f"Tim owes Steve £{steve_vs_tim}"
-    elif steve_vs_tim < 0:
-        steve_vs_tim_text = f"Steve owes Tim £{-steve_vs_tim}"
-    else:
-        steve_vs_tim_text = "Steve and Tim are even"
-
-    if steve_vs_thommo > 0:
-        steve_vs_thommo_text = f"Thommo owes Steve £{steve_vs_thommo}"
-    elif steve_vs_thommo < 0:
-        steve_vs_thommo_text = f"Steve owes Thommo £{-steve_vs_thommo}"
-    else:
-        steve_vs_thommo_text = "Steve and Thommo are even"
-
-    if tim_vs_thommo > 0:
-        tim_vs_thommo_text = f"Thommo owes Tim £{tim_vs_thommo}"
-    elif tim_vs_thommo < 0:
-        tim_vs_thommo_text = f"Tim owes Thommo £{-tim_vs_thommo}"
-    else:
-        tim_vs_thommo_text = "Tim and Thommo are even"
-
-    return TEMPLATES.TemplateResponse(
-        "football/bet_template.html",
-        {
-            "request": request,
-            "liverpool_points": liverpool_points,
-            "chelsea_points": chelsea_points,
-            "tottenham_points": tottenham_points,
-            "steve_vs_tim": steve_vs_tim_text,
-            "steve_vs_thommo": steve_vs_thommo_text,
-            "tim_vs_thommo": tim_vs_thommo_text,
-        },
+    # Create a bet data object for each user
+    liverpool_bet_data = FootballBetData(
+        team_name="liverpool",
+        name="Steve",
+        points=liverpool_points,
+        owea="From Tim" if (liverpool_points - chelsea_points) > 0 else "To Tim",
+        amounta=(liverpool_points - chelsea_points) * 5,
+        oweb=(
+            "From Thommo" if (liverpool_points - tottenham_points) > 0 else "To Thommo"
+        ),
+        amountb=(liverpool_points - tottenham_points) * 5,
+        balance="Steve's Balance",
+        balance_amount=(
+            (liverpool_points - chelsea_points) + (liverpool_points - tottenham_points)
+        )
+        * 5,
     )
+
+    chelsea_bet_data = FootballBetData(
+        team_name="chelsea",
+        name="Tim",
+        points=chelsea_points,
+        owea="From Steve" if (chelsea_points - liverpool_points) > 0 else "To Steve",
+        amounta=(chelsea_points - liverpool_points) * 5,
+        oweb="From Thommo" if (chelsea_points - tottenham_points) > 0 else "To Thommo",
+        amountb=(chelsea_points - tottenham_points) * 5,
+        balance="Tim's Balance",
+        balance_amount=(
+            (chelsea_points - liverpool_points) + (chelsea_points - tottenham_points)
+        )
+        * 5,
+    )
+
+    tottenham_bet_data = FootballBetData(
+        team_name="tottenham",
+        name="Thommo",
+        points=tottenham_points,
+        owea="From Steve" if (tottenham_points - liverpool_points) > 0 else "To Steve",
+        amounta=(tottenham_points - liverpool_points) * 5,
+        oweb="From Tim" if (tottenham_points - chelsea_points) > 0 else "To Tim",
+        amountb=(tottenham_points - chelsea_points) * 5,
+        balance="Thommo's Balance",
+        balance_amount=(
+            (tottenham_points - liverpool_points) + (tottenham_points - chelsea_points)
+        )
+        * 5,
+    )
+
+    # Add the bet data to the list
+    bet_data.bets.extend([liverpool_bet_data, chelsea_bet_data, tottenham_bet_data])
+
+    # Sort the bet data by the points field
+    bet_data.bets.sort(key=lambda x: x.points, reverse=True)
+
+    return bet_data
 
 
 @football_router.get("/api/", response_model=SimplifiedFootballData)

@@ -1,27 +1,79 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <link type="text/css" rel="stylesheet" href="/css/reset.css" />
-    <link type="text/css" rel="stylesheet" href="/css/football/bet.css" />
-    <link href="/icons/favicon.ico" rel="icon" type="image/ico" />
-    <title>Live Bet Standings</title>
-  </head>
-  <body>
-    <div class="outer">
-      <div class="header">
-        <h2>Live Bet Standings</h2>
-        <!-- <button id="subscribe-button">Subscribe</button> -->
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <link type="text/css" rel="stylesheet" href="/css/reset.css" />
+  <link type="text/css" rel="stylesheet" href="/css/football/bet.css" />
+  <link href="/icons/favicon.ico" rel="icon" type="image/ico" />
+  <title>Live Bet Standings</title>
+</head>
+
+<body>
+  <div class="main">
+    <h1 class="title">Premier League Tracker</h1>
+    <div class="bet-container">
+      <div class="bet-widget" id="bet-widget-0">
+        <div class="bet-row">
+          <p class="name" id="name-0"></p>
+          <p class="points" id="points-0"></p>
+        </div>
+        <div class="bet-row">
+          <p class="normal" id="owea-0"></p>
+          <p class="money-negative" id="amounta-0"></p>
+        </div>
+        <div class="bet-row">
+          <p class="normal" id="oweb-0"></p>
+          <p class="money-positive" id="amountb-0"></p>
+        </div>
+        <div class="spacer"></div>
+        <div class="bet-row">
+          <p class="balance" id="balance-0"></p>
+          <p class="money-positive" id="balance-amount-0"></p>
+        </div>
       </div>
-      <div class="main">
-        <p>Liverpool: {{ liverpool_points }}</p>
-        <p>Chelsea: {{ chelsea_points }}</p>
-        <p>Tottenham: {{ tottenham_points }}</p>
-        <p>{{ steve_vs_tim }}</p>
-        <p>{{ steve_vs_thommo }}</p>
-        <p>{{ tim_vs_thommo }}</p>
+      <div class="bet-widget" id="bet-widget-1">
+        <div class="bet-row">
+          <p class="name" id="name-1"></p>
+          <p class="points" id="points-1"></p>
+        </div>
+        <div class="bet-row">
+          <p class="normal" id="owea-1"></p>
+          <p class="money-negative" id="amounta-1"></p>
+        </div>
+        <div class="bet-row">
+          <p class="normal" id="oweb-1"></p>
+          <p class="money-positive" id="amountb-1"></p>
+        </div>
+        <div class="spacer"></div>
+        <div class="bet-row">
+          <p class="balance" id="balance-1"></p>
+          <p class="money-positive" id="balance-amount-1"></p>
+        </div>
+      </div>
+      <div class="bet-widget" id="bet-widget-2">
+        <div class="bet-row">
+          <p class="name" id="name-2"></p>
+          <p class="points" id="points-2"></p>
+        </div>
+        <div class="bet-row">
+          <p class="normal" id="owea-2"></p>
+          <p class="money-negative" id="amounta-2"></p>
+        </div>
+        <div class="bet-row">
+          <p class="normal" id="oweb-2"></p>
+          <p class="money-positive" id="amountb-2"></p>
+        </div>
+        <div class="spacer"></div>
+        <div class="bet-row">
+          <p class="balance" id="balance-2"></p>
+          <p class="money-positive" id="balance-amount-2"></p>
+        </div>
       </div>
     </div>
-  </body>
+  </div>
+  <script src="/js/football/bet.js"></script>
+</body>
+
 </html>

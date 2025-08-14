@@ -1,0 +1,107 @@
+.main {
+    background-color: #F8F8F8;
+}
+
+.bet-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+}
+
+.title {
+    font-size: 2rem;
+    font-weight: bold;
+    color: #333;
+    margin-left: 0.5rem;
+    padding-top: 0.5rem;
+}
+
+.bet-widget {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    margin: 0.5rem;
+    padding: 0.25rem;
+    border: 0.075rem;
+    border-style: solid;
+    border-color: silver;
+    border-radius: 0.5rem;
+    position: relative;
+    overflow: hidden;
+    background-color: white;
+}
+
+.bet-widget::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+    opacity: 0.1;
+    margin: 0.5rem;
+}
+
+.bet-widget-liverpool::before {
+    background-image: url(/images/football/crests/64.png);
+}
+
+.bet-widget-chelsea::before {
+    background-image: url(/images/football/crests/61.png);
+}
+
+.bet-widget-tottenham::before {
+    background-image: url(/images/football/crests/73.png);
+}
+
+.bet-widget:hover {
+    background-color: #F0F0F0;
+}
+
+.bet-row {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+p {
+    margin: 0;
+}
+
+.name {
+    font-weight: bold;
+    font-size: 1.5rem;
+    color: #333;
+    margin-bottom: 1rem;
+}
+
+.points {
+    font-weight: bold;
+    color: #333;
+    background-color: #E8E8E8;
+    padding: 0.5rem;
+    border-radius: 0.5rem;
+}
+
+.normal {
+    color: #888;
+}
+
+.spacer {
+    height: 1px;
+    border-bottom: 1px solid #e0e0e0;
+    margin: 0.5rem 0;
+}
+
+.money-positive {
+    color: green;
+}
+
+.money-negative {
+    color: red;
+}
+
+.balance {
+    font-weight: bold;
+    color: #333;
+}
