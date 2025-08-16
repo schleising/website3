@@ -27,6 +27,7 @@ from .models import (
     Match,
     MatchList,
     LiveTableItem,
+    MatchStatus,
     SimplifiedMatch,
     SimplifiedTableRow,
     SimplifiedFootballData,
@@ -239,13 +240,13 @@ async def get_bet_data(request: Request):
 
     # Filter out matches that have already finished and count them
     liverpool_chelsea = len(
-        [match for match in liverpool_chelsea if match.status != "FINISHED"]
+        [match for match in liverpool_chelsea if match.status not in [MatchStatus.in_play, MatchStatus.paused, MatchStatus.finished]]
     )
     liverpool_tottenham = len(
-        [match for match in liverpool_tottenham if match.status != "FINISHED"]
+        [match for match in liverpool_tottenham if match.status not in [MatchStatus.in_play, MatchStatus.paused, MatchStatus.finished]]
     )
     chelsea_tottenham = len(
-        [match for match in chelsea_tottenham if match.status != "FINISHED"]
+        [match for match in chelsea_tottenham if match.status not in [MatchStatus.in_play, MatchStatus.paused, MatchStatus.finished]]
     )
 
     # Calculate the best case for each team
