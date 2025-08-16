@@ -26,7 +26,7 @@ document.addEventListener("DOMContentLoaded", function () {
 });
 
 function getBetData() {
-    fetch("/football/bet/data")
+    fetch("/football/bet/data/")
         .then(response => response.json())
         .then(
             /** @param {FootballBetList} data */

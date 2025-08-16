@@ -201,7 +201,7 @@ async def get_bet_page(request: Request):
     )
 
 
-@football_router.get("/bet/data", response_model=FootballBetList)
+@football_router.get("/bet/data/", response_model=FootballBetList)
 async def get_bet_data(request: Request):
     # Get the bet data for the current user
     bet_data = FootballBetList(bets=[])
