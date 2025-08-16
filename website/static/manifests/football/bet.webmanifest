@@ -1,0 +1,37 @@
+{
+    "name": "Football Bet Tracker",
+    "icons": [
+        {
+            "src": "/icons/football/bet/android-chrome-144x144.png",
+            "sizes": "144x144",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "/icons/football/bet/android-chrome-192x192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "/icons/football/bet/android-chrome-512x512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "/icons/football/bet/android-chrome-maskable-512x512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "maskable"
+        }
+    ],
+    "start_url": "/football/bet/",
+    "display": "standalone",
+    "background_color": "#F8F8F8",
+    "theme_color": "#F8F8F8",
+    "orientation": "portrait",
+    "scope": "/football/bet/",
+    "id": "/football/bet/",
+    "description": "Track the Steve, Tim and Thommo betting data"
+}
