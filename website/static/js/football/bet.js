@@ -55,6 +55,20 @@ function getBetData() {
                         } else if (bet.amountb < 0) {
                             widget.querySelector(`#amountb-${index}`).classList.add("money-negative");
                         }
+                        widget.querySelector(`#best_case-${index}`).textContent = "£" + bet.best_case;
+                        widget.querySelector(`#best_case-${index}`).classList.remove("money-positive", "money-negative");
+                        if (bet.best_case > 0) {
+                            widget.querySelector(`#best_case-${index}`).classList.add("money-positive");
+                        } else if (bet.best_case < 0) {
+                            widget.querySelector(`#best_case-${index}`).classList.add("money-negative");
+                        }
+                        widget.querySelector(`#worst_case-${index}`).textContent = "£" + bet.worst_case;
+                        widget.querySelector(`#worst_case-${index}`).classList.remove("money-positive", "money-negative");
+                        if (bet.worst_case > 0) {
+                            widget.querySelector(`#worst_case-${index}`).classList.add("money-positive");
+                        } else if (bet.worst_case < 0) {
+                            widget.querySelector(`#worst_case-${index}`).classList.add("money-negative");
+                        }
                         widget.querySelector(`#balance-${index}`).textContent = bet.balance;
                         widget.querySelector(`#balance-amount-${index}`).textContent = "£" + bet.balance_amount;
                         widget.querySelector(`#balance-amount-${index}`).classList.remove("money-positive", "money-negative");

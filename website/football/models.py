@@ -316,6 +316,8 @@ class FootballBetData(BaseModel):
     amounta: int
     oweb: str
     amountb: int
+    best_case: int
+    worst_case: int
     balance: str
     balance_amount: int
 

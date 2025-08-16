@@ -165,6 +165,35 @@ async def retreive_team_matches(team_id: int) -> tuple[str, list[Match]]:
     return (team_name, matches)
 
 
+async def retreive_head_to_head_matches(
+    team_a_short_name: str, team_b_short_name: str
+) -> list[Match]:
+    matches: list[Match] = []
+
+    # Get the matches between the two teams from the database
+    if pl_matches is not None:
+        from_db_cursor = pl_matches.find(
+            {
+                "$or": [
+                    {
+                        "home_team.short_name": team_a_short_name,
+                        "away_team.short_name": team_b_short_name,
+                    },
+                    {
+                        "home_team.short_name": team_b_short_name,
+                        "away_team.short_name": team_a_short_name,
+                    },
+                ]
+            }
+        ).sort("utc_date", ASCENDING)
+
+        matches = [Match(**item) async for item in from_db_cursor]
+    else:
+        logging.error("No DB connection")
+
+    return matches
+
+
 @football_router.get("/bet/", response_class=HTMLResponse)
 async def get_bet_page(request: Request):
     return TEMPLATES.TemplateResponse(
@@ -177,10 +206,14 @@ async def get_bet_data(request: Request):
     # Get the bet data for the current user
     bet_data = FootballBetList(bets=[])
 
-    # Get the number of points for Liverpool, Chelsea and Tottenham
+    # Get the number of points and games remaining for Liverpool, Chelsea and Tottenham
     liverpool_points = 0
     chelsea_points = 0
     tottenham_points = 0
+
+    liverpool_remaining = 0
+    chelsea_remaining = 0
+    tottenham_remaining = 0
 
     if pl_table is None:
         return bet_data
@@ -191,10 +224,64 @@ async def get_bet_data(request: Request):
         team_details = TableItem.model_validate(table_item)
         if team_details.team.short_name == "Liverpool":
             liverpool_points = team_details.points
+            liverpool_remaining = 38 - team_details.played_games
         elif team_details.team.short_name == "Chelsea":
             chelsea_points = team_details.points
+            chelsea_remaining = 38 - team_details.played_games
         elif team_details.team.short_name == "Tottenham":
             tottenham_points = team_details.points
+            tottenham_remaining = 38 - team_details.played_games
+
+    # Get the matches between Liverpool, Chelsea and Tottenham
+    liverpool_chelsea = await retreive_head_to_head_matches("Liverpool", "Chelsea")
+    liverpool_tottenham = await retreive_head_to_head_matches("Liverpool", "Tottenham")
+    chelsea_tottenham = await retreive_head_to_head_matches("Chelsea", "Tottenham")
+
+    # Filter out matches that have already finished and count them
+    liverpool_chelsea = len(
+        [match for match in liverpool_chelsea if match.status != "FINISHED"]
+    )
+    liverpool_tottenham = len(
+        [match for match in liverpool_tottenham if match.status != "FINISHED"]
+    )
+    chelsea_tottenham = len(
+        [match for match in chelsea_tottenham if match.status != "FINISHED"]
+    )
+
+    # Calculate the worst case for each team
+    liverpool_worst_case = (
+        liverpool_points
+        - ((chelsea_remaining - chelsea_tottenham) * 3)
+        - ((tottenham_remaining - chelsea_tottenham) * 3)
+        - chelsea_tottenham * 3
+    ) * 5
+
+    chelsea_worst_case = (
+        chelsea_points
+        - ((liverpool_remaining - liverpool_tottenham) * 3)
+        - ((tottenham_remaining - liverpool_tottenham) * 3)
+        - liverpool_tottenham * 3
+    ) * 5
+
+    tottenham_worst_case = (
+        tottenham_points
+        - ((liverpool_remaining - liverpool_chelsea) * 3)
+        - ((chelsea_remaining - liverpool_chelsea) * 3)
+        - liverpool_chelsea * 3
+    ) * 5
+
+    # Calculate the best case for each team
+    liverpool_best_case = (
+        liverpool_points + (liverpool_remaining * 3) - (chelsea_tottenham * 2)
+    ) * 5
+
+    chelsea_best_case = (
+        chelsea_points + (chelsea_remaining * 3) - (liverpool_tottenham * 2)
+    ) * 5
+
+    tottenham_best_case = (
+        tottenham_points + (tottenham_remaining * 3) - (liverpool_chelsea * 2)
+    ) * 5
 
     # Create a bet data object for each user
     liverpool_bet_data = FootballBetData(
@@ -207,6 +294,8 @@ async def get_bet_data(request: Request):
             "From Thommo" if (liverpool_points - tottenham_points) > 0 else "To Thommo"
         ),
         amountb=(liverpool_points - tottenham_points) * 5,
+        best_case=liverpool_best_case,
+        worst_case=liverpool_worst_case,
         balance="Steve's Balance",
         balance_amount=(
             (liverpool_points - chelsea_points) + (liverpool_points - tottenham_points)
@@ -222,6 +311,8 @@ async def get_bet_data(request: Request):
         amounta=(chelsea_points - liverpool_points) * 5,
         oweb="From Thommo" if (chelsea_points - tottenham_points) > 0 else "To Thommo",
         amountb=(chelsea_points - tottenham_points) * 5,
+        best_case=chelsea_best_case,
+        worst_case=chelsea_worst_case,
         balance="Tim's Balance",
         balance_amount=(
             (chelsea_points - liverpool_points) + (chelsea_points - tottenham_points)
@@ -237,6 +328,8 @@ async def get_bet_data(request: Request):
         amounta=(tottenham_points - liverpool_points) * 5,
         oweb="From Tim" if (tottenham_points - chelsea_points) > 0 else "To Tim",
         amountb=(tottenham_points - chelsea_points) * 5,
+        best_case=tottenham_best_case,
+        worst_case=tottenham_worst_case,
         balance="Thommo's Balance",
         balance_amount=(
             (tottenham_points - liverpool_points) + (tottenham_points - chelsea_points)
