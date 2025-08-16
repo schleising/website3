@@ -250,27 +250,30 @@ async def get_bet_data(request: Request):
 
     # Calculate the best case for each team
     liverpool_best_case = (
-        liverpool_points
-        + (liverpool_remaining * 3)
-        - (chelsea_tottenham * 2)
-        - (chelsea_points)
-        - (tottenham_points)
+        (liverpool_points + (liverpool_remaining * 3))
+        - chelsea_points
+        - (chelsea_tottenham * 1)
+        + (liverpool_points + (liverpool_remaining * 3))
+        - tottenham_points
+        - (chelsea_tottenham * 1)
     ) * 5
 
     chelsea_best_case = (
-        chelsea_points
-        + (chelsea_remaining * 3)
-        - (liverpool_tottenham * 2)
-        - (liverpool_points)
-        - (tottenham_points)
+        (chelsea_points + (chelsea_remaining * 3))
+        - liverpool_points
+        - (liverpool_tottenham * 1)
+        + (chelsea_points + (chelsea_remaining * 3))
+        - tottenham_points
+        - (liverpool_tottenham * 1)
     ) * 5
 
     tottenham_best_case = (
-        tottenham_points
-        + (tottenham_remaining * 3)
-        - (liverpool_chelsea * 2)
-        - (liverpool_points)
-        - (chelsea_points)
+        (tottenham_points + (tottenham_remaining * 3))
+        - liverpool_points
+        - (chelsea_tottenham * 1)
+        + (tottenham_points + (tottenham_remaining * 3))
+        - chelsea_points
+        - (chelsea_tottenham * 1)
     ) * 5
 
     # Calculate the worst case for each team
