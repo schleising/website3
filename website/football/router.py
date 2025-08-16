@@ -272,15 +272,27 @@ async def get_bet_data(request: Request):
 
     # Calculate the best case for each team
     liverpool_best_case = (
-        liverpool_points + (liverpool_remaining * 3) - (chelsea_tottenham * 2)
+        liverpool_points
+        + (liverpool_remaining * 3)
+        - (chelsea_tottenham * 2)
+        - (chelsea_points * 3)
+        - (tottenham_points * 3)
     ) * 5
 
     chelsea_best_case = (
-        chelsea_points + (chelsea_remaining * 3) - (liverpool_tottenham * 2)
+        chelsea_points
+        + (chelsea_remaining * 3)
+        - (liverpool_tottenham * 2)
+        - (liverpool_points * 3)
+        - (tottenham_points * 3)
     ) * 5
 
     tottenham_best_case = (
-        tottenham_points + (tottenham_remaining * 3) - (liverpool_chelsea * 2)
+        tottenham_points
+        + (tottenham_remaining * 3)
+        - (liverpool_chelsea * 2)
+        - (liverpool_points * 3)
+        - (chelsea_points * 3)
     ) * 5
 
     # Create a bet data object for each user
