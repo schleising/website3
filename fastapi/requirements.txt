@@ -36,7 +36,7 @@ pydantic==2.11.7
 pydantic_core==2.33.2
 Pygments==2.19.2
 pymdown-extensions==10.16.1
-pymongo==4.14.0
+pymongo==4.14.1
 PyQRCode==1.2.1
 python-jose==3.5.0
 python-multipart==0.0.20
