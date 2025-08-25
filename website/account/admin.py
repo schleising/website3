@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 import logging
 from typing import Any, Dict, Optional, cast
 
@@ -139,9 +139,9 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None):
 
     # Set the expiry time to the requested time or 15 minutes if it is not set
     if expires_delta:
-        expire = datetime.utcnow() + expires_delta
+        expire = datetime.now(tz=UTC) + expires_delta
     else:
-        expire = datetime.utcnow() + timedelta(minutes=15)
+        expire = datetime.now(tz=UTC) + timedelta(minutes=15)
 
     # Add this to the data to be encoded
     to_encode.update({"exp": expire})

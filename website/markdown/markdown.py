@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime
 from bson import ObjectId
 
 from pymongo.results import UpdateResult
@@ -29,7 +29,7 @@ async def convert_to_markdown(data_to_convert: MarkdownDataMessage, user: User |
     if data_to_convert.save_data and user is not None:
         if markdown_collection is not None:
             # Create a database type
-            db_input = MarkdownDataToDb(**data_to_convert.model_dump(), username=user.username, last_updated=datetime.utcnow())
+            db_input = MarkdownDataToDb(**data_to_convert.model_dump(), username=user.username, last_updated=datetime.now(tz=UTC))
 
             try:
                 # Add the data to the database
