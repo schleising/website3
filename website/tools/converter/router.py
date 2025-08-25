@@ -190,12 +190,12 @@ async def subscribe(request: Request, response: Response):
     if push_collection is not None:
         try:
             result = await push_collection.insert_one(data)
+            logging.debug(result)
         except DuplicateKeyError as ex:
             logging.error(f'Error inserting subscription: {ex}')
             response.status_code = status.HTTP_400_BAD_REQUEST
             return {'status': 'error', 'message': 'Subscription already exists'}
 
-    logging.debug(result)
 
     # Send a 201 response
     return {'status': 'success'}
@@ -209,8 +209,8 @@ async def unsubscribe(request: Request):
     # Remove the subscription from the database
     if push_collection is not None:
         result = await push_collection.delete_one(data)
+        logging.debug(result)
 
-    logging.debug(result)
 
     # Send a 204 response
     return {'status': 'success'}
