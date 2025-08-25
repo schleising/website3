@@ -25,10 +25,7 @@ document.addEventListener('readystatechange', event => {
         }
 
         // Only scroll if the index is greater than 0 and less than the number of score widgets
-        if (index > 0 && index < scoreWidgets.length) {
-            // Move the index back one
-            index = index - 1;
-
+        if (index >= 0 && index < scoreWidgets.length) {
             // Get the widget to scroll to
             widgetToScrollTo = scoreWidgets[index];
     
