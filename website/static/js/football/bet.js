@@ -40,7 +40,15 @@ function getBetData() {
                         widget.classList.remove("bet-widget-liverpool", "bet-widget-chelsea", "bet-widget-tottenham");
                         widget.classList.add(`bet-widget-${bet.team_name}`);
                         widget.querySelector(`#name-${index}`).textContent = bet.name;
-                        widget.querySelector(`#live-text-${index}`).textContent = bet.live ? "LIVE" : "";
+                        const liveText = widget.querySelector(`#live-text-${index}`);
+                        const liveDiv = widget.querySelector(`#live-${index}`);
+                        if (bet.live) {
+                            liveDiv.classList.remove("hidden");
+                            liveText.textContent = "LIVE";
+                        } else {
+                            liveDiv.classList.add("hidden");
+                            liveText.textContent = "";
+                        }
                         widget.querySelector(`#played-${index}`).textContent = bet.played;
                         widget.querySelector(`#points-${index}`).textContent = bet.points;
                         widget.querySelector(`#owea-${index}`).textContent = bet.owea;
