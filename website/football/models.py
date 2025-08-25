@@ -82,7 +82,6 @@ class MatchStatus(str, Enum):
                 | MatchStatus.timed
                 | MatchStatus.postponed
                 | MatchStatus.cancelled
-                | MatchStatus.awarded
             ):
                 return False
             case (
@@ -90,6 +89,7 @@ class MatchStatus(str, Enum):
                 | MatchStatus.paused
                 | MatchStatus.finished
                 | MatchStatus.suspended
+                | MatchStatus.awarded
             ):
                 return True
 
