@@ -1,15 +1,67 @@
+from typing import Self
 from zoneinfo import ZoneInfo
+from dataclasses import dataclass
 
 from .football_db import get_table_db, retreive_head_to_head_matches
 
 
-from .models import FootballBetData, FootballBetList, Match, MatchStatus, TableItem
+from .models import (
+    FootballBetData,
+    FootballBetList,
+    LiveTableItem,
+    Match,
+)
+
+
+@dataclass
+class TeamPointsData:
+    team_name: str
+    current_points: int
+    remaining_matches: int
+    remaining_other_h2h_matches: int
+
+    def _team_best_case(self, other_team: Self) -> int:
+        # Calculate the max points for this team
+        max_own_points = self.current_points + (self.remaining_matches * 3)
+
+        # Calculate the min points for the other team
+        min_other_points = (
+            other_team.current_points
+            + (other_team.remaining_matches * 0)
+            + (self.remaining_other_h2h_matches * 1)
+        )
+
+        # Calculate the point difference
+        return max_own_points - min_other_points
+
+    def best_case(self, team_1: Self, team_2: Self) -> int:
+        return (self._team_best_case(team_1) + self._team_best_case(team_2)) * 5
+
+    def _team_worst_case(self, other_team: Self) -> int:
+        # Calculate the min points for this team
+        min_own_points = self.current_points + (self.remaining_matches * 0)
+
+        # Calculate the max points for the other team
+        max_other_points = other_team.current_points + (
+            (other_team.remaining_matches - self.remaining_other_h2h_matches) * 3
+        )
+
+        # Calculate the point difference
+        return min_own_points - max_other_points
+
+    def worst_case(self, team_1: Self, team_2: Self) -> int:
+        return (
+            self._team_worst_case(team_1)
+            + self._team_worst_case(team_2)
+            - (self.remaining_other_h2h_matches * 3)
+        ) * 5
 
 
 def update_match_timezone(matches: list[Match]) -> list[Match]:
     local_tz = ZoneInfo("Europe/London")
 
     for match in matches:
+        # Convert the match time to local time
         match.local_date = match.utc_date.astimezone(local_tz)
 
     return matches
@@ -19,163 +71,123 @@ async def create_bet_standings() -> FootballBetList:
     # Get the bet data for the current user
     bet_data = FootballBetList(bets=[])
 
-    # Get the number of points and games remaining for Liverpool, Chelsea and Tottenham
-    liverpool_points = 0
-    chelsea_points = 0
-    tottenham_points = 0
+    # Initialise the points for Liverpool, Chelsea and Tottenham
+    liverpool = TeamPointsData("Liverpool", 0, 0, 0)
+    chelsea = TeamPointsData("Chelsea", 0, 0, 0)
+    tottenham = TeamPointsData("Tottenham", 0, 0, 0)
 
-    liverpool_remaining = 0
-    chelsea_remaining = 0
-    tottenham_remaining = 0
+    # Get the current table data
+    table_data: list[LiveTableItem] = await get_table_db()
 
-    table = await get_table_db()
+    # Get the current points and remaining matches for each team
+    for item in table_data:
+        if item.team.short_name == "Liverpool":
+            liverpool.current_points = item.points
+            liverpool.remaining_matches = 38 - item.played_games
+        elif item.team.short_name == "Chelsea":
+            chelsea.current_points = item.points
+            chelsea.remaining_matches = 38 - item.played_games
+        elif item.team.short_name == "Tottenham":
+            tottenham.current_points = item.points
+            tottenham.remaining_matches = 38 - item.played_games
 
-    for table_item in table:
-        team_details = TableItem.model_validate(table_item)
-        if team_details.team.short_name == "Liverpool":
-            liverpool_points = team_details.points
-            liverpool_remaining = 38 - team_details.played_games
-        elif team_details.team.short_name == "Chelsea":
-            chelsea_points = team_details.points
-            chelsea_remaining = 38 - team_details.played_games
-        elif team_details.team.short_name == "Tottenham":
-            tottenham_points = team_details.points
-            tottenham_remaining = 38 - team_details.played_games
+    # Get the head to head matches between the other teams
+    liverpool_other_h2h = await retreive_head_to_head_matches("Liverpool", "Chelsea")
+    chelsea_other_h2h = await retreive_head_to_head_matches("Chelsea", "Tottenham")
+    tottenham_other_h2h = await retreive_head_to_head_matches("Tottenham", "Liverpool")
 
-    # Get the matches between Liverpool, Chelsea and Tottenham
-    liverpool_chelsea = await retreive_head_to_head_matches("Liverpool", "Chelsea")
-    liverpool_tottenham = await retreive_head_to_head_matches("Liverpool", "Tottenham")
-    chelsea_tottenham = await retreive_head_to_head_matches("Chelsea", "Tottenham")
-
-    # Filter out matches that have already finished and count them
-    liverpool_chelsea = len(
-        [
-            match
-            for match in liverpool_chelsea
-            if match.status
-            not in [MatchStatus.in_play, MatchStatus.paused, MatchStatus.finished]
-        ]
+    # Filter out head to head matches that have already started
+    liverpool.remaining_other_h2h_matches = len(
+        [match for match in liverpool_other_h2h if not match.status.has_started]
     )
-    liverpool_tottenham = len(
-        [
-            match
-            for match in liverpool_tottenham
-            if match.status
-            not in [MatchStatus.in_play, MatchStatus.paused, MatchStatus.finished]
-        ]
+    chelsea.remaining_other_h2h_matches = len(
+        [match for match in chelsea_other_h2h if not match.status.has_started]
     )
-    chelsea_tottenham = len(
-        [
-            match
-            for match in chelsea_tottenham
-            if match.status
-            not in [MatchStatus.in_play, MatchStatus.paused, MatchStatus.finished]
-        ]
+    tottenham.remaining_other_h2h_matches = len(
+        [match for match in tottenham_other_h2h if not match.status.has_started]
     )
 
-    # Calculate the best case for each team
-    liverpool_best_case = (
-        (liverpool_points + (liverpool_remaining * 3))
-        - chelsea_points
-        - (chelsea_tottenham * 1)
-        + (liverpool_points + (liverpool_remaining * 3))
-        - tottenham_points
-        - (chelsea_tottenham * 1)
-    ) * 5
-
-    chelsea_best_case = (
-        (chelsea_points + (chelsea_remaining * 3))
-        - liverpool_points
-        - (liverpool_tottenham * 1)
-        + (chelsea_points + (chelsea_remaining * 3))
-        - tottenham_points
-        - (liverpool_tottenham * 1)
-    ) * 5
-
-    tottenham_best_case = (
-        (tottenham_points + (tottenham_remaining * 3))
-        - liverpool_points
-        - (chelsea_tottenham * 1)
-        + (tottenham_points + (tottenham_remaining * 3))
-        - chelsea_points
-        - (chelsea_tottenham * 1)
-    ) * 5
-
-    # Calculate the worst case for each team
-    liverpool_worst_case = (
-        -(chelsea_points - liverpool_points)
-        - (tottenham_points - liverpool_points)
-        - ((chelsea_remaining - chelsea_tottenham) * 3)
-        - ((tottenham_remaining - chelsea_tottenham) * 3)
-        - chelsea_tottenham * 3
-    ) * 5
-
-    chelsea_worst_case = (
-        -(liverpool_points - chelsea_points)
-        - (tottenham_points - chelsea_points)
-        - ((liverpool_remaining - liverpool_tottenham) * 3)
-        - ((tottenham_remaining - liverpool_tottenham) * 3)
-        - liverpool_tottenham * 3
-    ) * 5
-
-    tottenham_worst_case = (
-        -(liverpool_points - tottenham_points)
-        - (chelsea_points - tottenham_points)
-        - ((liverpool_remaining - liverpool_chelsea) * 3)
-        - ((chelsea_remaining - liverpool_chelsea) * 3)
-        - liverpool_chelsea * 3
-    ) * 5
-
-    # Create a bet data object for each user
+    # Create the BetData structs for the three teams
     liverpool_bet_data = FootballBetData(
-        team_name="liverpool",
+        team_name=liverpool.team_name,
         name="Steve",
-        points=liverpool_points,
-        owea="From Tim" if (liverpool_points - chelsea_points) > 0 else "To Tim",
-        amounta=(liverpool_points - chelsea_points) * 5,
-        oweb=(
-            "From Thommo" if (liverpool_points - tottenham_points) > 0 else "To Thommo"
+        points=liverpool.current_points,
+        owea=(
+            "To Tim"
+            if liverpool.current_points < chelsea.current_points
+            else "From Tim"
         ),
-        amountb=(liverpool_points - tottenham_points) * 5,
-        best_case=liverpool_best_case,
-        worst_case=liverpool_worst_case,
+        amounta=(liverpool.current_points - chelsea.current_points) * 5,
+        oweb=(
+            "To Thommo"
+            if liverpool.current_points < tottenham.current_points
+            else "From Thommo"
+        ),
+        amountb=(liverpool.current_points - tottenham.current_points) * 5,
+        best_case=liverpool.best_case(chelsea, tottenham),
+        worst_case=liverpool.worst_case(chelsea, tottenham),
         balance="Steve's Balance",
         balance_amount=(
-            (liverpool_points - chelsea_points) + (liverpool_points - tottenham_points)
+            liverpool.current_points
+            - chelsea.current_points
+            + liverpool.current_points
+            - tottenham.current_points
         )
         * 5,
     )
 
     chelsea_bet_data = FootballBetData(
-        team_name="chelsea",
+        team_name=chelsea.team_name,
         name="Tim",
-        points=chelsea_points,
-        owea="From Steve" if (chelsea_points - liverpool_points) > 0 else "To Steve",
-        amounta=(chelsea_points - liverpool_points) * 5,
-        oweb="From Thommo" if (chelsea_points - tottenham_points) > 0 else "To Thommo",
-        amountb=(chelsea_points - tottenham_points) * 5,
-        best_case=chelsea_best_case,
-        worst_case=chelsea_worst_case,
+        points=chelsea.current_points,
+        owea=(
+            "To Steve"
+            if chelsea.current_points < liverpool.current_points
+            else "From Steve"
+        ),
+        amounta=(chelsea.current_points - liverpool.current_points) * 5,
+        oweb=(
+            "To Thommo"
+            if chelsea.current_points < tottenham.current_points
+            else "From Thommo"
+        ),
+        amountb=(chelsea.current_points - tottenham.current_points) * 5,
+        best_case=chelsea.best_case(liverpool, tottenham),
+        worst_case=chelsea.worst_case(liverpool, tottenham),
         balance="Tim's Balance",
         balance_amount=(
-            (chelsea_points - liverpool_points) + (chelsea_points - tottenham_points)
+            chelsea.current_points
+            - liverpool.current_points
+            + chelsea.current_points
+            - tottenham.current_points
         )
         * 5,
     )
 
     tottenham_bet_data = FootballBetData(
-        team_name="tottenham",
+        team_name=tottenham.team_name,
         name="Thommo",
-        points=tottenham_points,
-        owea="From Steve" if (tottenham_points - liverpool_points) > 0 else "To Steve",
-        amounta=(tottenham_points - liverpool_points) * 5,
-        oweb="From Tim" if (tottenham_points - chelsea_points) > 0 else "To Tim",
-        amountb=(tottenham_points - chelsea_points) * 5,
-        best_case=tottenham_best_case,
-        worst_case=tottenham_worst_case,
+        points=tottenham.current_points,
+        owea=(
+            "To Steve"
+            if tottenham.current_points < liverpool.current_points
+            else "From Steve"
+        ),
+        amounta=(tottenham.current_points - liverpool.current_points) * 5,
+        oweb=(
+            "To Tim"
+            if tottenham.current_points < chelsea.current_points
+            else "From Tim"
+        ),
+        amountb=(tottenham.current_points - chelsea.current_points) * 5,
+        best_case=tottenham.best_case(liverpool, chelsea),
+        worst_case=tottenham.worst_case(liverpool, chelsea),
         balance="Thommo's Balance",
         balance_amount=(
-            (tottenham_points - liverpool_points) + (tottenham_points - chelsea_points)
+            tottenham.current_points
+            - liverpool.current_points
+            + tottenham.current_points
+            - chelsea.current_points
         )
         * 5,
     )
@@ -183,7 +195,7 @@ async def create_bet_standings() -> FootballBetList:
     # Add the bet data to the list
     bet_data.bets.extend([liverpool_bet_data, chelsea_bet_data, tottenham_bet_data])
 
-    # Sort the bet data by the points field
+    # Sort the bet data by points
     bet_data.bets.sort(key=lambda x: x.points, reverse=True)
 
     return bet_data
