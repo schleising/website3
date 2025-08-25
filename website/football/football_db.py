@@ -1,7 +1,7 @@
-from datetime import datetime
+from datetime import UTC, datetime
 import logging
 
-from pymongo import ASCENDING
+from pymongo import ASCENDING, DESCENDING
 from pymongo.errors import DuplicateKeyError
 
 from ..database.database import get_data_by_date
@@ -80,6 +80,29 @@ async def retreive_head_to_head_matches(
     return matches
 
 
+async def retreive_latest_team_match(team_id: int) -> Match | None:
+    match: Match | None = None
+
+    if pl_matches is not None:
+        # Get the match for this team with the most recent start time before now
+        from_db = await pl_matches.find_one(
+            {
+                "$or": [{"home_team.id": team_id}, {"away_team.id": team_id}],
+                "utc_date": {"$lte": datetime.now(tz=UTC)},
+            },
+            sort=[("utc_date", DESCENDING)],
+        )
+
+        if from_db:
+            match = Match.model_validate(from_db)
+            logging.info(f"Latest match for team {team_id}: {match}")
+
+    else:
+        logging.error("No DB connection")
+
+    return match
+
+
 async def get_table_db() -> list[LiveTableItem]:
     table_list: list[LiveTableItem] = []
 
@@ -103,6 +126,7 @@ async def add_push_subscription(data: dict) -> bool:
         return False
 
     return True
+
 
 async def delete_push_subscription(data: dict) -> bool:
     if football_push is not None:
