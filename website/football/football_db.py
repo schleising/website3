@@ -80,14 +80,14 @@ async def retreive_head_to_head_matches(
     return matches
 
 
-async def retreive_latest_team_match(team_id: int) -> Match | None:
+async def retreive_latest_team_match(team: str) -> Match | None:
     match: Match | None = None
 
     if pl_matches is not None:
         # Get the match for this team with the most recent start time before now
         from_db = await pl_matches.find_one(
             {
-                "$or": [{"home_team.id": team_id}, {"away_team.id": team_id}],
+                "$or": [{"home_team.short_name": team}, {"away_team.short_name": team}],
                 "utc_date": {"$lte": datetime.now(tz=UTC)},
             },
             sort=[("utc_date", DESCENDING)],
@@ -95,7 +95,7 @@ async def retreive_latest_team_match(team_id: int) -> Match | None:
 
         if from_db:
             match = Match.model_validate(from_db)
-            logging.info(f"Latest match for team {team_id}: {match}")
+            logging.info(f"Latest match for team {team}: {match}")
 
     else:
         logging.error("No DB connection")

@@ -2,7 +2,11 @@ from typing import Self
 from zoneinfo import ZoneInfo
 from dataclasses import dataclass
 
-from .football_db import get_table_db, retreive_head_to_head_matches
+from .football_db import (
+    get_table_db,
+    retreive_head_to_head_matches,
+    retreive_latest_team_match,
+)
 
 
 from .models import (
@@ -16,9 +20,9 @@ from .models import (
 @dataclass
 class TeamPointsData:
     team_name: str
-    current_points: int
-    remaining_matches: int
-    remaining_other_h2h_matches: int
+    current_points: int = 0
+    remaining_matches: int = 0
+    remaining_other_h2h_matches: int = 0
 
     def _team_best_case(self, other_team: Self) -> int:
         # Calculate the max points for this team
@@ -67,14 +71,29 @@ def update_match_timezone(matches: list[Match]) -> list[Match]:
     return matches
 
 
+async def adjust_in_play_matches(
+    team_name: str, team_point_data: TeamPointsData
+) -> TeamPointsData:
+    latest_match = await retreive_latest_team_match(team_name)
+
+    if latest_match is not None and latest_match.status.is_live:
+        # Add one to the matches remaining
+        team_point_data.remaining_matches += 1
+
+        # Subtract the points for a live match
+        team_point_data.current_points -= latest_match.team_points(team_name) or 0
+
+    return team_point_data
+
+
 async def create_bet_standings() -> FootballBetList:
     # Get the bet data for the current user
     bet_data = FootballBetList(bets=[])
 
     # Initialise the points for Liverpool, Chelsea and Tottenham
-    liverpool = TeamPointsData("Liverpool", 0, 0, 0)
-    chelsea = TeamPointsData("Chelsea", 0, 0, 0)
-    tottenham = TeamPointsData("Tottenham", 0, 0, 0)
+    liverpool = TeamPointsData("Liverpool")
+    chelsea = TeamPointsData("Chelsea")
+    tottenham = TeamPointsData("Tottenham")
 
     # Get the current table data
     table_data: list[LiveTableItem] = await get_table_db()
@@ -106,6 +125,10 @@ async def create_bet_standings() -> FootballBetList:
     tottenham.remaining_other_h2h_matches = len(
         [match for match in tottenham_other_h2h if not match.status.has_started]
     )
+
+    liverpool = await adjust_in_play_matches("Liverpool", liverpool)
+    chelsea = await adjust_in_play_matches("Chelsea", chelsea)
+    tottenham = await adjust_in_play_matches("Tottenham", tottenham)
 
     # Create the BetData structs for the three teams
     liverpool_bet_data = FootballBetData(
