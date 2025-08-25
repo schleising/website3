@@ -21,6 +21,7 @@ from .models import (
 class TeamPointsData:
     team_name: str
     current_points: int = 0
+    adjusted_points: int = 0
     matches_played: int = 0
     remaining_matches: int = 0
     remaining_other_h2h_matches: int = 0
@@ -28,11 +29,11 @@ class TeamPointsData:
 
     def _team_best_case(self, other_team: Self) -> int:
         # Calculate the max points for this team
-        max_own_points = self.current_points + (self.remaining_matches * 3)
+        max_own_points = self.adjusted_points + (self.remaining_matches * 3)
 
         # Calculate the min points for the other team
         min_other_points = (
-            other_team.current_points
+            other_team.adjusted_points
             + (other_team.remaining_matches * 0)
             + (self.remaining_other_h2h_matches * 1)
         )
@@ -45,10 +46,10 @@ class TeamPointsData:
 
     def _team_worst_case(self, other_team: Self) -> int:
         # Calculate the min points for this team
-        min_own_points = self.current_points + (self.remaining_matches * 0)
+        min_own_points = self.adjusted_points + (self.remaining_matches * 0)
 
         # Calculate the max points for the other team
-        max_other_points = other_team.current_points + (
+        max_other_points = other_team.adjusted_points + (
             (other_team.remaining_matches - self.remaining_other_h2h_matches) * 3
         )
 
@@ -79,14 +80,11 @@ async def adjust_in_play_matches(
     latest_match = await retreive_latest_team_match(team_name)
 
     if latest_match is not None and latest_match.status.is_live:
-        # Decrease the matches played
-        team_point_data.matches_played -= 1
-
         # Add one to the matches remaining
         team_point_data.remaining_matches += 1
 
         # Subtract the points for a live match
-        team_point_data.current_points -= latest_match.team_points(team_name) or 0
+        team_point_data.adjusted_points -= latest_match.team_points(team_name) or 0
 
         # Set the live flag
         team_point_data.match_in_play = True
@@ -111,14 +109,17 @@ async def create_bet_standings() -> FootballBetList:
         if item.team.short_name == "Liverpool":
             liverpool.matches_played = item.played_games
             liverpool.current_points = item.points
+            liverpool.adjusted_points = item.points
             liverpool.remaining_matches = 38 - item.played_games
         elif item.team.short_name == "Chelsea":
             chelsea.matches_played = item.played_games
             chelsea.current_points = item.points
+            chelsea.adjusted_points = item.points
             chelsea.remaining_matches = 38 - item.played_games
         elif item.team.short_name == "Tottenham":
             tottenham.matches_played = item.played_games
             tottenham.current_points = item.points
+            tottenham.adjusted_points = item.points
             tottenham.remaining_matches = 38 - item.played_games
 
     # Get the head to head matches between the other teams
