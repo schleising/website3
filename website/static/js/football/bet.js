@@ -2,6 +2,7 @@
  * @typedef {Object} FootballBetData
  * @property {string} team_name - Name of the team
  * @property {string} name - Name of the participant
+ * @property {number} played - Matches played
  * @property {number} points - Points associated with the bet
  * @property {string} owea - Owed amount A
  * @property {number} amounta - Amount A
@@ -9,6 +10,7 @@
  * @property {number} amountb - Amount B
  * @property {string} balance - Balance description or value
  * @property {number} balance_amount - Balance amount
+ * @property {boolean} live - Whether the match is live
  */
 
 /**
@@ -38,7 +40,7 @@ function getBetData() {
                         widget.classList.remove("bet-widget-liverpool", "bet-widget-chelsea", "bet-widget-tottenham");
                         widget.classList.add(`bet-widget-${bet.team_name}`);
                         widget.querySelector(`#name-${index}`).textContent = bet.name;
-                        widget.querySelector(`#points-${index}`).textContent = bet.points + "Pts";
+                        widget.querySelector(`#points-${index}`).textContent = (bet.live ? "LIVE " : "") + bet.played + " Pld " + bet.points + " Pts";
                         widget.querySelector(`#owea-${index}`).textContent = bet.owea;
                         widget.querySelector(`#amounta-${index}`).textContent = "£" + bet.amounta;
                         widget.querySelector(`#amounta-${index}`).classList.remove("money-positive", "money-negative");

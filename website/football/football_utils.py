@@ -21,8 +21,10 @@ from .models import (
 class TeamPointsData:
     team_name: str
     current_points: int = 0
+    matches_played: int = 0
     remaining_matches: int = 0
     remaining_other_h2h_matches: int = 0
+    match_in_play: bool = False
 
     def _team_best_case(self, other_team: Self) -> int:
         # Calculate the max points for this team
@@ -77,11 +79,17 @@ async def adjust_in_play_matches(
     latest_match = await retreive_latest_team_match(team_name)
 
     if latest_match is not None and latest_match.status.is_live:
+        # Decrease the matches played
+        team_point_data.matches_played -= 1
+
         # Add one to the matches remaining
         team_point_data.remaining_matches += 1
 
         # Subtract the points for a live match
         team_point_data.current_points -= latest_match.team_points(team_name) or 0
+
+        # Set the live flag
+        team_point_data.match_in_play = True
 
     return team_point_data
 
@@ -101,12 +109,15 @@ async def create_bet_standings() -> FootballBetList:
     # Get the current points and remaining matches for each team
     for item in table_data:
         if item.team.short_name == "Liverpool":
+            liverpool.matches_played = item.played_games
             liverpool.current_points = item.points
             liverpool.remaining_matches = 38 - item.played_games
         elif item.team.short_name == "Chelsea":
+            chelsea.matches_played = item.played_games
             chelsea.current_points = item.points
             chelsea.remaining_matches = 38 - item.played_games
         elif item.team.short_name == "Tottenham":
+            tottenham.matches_played = item.played_games
             tottenham.current_points = item.points
             tottenham.remaining_matches = 38 - item.played_games
 
@@ -132,8 +143,9 @@ async def create_bet_standings() -> FootballBetList:
 
     # Create the BetData structs for the three teams
     liverpool_bet_data = FootballBetData(
-        team_name=liverpool.team_name,
+        team_name=liverpool.team_name.lower(),
         name="Steve",
+        played=liverpool.matches_played,
         points=liverpool.current_points,
         owea=(
             "To Tim"
@@ -157,11 +169,13 @@ async def create_bet_standings() -> FootballBetList:
             - tottenham.current_points
         )
         * 5,
+        live=liverpool.match_in_play,
     )
 
     chelsea_bet_data = FootballBetData(
-        team_name=chelsea.team_name,
+        team_name=chelsea.team_name.lower(),
         name="Tim",
+        played=chelsea.matches_played,
         points=chelsea.current_points,
         owea=(
             "To Steve"
@@ -185,11 +199,13 @@ async def create_bet_standings() -> FootballBetList:
             - tottenham.current_points
         )
         * 5,
+        live=chelsea.match_in_play,
     )
 
     tottenham_bet_data = FootballBetData(
-        team_name=tottenham.team_name,
+        team_name=tottenham.team_name.lower(),
         name="Thommo",
+        played=tottenham.matches_played,
         points=tottenham.current_points,
         owea=(
             "To Steve"
@@ -213,6 +229,7 @@ async def create_bet_standings() -> FootballBetList:
             - chelsea.current_points
         )
         * 5,
+        live=tottenham.match_in_play,
     )
 
     # Add the bet data to the list
