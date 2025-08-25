@@ -13,7 +13,7 @@ class IrcaReader:
             ac: Mapping[str, Any] | None = await irca_collection.find_one({'registration': tail_no})
 
             if ac is not None:
-                return AircraftModel(**ac)
+                return AircraftModel.model_validate(ac)
             else:
                 return None
         else:

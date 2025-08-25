@@ -12,7 +12,7 @@ class IrcaReader:
 
             # If we got an aircraft, convert it to an AircraftModel
             if ac_db is not None:
-                ac = AircraftModel(**ac_db)
+                ac = AircraftModel.model_validate(ac_db)
             else:
                 ac = None
 

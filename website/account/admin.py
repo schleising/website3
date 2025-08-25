@@ -96,7 +96,7 @@ async def get_user_in_db(username: str) -> UserInDB | None:
 
         if dbuser is not None:
             # If the user exists, return it with the hashed password
-            return UserInDB(**dbuser)
+            return UserInDB.model_validate(dbuser)
         else:
             # If the user does not exist return None
             return None
@@ -111,7 +111,7 @@ async def get_user(username: str) -> User | None:
 
         if dbuser is not None:
             # If the user exists, return it without the hashed password
-            return User(**dbuser)
+            return User.model_validate(dbuser)
         else:
             # If the user does not exist return None
             return None
@@ -131,7 +131,7 @@ async def authenticate_user(username: str, password: str) -> User | None:
         return None
     else:
         # Return the valid User without the hashed password
-        return User(**user.model_dump())
+        return User.model_validate(user)
 
 def create_access_token(data: dict, expires_delta: timedelta | None = None):
     # Copy the data to be encoded

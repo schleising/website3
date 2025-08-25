@@ -49,7 +49,7 @@ async def logger(request: Request):
     # Get the event types from the database
     if event_collection is not None:
         event_types_from_db = event_collection.find()
-        event_types = [Event(**event).event async for event in event_types_from_db]
+        event_types = [Event.model_validate(event).event async for event in event_types_from_db]
     else:
         event_types = []
 
@@ -64,7 +64,7 @@ async def logger(request: Request):
 
             if last_log_from_db is not None:
                 # Create a Log object from the last log entry
-                last_log = Log(**last_log_from_db)
+                last_log = Log.model_validate(last_log_from_db)
 
                 # Get the count of logs for the event type in the last 24 hours
                 log_count = await event_log_collection.count_documents(
@@ -220,7 +220,7 @@ async def stats(event_type: str, request: Request):
         logs_from_db = event_log_collection.find({"event": event_type}).sort(
             "log_date", -1
         )
-        logs = [LogWithID(**log).model_dump() async for log in logs_from_db]
+        logs = [LogWithID.model_validate(log).model_dump() async for log in logs_from_db]
 
     # Return a template response
     return TEMPLATES.TemplateResponse(

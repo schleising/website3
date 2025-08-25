@@ -10,17 +10,31 @@ from fastapi.encoders import jsonable_encoder
 
 from ..account.user_model import User
 
-from .models import MarkdownDataMessage, MarkdownResponse, MarkdownDataToDb, MarkdownDataFromDb, BlogId, BlogList, BlogResponse
+from .models import (
+    MarkdownDataMessage,
+    MarkdownResponse,
+    MarkdownDataToDb,
+    MarkdownDataFromDb,
+    BlogId,
+    BlogList,
+    BlogResponse,
+)
 
 from . import markdown_collection
 
-async def convert_to_markdown(data_to_convert: MarkdownDataMessage, user: User | None) -> MarkdownResponse:
+
+async def convert_to_markdown(
+    data_to_convert: MarkdownDataMessage, user: User | None
+) -> MarkdownResponse:
     # Convert the markdown text to formatted text
-    converted_text = markdown(data_to_convert.text, extensions=[
-        'markdown.extensions.admonition',
-        'pymdownx.extra',
-        'md_mermaid',
-    ])
+    converted_text = markdown(
+        data_to_convert.text,
+        extensions=[
+            "markdown.extensions.admonition",
+            "pymdownx.extra",
+            "md_mermaid",
+        ],
+    )
 
     # Indicates whether data has been saved to the DB
     data_saved = None
@@ -29,11 +43,20 @@ async def convert_to_markdown(data_to_convert: MarkdownDataMessage, user: User |
     if data_to_convert.save_data and user is not None:
         if markdown_collection is not None:
             # Create a database type
-            db_input = MarkdownDataToDb(**data_to_convert.model_dump(), username=user.username, last_updated=datetime.now(tz=UTC))
+            db_input = MarkdownDataToDb(
+                title=data_to_convert.title,
+                text=data_to_convert.text,
+                username=user.username,
+                last_updated=datetime.now(tz=UTC),
+            )
 
             try:
                 # Add the data to the database
-                result: UpdateResult = await markdown_collection.replace_one({'title': data_to_convert.title, 'username': user.username}, jsonable_encoder(db_input), upsert=True)
+                result: UpdateResult = await markdown_collection.replace_one(
+                    {"title": data_to_convert.title, "username": user.username},
+                    jsonable_encoder(db_input),
+                    upsert=True,
+                )
 
                 # If the transaction was successful, set data_savedd to True
                 if result.modified_count > 0 or result.upserted_id is not None:
@@ -46,12 +69,10 @@ async def convert_to_markdown(data_to_convert: MarkdownDataMessage, user: User |
                 data_saved = False
 
     # Create a response message
-    response_msg = MarkdownResponse(
-        markdown_text = converted_text,
-        data_saved = data_saved
-    )
+    response_msg = MarkdownResponse(markdown_text=converted_text, data_saved=data_saved)
 
     return response_msg
+
 
 async def get_blog_list(user: User | None) -> BlogList:
     if markdown_collection is not None and user is not None:
@@ -59,10 +80,16 @@ async def get_blog_list(user: User | None) -> BlogList:
         blog_cursor = markdown_collection.find({})
 
         # Convert the list to a Markdown Data From DB type, so we can check the user
-        blog_list = [MarkdownDataFromDb(**blog_id) async for blog_id in blog_cursor]
+        blog_list = [
+            MarkdownDataFromDb.model_validate(blog_id) async for blog_id in blog_cursor
+        ]
 
         # Filter out posts which are not by this user
-        blog_list = [BlogId(id=str(blog_id.id), title=blog_id.title) for blog_id in blog_list if blog_id.username == user.username]
+        blog_list = [
+            BlogId(id=str(blog_id.id), title=blog_id.title)
+            for blog_id in blog_list
+            if blog_id.username == user.username
+        ]
 
         # Return the blog list
         return BlogList(blog_ids=blog_list)
@@ -70,14 +97,15 @@ async def get_blog_list(user: User | None) -> BlogList:
     # Return an empty list
     return BlogList(blog_ids=[])
 
+
 async def get_blog_text(blog_id: str) -> BlogResponse:
     if markdown_collection is not None:
         # Get the blog entry
-        item_db = await markdown_collection.find_one({'_id': ObjectId(blog_id)})
+        item_db = await markdown_collection.find_one({"_id": ObjectId(blog_id)})
 
         # Convert it to a response
         if item_db is not None:
-            markdown_data = BlogResponse(**item_db)
+            markdown_data = BlogResponse.model_validate(item_db)
         else:
             markdown_data = BlogResponse()
 

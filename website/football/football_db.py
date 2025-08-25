@@ -11,12 +11,12 @@ from .models import Match, LiveTableItem
 
 
 async def retreive_matches(date_from: datetime, date_to: datetime) -> list[Match]:
-    matches: list[Match] = []
+    matches = []
 
     logging.debug(f"Getting Matches from {date_from} to {date_to}")
 
     if pl_matches is not None:
-        matches: list[Match] = await get_data_by_date(
+        matches = await get_data_by_date(
             pl_matches, "utc_date", date_from, date_to, Match
         )
     else:
@@ -33,7 +33,7 @@ async def retreive_team_matches(team_id: int) -> tuple[str, list[Match]]:
             {"$or": [{"home_team.id": team_id}, {"away_team.id": team_id}]}
         ).sort("utc_date", ASCENDING)
 
-        matches = [Match(**item) async for item in from_db_cursor]
+        matches = [Match.model_validate(item) async for item in from_db_cursor]
     else:
         matches: list[Match] = []
 
@@ -45,7 +45,7 @@ async def retreive_team_matches(team_id: int) -> tuple[str, list[Match]]:
         logging.debug(f"Team Dict: {team_dict_db}")
 
         if team_dict_db is not None:
-            item = LiveTableItem(**team_dict_db)
+            item = LiveTableItem.model_validate(team_dict_db)
             team_name = item.team.short_name
 
     return (team_name, matches)
@@ -73,7 +73,7 @@ async def retreive_head_to_head_matches(
             }
         ).sort("utc_date", ASCENDING)
 
-        matches = [Match(**item) async for item in from_db_cursor]
+        matches = [Match.model_validate(item) async for item in from_db_cursor]
     else:
         logging.error("No DB connection")
 
@@ -109,7 +109,7 @@ async def get_table_db() -> list[LiveTableItem]:
     if pl_table is not None:
         table_cursor = pl_table.find({}).sort("position", ASCENDING)
 
-        table_list = [LiveTableItem(**table_item) async for table_item in table_cursor]
+        table_list = [LiveTableItem.model_validate(table_item) async for table_item in table_cursor]
 
     return table_list
 

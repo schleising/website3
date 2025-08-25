@@ -51,7 +51,7 @@ async def get_data() -> SensorDataPoints:
         )
 
         # Convert the data to a list
-        latest_data = [SensorData(**item["data"]) async for item in latest_data_db if item["data"]["device_name"] != "Office Thermometer"]
+        latest_data = [SensorData.model_validate(item["data"]) async for item in latest_data_db if item["data"]["device_name"] != "Office Thermometer"]
 
         # Sort the data by device_name
         latest_data.sort(key=lambda x: x.device_name)
@@ -104,7 +104,7 @@ async def timeseries() -> TimeseriesDataResponse:
         ).sort([("timestamp", 1)])
 
         # Parse the data into a list of SensorData objects
-        data_list = [SensorData(**item) async for item in data]
+        data_list = [SensorData.model_validate(item) async for item in data]
 
         # Create a list of TimeseriesDataPoint objects
         timeseries_data_points = [

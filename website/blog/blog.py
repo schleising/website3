@@ -18,7 +18,7 @@ async def get_blog_list() -> list[MarkdownDataFromDb]:
         blog_cursor = blog_collection.find({})
 
         # Convert the list to a list of Markdown Data from DB objects
-        blog_list = [MarkdownDataFromDb(**blog) async for blog in blog_cursor]
+        blog_list = [MarkdownDataFromDb.model_validate(blog) async for blog in blog_cursor]
 
         # Sort the blog list by date
         blog_list = sorted(blog_list, key=lambda blog: blog.last_updated, reverse=True)
@@ -36,7 +36,7 @@ async def get_blog_by_id(id: str) -> MarkdownDataFromDb | None:
 
         if item_db is not None:
             # Convert the blog to a Markdown Data from DB object
-            blog = MarkdownDataFromDb(**item_db)
+            blog = MarkdownDataFromDb.model_validate(item_db)
         else:
             # Set the blog to None
             blog = None
@@ -70,7 +70,7 @@ async def get_blog_author(current_blog: MarkdownDataFromDb | None) -> tuple[str,
 
         # Convert the user to a User object
         if user_db is not None:
-            user = User(**user_db)
+            user = User.model_validate(user_db)
         else:
             user = None
 

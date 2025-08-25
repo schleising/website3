@@ -44,7 +44,7 @@ async def websocket_endpoint(websocket: WebSocket):
             match msg.message_type:
                 case MessageType.MARKDOWN_UPDATE:
                     # Get the message body into a markdown data message
-                    markdown_data_message = MarkdownDataMessage(**msg.body)
+                    markdown_data_message = MarkdownDataMessage.model_validate(msg.body)
 
                     # Convert the markdown text to HTML
                     response_body = await convert_to_markdown(markdown_data_message, user)
@@ -54,7 +54,7 @@ async def websocket_endpoint(websocket: WebSocket):
                     response_body = await get_blog_list(user)
                 case MessageType.GET_BLOG_TEXT:
                     # Get the request so we can get the ID
-                    blog_text_request = BlogRequest(**msg.body)
+                    blog_text_request = BlogRequest.model_validate(msg.body)
 
                     # Get the blog title and text
                     response_body = await get_blog_text(blog_text_request.id)

@@ -100,7 +100,7 @@ class DatabaseTools:
 
         # Convert the list of FileData objects to a list of file paths
         file_list = [
-            self._create_converted_data(count, ConvertedFileDataFromDb(**data))
+            self._create_converted_data(count, ConvertedFileDataFromDb.model_validate(data))
             for count, data in enumerate(db_file_list)
         ]
 
@@ -117,7 +117,7 @@ class DatabaseTools:
 
         # Convert the list of FileData objects to a list of file paths
         if db_file is not None:
-            file_data_list = [FileData(**data) async for data in db_file]
+            file_data_list = [FileData.model_validate(data) async for data in db_file]
 
             return sorted(file_data_list, key=lambda file_data: file_data.backend_name)
 

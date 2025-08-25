@@ -56,7 +56,7 @@ async def websocket_endpoint(websocket: WebSocket):
 
                 async for result in results:
                     # Parse the result into an Aircraft Model
-                    aircraft = AircraftModel(**result)
+                    aircraft = AircraftModel.model_validate(result)
 
                     # Append the tail number to the response list
                     if aircraft.registration != '':
