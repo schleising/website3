@@ -95,7 +95,7 @@ async def retreive_latest_team_match(team: str) -> Match | None:
 
         if from_db:
             match = Match.model_validate(from_db)
-            logging.info(f"Latest match for team {team}: {match}")
+            logging.debug(f"Latest match for team {team}: {match}")
 
     else:
         logging.error("No DB connection")
