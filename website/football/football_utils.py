@@ -115,15 +115,15 @@ async def create_bet_standings() -> FootballBetList:
     chelsea_other_h2h = await retreive_head_to_head_matches("Chelsea", "Tottenham")
     tottenham_other_h2h = await retreive_head_to_head_matches("Tottenham", "Liverpool")
 
-    # Filter out head to head matches that have already started
+    # Filter out head to head matches that have already finished
     liverpool.remaining_other_h2h_matches = len(
-        [match for match in liverpool_other_h2h if not match.status.has_started]
+        [match for match in liverpool_other_h2h if not match.status.has_finished]
     )
     chelsea.remaining_other_h2h_matches = len(
-        [match for match in chelsea_other_h2h if not match.status.has_started]
+        [match for match in chelsea_other_h2h if not match.status.has_finished]
     )
     tottenham.remaining_other_h2h_matches = len(
-        [match for match in tottenham_other_h2h if not match.status.has_started]
+        [match for match in tottenham_other_h2h if not match.status.has_finished]
     )
 
     liverpool = await adjust_in_play_matches("Liverpool", liverpool)
