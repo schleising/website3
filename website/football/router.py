@@ -16,10 +16,14 @@ from fastapi import (
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
-from pymongo import ASCENDING
-from pymongo.errors import DuplicateKeyError
-
-from ..database.database import get_data_by_date
+from .football_db import (
+    retreive_matches,
+    retreive_team_matches,
+    retreive_head_to_head_matches,
+    get_table_db,
+    add_push_subscription,
+    delete_push_subscription,
+)
 
 from .models import (
     FootballBetData,
@@ -33,14 +37,13 @@ from .models import (
     SimplifiedFootballData,
     TableItem,
 )
-from . import pl_matches, pl_table, football_push
 
 TEMPLATES = Jinja2Templates("/app/templates")
 
 football_router = APIRouter(prefix="/football")
 
 
-def update_match_timezone(matches: list[Match], request: Request) -> list[Match]:
+def update_match_timezone(matches: list[Match]) -> list[Match]:
     local_tz = ZoneInfo("Europe/London")
 
     for match in matches:
@@ -56,7 +59,7 @@ async def get_live_matches(request: Request):
         datetime.today().replace(hour=0, minute=0, second=0, microsecond=0),
         datetime.today().replace(hour=23, minute=59, second=59, microsecond=0),
     )
-    matches = update_match_timezone(matches, request)
+    matches = update_match_timezone(matches)
     return TEMPLATES.TemplateResponse(
         "football/match_template.html",
         {
@@ -81,7 +84,7 @@ async def get_months_matches(request: Request, month: int = Path(ge=1, le=12)):
     end_date = datetime(year, month, last_day_of_month, 23, 59, 59)
 
     matches = await retreive_matches(start_date, end_date)
-    matches = update_match_timezone(matches, request)
+    matches = update_match_timezone(matches)
 
     return TEMPLATES.TemplateResponse(
         "football/match_template.html",
@@ -97,7 +100,7 @@ async def get_months_matches(request: Request, month: int = Path(ge=1, le=12)):
 @football_router.get("/matches/team/{team_id}/", response_class=HTMLResponse)
 async def get_teams_matches(request: Request, team_id: int):
     team_name, matches = await retreive_team_matches(team_id)
-    matches = update_match_timezone(matches, request)
+    matches = update_match_timezone(matches)
 
     return TEMPLATES.TemplateResponse(
         "football/match_template.html",
@@ -112,87 +115,12 @@ async def get_teams_matches(request: Request, team_id: int):
 
 @football_router.get("/table/", response_class=HTMLResponse)
 async def get_table(request: Request):
-    table_list: list[LiveTableItem] = []
-
-    if pl_table is not None:
-        table_cursor = pl_table.find({}).sort("position", ASCENDING)
-
-        table_list = [LiveTableItem(**table_item) async for table_item in table_cursor]
+    table_list: list[LiveTableItem] = await get_table_db()
 
     return TEMPLATES.TemplateResponse(
         "football/table_template.html",
         {"request": request, "title": "Premier League Table", "table_list": table_list},
     )
-
-
-async def retreive_matches(date_from: datetime, date_to: datetime) -> list[Match]:
-    matches: list[Match] = []
-
-    logging.debug(f"Getting Matches from {date_from} to {date_to}")
-
-    if pl_matches is not None:
-        matches: list[Match] = await get_data_by_date(
-            pl_matches, "utc_date", date_from, date_to, Match
-        )
-    else:
-        logging.error("No DB connection")
-
-    return matches
-
-
-async def retreive_team_matches(team_id: int) -> tuple[str, list[Match]]:
-    team_name = "Unknown"
-
-    if pl_matches is not None:
-        from_db_cursor = pl_matches.find(
-            {"$or": [{"home_team.id": team_id}, {"away_team.id": team_id}]}
-        ).sort("utc_date", ASCENDING)
-
-        matches = [Match(**item) async for item in from_db_cursor]
-    else:
-        matches: list[Match] = []
-
-    # Get the team name from the table db
-    if pl_table is not None:
-        # Get the team dict from the table db
-        team_dict_db = await pl_table.find_one({"team.id": team_id})
-
-        logging.debug(f"Team Dict: {team_dict_db}")
-
-        if team_dict_db is not None:
-            item = LiveTableItem(**team_dict_db)
-            team_name = item.team.short_name
-
-    return (team_name, matches)
-
-
-async def retreive_head_to_head_matches(
-    team_a_short_name: str, team_b_short_name: str
-) -> list[Match]:
-    matches: list[Match] = []
-
-    # Get the matches between the two teams from the database
-    if pl_matches is not None:
-        from_db_cursor = pl_matches.find(
-            {
-                "$or": [
-                    {
-                        "home_team.short_name": team_a_short_name,
-                        "away_team.short_name": team_b_short_name,
-                    },
-                    {
-                        "home_team.short_name": team_b_short_name,
-                        "away_team.short_name": team_a_short_name,
-                    },
-                ]
-            }
-        ).sort("utc_date", ASCENDING)
-
-        matches = [Match(**item) async for item in from_db_cursor]
-    else:
-        logging.error("No DB connection")
-
-    return matches
 
 
 @football_router.get("/bet/", response_class=HTMLResponse)
@@ -216,12 +144,9 @@ async def get_bet_data(request: Request):
     chelsea_remaining = 0
     tottenham_remaining = 0
 
-    if pl_table is None:
-        return bet_data
+    table = await get_table_db()
 
-    table_cursor = pl_table.find({})
-
-    async for table_item in table_cursor:
+    for table_item in table:
         team_details = TableItem.model_validate(table_item)
         if team_details.team.short_name == "Liverpool":
             liverpool_points = team_details.points
@@ -240,13 +165,28 @@ async def get_bet_data(request: Request):
 
     # Filter out matches that have already finished and count them
     liverpool_chelsea = len(
-        [match for match in liverpool_chelsea if match.status not in [MatchStatus.in_play, MatchStatus.paused, MatchStatus.finished]]
+        [
+            match
+            for match in liverpool_chelsea
+            if match.status
+            not in [MatchStatus.in_play, MatchStatus.paused, MatchStatus.finished]
+        ]
     )
     liverpool_tottenham = len(
-        [match for match in liverpool_tottenham if match.status not in [MatchStatus.in_play, MatchStatus.paused, MatchStatus.finished]]
+        [
+            match
+            for match in liverpool_tottenham
+            if match.status
+            not in [MatchStatus.in_play, MatchStatus.paused, MatchStatus.finished]
+        ]
     )
     chelsea_tottenham = len(
-        [match for match in chelsea_tottenham if match.status not in [MatchStatus.in_play, MatchStatus.paused, MatchStatus.finished]]
+        [
+            match
+            for match in chelsea_tottenham
+            if match.status
+            not in [MatchStatus.in_play, MatchStatus.paused, MatchStatus.finished]
+        ]
     )
 
     # Calculate the best case for each team
@@ -279,7 +219,7 @@ async def get_bet_data(request: Request):
 
     # Calculate the worst case for each team
     liverpool_worst_case = (
-        - (chelsea_points - liverpool_points)
+        -(chelsea_points - liverpool_points)
         - (tottenham_points - liverpool_points)
         - ((chelsea_remaining - chelsea_tottenham) * 3)
         - ((tottenham_remaining - chelsea_tottenham) * 3)
@@ -287,7 +227,7 @@ async def get_bet_data(request: Request):
     ) * 5
 
     chelsea_worst_case = (
-        - (liverpool_points - chelsea_points)
+        -(liverpool_points - chelsea_points)
         - (tottenham_points - chelsea_points)
         - ((liverpool_remaining - liverpool_tottenham) * 3)
         - ((tottenham_remaining - liverpool_tottenham) * 3)
@@ -295,7 +235,7 @@ async def get_bet_data(request: Request):
     ) * 5
 
     tottenham_worst_case = (
-        - (liverpool_points - tottenham_points)
+        -(liverpool_points - tottenham_points)
         - (chelsea_points - tottenham_points)
         - ((liverpool_remaining - liverpool_chelsea) * 3)
         - ((chelsea_remaining - liverpool_chelsea) * 3)
@@ -393,28 +333,23 @@ async def get_simplified_matches(request: Request) -> SimplifiedFootballData:
             )
         )
 
-    table_list: list[LiveTableItem] = []
+    table_list = await get_table_db()
 
-    if pl_table is not None:
-        table_cursor = pl_table.find({}).sort("position", ASCENDING)
-
-        table_list = [LiveTableItem(**table_item) async for table_item in table_cursor]
-
-        for table_item in table_list:
-            simplified_football_data.table.append(
-                SimplifiedTableRow(
-                    position=table_item.position,
-                    team=table_item.team.short_name,
-                    played=table_item.played_games,
-                    won=table_item.won,
-                    drawn=table_item.draw,
-                    lost=table_item.lost,
-                    goals_for=table_item.goals_for,
-                    goals_against=table_item.goals_against,
-                    goal_difference=table_item.goal_difference,
-                    points=table_item.points,
-                )
+    for table_item in table_list:
+        simplified_football_data.table.append(
+            SimplifiedTableRow(
+                position=table_item.position,
+                team=table_item.team.short_name,
+                played=table_item.played_games,
+                won=table_item.won,
+                drawn=table_item.draw,
+                lost=table_item.lost,
+                goals_for=table_item.goals_for,
+                goals_against=table_item.goals_against,
+                goal_difference=table_item.goal_difference,
+                points=table_item.points,
             )
+        )
 
     # Return the simplified football data
     return simplified_football_data
@@ -459,15 +394,12 @@ async def subscribe(request: Request, response: Response):
     logging.debug(data)
 
     # Insert the subscription into the database
-    if football_push is not None:
-        try:
-            result = await football_push.insert_one(data)
-        except DuplicateKeyError as ex:
-            logging.error(f"Error inserting subscription: {ex}")
-            response.status_code = status.HTTP_400_BAD_REQUEST
-            return {"status": "error", "message": "Subscription already exists"}
+    ok = await add_push_subscription(data)
 
-    logging.debug(result)
+    # Check if the subscription was added
+    if not ok:
+        response.status_code = status.HTTP_400_BAD_REQUEST
+        return {"status": "error", "message": "Subscription already exists"}
 
     # Send a 201 response
     return {"status": "success"}
@@ -480,10 +412,11 @@ async def unsubscribe(request: Request):
     logging.debug(data)
 
     # Remove the subscription from the database
-    if football_push is not None:
-        result = await football_push.delete_one(data)
+    ok = await delete_push_subscription(data)
 
-    logging.debug(result)
+    # Check if the subscription was deleted
+    if not ok:
+        return {"status": "error", "message": "Subscription not found"}
 
     # Send a 204 response
     return {"status": "success"}
