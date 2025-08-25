@@ -87,12 +87,55 @@ p {
     color: #333;
 }
 
+.stats {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    background-color: #E8E8E8;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.5rem;
+}
+
+.live-text {
+    font-size: 0.75rem;
+    font-weight: bold;
+    color: green;
+    animation: pulse-live-text 2s infinite;
+}
+
+@keyframes pulse-live-text {
+    0% {
+        color: green;
+    }
+    50% {
+        color: #E8E8E8;
+    }
+    100% {
+        color: green;
+    }
+}
+
+.stats-title {
+    font-size: 0.75rem;
+    color: #333;
+}
+
+.played-container,
+.points-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.played-container {
+    margin-right: 0.25rem;
+}
+
+.played,
 .points {
+    font-size: 1rem;
     font-weight: bold;
     color: #333;
-    background-color: #E8E8E8;
-    padding: 0.5rem;
-    border-radius: 0.5rem;
 }
 
 .normal {
