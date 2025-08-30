@@ -93,7 +93,7 @@ p {
     align-items: center;
     justify-items: center;
     background-color: #E8E8E8;
-    gap: 0.25rem;
+    column-gap: 0.25rem;
     padding: 0.25rem 0.5rem;
     border-radius: 0.5rem;
 }
