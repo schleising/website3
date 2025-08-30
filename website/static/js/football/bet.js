@@ -11,6 +11,10 @@
  * @property {string} balance - Balance description or value
  * @property {number} balance_amount - Balance amount
  * @property {boolean} live - Whether the match is live
+ * @property {string|null} home_team - Home team name (if live)
+ * @property {string|null} away_team - Away team name (if live)
+ * @property {number|null} home_team_score - Home team score (if live)
+ * @property {number|null} away_team_score - Away team score (if live)
  */
 
 /**
@@ -40,14 +44,27 @@ function getBetData() {
                         widget.classList.remove("bet-widget-liverpool", "bet-widget-chelsea", "bet-widget-tottenham");
                         widget.classList.add(`bet-widget-${bet.team_name}`);
                         widget.querySelector(`#name-${index}`).textContent = bet.name;
+                        const stats = widget.querySelector(`#stats-${index}`);
                         const liveText = widget.querySelector(`#live-text-${index}`);
-                        const liveDiv = widget.querySelector(`#live-${index}`);
+                        const liveScoreText = widget.querySelector(`#live-score-text-${index}`);
                         if (bet.live) {
-                            liveDiv.classList.remove("hidden");
+                            stats.classList.remove("stats-2-columns");
+                            stats.classList.add("stats-3-columns");
+                            liveText.classList.remove("hidden");
                             liveText.textContent = "LIVE";
+                            liveScoreText.classList.remove("hidden");
+                            if (bet.home_team !== null && bet.away_team !== null && bet.home_team_score !== null && bet.away_team_score !== null) {
+                                liveScoreText.textContent = `${bet.home_team} ${bet.home_team_score} - ${bet.away_team_score} ${bet.away_team}`;
+                            } else {
+                                liveScoreText.textContent = "";
+                            }
                         } else {
-                            liveDiv.classList.add("hidden");
+                            stats.classList.remove("stats-3-columns");
+                            stats.classList.add("stats-2-columns");
+                            liveText.classList.add("hidden");
                             liveText.textContent = "";
+                            liveScoreText.classList.add("hidden");
+                            liveScoreText.textContent = "";
                         }
                         widget.querySelector(`#played-${index}`).textContent = bet.played;
                         widget.querySelector(`#points-${index}`).textContent = bet.points;

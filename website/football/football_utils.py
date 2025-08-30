@@ -26,6 +26,10 @@ class TeamPointsData:
     remaining_matches: int = 0
     remaining_other_h2h_matches: int = 0
     match_in_play: bool = False
+    in_play_home_team: str | None = None
+    in_play_away_team: str | None = None
+    in_play_home_team_score: int | None = None
+    in_play_away_team_score: int | None = None
 
     def _team_best_case(self, other_team: Self) -> int:
         # Calculate the max points for this team
@@ -88,6 +92,12 @@ async def adjust_in_play_matches(
 
         # Set the live flag
         team_point_data.match_in_play = True
+
+        # Store the in play match details
+        team_point_data.in_play_home_team = latest_match.home_team.tla
+        team_point_data.in_play_away_team = latest_match.away_team.tla
+        team_point_data.in_play_home_team_score = latest_match.score.full_time.home
+        team_point_data.in_play_away_team_score = latest_match.score.full_time.away
 
     return team_point_data
 
@@ -171,6 +181,10 @@ async def create_bet_standings() -> FootballBetList:
         )
         * 5,
         live=liverpool.match_in_play,
+        home_team=liverpool.in_play_home_team,
+        away_team=liverpool.in_play_away_team,
+        home_team_score=liverpool.in_play_home_team_score,
+        away_team_score=liverpool.in_play_away_team_score,
     )
 
     chelsea_bet_data = FootballBetData(
@@ -201,6 +215,10 @@ async def create_bet_standings() -> FootballBetList:
         )
         * 5,
         live=chelsea.match_in_play,
+        home_team=chelsea.in_play_home_team,
+        away_team=chelsea.in_play_away_team,
+        home_team_score=chelsea.in_play_home_team_score,
+        away_team_score=chelsea.in_play_away_team_score,
     )
 
     tottenham_bet_data = FootballBetData(
@@ -231,6 +249,10 @@ async def create_bet_standings() -> FootballBetList:
         )
         * 5,
         live=tottenham.match_in_play,
+        home_team=tottenham.in_play_home_team,
+        away_team=tottenham.in_play_away_team,
+        home_team_score=tottenham.in_play_home_team_score,
+        away_team_score=tottenham.in_play_away_team_score,
     )
 
     # Add the bet data to the list
