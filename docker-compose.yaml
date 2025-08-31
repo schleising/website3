@@ -37,6 +37,21 @@ services:
         max-size: "10m"
         max-file: "3"
 
+  go-bet-server:
+    build: bet
+    depends_on:
+      - mongodb
+    ports:
+      - "8888:8080"
+    restart: always
+    extra_hosts:
+        - "host.docker.internal:host-gateway"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
   backend:
     build: backend
     depends_on:
