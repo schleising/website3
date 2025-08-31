@@ -1,6 +1,9 @@
 package main
 
-import "strings"
+import (
+	"slices"
+	"strings"
+)
 
 // BetData holds the information for a single bet
 type BetData struct {
@@ -285,6 +288,11 @@ func GetBetResponse(db *Database) (BetResponse, error) {
 			},
 		},
 	}
+
+	// Sort the list of bets by points
+	slices.SortStableFunc(betResponse.Bets, func(a, b BetData) int {
+		return b.Points - a.Points
+	})
 
 	return betResponse, nil
 }
