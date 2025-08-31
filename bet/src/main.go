@@ -8,6 +8,20 @@ import (
 
 // A simple go server returning a hello world message
 func main() {
+	// Create a new database connection
+	db, err := NewDatabase()
+
+	if err != nil {
+		fmt.Printf("Failed to connect to database: %s\n", err)
+		return
+	}
+
+	// Ensure the database is closed when the program exits
+	defer db.Close()
+
+	// Print a message to the console
+	fmt.Println("Connected to database")
+
 	// Handler for the root path
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		// Log the request
@@ -26,7 +40,7 @@ func main() {
 		fmt.Printf("Received request: %s %s %s\n", r.RemoteAddr, r.Method, r.URL)
 
 		// Create a new BetResponse
-		betResponse, err := GetBetResponse()
+		betResponse, err := GetBetResponse(db)
 		if err != nil {
 			http.Error(w, "Failed to create bet response", http.StatusInternalServerError)
 			return
