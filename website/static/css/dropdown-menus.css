@@ -26,7 +26,7 @@ a.sub-level-nav {
 
 .sub-level-nav:hover {
     color: dimgrey;
-    background-color: hsl(219, 79%, 94%);;
+    background-color: hsl(219, 79%, 94%);
 }
 
 .sub-level-nav-container {
@@ -37,18 +37,11 @@ a.sub-level-nav {
 }
 
 @media screen and (max-width: 42rem) {
-    #main {
-        flex-direction: column;
-        position: relative;
-    }
-
     #content {
-        margin-top: 3rem;
         padding: 0.25rem;
     }
-    
+
     .main-nav {
-        position: absolute;
         width: 2.5rem;
     }
 
@@ -65,12 +58,12 @@ a.sub-level-nav {
     }
 
     .main-nav:hover {
-        background-color: hsl(219, 79%, 96%);;
+        background-color: hsl(219, 79%, 96%);
     }
-    
+
     .main-nav:hover .sub-level-nav-container {
         display: flex;
-        background-color: hsl(219, 79%, 96%);;
+        background-color: hsl(219, 79%, 96%);
     }
 
     .sidebar {
