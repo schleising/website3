@@ -4,10 +4,23 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
+
+	_ "time/tzdata"
 )
 
 // A simple go server returning a hello world message
 func main() {
+	// Load the Europe/London timezone
+	loc, err := time.LoadLocation("Europe/London")
+	now := time.Now().In(loc)
+	zone, _ := now.Zone()
+
+	if err != nil {
+		fmt.Printf("Failed to load timezone: %s\n", err)
+		return
+	}
+
 	// Create a new database connection
 	db, err := NewDatabase()
 
@@ -20,12 +33,13 @@ func main() {
 	defer db.Close()
 
 	// Print a message to the console
-	fmt.Println("Connected to database")
+	fmt.Printf("[%s %s] Connected to database\n", time.Now().In(loc).Format("2006-01-02 15:04:05"), zone)
 
 	// Handler for the root path
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		// Log the request
-		fmt.Printf("Received request: %s %s %s\n", r.RemoteAddr, r.Method, r.URL)
+		fmt.Printf("[%s %s] Received request: %s %s %s\n",
+			time.Now().In(loc).Format("2006-01-02 15:04:05"), zone, r.RemoteAddr, r.Method, r.URL)
 
 		// Set the header to text/html
 		w.Header().Set("Content-Type", "text/html")
@@ -36,9 +50,6 @@ func main() {
 
 	// Handler for the /data path
 	http.HandleFunc("/football/bet/data/", func(w http.ResponseWriter, r *http.Request) {
-		// Log the request
-		fmt.Printf("Received request: %s %s %s\n", r.RemoteAddr, r.Method, r.URL)
-
 		// Create a new BetResponse
 		betResponse, err := GetBetResponse(db)
 		if err != nil {
