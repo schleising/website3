@@ -49,8 +49,8 @@ func main() {
 		// Set the header to text/html
 		w.Header().Set("Content-Type", "text/html")
 
-		// Return the contents of /app/html/bet_template.html
-		http.ServeFile(w, r, "/app/html/bet_template.html")
+		// Return the contents of /html/bet_template.html
+		http.ServeFile(w, r, "/html/bet_template.html")
 	})
 
 	// Handler for the /data path

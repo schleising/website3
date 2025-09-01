@@ -19,8 +19,5 @@ RUN apk update && apk upgrade
 # Copy the Pre-built binary file from the previous stage
 COPY --from=builder /app/go-bet-server /app/go-bet-server
 
-# Copy the html folder
-COPY src/html /app/html
-
 # Command to run the executable
 ENTRYPOINT [ "/app/go-bet-server" ]

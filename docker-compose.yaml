@@ -8,7 +8,7 @@ services:
       - fastapi
     volumes:
       - ./website/static:/static:ro
-      - ./bet/src/static:/bet_static:ro
+      - ./bet/static:/bet_static:ro
       - socket_volume:/socket:rw
       - nginx_conf:/etc/nginx:rw
       - letsencrypt_conf:/etc/letsencrypt:rw
@@ -42,6 +42,9 @@ services:
     build: bet
     depends_on:
       - mongodb
+    volumes:
+      - ./bet/static:/bet_static:ro
+      - ./bet/html:/html:ro
     ports:
       - "8888:8080"
     restart: always
