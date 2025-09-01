@@ -1,0 +1,4 @@
+# robots.txt for bet.schleising.net
+
+User-agent: *
+Disallow:

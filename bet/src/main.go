@@ -37,6 +37,11 @@ func main() {
 
 	// Handler for the root path
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/" {
+			http.NotFound(w, r)
+			return
+		}
+
 		// Log the request
 		fmt.Printf("[%s %s] Received request: %s %s %s\n",
 			time.Now().In(loc).Format("2006-01-02 15:04:05"), zone, r.RemoteAddr, r.Method, r.URL)

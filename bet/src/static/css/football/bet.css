@@ -1,0 +1,176 @@
+html,
+body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+}
+
+.main {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    background-color: #F8F8F8;
+    padding: 0.5rem;
+}
+
+.bet-container {
+    flex: 1;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 0.5rem;
+}
+
+.title {
+    font-size: 2rem;
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 0.5rem;
+}
+
+.bet-widget {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-evenly;
+    margin: 0rem;
+    padding: 0.25rem;
+    border: 0.075rem;
+    border-style: solid;
+    border-color: silver;
+    border-radius: 0.5rem;
+    position: relative;
+    overflow: hidden;
+    background-color: white;
+}
+
+.bet-widget::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+    opacity: 0.1;
+    margin: 0.5rem;
+}
+
+.bet-widget-liverpool::before {
+    background-image: url(/images/football/crests/64.png);
+}
+
+.bet-widget-chelsea::before {
+    background-image: url(/images/football/crests/61.png);
+}
+
+.bet-widget-tottenham::before {
+    background-image: url(/images/football/crests/73.png);
+}
+
+.bet-widget:hover {
+    background-color: #F0F0F0;
+}
+
+.bet-row {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin: 0.15rem 0;
+}
+
+p {
+    margin: 0;
+    padding: 0;
+}
+
+.name {
+    font-weight: bold;
+    font-size: 1.5rem;
+    color: #333;
+}
+
+.stats {
+    display: grid;
+    align-items: center;
+    justify-items: center;
+    background-color: #E8E8E8;
+    column-gap: 0.25rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.5rem;
+}
+
+.stats-2-columns {
+    grid-template-columns: repeat(2, auto);
+}
+
+.stats-3-columns {
+    grid-template-columns: repeat(3, auto);
+}
+
+.live-score-text {
+    font-size: 0.75rem;
+    color: #333;
+}
+
+.live-text {
+    font-size: 0.75rem;
+    font-weight: bold;
+    color: green;
+    animation: pulse-live-text 2s infinite;
+}
+
+@keyframes pulse-live-text {
+    0% {
+        color: green;
+    }
+    50% {
+        color: #E8E8E8;
+    }
+    100% {
+        color: green;
+    }
+}
+
+.hidden {
+    display: none;
+}
+
+.stats-title {
+    font-size: 0.75rem;
+    color: #333;
+}
+
+.played,
+.points {
+    font-size: 1.25rem;
+    font-weight: bold;
+    color: #333;
+}
+
+.normal {
+    color: #888;
+}
+
+.spacer {
+    height: 1px;
+    border-bottom: 1px solid #e0e0e0;
+    margin: 0.15rem 0;
+}
+
+.money-positive {
+    color: green;
+}
+
+.money-negative {
+    color: red;
+}
+
+.balance {
+    font-weight: bold;
+    color: #333;
+}
+
+@media screen and (min-width: 624px) {
+    .bet-container {
+        flex: 0 1 auto;
+    }
+}
