@@ -1,4 +1,4 @@
-const VERSION = 'v0.0.18';
+const VERSION = 'v0.0.19';
 const CACHE_NAME = `football-bet-tracker-${VERSION}`;
 
 const APP_STATIC_RESOURCES = [
@@ -46,14 +46,12 @@ async function fetchAndCache(pathname) {
         const response = await fetch(pathname);
         if (response.status === 200) {
             await cache.put(pathname, response.clone());
-            console.log(`Cached: ${pathname}`);
             return response;
         }
     } catch (error) {
         // Get the cached version if the network response is not OK
         const cachedResponse = await cache.match(pathname);
         if (cachedResponse) {
-            console.log(`Serving cached: ${pathname}`);
             return cachedResponse;
         }
     }
@@ -75,10 +73,8 @@ self.addEventListener("fetch", (event) => {
             const url = new URL(event.request.url);
 
             if (url.pathname !== "/football/bet/data/") {
-                console.log(`Using cache-first strategy for: ${url.pathname}`);
                 return await cacheFirst(url.pathname);
             } else {
-                console.log(`Using network-first strategy for: ${url.pathname}`);
                 return await fetchAndCache(url.pathname);
             }
         })(),
