@@ -31,21 +31,56 @@ type BetResponse struct {
 	Bets []BetData `json:"bets"`
 }
 
+type teamPointsDataResponse struct {
+	teamPointsData *TeamPointsData
+	err            error
+}
+
 // Function to construct the BetResponse
 func NewBetResponse(db *Database) (*BetResponse, error) {
+	// Create a channel to receive TeamPointsData
+	liverpoolTeamPointsDataChan := make(chan teamPointsDataResponse)
+	chelseaTeamPointsDataChan := make(chan teamPointsDataResponse)
+	tottenhamTeamPointsDataChan := make(chan teamPointsDataResponse)
+
+	// Fetch TeamPointsData for Liverpool
+	go func() {
+		teamPointsData, err := NewTeamPointsData(db, "Liverpool", []string{"Chelsea", "Tottenham"})
+		liverpoolTeamPointsDataChan <- teamPointsDataResponse{teamPointsData, err}
+	}()
+
+	// Fetch TeamPointsData for Chelsea
+	go func() {
+		teamPointsData, err := NewTeamPointsData(db, "Chelsea", []string{"Liverpool", "Tottenham"})
+		chelseaTeamPointsDataChan <- teamPointsDataResponse{teamPointsData, err}
+	}()
+
+	// Fetch TeamPointsData for Tottenham
+	go func() {
+		teamPointsData, err := NewTeamPointsData(db, "Tottenham", []string{"Liverpool", "Chelsea"})
+		tottenhamTeamPointsDataChan <- teamPointsDataResponse{teamPointsData, err}
+	}()
+
+	// Wait for all goroutines to finish
+	liverpoolTeamPointsData := <-liverpoolTeamPointsDataChan
+	chelseaTeamPointsData := <-chelseaTeamPointsDataChan
+	tottenhamTeamPointsData := <-tottenhamTeamPointsDataChan
+
+	// Check for errors
+	if liverpoolTeamPointsData.err != nil {
+		return nil, liverpoolTeamPointsData.err
+	}
+	if chelseaTeamPointsData.err != nil {
+		return nil, chelseaTeamPointsData.err
+	}
+	if tottenhamTeamPointsData.err != nil {
+		return nil, tottenhamTeamPointsData.err
+	}
+
 	// Create TeamPointsData instances
-	liverpool, err := NewTeamPointsData(db, "Liverpool", []string{"Chelsea", "Tottenham"})
-	if err != nil {
-		return nil, err
-	}
-	chelsea, err := NewTeamPointsData(db, "Chelsea", []string{"Liverpool", "Tottenham"})
-	if err != nil {
-		return nil, err
-	}
-	tottenham, err := NewTeamPointsData(db, "Tottenham", []string{"Liverpool", "Chelsea"})
-	if err != nil {
-		return nil, err
-	}
+	liverpool := liverpoolTeamPointsData.teamPointsData
+	chelsea := chelseaTeamPointsData.teamPointsData
+	tottenham := tottenhamTeamPointsData.teamPointsData
 
 	// Create the BetResponse
 	betResponse := BetResponse{
