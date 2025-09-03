@@ -88,6 +88,24 @@ func (db *Database) GetTableDb() ([]LiveTableItem, error) {
 	return tableList, nil
 }
 
+func (db *Database) GetTeamLeagueDataDb(team string) (*LiveTableItem, error) {
+	var teamData *LiveTableItem
+
+	// Create a 3 second timeout context
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	// Query the database
+	err := db.client.Database(WEB_DATABASE).Collection(PL_TABLE_COLLECTION).FindOne(ctx, bson.M{
+		"team.short_name": team,
+	}).Decode(&teamData)
+	if err != nil {
+		return nil, fmt.Errorf("failed to find document: %w", err)
+	}
+
+	return teamData, nil
+}
+
 func (db *Database) GetHeadToHeadMatchesDb(team_a_short_name, team_b_short_name string) ([]Match, error) {
 	var matches []Match
 

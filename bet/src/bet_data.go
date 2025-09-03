@@ -31,170 +31,21 @@ type BetResponse struct {
 	Bets []BetData `json:"bets"`
 }
 
-type TableData struct {
-	Table []LiveTableItem
-	Err   error
-}
-
-type MatchData struct {
-	Matches []Match
-	Err     error
-}
-
 // Function to construct the BetResponse
-func GetBetResponse(db *Database) (BetResponse, error) {
+func NewBetResponse(db *Database) (*BetResponse, error) {
 	// Create TeamPointsData instances
-	liverpool := &TeamPointsData{}
-	chelsea := &TeamPointsData{}
-	tottenham := &TeamPointsData{}
-
-	// Create a channel to receive the table data
-	tableDataChannel := make(chan TableData)
-
-	// Create channels to receive the head to head match data for Liverpool, Chelsea, and Tottenham
-	liverpoolH2HChannel := make(chan MatchData)
-	chelseaH2HChannel := make(chan MatchData)
-	tottenhamH2HChannel := make(chan MatchData)
-
-	// Create channels to receive the latest match data for Liverpool, Chelsea, and Tottenham
-	liverpoolLatestChannel := make(chan MatchData)
-	chelseaLatestChannel := make(chan MatchData)
-	tottenhamLatestChannel := make(chan MatchData)
-
-	// Get the table data
-	go func() {
-		// Fetch the table data from the database
-		tableData, err := db.GetTableDb()
-		tableDataChannel <- TableData{Table: tableData, Err: err}
-	}()
-
-	// Get the head to head match data for Liverpool
-	go func() {
-		// Fetch the head to head match data from the database
-		matches, err := db.GetHeadToHeadMatchesDb("Chelsea", "Tottenham")
-		liverpoolH2HChannel <- MatchData{Matches: matches, Err: err}
-	}()
-
-	// Get the head to head match data for Chelsea
-	go func() {
-		// Fetch the head to head match data from the database
-		matches, err := db.GetHeadToHeadMatchesDb("Liverpool", "Tottenham")
-		chelseaH2HChannel <- MatchData{Matches: matches, Err: err}
-	}()
-
-	// Get the head to head match data for Tottenham
-	go func() {
-		// Fetch the head to head match data from the database
-		matches, err := db.GetHeadToHeadMatchesDb("Liverpool", "Chelsea")
-		tottenhamH2HChannel <- MatchData{Matches: matches, Err: err}
-	}()
-
-	// Get the latest match data for Liverpool
-	go func() {
-		// Fetch the latest match data from the database
-		match, err := db.GetLatestTeamMatchDb("Liverpool")
-		liverpoolLatestChannel <- MatchData{Matches: []Match{*match}, Err: err}
-	}()
-
-	// Get the latest match data for Chelsea
-	go func() {
-		// Fetch the latest match data from the database
-		match, err := db.GetLatestTeamMatchDb("Chelsea")
-		chelseaLatestChannel <- MatchData{Matches: []Match{*match}, Err: err}
-	}()
-
-	// Get the latest match data for Tottenham
-	go func() {
-		// Fetch the latest match data from the database
-		match, err := db.GetLatestTeamMatchDb("Tottenham")
-		tottenhamLatestChannel <- MatchData{Matches: []Match{*match}, Err: err}
-	}()
-
-	// Wait for the data from the channels
-	tableData := <-tableDataChannel
-	liverpoolH2H := <-liverpoolH2HChannel
-	chelseaH2H := <-chelseaH2HChannel
-	tottenhamH2H := <-tottenhamH2HChannel
-	liverpoolLatest := <-liverpoolLatestChannel
-	chelseaLatest := <-chelseaLatestChannel
-	tottenhamLatest := <-tottenhamLatestChannel
-
-	// Check for errors
-	if tableData.Err != nil {
-		return BetResponse{}, tableData.Err
+	liverpool, err := NewTeamPointsData(db, "Liverpool", []string{"Chelsea", "Tottenham"})
+	if err != nil {
+		return nil, err
 	}
-
-	if liverpoolH2H.Err != nil {
-		return BetResponse{}, liverpoolH2H.Err
+	chelsea, err := NewTeamPointsData(db, "Chelsea", []string{"Liverpool", "Tottenham"})
+	if err != nil {
+		return nil, err
 	}
-
-	if chelseaH2H.Err != nil {
-		return BetResponse{}, chelseaH2H.Err
+	tottenham, err := NewTeamPointsData(db, "Tottenham", []string{"Liverpool", "Chelsea"})
+	if err != nil {
+		return nil, err
 	}
-
-	if tottenhamH2H.Err != nil {
-		return BetResponse{}, tottenhamH2H.Err
-	}
-
-	if liverpoolLatest.Err != nil {
-		return BetResponse{}, liverpoolLatest.Err
-	}
-
-	if chelseaLatest.Err != nil {
-		return BetResponse{}, chelseaLatest.Err
-	}
-
-	if tottenhamLatest.Err != nil {
-		return BetResponse{}, tottenhamLatest.Err
-	}
-
-	// Process the table data
-	for _, item := range tableData.Table {
-		switch item.Team.GetShortName() {
-		case "Liverpool":
-			liverpool.teamName = "Liverpool"
-			liverpool.matchesPlayed = item.PlayedGames
-			liverpool.currentPoints = item.Points
-			liverpool.adjustedPoints = item.Points
-			liverpool.remainingMatches = 38 - item.PlayedGames
-		case "Chelsea":
-			chelsea.teamName = "Chelsea"
-			chelsea.matchesPlayed = item.PlayedGames
-			chelsea.currentPoints = item.Points
-			chelsea.adjustedPoints = item.Points
-			chelsea.remainingMatches = 38 - item.PlayedGames
-		case "Tottenham":
-			tottenham.teamName = "Tottenham"
-			tottenham.matchesPlayed = item.PlayedGames
-			tottenham.currentPoints = item.Points
-			tottenham.adjustedPoints = item.Points
-			tottenham.remainingMatches = 38 - item.PlayedGames
-		}
-	}
-
-	// Get the number of remaining head to head matches
-	for _, match := range liverpoolH2H.Matches {
-		if !match.HasFinished() {
-			liverpool.remainingOtherH2HMatches += 1
-		}
-	}
-
-	for _, match := range chelseaH2H.Matches {
-		if !match.HasFinished() {
-			chelsea.remainingOtherH2HMatches += 1
-		}
-	}
-
-	for _, match := range tottenhamH2H.Matches {
-		if !match.HasFinished() {
-			tottenham.remainingOtherH2HMatches += 1
-		}
-	}
-
-	// Adjust for in play matches
-	liverpool = adjustInPlayMatches("Liverpool", liverpool, &liverpoolLatest.Matches[0])
-	chelsea = adjustInPlayMatches("Chelsea", chelsea, &chelseaLatest.Matches[0])
-	tottenham = adjustInPlayMatches("Tottenham", tottenham, &tottenhamLatest.Matches[0])
 
 	// Create the BetResponse
 	betResponse := BetResponse{
@@ -294,26 +145,5 @@ func GetBetResponse(db *Database) (BetResponse, error) {
 		return b.Points - a.Points
 	})
 
-	return betResponse, nil
-}
-
-func adjustInPlayMatches(teamName string, teamPointData *TeamPointsData, teamLatestMatch *Match) *TeamPointsData {
-	if teamLatestMatch.IsLive() {
-		// Add one to the matches remaining
-		teamPointData.remainingMatches += 1
-
-		// Subtract the points for a live match
-		teamPointData.adjustedPoints -= teamLatestMatch.TeamPoints(teamName)
-
-		// Set the live flag
-		teamPointData.matchInPlay = true
-
-		// Store the in play match details
-		teamPointData.inPlayHomeTeam = teamLatestMatch.HomeTeam.Tla
-		teamPointData.inPlayAwayTeam = teamLatestMatch.AwayTeam.Tla
-		teamPointData.inPlayHomeTeamScore = teamLatestMatch.Score.FullTime.Home
-		teamPointData.inPlayAwayTeamScore = teamLatestMatch.Score.FullTime.Away
-	}
-
-	return teamPointData
+	return &betResponse, nil
 }

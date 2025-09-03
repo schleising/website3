@@ -56,7 +56,7 @@ func main() {
 	// Handler for the /data path
 	http.HandleFunc("/football/bet/data/", func(w http.ResponseWriter, r *http.Request) {
 		// Create a new BetResponse
-		betResponse, err := GetBetResponse(db)
+		betResponse, err := NewBetResponse(db)
 		if err != nil {
 			http.Error(w, "Failed to create bet response", http.StatusInternalServerError)
 			return

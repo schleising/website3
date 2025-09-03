@@ -1,8 +1,11 @@
 package main
 
+import "fmt"
+
 // TeamPointsData holds the points data for a team
 type TeamPointsData struct {
 	teamName                 string
+	otherTeamNames           []string
 	currentPoints            int
 	adjustedPoints           int
 	matchesPlayed            int
@@ -13,6 +16,98 @@ type TeamPointsData struct {
 	inPlayAwayTeam           string
 	inPlayHomeTeamScore      int
 	inPlayAwayTeamScore      int
+}
+
+type tableData struct {
+	table LiveTableItem
+	err   error
+}
+
+type matchData struct {
+	matches []Match
+	err     error
+}
+
+func NewTeamPointsData(db *Database, teamName string, otherTeamNames []string) (*TeamPointsData, error) {
+	tpd := &TeamPointsData{
+		teamName:       teamName,
+		otherTeamNames: otherTeamNames,
+	}
+
+	teamLeagueDataCh := make(chan *tableData)
+	teamH2HDataCh := make(chan *matchData)
+	teamLatestMatchCh := make(chan *matchData)
+
+	// Get the team league data
+	go func() {
+		teamData, err := db.GetTeamLeagueDataDb(teamName)
+		teamLeagueDataCh <- &tableData{table: *teamData, err: err}
+	}()
+
+	// Get the head to head data
+	go func() {
+		h2hData, err := db.GetHeadToHeadMatchesDb(otherTeamNames[0], otherTeamNames[1])
+		teamH2HDataCh <- &matchData{matches: h2hData, err: err}
+	}()
+
+	// Get the latest match data
+	go func() {
+		latestMatchData, err := db.GetLatestTeamMatchDb(teamName)
+		teamLatestMatchCh <- &matchData{matches: []Match{*latestMatchData}, err: err}
+	}()
+
+	// Wait for the database responses
+	teamLeagueData := <-teamLeagueDataCh
+	teamH2HData := <-teamH2HDataCh
+	teamLatestMatchData := <-teamLatestMatchCh
+
+	// Check for errors
+	if teamLeagueData.err != nil {
+		return nil, fmt.Errorf("failed to get team league data: %w", teamLeagueData.err)
+	}
+	if teamH2HData.err != nil {
+		return nil, fmt.Errorf("failed to get team head-to-head data: %w", teamH2HData.err)
+	}
+	if teamLatestMatchData.err != nil {
+		return nil, fmt.Errorf("failed to get team latest match data: %w", teamLatestMatchData.err)
+	}
+
+	// Populate the TeamPointsData struct
+	tpd.currentPoints = teamLeagueData.table.Points
+	tpd.adjustedPoints = teamLeagueData.table.Points
+	tpd.matchesPlayed = teamLeagueData.table.PlayedGames
+	tpd.remainingMatches = 38 - teamLeagueData.table.PlayedGames
+
+	// Calculate the number of remaining head-to-head matches
+	for _, match := range teamH2HData.matches {
+		if !match.HasFinished() {
+			tpd.remainingOtherH2HMatches++
+		}
+	}
+
+	// Adjust the points for any matches currently in play
+	tpd.adjustInPlayMatches(&teamLatestMatchData.matches[0])
+
+	return tpd, nil
+}
+
+func (tpd *TeamPointsData) adjustInPlayMatches(teamLatestMatch *Match) {
+	if teamLatestMatch.IsLive() {
+		// Add one to the matches remaining
+		tpd.remainingMatches += 1
+
+		// Subtract the points for a live match
+		tpd.adjustedPoints -= teamLatestMatch.TeamPoints(tpd.teamName)
+
+		// Set the live flag
+		tpd.matchInPlay = true
+
+		// Store the in play match details
+		tpd.inPlayHomeTeam = teamLatestMatch.HomeTeam.Tla
+		tpd.inPlayAwayTeam = teamLatestMatch.AwayTeam.Tla
+		tpd.inPlayHomeTeamScore = teamLatestMatch.Score.FullTime.Home
+		tpd.inPlayAwayTeamScore = teamLatestMatch.Score.FullTime.Away
+	}
 }
 
 func (this_team *TeamPointsData) teamBestCase(other_team *TeamPointsData) int {
