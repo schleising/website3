@@ -1,17 +1,17 @@
-const VERSION = 'v0.0.19';
+const VERSION = "v0.0.27";
 const CACHE_NAME = `football-bet-tracker-${VERSION}`;
 
 const APP_STATIC_RESOURCES = [
-    '/',
-    '/css/reset.css',
-    '/css/football/bet.css',
-    '/images/football/crests/64.png',
-    '/images/football/crests/61.png',
-    '/images/football/crests/73.png',
-    '/icons/football/bet/favicon-48x48.ico',
-    '/manifests/football/bet.webmanifest',
-    '/js/football/bet.js',
-    '/football/bet/data/',
+    "/",
+    "/css/reset.css",
+    "/css/football/bet.css",
+    "/images/football/crests/64.png",
+    "/images/football/crests/61.png",
+    "/images/football/crests/73.png",
+    "/icons/football/bet/favicon-48x48.ico",
+    "/manifests/football/bet.webmanifest",
+    "/js/football/bet.js",
+    "/football/bet/data/",
 ];
 
 self.addEventListener("install", (event) => {
@@ -63,7 +63,10 @@ async function cacheFirst(pathname) {
     if (cachedResponse) {
         return cachedResponse;
     }
-    return fetchAndCache(pathname);
+
+    networkResponse = await fetchAndCache(pathname);
+
+    return networkResponse;
 }
 
 self.addEventListener("fetch", (event) => {
@@ -72,11 +75,33 @@ self.addEventListener("fetch", (event) => {
         (async () => {
             const url = new URL(event.request.url);
 
-            if (url.pathname !== "/football/bet/data/") {
+            const fetchAndCacheUrls = [
+                "/",
+                "/css/football/bet.css",
+                "/manifests/football/bet.webmanifest",
+                "/js/football/bet.js",
+                "/football/bet/data/",
+            ];
+
+            if (!fetchAndCacheUrls.includes(url.pathname)) {
                 return await cacheFirst(url.pathname);
             } else {
                 return await fetchAndCache(url.pathname);
             }
         })(),
     );
+});
+
+self.addEventListener("message", (event) => {
+    if (event.data.messageType === "getCachedBetData") {
+        event.waitUntil(
+            (async () => {
+                const cache = await caches.open(CACHE_NAME);
+                const cachedResponse = await cache.match("/football/bet/data/");
+                if (cachedResponse) {
+                    event.source.postMessage({ messageType: "cachedBetData", data: await cachedResponse.json() });
+                }
+            })(),
+        );
+    }
 });
