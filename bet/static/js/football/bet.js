@@ -151,6 +151,17 @@ navigator.serviceWorker.addEventListener("message", (event) => {
             const cachedData = event.data.data;
             handleBetDataUpdate(cachedData, true);
             break;
+        case "onlineStatus":
+            // Set the online status indicator to red or green depending on the online status
+            const online = event.data.online;
+
+            const onlineStatusElement = document.getElementById("online-status");
+
+            if (onlineStatusElement) {
+                onlineStatusElement.classList.toggle("red", !online);
+                onlineStatusElement.classList.toggle("green", online);
+            }
+            break;
         default:
             console.error(`Unknown message type: ${event.data.messageType}`);
             break;

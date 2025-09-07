@@ -48,6 +48,7 @@ func main() {
 
 		// Set the header to text/html
 		w.Header().Set("Content-Type", "text/html")
+		w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
 
 		// Return the contents of /html/bet_template.html
 		http.ServeFile(w, r, "/html/bet_template.html")
@@ -71,6 +72,7 @@ func main() {
 
 		// Set the header to application/json
 		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
 
 		// Write the JSON response
 		w.Write(jsonData)

@@ -13,6 +13,27 @@ body {
     padding: 0.5rem;
 }
 
+.header {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.online-status {
+    font-size: 1rem;
+    color: red;
+    margin-right: 0.25rem;
+}
+
+.red {
+    color: red;
+}
+
+.green {
+    color: limegreen;
+}
+
 .bet-container {
     flex: 1;
     display: grid;
@@ -24,7 +45,7 @@ body {
     font-size: 2rem;
     font-weight: bold;
     color: #333;
-    margin-bottom: 0.5rem;
+    margin: 0.25rem 0rem;
 }
 
 .bet-widget {
@@ -122,9 +143,11 @@ p {
     0% {
         color: green;
     }
+
     50% {
         color: #E8E8E8;
     }
+
     100% {
         color: green;
     }

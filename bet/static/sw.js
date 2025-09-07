@@ -1,5 +1,13 @@
-const VERSION = "v0.0.27";
+/**
+ * @typedef {Object} DataResponse
+ * @property {Response} response
+ * @property {boolean} fromCache
+ */
+
+
+const VERSION = "v0.0.29";
 const CACHE_NAME = `football-bet-tracker-${VERSION}`;
+
 
 const APP_STATIC_RESOURCES = [
     "/",
@@ -40,34 +48,53 @@ self.addEventListener("activate", (event) => {
     );
 });
 
+
+/**
+ * Fetch and cache a resource
+ * @param {string} pathname
+ * @returns {Promise<DataResponse>}
+ */
 async function fetchAndCache(pathname) {
     const cache = await caches.open(CACHE_NAME);
     try {
         const response = await fetch(pathname);
         if (response.status === 200) {
             await cache.put(pathname, response.clone());
-            return response;
         }
+
+        return { response, fromCache: false };
     } catch (error) {
         // Get the cached version if the network response is not OK
         const cachedResponse = await cache.match(pathname);
         if (cachedResponse) {
-            return cachedResponse;
+            return { response: cachedResponse, fromCache: true };
         }
     }
 }
 
+/**
+ * Cache first strategy
+ * @param {string} pathname
+ * @returns {Promise<DataResponse>}
+ */
 async function cacheFirst(pathname) {
     const cache = await caches.open(CACHE_NAME);
     const cachedResponse = await cache.match(pathname);
     if (cachedResponse) {
-        return cachedResponse;
+        return { response: cachedResponse, fromCache: true };
     }
 
     networkResponse = await fetchAndCache(pathname);
 
     return networkResponse;
 }
+
+
+/** 
+ * Fetch event listener
+ *
+ * @param {FetchEvent} event
+ */
 
 self.addEventListener("fetch", (event) => {
     // For every other request type
@@ -83,11 +110,24 @@ self.addEventListener("fetch", (event) => {
                 "/football/bet/data/",
             ];
 
+            /** @type {DataResponse} */
+            let dataResponse;
+
             if (!fetchAndCacheUrls.includes(url.pathname)) {
-                return await cacheFirst(url.pathname);
+                dataResponse = await cacheFirst(url.pathname);
             } else {
-                return await fetchAndCache(url.pathname);
+                dataResponse = await fetchAndCache(url.pathname);
             }
+
+            if (url.pathname === "/football/bet/data/") {
+                const allClients = await clients.matchAll();
+
+                allClients.forEach((client) => {
+                    client.postMessage({ messageType: "onlineStatus", online: !dataResponse.fromCache });
+                });
+            }
+
+            return dataResponse.response;
         })(),
     );
 });
@@ -100,6 +140,7 @@ self.addEventListener("message", (event) => {
                 const cachedResponse = await cache.match("/football/bet/data/");
                 if (cachedResponse) {
                     event.source.postMessage({ messageType: "cachedBetData", data: await cachedResponse.json() });
+                    event.source.postMessage({ messageType: "onlineStatus", online: false });
                 }
             })(),
         );
