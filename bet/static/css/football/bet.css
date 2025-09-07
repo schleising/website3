@@ -21,7 +21,7 @@ body {
 }
 
 .online-status {
-    font-size: 1rem;
+    font-size: 1.25rem;
     color: red;
     margin-right: 0.25rem;
 }
