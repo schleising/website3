@@ -5,6 +5,7 @@ import "fmt"
 // TeamPointsData holds the points data for a team
 type TeamPointsData struct {
 	teamName                 string
+	playerName               string
 	otherTeamNames           []string
 	currentPoints            int
 	adjustedPoints           int
@@ -28,9 +29,10 @@ type matchData struct {
 	err     error
 }
 
-func NewTeamPointsData(db *Database, teamName string, otherTeamNames []string) (*TeamPointsData, error) {
+func NewTeamPointsData(db *Database, teamName string, playerName string, otherTeamNames []string) (*TeamPointsData, error) {
 	tpd := &TeamPointsData{
 		teamName:       teamName,
+		playerName:     playerName,
 		otherTeamNames: otherTeamNames,
 	}
 

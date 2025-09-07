@@ -26,9 +26,42 @@ type BetData struct {
 	AwayTeamScore int    `json:"away_team_score"`
 }
 
+// Create a new BetData struct
+func NewBetData(thisTeamPointsData *TeamPointsData, otherTeamPointsDataA *TeamPointsData, otherTeamPointsDataB *TeamPointsData) *BetData {
+	return &BetData{
+		TeamName: strings.ToLower(thisTeamPointsData.teamName),
+		Name:     thisTeamPointsData.playerName,
+		Played:   thisTeamPointsData.matchesPlayed,
+		Points:   thisTeamPointsData.currentPoints,
+		OweA: func() string {
+			if thisTeamPointsData.currentPoints < otherTeamPointsDataA.currentPoints {
+				return "To " + otherTeamPointsDataA.playerName
+			}
+			return "From " + otherTeamPointsDataA.playerName
+		}(),
+		AmountA: (thisTeamPointsData.currentPoints - otherTeamPointsDataA.currentPoints) * 5,
+		OweB: func() string {
+			if thisTeamPointsData.currentPoints < otherTeamPointsDataB.currentPoints {
+				return "To " + otherTeamPointsDataB.playerName
+			}
+			return "From " + otherTeamPointsDataB.playerName
+		}(),
+		AmountB:       (thisTeamPointsData.currentPoints - otherTeamPointsDataB.currentPoints) * 5,
+		BestCase:      thisTeamPointsData.BestCase(otherTeamPointsDataA, otherTeamPointsDataB),
+		WorstCase:     thisTeamPointsData.WorstCase(otherTeamPointsDataA, otherTeamPointsDataB),
+		Balance:       thisTeamPointsData.playerName + "'s Balance",
+		BalanceAmount: (thisTeamPointsData.currentPoints - otherTeamPointsDataA.currentPoints + thisTeamPointsData.currentPoints - otherTeamPointsDataB.currentPoints) * 5,
+		Live:          thisTeamPointsData.matchInPlay,
+		HomeTeam:      thisTeamPointsData.inPlayHomeTeam,
+		AwayTeam:      thisTeamPointsData.inPlayAwayTeam,
+		HomeTeamScore: thisTeamPointsData.inPlayHomeTeamScore,
+		AwayTeamScore: thisTeamPointsData.inPlayAwayTeamScore,
+	}
+}
+
 // BetResponse holds the response structure for bets
 type BetResponse struct {
-	Bets []BetData `json:"bets"`
+	Bets []*BetData `json:"bets"`
 }
 
 type teamPointsDataResponse struct {
@@ -45,19 +78,19 @@ func NewBetResponse(db *Database) (*BetResponse, error) {
 
 	// Fetch TeamPointsData for Liverpool
 	go func() {
-		teamPointsData, err := NewTeamPointsData(db, "Liverpool", []string{"Chelsea", "Tottenham"})
+		teamPointsData, err := NewTeamPointsData(db, "Liverpool", "Steve", []string{"Chelsea", "Tottenham"})
 		liverpoolTeamPointsDataChan <- teamPointsDataResponse{teamPointsData, err}
 	}()
 
 	// Fetch TeamPointsData for Chelsea
 	go func() {
-		teamPointsData, err := NewTeamPointsData(db, "Chelsea", []string{"Liverpool", "Tottenham"})
+		teamPointsData, err := NewTeamPointsData(db, "Chelsea", "Tim", []string{"Liverpool", "Tottenham"})
 		chelseaTeamPointsDataChan <- teamPointsDataResponse{teamPointsData, err}
 	}()
 
 	// Fetch TeamPointsData for Tottenham
 	go func() {
-		teamPointsData, err := NewTeamPointsData(db, "Tottenham", []string{"Liverpool", "Chelsea"})
+		teamPointsData, err := NewTeamPointsData(db, "Tottenham", "Thommo", []string{"Liverpool", "Chelsea"})
 		tottenhamTeamPointsDataChan <- teamPointsDataResponse{teamPointsData, err}
 	}()
 
@@ -84,99 +117,15 @@ func NewBetResponse(db *Database) (*BetResponse, error) {
 
 	// Create the BetResponse
 	betResponse := BetResponse{
-		Bets: []BetData{
-			{
-				TeamName: strings.ToLower(liverpool.teamName),
-				Name:     "Steve",
-				Played:   liverpool.matchesPlayed,
-				Points:   liverpool.currentPoints,
-				OweA: func() string {
-					if liverpool.currentPoints < chelsea.currentPoints {
-						return "To Tim"
-					}
-					return "From Tim"
-				}(),
-				AmountA: (liverpool.currentPoints - chelsea.currentPoints) * 5,
-				OweB: func() string {
-					if liverpool.currentPoints < tottenham.currentPoints {
-						return "To Thommo"
-					}
-					return "From Thommo"
-				}(),
-				AmountB:       (liverpool.currentPoints - tottenham.currentPoints) * 5,
-				BestCase:      liverpool.BestCase(chelsea, tottenham),
-				WorstCase:     liverpool.WorstCase(chelsea, tottenham),
-				Balance:       "Steve's Balance",
-				BalanceAmount: (liverpool.currentPoints - chelsea.currentPoints + liverpool.currentPoints - tottenham.currentPoints) * 5,
-				Live:          liverpool.matchInPlay,
-				HomeTeam:      liverpool.inPlayHomeTeam,
-				AwayTeam:      liverpool.inPlayAwayTeam,
-				HomeTeamScore: liverpool.inPlayHomeTeamScore,
-				AwayTeamScore: liverpool.inPlayAwayTeamScore,
-			},
-			{
-				TeamName: strings.ToLower(chelsea.teamName),
-				Name:     "Tim",
-				Played:   chelsea.matchesPlayed,
-				Points:   chelsea.currentPoints,
-				OweA: func() string {
-					if chelsea.currentPoints < liverpool.currentPoints {
-						return "To Steve"
-					}
-					return "From Steve"
-				}(),
-				AmountA: (chelsea.currentPoints - liverpool.currentPoints) * 5,
-				OweB: func() string {
-					if chelsea.currentPoints < tottenham.currentPoints {
-						return "To Thommo"
-					}
-					return "From Thommo"
-				}(),
-				AmountB:       (chelsea.currentPoints - tottenham.currentPoints) * 5,
-				BestCase:      chelsea.BestCase(liverpool, tottenham),
-				WorstCase:     chelsea.WorstCase(liverpool, tottenham),
-				Balance:       "Tim's Balance",
-				BalanceAmount: (chelsea.currentPoints - liverpool.currentPoints + chelsea.currentPoints - tottenham.currentPoints) * 5,
-				Live:          chelsea.matchInPlay,
-				HomeTeam:      chelsea.inPlayHomeTeam,
-				AwayTeam:      chelsea.inPlayAwayTeam,
-				HomeTeamScore: chelsea.inPlayHomeTeamScore,
-				AwayTeamScore: chelsea.inPlayAwayTeamScore,
-			},
-			{
-				TeamName: strings.ToLower(tottenham.teamName),
-				Name:     "Thommo",
-				Played:   tottenham.matchesPlayed,
-				Points:   tottenham.currentPoints,
-				OweA: func() string {
-					if tottenham.currentPoints < liverpool.currentPoints {
-						return "To Steve"
-					}
-					return "From Steve"
-				}(),
-				AmountA: (tottenham.currentPoints - liverpool.currentPoints) * 5,
-				OweB: func() string {
-					if tottenham.currentPoints < chelsea.currentPoints {
-						return "To Tim"
-					}
-					return "From Tim"
-				}(),
-				AmountB:       (tottenham.currentPoints - chelsea.currentPoints) * 5,
-				BestCase:      tottenham.BestCase(liverpool, chelsea),
-				WorstCase:     tottenham.WorstCase(liverpool, chelsea),
-				Balance:       "Thommo's Balance",
-				BalanceAmount: (tottenham.currentPoints - liverpool.currentPoints + tottenham.currentPoints - chelsea.currentPoints) * 5,
-				Live:          tottenham.matchInPlay,
-				HomeTeam:      tottenham.inPlayHomeTeam,
-				AwayTeam:      tottenham.inPlayAwayTeam,
-				HomeTeamScore: tottenham.inPlayHomeTeamScore,
-				AwayTeamScore: tottenham.inPlayAwayTeamScore,
-			},
+		Bets: []*BetData{
+			NewBetData(liverpool, chelsea, tottenham),
+			NewBetData(chelsea, liverpool, tottenham),
+			NewBetData(tottenham, liverpool, chelsea),
 		},
 	}
 
 	// Sort the list of bets by points
-	slices.SortStableFunc(betResponse.Bets, func(a, b BetData) int {
+	slices.SortStableFunc(betResponse.Bets, func(a, b *BetData) int {
 		return b.Points - a.Points
 	})
 
