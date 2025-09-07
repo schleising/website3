@@ -37,7 +37,7 @@ body {
 }
 
 .green {
-    color: limegreen;
+    color: mediumseagreen;
 }
 
 .bet-container {
@@ -134,13 +134,13 @@ p {
 .live-text {
     font-size: 0.75rem;
     font-weight: bold;
-    color: green;
+    color: mediumseagreen;
     animation: pulse-live-text 2s infinite;
 }
 
 @keyframes pulse-live-text {
     0% {
-        color: green;
+        color: mediumseagreen;
     }
 
     50% {
@@ -148,7 +148,7 @@ p {
     }
 
     100% {
-        color: green;
+        color: mediumseagreen;
     }
 }
 
@@ -179,7 +179,7 @@ p {
 }
 
 .money-positive {
-    color: limegreen;
+    color: mediumseagreen;
 }
 
 .money-negative {
