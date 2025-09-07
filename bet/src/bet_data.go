@@ -110,17 +110,12 @@ func NewBetResponse(db *Database) (*BetResponse, error) {
 		return nil, tottenhamTeamPointsData.err
 	}
 
-	// Create TeamPointsData instances
-	liverpool := liverpoolTeamPointsData.teamPointsData
-	chelsea := chelseaTeamPointsData.teamPointsData
-	tottenham := tottenhamTeamPointsData.teamPointsData
-
 	// Create the BetResponse
 	betResponse := BetResponse{
 		Bets: []*BetData{
-			NewBetData(liverpool, chelsea, tottenham),
-			NewBetData(chelsea, liverpool, tottenham),
-			NewBetData(tottenham, liverpool, chelsea),
+			NewBetData(liverpoolTeamPointsData.teamPointsData, chelseaTeamPointsData.teamPointsData, tottenhamTeamPointsData.teamPointsData),
+			NewBetData(chelseaTeamPointsData.teamPointsData, liverpoolTeamPointsData.teamPointsData, tottenhamTeamPointsData.teamPointsData),
+			NewBetData(tottenhamTeamPointsData.teamPointsData, liverpoolTeamPointsData.teamPointsData, chelseaTeamPointsData.teamPointsData),
 		},
 	}
 
