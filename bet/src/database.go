@@ -98,7 +98,7 @@ func (db *Database) GetTeamLeagueDataDb(team string) (*LiveTableItem, error) {
 	// Query the database
 	err := db.client.Database(WEB_DATABASE).Collection(PL_TABLE_COLLECTION).FindOne(ctx, bson.M{
 		"team.short_name": team,
-	}).Decode(&teamData)
+	}).Decode(teamData)
 	if err != nil {
 		return nil, fmt.Errorf("failed to find document: %w", err)
 	}
@@ -162,7 +162,7 @@ func (db *Database) GetLatestTeamMatchDb(team string) (*Match, error) {
 			{"away_team.short_name": team},
 		},
 		"utc_date": bson.M{"$lte": time.Now().UTC()},
-	}, options.FindOne().SetSort(bson.M{"utc_date": -1})).Decode(&match)
+	}, options.FindOne().SetSort(bson.M{"utc_date": -1})).Decode(match)
 	if err != nil {
 		return nil, fmt.Errorf("failed to find documents: %w", err)
 	}
