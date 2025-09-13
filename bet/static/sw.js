@@ -90,13 +90,7 @@ async function cacheFirst(pathname) {
 }
 
 
-/** 
- * Fetch event listener
- *
- * @param {FetchEvent} event
- */
-
-self.addEventListener("fetch", (event) => {
+self.addEventListener("fetch", /** @param {FetchEvent} event */ (event) => {
     // For every other request type
     event.respondWith(
         (async () => {
