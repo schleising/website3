@@ -3,6 +3,9 @@
 {% block head %}
 <link rel="stylesheet" href="/css/aircraft_db/aircraft_db.css">
 <link rel="stylesheet" href="/css/table.css?v1.0.0">
+{% block scripts %}
+<script defer src="/js/aircraft_db/aircraft_db.js"></script>
+{% endblock %}
 {% block title %}<title>Aircraft DB</title>{% endblock %}
 {% endblock %}
 
@@ -150,8 +153,4 @@
 
 {% block footer %}
 <footer>Data sourced from <a href="https://opensky-network.org/" class="link-light" target="_blank">OpenSky</a></footer>
-{% endblock %}
-
-{% block scripts %}
-<script src="/js/aircraft_db/aircraft_db.js"></script>
 {% endblock %}

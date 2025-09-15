@@ -1,5 +1,9 @@
 {% extends '/tools/logger/logger-base.html' %}
 
+{% block scripts %}
+<script defer src="/js/tools/logger/stats.js"></script>
+{% endblock scripts %}
+
 {% block title %}
 <title>Logger - Stats</title>
 {% endblock title %}
@@ -49,7 +53,3 @@
 </div>
 
 {% endblock popovers %}
-
-{% block scripts %}
-<script src="/js/tools/logger/stats.js"></script>
-{% endblock scripts %}

@@ -8,6 +8,10 @@
   <link type="text/css" rel="stylesheet" href="/css/tools/logger/main.css" />
   {% block styles %}
   {% endblock styles %}
+  <script defer src="/js/tools/logger/scope.js"></script>
+  <script defer src="/js/utils/outerResize.js"></script>
+  {% block scripts %}
+  {% endblock scripts %}
   <link rel="icon" type="image/ico" sizes="48x48" href="/icons/tools/logger/favicon-48x48.ico" />
   <link rel="manifest" href="/manifests/tools/logger/logger.webmanifest" />
   {% block title %}
@@ -22,11 +26,6 @@
 
   {% block popovers %}
   {% endblock popovers %}
-
-  <script src="/js/tools/logger/scope.js"></script>
-  <script src="/js/utils/outerResize.js"></script>
-  {% block scripts %}
-  {% endblock scripts %}
 </body>
 
 </html>

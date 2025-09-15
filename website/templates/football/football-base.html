@@ -3,6 +3,19 @@
 {% block head %}
 <link rel="stylesheet" href="/css/right-nav.css">
 <link rel="stylesheet" href="/css/football/football.css?v1.0.2">
+{% block scripts %}
+{% if live_matches %}
+<script defer src="/js/football/football.js"></script>
+<script defer src="/js/football/visibility_refresh.js"></script>
+<script defer src="/js/football/scope.js"></script>
+<script defer src="/js/utils/subscribe.js"></script>
+{% endif %}
+{% if matches|length > 0 %}
+<script defer src="/js/football/scroll-scores.js"></script>
+{% endif %}
+{% block football_scripts %}
+{% endblock %}
+{% endblock %}
 {% block football_head %}
 {% endblock %}
 {% endblock %}
@@ -23,18 +36,4 @@
 {% endblock %}
 {% block footer %}
 <footer>Data sourced from <a href="https://www.football-data.org/" class="link-light" target="_blank">football-data.org</a></footer>
-{% endblock %}
-
-{% block scripts %}
-{% if live_matches %}
-<script src="/js/football/football.js"></script>
-<script src="/js/football/visibility_refresh.js"></script>
-<script src="/js/football/scope.js"></script>
-<script src="/js/utils/subscribe.js"></script>
-{% endif %}
-{% if matches|length > 0 %}
-<script src="/js/football/scroll-scores.js"></script>
-{% endif %}
-{% block football_scripts %}
-{% endblock %}
 {% endblock %}

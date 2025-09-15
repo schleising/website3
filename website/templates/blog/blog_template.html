@@ -5,6 +5,10 @@
 <link rel="stylesheet" href="/css/blog/blog.css">
 <link rel="stylesheet" href="/css/markdown/markdown.css">
 <link rel="stylesheet" href="/css/markdown/styles.css">
+{% block scripts %}
+<script defer src="https://cdn.jsdelivr.net/npm/mermaid@9/dist/mermaid.min.js"></script>
+<script defer src="/js/blog/blog.js"></script>
+{% endblock %}
 {% block title %}<title>{% if blog_entry != None %}{{ blog_entry.title }}{% else %}Blog{% endif %}</title>{% endblock %}
 {% endblock %}
 
@@ -39,9 +43,4 @@
 
 {% block footer %}
 <footer>Blog</footer>
-{% endblock %}
-
-{% block scripts %}
-<script src="https://cdn.jsdelivr.net/npm/mermaid@9/dist/mermaid.min.js"></script>
-<script src="/js/blog/blog.js"></script>
 {% endblock %}
