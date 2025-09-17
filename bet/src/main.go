@@ -42,9 +42,17 @@ func main() {
 			return
 		}
 
+		// Get the real IP address of the client from the X-Real-IP header
+		realIP := r.Header.Get("X-Real-IP")
+
+		// If the X-Real-IP header is not set, use the remote address
+		if realIP == "" {
+			realIP = r.RemoteAddr
+		}
+
 		// Log the request
 		fmt.Printf("[%s %s] Received request: %s %s %s\n",
-			time.Now().In(loc).Format("2006-01-02 15:04:05"), zone, r.RemoteAddr, r.Method, r.URL)
+			time.Now().In(loc).Format("2006-01-02 15:04:05"), zone, realIP, r.Method, r.URL)
 
 		// Set the header to text/html
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
