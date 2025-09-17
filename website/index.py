@@ -1,6 +1,8 @@
 import logging
 from contextlib import asynccontextmanager
 
+from starlette.types import ASGIApp, Receive, Scope, Send
+
 from fastapi import FastAPI, Request, Depends
 from fastapi.responses import HTMLResponse
 from fastapi.exceptions import RequestValidationError
@@ -20,6 +22,46 @@ from .blog.router import blog_router
 from .football.router import football_router
 
 from .tools.router import tools_router
+
+
+class RealIPMiddleware:
+    """
+    ASGI middleware to set request.client.host from X-Real-IP or X-Forwarded-For.
+    Works over Unix sockets or TCP proxies.
+    """
+
+    def __init__(self, app: ASGIApp, trusted_proxies=None):
+        self.app = app
+        # List of trusted proxy IPs; if None, accept all
+        self.trusted_proxies = trusted_proxies or []
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send):
+        if scope["type"] == "http":
+            headers = {k.decode().lower(): v.decode() for k, v in scope["headers"]}
+            real_ip = headers.get("x-real-ip")
+            xff = headers.get("x-forwarded-for")
+
+            client_ip = None
+
+            if real_ip:
+                client_ip = real_ip
+            elif xff:
+                # X-Forwarded-For may contain a comma-separated list; take first
+                client_ip = xff.split(",")[0].strip()
+
+            # Optional: restrict to requests from trusted proxies only
+            if self.trusted_proxies and scope.get("client"):
+                _, remote_port = scope["client"]
+                remote_ip = scope["client"][0]
+                if remote_ip not in self.trusted_proxies:
+                    client_ip = None  # ignore headers from untrusted sources
+
+            if client_ip:
+                # Patch the ASGI client tuple (ip, port)
+                scope["client"] = (client_ip, 0)
+
+        await self.app(scope, receive, send)
+
 
 # Initialise logging
 logging.basicConfig(
@@ -56,6 +98,9 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# Add the Real IP middleware
+app.add_middleware(RealIPMiddleware, trusted_proxies=None)
+
 # Include the account router
 app.include_router(account_router)
 
@@ -73,6 +118,7 @@ app.include_router(football_router)
 
 # Include the tools router
 app.include_router(tools_router)
+
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request, exc):
