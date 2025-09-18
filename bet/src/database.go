@@ -18,6 +18,7 @@ const MONGO_CONNECTION_STRING = "mongodb://host.docker.internal:27017"
 const WEB_DATABASE = "web_database"
 const PL_MATCHES_COLLECTION = "pl_matches_2025_2026"
 const PL_TABLE_COLLECTION = "live_pl_table"
+const USER_LOCATION_COLLECTION = "user_locations"
 
 func NewDatabase() (*Database, error) {
 	// Create an options struct with the connection string and a 3 second timeout
@@ -168,4 +169,26 @@ func (db *Database) GetLatestTeamMatchDb(team string) (*Match, error) {
 	}
 
 	return match, nil
+}
+
+func (db *Database) UpdateUserLocation(ip, city, country string) error {
+	// Create a 3 second timeout context
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	// Create a user location object
+	userLocation := UserLocation{
+		IP:        ip,
+		City:      city,
+		Country:   country,
+		Timestamp: time.Now().UTC(),
+	}
+
+	// Insert the user location into the database
+	_, err := db.client.Database(WEB_DATABASE).Collection(USER_LOCATION_COLLECTION).InsertOne(ctx, userLocation)
+	if err != nil {
+		return fmt.Errorf("failed to insert document: %w", err)
+	}
+
+	return nil
 }

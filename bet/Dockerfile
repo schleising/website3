@@ -16,6 +16,9 @@ FROM alpine:latest
 # Update and upgrade the image
 RUN apk update && apk upgrade
 
+# Copy the GeoLite2 City database
+COPY GeoLite2-City/GeoLite2-City.mmdb /app/GeoLite2-City.mmdb
+
 # Copy the Pre-built binary file from the previous stage
 COPY --from=builder /app/go-bet-server /app/go-bet-server
 

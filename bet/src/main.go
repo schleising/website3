@@ -3,23 +3,36 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"net"
 	"net/http"
 	"time"
 
 	_ "time/tzdata"
+
+	"github.com/oschwald/geoip2-golang"
 )
 
 // A simple go server returning a hello world message
 func main() {
 	// Load the Europe/London timezone
 	loc, err := time.LoadLocation("Europe/London")
-	now := time.Now().In(loc)
-	zone, _ := now.Zone()
 
 	if err != nil {
 		fmt.Printf("Failed to load timezone: %s\n", err)
 		return
 	}
+
+	now := time.Now().In(loc)
+	zone, _ := now.Zone()
+
+	geo_db, err := geoip2.Open("/app/GeoLite2-City.mmdb")
+	if err != nil {
+		fmt.Printf("Failed to open GeoIP2 database: %s\n", err)
+		return
+	}
+	defer geo_db.Close()
+	
+	fmt.Printf("[%s %s] Loaded GeoIP2 database\n", time.Now().In(loc).Format("2006-01-02 15:04:05"), zone)
 
 	// Create a new database connection
 	db, err := NewDatabase()
@@ -48,6 +61,40 @@ func main() {
 		// If the X-Real-IP header is not set, use the remote address
 		if realIP == "" {
 			realIP = r.RemoteAddr
+		} else {
+			// Spawn a goroutine to resolve the IP address to a city
+			go func(ip string, db *Database) {
+				parsedIP := net.ParseIP(ip)
+				if parsedIP == nil {
+					fmt.Printf("Failed to parse IP address: %s\n", ip)
+					return
+				}
+
+				record, err := geo_db.City(parsedIP)
+				if err != nil {
+					fmt.Printf("Failed to get city for IP address %s: %s\n", ip, err)
+					return
+				}
+
+				city := record.City.Names["en"]
+				country := record.Country.Names["en"]
+
+				if city == "" {
+					city = "Unknown City"
+				}
+				if country == "" {
+					country = "Unknown Country"
+				}
+
+				fmt.Printf("[%s %s] Resolved IP %s to %s, %s\n", time.Now().In(loc).Format("2006-01-02 15:04:05"), zone, ip, city, country)
+
+				// Update the database with the resolved city and country
+				err = db.UpdateUserLocation(ip, city, country)
+				if err != nil {
+					fmt.Printf("Failed to update user location for IP %s: %s\n", ip, err)
+					return
+				}
+			}(realIP, db)
 		}
 
 		// Log the request
