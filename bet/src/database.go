@@ -8,6 +8,8 @@ import (
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
+
+	"github.com/oschwald/geoip2-golang"
 )
 
 type Database struct {
@@ -171,7 +173,7 @@ func (db *Database) GetLatestTeamMatchDb(team string) (*Match, error) {
 	return match, nil
 }
 
-func (db *Database) UpdateUserLocation(ip, city, country string) error {
+func (db *Database) UpdateUserLocation(ip string, city geoip2.City) error {
 	// Create a 3 second timeout context
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
@@ -179,8 +181,11 @@ func (db *Database) UpdateUserLocation(ip, city, country string) error {
 	// Create a user location object
 	userLocation := UserLocation{
 		IP:        ip,
-		City:      city,
-		Country:   country,
+		City:      city.City.Names["en"],
+		Country:   city.Country.Names["en"],
+		Latitude:  city.Location.Latitude,
+		Longitude: city.Location.Longitude,
+		Accuracy:  city.Location.AccuracyRadius,
 		Timestamp: time.Now().UTC(),
 	}
 

@@ -89,7 +89,7 @@ func main() {
 				fmt.Printf("[%s %s] Resolved IP %s to %s, %s\n", time.Now().In(loc).Format("2006-01-02 15:04:05"), zone, ip, city, country)
 
 				// Update the database with the resolved city and country
-				err = db.UpdateUserLocation(ip, city, country)
+				err = db.UpdateUserLocation(ip, *record)
 				if err != nil {
 					fmt.Printf("Failed to update user location for IP %s: %s\n", ip, err)
 					return
