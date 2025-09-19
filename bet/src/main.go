@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"html/template"
 	"net"
 	"net/http"
 	"time"
@@ -31,7 +32,7 @@ func main() {
 		return
 	}
 	defer geo_db.Close()
-	
+
 	fmt.Printf("[%s %s] Loaded GeoIP2 database\n", time.Now().In(loc).Format("2006-01-02 15:04:05"), zone)
 
 	// Create a new database connection
@@ -105,8 +106,8 @@ func main() {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
 
-		// Return the contents of /html/bet_template.html
-		http.ServeFile(w, r, "/html/bet_template.html")
+		// Return the contents of /html/index.html
+		http.ServeFile(w, r, "/html/index.html")
 	})
 
 	// Handler for the /data path
@@ -131,6 +132,41 @@ func main() {
 
 		// Write the JSON response
 		w.Write(jsonData)
+	})
+
+	// Handler for the /locations path
+	http.HandleFunc("/locations/", func(w http.ResponseWriter, r *http.Request) {
+		// Get the user locations from the database
+		locations, err := db.GetUserLocations()
+		if err != nil {
+			http.Error(w, "Failed to get user locations", http.StatusInternalServerError)
+			return
+		}
+
+		// Set the header to text/html
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
+
+		// Create a function map for the template
+		funcMap := template.FuncMap{
+			"formatTime": func(t time.Time) string {
+				return t.In(loc).Format("Mon 01 Jan 2006 15:04:05 MST")
+			},
+		}
+
+		// Create a new template with the function map
+		locationTemplate, err := template.New("location_template.html").Funcs(funcMap).ParseFiles("/html/location_template.html")
+		if err != nil {
+			http.Error(w, "Failed to parse template", http.StatusInternalServerError)
+			return
+		}
+
+		// Execute the template with the locations data
+		err = locationTemplate.Execute(w, locations)
+		if err != nil {
+			http.Error(w, "Failed to execute template", http.StatusInternalServerError)
+			return
+		}
 	})
 
 	http.ListenAndServe(":8080", nil)

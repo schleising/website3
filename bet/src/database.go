@@ -189,6 +189,14 @@ func (db *Database) UpdateUserLocation(ip string, city geoip2.City) error {
 		Timestamp: time.Now().UTC(),
 	}
 
+	// If city or country is empty, set to "Unknown City" or "Unknown Country"
+	if userLocation.City == "" {
+		userLocation.City = "Unknown City"
+	}
+	if userLocation.Country == "" {
+		userLocation.Country = "Unknown Country"
+	}
+
 	// Insert the user location into the database
 	_, err := db.client.Database(WEB_DATABASE).Collection(USER_LOCATION_COLLECTION).InsertOne(ctx, userLocation)
 	if err != nil {
@@ -196,4 +204,36 @@ func (db *Database) UpdateUserLocation(ip string, city geoip2.City) error {
 	}
 
 	return nil
+}
+
+func (db *Database) GetUserLocations() ([]UserLocation, error) {
+	var locations []UserLocation
+
+	// Create a 3 second timeout context
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	// Query the database, last 50 locations, sorted by timestamp descending
+	cursor, err := db.client.Database(WEB_DATABASE).Collection(USER_LOCATION_COLLECTION).Find(ctx, bson.M{},
+		options.Find().SetSort(bson.M{"timestamp": -1}).SetLimit(50))
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to find documents: %w", err)
+	}
+	defer cursor.Close(ctx)
+
+	// Iterate through the cursor
+	for cursor.Next(ctx) {
+		var item UserLocation
+		if err := cursor.Decode(&item); err != nil {
+			return nil, fmt.Errorf("failed to decode document: %w", err)
+		}
+		locations = append(locations, item)
+	}
+
+	if err := cursor.Err(); err != nil {
+		return nil, fmt.Errorf("cursor error: %w", err)
+	}
+
+	return locations, nil
 }

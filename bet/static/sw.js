@@ -5,7 +5,7 @@
  */
 
 
-const VERSION = "v0.0.29";
+const VERSION = "v0.0.30";
 const CACHE_NAME = `football-bet-tracker-${VERSION}`;
 
 
@@ -102,6 +102,7 @@ self.addEventListener("fetch", /** @param {FetchEvent} event */ (event) => {
                 "/manifests/football/bet.webmanifest",
                 "/js/football/bet.js",
                 "/football/bet/data/",
+                "/locations/",
             ];
 
             /** @type {DataResponse} */

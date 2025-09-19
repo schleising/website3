@@ -40,6 +40,11 @@ body {
     color: mediumseagreen;
 }
 
+.undecorated-link {
+    text-decoration: none;
+    color: inherit;
+}
+
 .bet-container {
     flex: 1;
     display: grid;
