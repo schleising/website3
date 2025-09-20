@@ -6,7 +6,7 @@
   <meta name="description" content="Locations of visitors to the live betting standings for the Premier League">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, shrink-to-fit=no, user-scalable=no">
   <link type="text/css" rel="stylesheet" href="/css/reset.css?v1.0.0" />
-  <link type="text/css" rel="stylesheet" href="/css/locations.css?v1.0.2" />
+  <link type="text/css" rel="stylesheet" href="/css/locations.css?v1.0.3" />
   <link href="/icons/football/bet/favicon-48x48.ico?v1.0.0" rel="icon" type="image/ico" sizes="48x48" />
   <link rel="manifest" href="/manifests/football/bet.webmanifest?v1.0.1" />
   <title>{{ if .SingleIP }}IP {{ (index .Locations 0).IP }}{{ else }}Visitors{{ end }}</title>
@@ -15,17 +15,18 @@
 <body>
   <div class="main">
     <div class="header">
-      <h1>{{ if .SingleIP }}IP {{ (index .Locations 0).IP }}{{ else }}Visitors{{ end }}</h1>
+      <h1>{{ if .SingleIP }}Visits{{ else }}Visitors{{ end }}</h1>
+      {{ if .SingleIP }}<p class="sub-title">{{ (index .Locations 0).IP }}</p>{{ end }}
     </div>
     <div class="content">
       {{ range .Locations }}
       <div class="location-container">
         <p class="location-key">{{ if not $.SingleIP }}Last Visit {{ end }}Time</p>
         <p class="location-value" id="timestamp">{{ formatTime .Timestamp }}</p>
-        <p class="location-key">IP</p>
-        <a href="/locations/{{ .IP }}/" class="location-value" id="ip">{{ .IP }}</a>
+        {{ if not $.SingleIP }}<p class="location-key">IP</p>
+        <a href="/locations/{{ .IP }}/" class="location-value" id="ip">{{ .IP }}</a>{{ end }}
         <p class="location-key">City</p>
-        <p class="location-value" id="city"><a href="https://www.google.co.uk/maps?q={{ .Latitude }},{{ .Longitude }}" target="_blank">{{ .City }}</a></p>
+        <a href="https://www.google.co.uk/maps?q={{ .Latitude }},{{ .Longitude }}" class="location-value" target="_blank">{{ .City }}</a>
         <p class="location-key">Country</p>
         <p class="location-value" id="country">{{ .Country }}</p>
         <p class="location-key">Lat/Long</p>
