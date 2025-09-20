@@ -23,23 +23,6 @@ body {
     margin-bottom: 0.5rem;
 }
 
-.home-button {
-    display: inline-block;
-    padding: 0.25em 0.5em;
-    background: #eee;
-    border: 1px solid #bbb;
-    border-radius: 0.4em;
-    color: #222;
-    text-decoration: none;
-    font-size: 1em;
-    cursor: pointer;
-    transition: background 0.2s;
-}
-
-.home-button:hover {
-    background: #ddd;
-}
-
 .content {
     flex: 1;
     display: flex;
