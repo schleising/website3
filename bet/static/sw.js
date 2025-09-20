@@ -5,7 +5,7 @@
  */
 
 
-const VERSION = "v0.0.30";
+const VERSION = "v0.0.31";
 const CACHE_NAME = `football-bet-tracker-${VERSION}`;
 
 
@@ -102,13 +102,12 @@ self.addEventListener("fetch", /** @param {FetchEvent} event */ (event) => {
                 "/manifests/football/bet.webmanifest",
                 "/js/football/bet.js",
                 "/football/bet/data/",
-                "/locations/",
             ];
 
             /** @type {DataResponse} */
             let dataResponse;
 
-            if (!fetchAndCacheUrls.includes(url.pathname)) {
+            if (!fetchAndCacheUrls.includes(url.pathname) || url.pathname.startsWith("/locations/")) {
                 dataResponse = await cacheFirst(url.pathname);
             } else {
                 dataResponse = await fetchAndCache(url.pathname);
