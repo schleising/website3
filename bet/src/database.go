@@ -213,10 +213,61 @@ func (db *Database) GetUserLocations() ([]UserLocation, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	// Query the database, last 50 locations, sorted by timestamp descending
-	cursor, err := db.client.Database(WEB_DATABASE).Collection(USER_LOCATION_COLLECTION).Find(ctx, bson.M{},
-		options.Find().SetSort(bson.M{"timestamp": -1}).SetLimit(50))
+	// Query the database, Get one document for each unique IP address, sorted by most recent timestamp and add the count of each IP address
+	cursor, err := db.client.Database(WEB_DATABASE).Collection(USER_LOCATION_COLLECTION).Aggregate(ctx, mongo.Pipeline{
+		// Sort by timestamp descending
+		{{Key: "$sort", Value: bson.D{{Key: "timestamp", Value: -1}}}},
+		// Group by IP address and get the first document for each group and count the number of documents in each group
+		{{
+			Key: "$group", Value: bson.D{
+				{Key: "_id", Value: "$ip"},
+				{Key: "ip", Value: bson.D{{Key: "$first", Value: "$ip"}}},
+				{Key: "city", Value: bson.D{{Key: "$first", Value: "$city"}}},
+				{Key: "country", Value: bson.D{{Key: "$first", Value: "$country"}}},
+				{Key: "latitude", Value: bson.D{{Key: "$first", Value: "$latitude"}}},
+				{Key: "longitude", Value: bson.D{{Key: "$first", Value: "$longitude"}}},
+				{Key: "accuracy", Value: bson.D{{Key: "$first", Value: "$accuracy"}}},
+				{Key: "timestamp", Value: bson.D{{Key: "$first", Value: "$timestamp"}}},
+				{Key: "visitcount", Value: bson.D{{Key: "$sum", Value: 1}}},
+			},
+		}},
+		// Sort by visit count descending
+		{{Key: "$sort", Value: bson.D{{Key: "timestamp", Value: -1}}}},
+	})
 
+	if err != nil {
+		return nil, fmt.Errorf("failed to find documents: %w", err)
+	}
+	defer cursor.Close(ctx)
+
+	// Iterate through the cursor
+	for cursor.Next(ctx) {
+		var item UserLocation
+		if err := cursor.Decode(&item); err != nil {
+			return nil, fmt.Errorf("failed to decode document: %w", err)
+		}
+		locations = append(locations, item)
+	}
+
+	if err := cursor.Err(); err != nil {
+		return nil, fmt.Errorf("cursor error: %w", err)
+	}
+
+	return locations, nil
+}
+
+// Get the last 50 visits from a specific IP address, sorted by most recent timestamp
+func (db *Database) GetUserLocationByIP(ip string) ([]UserLocation, error) {
+	var locations []UserLocation
+
+	// Create a 3 second timeout context
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	// Query the database
+	cursor, err := db.client.Database(WEB_DATABASE).Collection(USER_LOCATION_COLLECTION).Find(ctx, bson.M{
+		"ip": ip,
+	}, options.Find().SetSort(bson.M{"timestamp": -1}).SetLimit(50))
 	if err != nil {
 		return nil, fmt.Errorf("failed to find documents: %w", err)
 	}

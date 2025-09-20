@@ -5,13 +5,14 @@
  */
 
 
-const VERSION = "v0.0.31";
+const VERSION = "v0.0.34";
 const CACHE_NAME = `football-bet-tracker-${VERSION}`;
 
 
 const APP_STATIC_RESOURCES = [
     "/",
     "/css/reset.css",
+    "/css/locations.css",
     "/css/football/bet.css",
     "/images/football/crests/64.png",
     "/images/football/crests/61.png",
@@ -99,6 +100,7 @@ self.addEventListener("fetch", /** @param {FetchEvent} event */ (event) => {
             const fetchAndCacheUrls = [
                 "/",
                 "/css/football/bet.css",
+                "/css/locations.css",
                 "/manifests/football/bet.webmanifest",
                 "/js/football/bet.js",
                 "/football/bet/data/",
@@ -107,10 +109,10 @@ self.addEventListener("fetch", /** @param {FetchEvent} event */ (event) => {
             /** @type {DataResponse} */
             let dataResponse;
 
-            if (!fetchAndCacheUrls.includes(url.pathname) || url.pathname.startsWith("/locations/")) {
-                dataResponse = await cacheFirst(url.pathname);
-            } else {
+            if (fetchAndCacheUrls.includes(url.pathname) || url.pathname.startsWith("/locations/")) {
                 dataResponse = await fetchAndCache(url.pathname);
+            } else {
+                dataResponse = await cacheFirst(url.pathname);
             }
 
             if (url.pathname === "/football/bet/data/") {

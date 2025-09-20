@@ -23,7 +23,7 @@ body {
     margin-bottom: 0.5rem;
 }
 
-.back-button {
+.home-button {
     display: inline-block;
     padding: 0.25em 0.5em;
     background: #eee;
@@ -36,7 +36,7 @@ body {
     transition: background 0.2s;
 }
 
-.back-button:hover {
+.home-button:hover {
     background: #ddd;
 }
 

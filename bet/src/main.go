@@ -138,31 +138,93 @@ func main() {
 			return
 		}
 
-		// Set the header to text/html
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
+		locationData := LocationData{
+			SingleIP:  false,
+			Locations: locations,
+		}
 
 		// Create a function map for the template
 		funcMap := template.FuncMap{
 			"formatTime": func(t time.Time) string {
-				return t.In(loc).Format("Mon 01 Jan 2006 15:04:05 MST")
+				return t.In(loc).Format("Mon 2 Jan 2006 15:04:05 MST")
 			},
 		}
 
+		// Set the header to text/html
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
+		
 		// Create a new template with the function map
 		locationTemplate, err := template.New("location_template.html").Funcs(funcMap).ParseFiles("/html/location_template.html")
 		if err != nil {
+			fmt.Printf("Failed to parse template: %s\n", err)
 			http.Error(w, "Failed to parse template", http.StatusInternalServerError)
 			return
+
 		}
 
 		// Execute the template with the locations data
-		err = locationTemplate.Execute(w, locations)
+		err = locationTemplate.Execute(w, locationData)
 		if err != nil {
+			fmt.Printf("Failed to execute template: %s\n", err)
 			http.Error(w, "Failed to execute template", http.StatusInternalServerError)
 			return
 		}
 	})
+
+	getIpAddressHandler := func(w http.ResponseWriter, r *http.Request) {
+		ip := r.PathValue("ip")
+
+		// Validate the IP address
+		parsedIP := net.ParseIP(ip)
+		if parsedIP == nil {
+			http.Error(w, "Invalid IP address", http.StatusBadRequest)
+			return
+		}
+
+		// Get the user locations from the database
+		locations, err := db.GetUserLocationByIP(parsedIP.String())
+		if err != nil {
+			http.Error(w, "Failed to get user locations", http.StatusInternalServerError)
+			return
+		}
+		
+		locationData := LocationData{
+			SingleIP:  true,
+			Locations: locations,
+		}
+		
+		// Create a function map for the template
+		funcMap := template.FuncMap{
+			"formatTime": func(t time.Time) string {
+				return t.In(loc).Format("Mon 2 Jan 2006 15:04:05 MST")
+			},
+		}
+
+		// Set the header to text/html
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
+		
+		// Create a new template with the function map
+		locationTemplate, err := template.New("location_template.html").Funcs(funcMap).ParseFiles("/html/location_template.html")
+		if err != nil {
+			fmt.Printf("Failed to parse template: %s\n", err)
+			http.Error(w, "Failed to parse template", http.StatusInternalServerError)
+			return
+
+		}
+
+		// Execute the template with the locations data
+		err = locationTemplate.Execute(w, locationData)
+		if err != nil {
+			fmt.Printf("Failed to execute template: %s\n", err)
+			http.Error(w, "Failed to execute template", http.StatusInternalServerError)
+			return
+		}
+	}
+
+	http.HandleFunc("GET /locations/{ip}", getIpAddressHandler)
+	http.HandleFunc("GET /locations/{ip}/", getIpAddressHandler)
 
 	http.ListenAndServe(":8080", nil)
 }
