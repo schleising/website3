@@ -43,6 +43,7 @@ body {
 .undecorated-link {
     text-decoration: none;
     color: inherit;
+    cursor: pointer;
 }
 
 .bet-container {
