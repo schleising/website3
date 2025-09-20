@@ -50,7 +50,8 @@ func main() {
 	fmt.Printf("[%s %s] Connected to database\n", time.Now().In(loc).Format("2006-01-02 15:04:05"), zone)
 
 	// Handler for the root path
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
+		// Ensure the path is exactly /
 		if r.URL.Path != "/" {
 			http.NotFound(w, r)
 			return
@@ -111,7 +112,13 @@ func main() {
 	})
 
 	// Handler for the /data path
-	http.HandleFunc("/football/bet/data/", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("GET /football/bet/data/", func(w http.ResponseWriter, r *http.Request) {
+		// Ensure the path is exactly /football/bet/data/
+		if r.URL.Path != "/football/bet/data/" {
+			http.NotFound(w, r)
+			return
+		}
+
 		// Create a new BetResponse
 		betResponse, err := NewBetResponse(db)
 		if err != nil {
@@ -135,7 +142,13 @@ func main() {
 	})
 
 	// Handler for the /locations path
-	http.HandleFunc("/locations/", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("GET /locations/", func(w http.ResponseWriter, r *http.Request) {
+		// Ensure the path is exactly /locations/
+		if r.URL.Path != "/locations/" {
+			http.NotFound(w, r)
+			return
+		}
+
 		// Get the user locations from the database
 		locations, err := db.GetUserLocations()
 		if err != nil {
