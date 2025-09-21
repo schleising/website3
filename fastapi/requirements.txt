@@ -12,7 +12,7 @@ click==8.3.0
 cryptography==46.0.1
 dnspython==2.8.0
 ecdsa==0.19.1
-fastapi==0.116.2
+fastapi==0.117.1
 frozenlist==1.7.0
 h11==0.16.0
 http_ece==1.2.1
@@ -51,6 +51,6 @@ starlette==0.48.0
 typing-inspection==0.4.1
 typing_extensions==4.15.0
 urllib3==2.5.0
-uvicorn==0.35.0
+uvicorn==0.36.0
 websockets==15.0.1
 yarl==1.20.1
