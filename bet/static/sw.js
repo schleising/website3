@@ -5,7 +5,7 @@
  */
 
 
-const VERSION = "v0.0.34";
+const VERSION = "v0.0.35";
 const CACHE_NAME = `football-bet-tracker-${VERSION}`;
 
 

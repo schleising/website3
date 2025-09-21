@@ -27,6 +27,20 @@
         }
     ],
     "start_url": "/",
+    "shortcuts": [
+        {
+            "name": "Bet Standings",
+            "short_name": "Standings",
+            "description": "View your bet standings",
+            "url": "/"
+        },
+        {
+            "name": "Visitors",
+            "short_name": "Visitors",
+            "description": "View your visitors",
+            "url": "/locations/"
+        }
+    ],
     "display": "standalone",
     "background_color": "#F8F8F8",
     "theme_color": "#F8F8F8",
