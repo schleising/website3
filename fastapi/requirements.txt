@@ -12,7 +12,7 @@ click==8.3.0
 cryptography==46.0.2
 dnspython==2.8.0
 ecdsa==0.19.1
-fastapi==0.118.3
+fastapi==0.119.0
 frozenlist==1.8.0
 h11==0.16.0
 http_ece==1.2.1
