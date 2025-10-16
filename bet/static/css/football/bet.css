@@ -197,6 +197,10 @@ p {
     color: #333;
 }
 
+.bold {
+    font-weight: bold;
+}
+
 @media screen and (min-width: 624px) {
     .bet-container {
         flex: 0 1 auto;
