@@ -98,11 +98,13 @@ func main() {
 			time.Now().In(loc).Format("2006-01-02 15:04:05"), zone, realIP, r.Method, r.URL)
 
 		// Set the header to text/html
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
+		// w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		// w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
 
-		// Return the contents of /html/index.html
-		http.ServeFile(w, r, "/html/index.html")
+		// // Return the contents of /html/index.html
+		// http.ServeFile(w, r, "/html/index.html")
+
+		http.Error(w, "Not Found", http.StatusNotFound)
 	})
 
 	// Handler for the /data path
