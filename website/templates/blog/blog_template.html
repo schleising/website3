@@ -37,7 +37,7 @@
 {% endblock %}
 {% block sidebar %}
   {% for blog in blog_list %}
-    <a href="{{ blog.id }}/" class="sub-level-nav" id="{{ blog.id }}">{{ blog.title }}</a>
+    <a href="/blog/{{ blog.id }}/" class="sub-level-nav" id="{{ blog.id }}">{{ blog.title }}</a>
   {% endfor %}
 {% endblock %}
 
