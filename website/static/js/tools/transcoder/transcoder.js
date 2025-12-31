@@ -11,14 +11,37 @@ async function updateServiceWorkerRegistration() {
         return await registration.update();
     } else {
         console.log('Service Worker not registered, registering...');
-        return await navigator.serviceWorker.register(serviceWorkerPath, {scope: serviceWorkerScope});
+        return await navigator.serviceWorker.register(serviceWorkerPath, { scope: serviceWorkerScope });
     }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
     // Set a one second timer to request progress information from the server
     setInterval(() => {
-        fetch('/tools/transcoder/progress/')
+        getProgress();
+    }, 1000);
+
+    // Initial call to get progress information
+    getProgress();
+
+    // Check if the browser supports service workers
+    if ('serviceWorker' in navigator) {
+        // Create the service worker and register it
+        updateServiceWorkerRegistration()
+            .then(() => navigator.serviceWorker.ready)
+            .then((registration) => {
+                console.log('Service Worker DOM:', registration.active);
+            })
+            .catch((error) => {
+                console.error('Service Worker registration failed:', error);
+            });
+    } else {
+        console.warn('Service Worker is not supported');
+    }
+});
+
+async function getProgress() {
+    fetch('/tools/transcoder/progress/')
         .then(response => response.json())
         .then(data => {
             // Check whether there is an object called error in the response
@@ -76,20 +99,4 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('no-transcode').style.display = 'flex';
             document.getElementById('progress-area').style.display = 'none';
         });
-    }, 1000);
-
-    // Check if the browser supports service workers
-    if ('serviceWorker' in navigator) {
-        // Create the service worker and register it
-        updateServiceWorkerRegistration()
-            .then(() => navigator.serviceWorker.ready)
-            .then((registration) => {
-                console.log('Service Worker DOM:', registration.active);
-            })
-            .catch((error) => {
-                console.error('Service Worker registration failed:', error);
-            });
-    } else {
-        console.warn('Service Worker is not supported');
-    }
-});
+}
