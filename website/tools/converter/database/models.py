@@ -110,6 +110,8 @@ class VideoInformation(BaseModel):
 
 class FileData(BaseModel):
     filename: str
+    inode: int
+    deleted: bool
     video_information: VideoInformation
     conversion_required: bool
     converting: bool
