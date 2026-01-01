@@ -36,7 +36,7 @@ pycparser==2.23
 pydantic==2.12.5
 pydantic_core==2.41.5
 Pygments==2.19.2
-pymdown-extensions==10.19.1
+pymdown-extensions==10.20
 pymongo==4.15.5
 PyQRCode==1.2.1
 python-jose==3.5.0
