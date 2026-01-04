@@ -1,5 +1,5 @@
 # Start with the base nginx image
-FROM nginx
+FROM nginx:latest
 
 # Install Cron and Certbot
 # Don't install recommended packages and clear download cache to reduce the size of the image and build time
