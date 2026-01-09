@@ -14,7 +14,7 @@ from pymongo.errors import DuplicateKeyError
 
 from jose import JWTError, jwt
 
-from passlib.context import CryptContext
+import bcrypt
 
 from pydantic import BaseModel
 
@@ -24,20 +24,23 @@ from . import user_collection
 
 # to get a string like this run:
 # openssl rand -hex 32
-with open('/app/secrets/secret_key.txt', encoding='utf8') as secret_file:
+with open("/app/secrets/secret_key.txt", encoding="utf8") as secret_file:
     SECRET_KEY = secret_file.read().strip()
 
 # Use the HS256 signing algorithm for the JWT token
 ALGORITHM = "HS256"
+
 
 # Class describing the token and token type
 class Token(BaseModel):
     access_token: str
     token_type: str
 
+
 # Class for the token data
 class TokenData(BaseModel):
     username: str | None = None
+
 
 # This class is a copy of the FastAPI OAuth2PasswordBearer to check for a cookie
 # rather than the Authorization header as this does not work in a web app
@@ -63,9 +66,9 @@ class CookieOAuth2PasswordBearer(OAuth2):
         )
 
     async def __call__(self, request: HTTPConnection) -> Optional[str]:
-        logging.debug(f'CookieOAuth2PasswordBearer: {request}')
-        scheme = 'bearer'
-        param = request.cookies.get('token')
+        logging.debug(f"CookieOAuth2PasswordBearer: {request}")
+        scheme = "bearer"
+        param = request.cookies.get("token")
 
         if param is None or scheme.lower() != "bearer":
             if self.auto_error:
@@ -74,25 +77,25 @@ class CookieOAuth2PasswordBearer(OAuth2):
                 return None
         return param
 
-# Use bcrypt to hash the password
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 # Use the bespoke Cookie OAuth2 scheme
 oauth2_scheme = CookieOAuth2PasswordBearer(tokenUrl="/account/token")
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    # Veryfy the plain and hashed passwords match
-    return pwd_context.verify(plain_password, hashed_password)
+    return bcrypt.checkpw(
+        plain_password.encode("utf-8"), hashed_password.encode("utf-8")
+    )
+
 
 def get_password_hash(password: str) -> str:
-    # Get the hashed version of the plaintext password 
-    return pwd_context.hash(password)
+    return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+
 
 async def get_user_in_db(username: str) -> UserInDB | None:
     if user_collection is not None:
         # If the user collection exists try to get the user
-        dbuser = await user_collection.find_one({'username': username})
+        dbuser = await user_collection.find_one({"username": username})
 
         if dbuser is not None:
             # If the user exists, return it with the hashed password
@@ -104,10 +107,11 @@ async def get_user_in_db(username: str) -> UserInDB | None:
         # If the collectiion does not exist, return None
         return None
 
+
 async def get_user(username: str) -> User | None:
     if user_collection is not None:
         # If the user collection exists try to get the user
-        dbuser = await user_collection.find_one({'username': username})
+        dbuser = await user_collection.find_one({"username": username})
 
         if dbuser is not None:
             # If the user exists, return it without the hashed password
@@ -118,6 +122,7 @@ async def get_user(username: str) -> User | None:
     else:
         # If the collectiion does not exist, return None
         return None
+
 
 async def authenticate_user(username: str, password: str) -> User | None:
     # Try to get the user
@@ -132,6 +137,7 @@ async def authenticate_user(username: str, password: str) -> User | None:
     else:
         # Return the valid User without the hashed password
         return User.model_validate(user)
+
 
 def create_access_token(data: dict, expires_delta: timedelta | None = None):
     # Copy the data to be encoded
@@ -152,11 +158,12 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None):
     # Return the token
     return encoded_jwt
 
+
 async def get_current_user(token: str | None = Depends(oauth2_scheme)) -> User | None:
     # Check whether there is a token
     if token is not None:
         try:
-            # Attempt to decode the token
+            # Attempt to decode the token
             payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
 
             # If successfully decoded get the username
@@ -189,9 +196,12 @@ async def get_current_user(token: str | None = Depends(oauth2_scheme)) -> User |
         # Return None if there is no Token
         return None
 
-async def get_current_active_user(request: HTTPConnection, current_user: User | None = Depends(get_current_user)) -> None:
-    logging.debug(f'get_current_active_user - request: {request}')
-    logging.debug(f'get_current_active_user - current_user: {current_user}')
+
+async def get_current_active_user(
+    request: HTTPConnection, current_user: User | None = Depends(get_current_user)
+) -> None:
+    logging.debug(f"get_current_active_user - request: {request}")
+    logging.debug(f"get_current_active_user - current_user: {current_user}")
 
     # Check whether we have got a user
     if current_user is not None:
@@ -205,7 +215,10 @@ async def get_current_active_user(request: HTTPConnection, current_user: User | 
         # If we have not got a user set request.state.user to None
         request.state.user = None
 
-async def create_new_user(firstname: str, lastname: str, username: str, password: str) -> User | None:
+
+async def create_new_user(
+    firstname: str, lastname: str, username: str, password: str
+) -> User | None:
     # Hash the password
     hashed_password = get_password_hash(password)
 
@@ -215,7 +228,7 @@ async def create_new_user(firstname: str, lastname: str, username: str, password
         last_name=lastname,
         username=username,
         hashed_password=hashed_password,
-        disabled=False
+        disabled=False,
     )
 
     # Check we have a collection
@@ -237,20 +250,25 @@ async def create_new_user(firstname: str, lastname: str, username: str, password
             # Return None
             return None
     else:
-            # Return None
+        # Return None
         return None
+
 
 def get_login_response(user: User, url: str) -> RedirectResponse:
     # If the user is valid, create a JWT token
-    access_token_expires = timedelta(seconds=user.token_expiry) if user.token_expiry is not None else None
+    access_token_expires = (
+        timedelta(seconds=user.token_expiry) if user.token_expiry is not None else None
+    )
 
-    # Create the token
+    # Create the token
     access_token = create_access_token(
         data={"sub": user.username}, expires_delta=access_token_expires
     )
 
     # Create a redirect response to the login success page
-    response = RedirectResponse(f'/account/{url}', status_code=status.HTTP_303_SEE_OTHER)
+    response = RedirectResponse(
+        f"/account/{url}", status_code=status.HTTP_303_SEE_OTHER
+    )
 
     # Set a cookie on the response with the contents as the JWT token
     response.set_cookie(
@@ -259,7 +277,7 @@ def get_login_response(user: User, url: str) -> RedirectResponse:
         value=access_token,
         secure=True,
         httponly=True,
-        samesite='lax'
+        samesite="lax",
     )
 
     # Return the reponse

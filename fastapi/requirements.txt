@@ -3,7 +3,7 @@ aiohttp==3.13.3
 aiosignal==1.4.0
 annotated-doc==0.0.4
 annotated-types==0.7.0
-anyio==4.12.0
+anyio==4.12.1
 attrs==25.4.0
 bcrypt==5.0.0
 certifi==2026.1.4
@@ -28,20 +28,19 @@ motor==3.7.1
 motor-types==1.0.0b4
 multidict==6.7.0
 notify-run @ git+https://github.com/notify-run/notify.run.git@0b37558d54fda52d382a72cef05c05856c605c7b#subdirectory=py_client
-passlib==1.7.4
 propcache==0.4.1
-py-vapid==1.9.2
+py-vapid==1.9.4
 pyasn1==0.6.1
 pycparser==2.23
 pydantic==2.12.5
 pydantic_core==2.41.5
 Pygments==2.19.2
 pymdown-extensions==10.20
-pymongo==4.15.5
+pymongo==4.16.0
 PyQRCode==1.2.1
 python-jose==3.5.0
 python-multipart==0.0.21
-pywebpush==2.1.2
+pywebpush==2.2.0
 PyYAML==6.0.3
 requests==2.31.0
 rich==14.2.0
@@ -51,7 +50,7 @@ sniffio==1.3.1
 starlette==0.50.0
 typing-inspection==0.4.2
 typing_extensions==4.15.0
-urllib3==2.6.2
+urllib3==2.6.3
 uvicorn==0.40.0
 websockets==15.0.1
 yarl==1.22.0
