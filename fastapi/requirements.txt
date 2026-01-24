@@ -19,7 +19,7 @@ h11==0.16.0
 http_ece==1.2.1
 idna==3.11
 Jinja2==3.1.6
-Markdown==3.10
+Markdown==3.10.1
 markdown-it-py==4.0.0
 MarkupSafe==3.0.3
 md_mermaid @ git+https://github.com/schleising/md_mermaid@e2076ca7bff9f7bb27ce73549e604d742de8af1c
@@ -31,11 +31,11 @@ notify-run @ git+https://github.com/notify-run/notify.run.git@0b37558d54fda52d38
 propcache==0.4.1
 py-vapid==1.9.4
 pyasn1==0.6.2
-pycparser==2.23
+pycparser==3.0
 pydantic==2.12.5
 pydantic_core==2.41.5
 Pygments==2.19.2
-pymdown-extensions==10.20
+pymdown-extensions==10.20.1
 pymongo==4.16.0
 PyQRCode==1.2.1
 python-jose==3.5.0
