@@ -1,35 +1,12 @@
 services:
-  nginx:
-    build: nginx
-    ports:
-      - 8010:80/tcp
-      - 8011:443/tcp
-      - 8011:443/udp
-    depends_on:
-      - fastapi
-    volumes:
-      - ./website/static:/static:ro
-      - ./bet/static:/bet_static:ro
-      - socket_volume:/socket:rw
-      - nginx_conf:/etc/nginx:rw
-      - letsencrypt_conf:/etc/letsencrypt:rw
-    restart: always
-    stop_signal: SIGQUIT
-    extra_hosts:
-        - "host.docker.internal:host-gateway"
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-
   fastapi:
     build: fastapi
     depends_on:
       - mongodb
     volumes:
       - ./website:/app:ro
-      - socket_volume:/socket:rw
+    ports:
+      - "8081:8080"
     restart: always
     extra_hosts:
         - "host.docker.internal:host-gateway"
@@ -47,7 +24,7 @@ services:
       - ./bet/static:/bet_static:ro
       - ./bet/html:/html:ro
     ports:
-      - "8888:8080"
+      - "8888:8020"
     restart: always
     extra_hosts:
         - "host.docker.internal:host-gateway"
@@ -88,8 +65,5 @@ services:
         max-file: "3"
 
 volumes:
-  socket_volume:
-  nginx_conf:
-  letsencrypt_conf:
   db_volume:
   db_conf:
