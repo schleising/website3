@@ -5,7 +5,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
   <link type="text/css" rel="stylesheet" href="/css/tools/monitor/reset.css?v1.0.0" />
-  <link type="text/css" rel="stylesheet" href="/css/tools/monitor/monitor.css?v1.0.0" />
+  <link type="text/css" rel="stylesheet" href="/css/tools/monitor/monitor.css?v1.0.1" />
   <script defer src="/js/tools/monitor/scope.js?v1.0.0"></script>
   <script defer src="/js/tools/monitor/monitor.js?v1.0.0"></script>
   <link rel="icon" type="image/ico" sizes="48x48" href="/icons/tools/monitor/favicon-48x48.ico" />
@@ -18,26 +18,28 @@
     <div class="header">
       <h2>Home Monitor</h2>
     </div>
-    {% for data in sensor_data.data %}
-    <div class="data-container" id="data-container-{{ data.device_id }}">
-      <div class="data">
-        <p class="monitor-title">Device:</p>
-        <p class="monitor-data" id="device-{{ data.device_id }}"></p>
-        <p class="monitor-title">Time:</p>
-        <p class="monitor-data" id="time-{{ data.device_id }}"></p>
-        <p class="monitor-title">Status:</p>
-        <p class="monitor-data" id="status-{{ data.device_id }}"></p>
-        <p class="monitor-title">Temperature:</p>
-        <p class="monitor-data" id="temperature-{{ data.device_id }}"></p>
-        <p class="monitor-title">Humidity:</p>
-        <p class="monitor-data" id="humidity-{{ data.device_id }}"></p>
-        <div class="svg-container" id="svg-container-{{ data.device_id }}"">
-          <svg id="chart-{{ data.device_id }}" class="chart-svg" xmlns="http://www.w3.org/2000/svg" xmlns: xlink="http://www.w3.org/1999/xlink">
-          </svg>
+    <div class="charts">
+      {% for data in sensor_data.data %}
+      <div class="data-container" id="data-container-{{ data.device_id }}">
+        <div class="data">
+          <p class="monitor-title">Device:</p>
+          <p class="monitor-data" id="device-{{ data.device_id }}"></p>
+          <p class="monitor-title">Time:</p>
+          <p class="monitor-data" id="time-{{ data.device_id }}"></p>
+          <p class="monitor-title">Status:</p>
+          <p class="monitor-data" id="status-{{ data.device_id }}"></p>
+          <p class="monitor-title">Temperature:</p>
+          <p class="monitor-data" id="temperature-{{ data.device_id }}"></p>
+          <p class="monitor-title">Humidity:</p>
+          <p class="monitor-data" id="humidity-{{ data.device_id }}"></p>
+          <div class="svg-container" id="svg-container-{{ data.device_id }}"">
+            <svg id="chart-{{ data.device_id }}" class="chart-svg" xmlns="http://www.w3.org/2000/svg" xmlns: xlink="http://www.w3.org/1999/xlink">
+            </svg>
+          </div>
         </div>
       </div>
+      {% endfor %}
     </div>
-    {% endfor %}
   </div>
 </body>
 

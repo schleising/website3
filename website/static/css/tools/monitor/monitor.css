@@ -25,6 +25,12 @@ p.monitor-data {
     padding: 0.25rem;
 }
 
+.charts {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 1rem;
+}
+
 .data-container {
     display: flex;
     flex-direction: row;
