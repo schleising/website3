@@ -101,7 +101,9 @@ class DatabaseTools:
 
         # Convert the list of FileData objects to a list of file paths
         file_list = [
-            self._create_converted_data(count, ConvertedFileDataFromDb.model_validate(data))
+            self._create_converted_data(
+                count, ConvertedFileDataFromDb.model_validate(data)
+            )
             for count, data in enumerate(db_file_list)
         ]
 
@@ -113,7 +115,12 @@ class DatabaseTools:
 
         # Get the files where converting or copying is True from MongoDB
         db_file = media_collection.find(
-            {"$or": [{"converting": True, "deleted": False}, {"copying": True, "deleted": False}]}
+            {
+                "$or": [
+                    {"converting": True, "deleted": False},
+                    {"copying": True, "deleted": False},
+                ]
+            }
         )
 
         # Convert the list of FileData objects to a list of file paths
@@ -147,7 +154,9 @@ class DatabaseTools:
         total_files = await media_collection.count_documents({})
 
         # Get the total number of files that have been converted
-        total_converted = await media_collection.count_documents({"converted": True, "deleted": False})
+        total_converted = await media_collection.count_documents(
+            {"converted": True, "deleted": False}
+        )
 
         # Get the total number of files that need to be converted
         total_to_convert = await media_collection.count_documents(
@@ -161,7 +170,9 @@ class DatabaseTools:
         )
 
         # Get the total number of files that are currently being converted
-        total_converting = await media_collection.count_documents({"converting": True, "deleted": False})
+        total_converting = await media_collection.count_documents(
+            {"converting": True, "deleted": False}
+        )
 
         # Add the number of files that are currently being converted to the total number of files that need to be converted
         total_to_convert += total_converting
@@ -294,7 +305,11 @@ class DatabaseTools:
 
         # Get the number of films which are currently being converted
         total_films_converting = await media_collection.count_documents(
-            {"conversion_in_progress": True, "deleted": False, "filename": {"$regex": r"Films"}}
+            {
+                "conversion_in_progress": True,
+                "deleted": False,
+                "filename": {"$regex": r"Films"},
+            }
         )
 
         # Get the count of conversion errors
