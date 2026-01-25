@@ -23,7 +23,7 @@ async def converter(request: Request):
 async def get_progress():
     try:
         async with aiohttp.ClientSession() as session:
-            async with session.get('http://host.docker.internal:8080/') as response:
+            async with session.get('http://host.docker.internal:8020/') as response:
                 return await response.json()
     except Exception as e:
         logging.error(f'Error getting progress: {e}')
