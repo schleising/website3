@@ -19,4 +19,4 @@ COPY --from=build /root/.local /root/.local
 ENV PATH=/root/.local/bin:$PATH
 
 # Set the entrypoint to run uvicorn with a socket connection
-CMD [ "uvicorn", "app.index:app", "--uds", "/socket/uvicorn.sock", "--proxy-headers" ]
+CMD [ "uvicorn", "app.index:app", "--host", "0.0.0.0", "--port", "8080", "--proxy-headers" ]
