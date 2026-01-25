@@ -84,6 +84,7 @@ class DatabaseTools:
                 "converting": False,
                 "converted": True,
                 "conversion_error": False,
+                "deleted": False,
                 "end_conversion_time": {"$gte": datetime.now() - timedelta(days=7)},
             },
             sort=[("end_conversion_time", DESCENDING)],
@@ -112,7 +113,7 @@ class DatabaseTools:
 
         # Get the files where converting or copying is True from MongoDB
         db_file = media_collection.find(
-            {"$or": [{"converting": True}, {"copying": True}]}
+            {"$or": [{"converting": True, "deleted": False}, {"copying": True, "deleted": False}]}
         )
 
         # Convert the list of FileData objects to a list of file paths
@@ -146,7 +147,7 @@ class DatabaseTools:
         total_files = await media_collection.count_documents({})
 
         # Get the total number of files that have been converted
-        total_converted = await media_collection.count_documents({"converted": True})
+        total_converted = await media_collection.count_documents({"converted": True, "deleted": False})
 
         # Get the total number of files that need to be converted
         total_to_convert = await media_collection.count_documents(
@@ -155,11 +156,12 @@ class DatabaseTools:
                 "converted": False,
                 "converting": False,
                 "conversion_error": False,
+                "deleted": False,
             }
         )
 
         # Get the total number of files that are currently being converted
-        total_converting = await media_collection.count_documents({"converting": True})
+        total_converting = await media_collection.count_documents({"converting": True, "deleted": False})
 
         # Add the number of files that are currently being converted to the total number of files that need to be converted
         total_to_convert += total_converting
@@ -167,7 +169,7 @@ class DatabaseTools:
         # Get the total number of gigabytes before conversion
         gigabytes_before_conversion_db = await media_collection.aggregate(
             [
-                {"$match": {"converted": True}},
+                {"$match": {"converted": True, "deleted": False}},
                 {"$group": {"_id": None, "total": {"$sum": "$pre_conversion_size"}}},
             ]
         ).to_list(length=None)
@@ -184,7 +186,7 @@ class DatabaseTools:
         # Get the total number of gigabytes after conversion
         gigabytes_after_conversion_db = await media_collection.aggregate(
             [
-                {"$match": {"converted": True}},
+                {"$match": {"converted": True, "deleted": False}},
                 {"$group": {"_id": None, "total": {"$sum": "$current_size"}}},
             ]
         ).to_list(length=None)
@@ -211,7 +213,7 @@ class DatabaseTools:
         # Get the total conversion time from the database
         total_conversion_time_db = await media_collection.aggregate(
             [
-                {"$match": {"converted": True}},
+                {"$match": {"converted": True, "deleted": False}},
                 {
                     "$group": {
                         "_id": None,
@@ -243,7 +245,7 @@ class DatabaseTools:
         # Get the total size of all of the video files requiring conversion before conversion by summing the pre_conversion_size field
         total_size_before_conversion_db = await media_collection.aggregate(
             [
-                {"$match": {"conversion_required": True}},
+                {"$match": {"conversion_required": True, "deleted": False}},
                 {"$group": {"_id": None, "total": {"$sum": "$pre_conversion_size"}}},
             ]
         ).to_list(length=None)
@@ -260,7 +262,7 @@ class DatabaseTools:
         # Get the total size of all of the video files requiring conversion after conversion by summing the current_size field
         total_size_after_conversion_db = await media_collection.aggregate(
             [
-                {"$match": {"conversion_required": True}},
+                {"$match": {"conversion_required": True, "deleted": False}},
                 {"$group": {"_id": None, "total": {"$sum": "$current_size"}}},
             ]
         ).to_list(length=None)
@@ -276,7 +278,7 @@ class DatabaseTools:
 
         # Get the number of films which have been converted
         total_films_converted = await media_collection.count_documents(
-            {"converted": True, "filename": {"$regex": r"Films"}}
+            {"converted": True, "deleted": False, "filename": {"$regex": r"Films"}}
         )
 
         # Get the number of films which have to be converted
@@ -285,24 +287,25 @@ class DatabaseTools:
                 "conversion_required": True,
                 "converted": False,
                 "conversion_error": False,
+                "deleted": False,
                 "filename": {"$regex": r"Films"},
             }
         )
 
         # Get the number of films which are currently being converted
         total_films_converting = await media_collection.count_documents(
-            {"conversion_in_progress": True, "filename": {"$regex": r"Films"}}
+            {"conversion_in_progress": True, "deleted": False, "filename": {"$regex": r"Films"}}
         )
 
         # Get the count of conversion errors
         total_conversion_errors = await media_collection.count_documents(
-            {"conversion_error": True}
+            {"conversion_error": True, "deleted": False}
         )
 
         # Get the total number of files converted by each backed sorted by backend name
         total_files_converted_by_backend_db = media_collection.aggregate(
             [
-                {"$match": {"converted": True}},
+                {"$match": {"converted": True, "deleted": False}},
                 {"$group": {"_id": "$backend_name", "total": {"$sum": 1}}},
                 {"$sort": {"_id": 1}},
             ]
@@ -357,13 +360,13 @@ class DatabaseTools:
 
         # Get the file names of the files that have conversion errors
         files_with_errors = media_collection.find(
-            {"conversion_error": True}, projection=["filename"]
+            {"conversion_error": True, "deleted": False}, projection=["filename"]
         )
 
         # Create a list of UpdateOne objects to set the conversion_error field to False
         update_requests = [
             UpdateOne(
-                {"filename": file_data["filename"]},
+                {"filename": file_data["filename"], "deleted": False},
                 {"$set": {"conversion_error": False}},
             )
             async for file_data in files_with_errors
