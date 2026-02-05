@@ -228,5 +228,5 @@ func main() {
 	http.HandleFunc("GET /locations/{ip}", getIpAddressHandler)
 	http.HandleFunc("GET /locations/{ip}/", getIpAddressHandler)
 
-	http.ListenAndServe(":8080", nil)
+	http.ListenAndServe(":8020", nil)
 }
