@@ -1,4 +1,30 @@
-# robots.txt for *.schleising.net
+# ==========================================
+# robots.txt for www.schleising.net
+# ==========================================
 
+# 1. BLOCK AI SCRAPERS
+User-agent: GPTBot
+User-agent: ChatGPT-User
+User-agent: OAI-SearchBot
+User-agent: ClaudeBot
+User-agent: Amazonbot
+User-agent: anthropic-ai
+Disallow: /
+
+# 2. BLOCK AGGRESSIVE/UNWANTED SEO BOTS
+User-agent: AhrefsBot
+User-agent: SERankingBacklinksBot
+User-agent: PetalBot
+User-agent: YandexBot
+Disallow: /
+
+# 3. RULES FOR GOOD BOTS (Google, Bing, TikTok)
 User-agent: *
-Disallow:
+# Don't index login or account pages
+Disallow: /account/
+Disallow: /login/
+# Don't index backend system folders if they exist
+Disallow: /tools/
+Disallow: /admin/
+# Allow everything else (Blog, Football, etc.)
+Allow: /
