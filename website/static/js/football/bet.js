@@ -32,7 +32,9 @@ document.addEventListener("DOMContentLoaded", function () {
 });
 
 function getBetData() {
-    fetch("/football/bet/data/")
+    const headers = new Headers();
+    headers.append("Content-Type", "application/json");
+    fetch("/football/bet/data/", { headers })
         .then(response => response.json())
         .then(
             /** @param {FootballBetList} data */

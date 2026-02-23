@@ -58,7 +58,9 @@ self.addEventListener("activate", (event) => {
 async function fetchAndCache(pathname) {
     const cache = await caches.open(CACHE_NAME);
     try {
-        const response = await fetch(pathname);
+        const headers = new Headers();
+        headers.append("Content-Type", "application/json");
+        const response = await fetch(pathname, { headers });
         if (response.status === 200) {
             await cache.put(pathname, response.clone());
         }

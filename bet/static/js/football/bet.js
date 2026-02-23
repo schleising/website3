@@ -169,8 +169,10 @@ navigator.serviceWorker.addEventListener("message", (event) => {
 });
 
 async function getBetData() {
+    const headers = new Headers();
+    headers.append("Content-Type", "application/json");
     /** @type {Promise<FootballBetList>} */
-    fetch("/football/bet/data/")
+    fetch("/football/bet/data/", { headers })
         .then(response => response.json())
         .then(/** @param {FootballBetList} data */ data => handleBetDataUpdate(data, false))
         .catch(error => {

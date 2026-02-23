@@ -178,8 +178,10 @@ function handleMoveEvent(svg, clientX, clientY) {
 
 // Fetch the latest temperature data from the server every 5 seconds and update the page
 async function fetchSensorData() {
+    const headers = new Headers();
+    headers.append("Content-Type", "application/json");
     // Fetch the sensor data
-    fetch('/tools/monitor/latest_data/')
+    fetch('/tools/monitor/latest_data/', { headers })
         .then(response => response.json())
         .then(response_data => {
             // Update the sensor data on the page
@@ -210,8 +212,10 @@ async function fetchSensorData() {
 
 // Fetch the time series temperature data from the server
 async function fetchTemperatureData() {
+    const headers = new Headers();
+    headers.append("Content-Type", "application/json");
     // Fetch the temperature data
-    fetch('/tools/monitor/timeseries/')
+    fetch('/tools/monitor/timeseries/', { headers })
         .then(response => response.json())
         .then(response_data => {
             // Update the temperature data

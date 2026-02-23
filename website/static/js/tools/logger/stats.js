@@ -135,9 +135,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Add the event listener for the delete button
             document.getElementById('delete-log').addEventListener('click', () => {
+                const headers = new Headers();
+                headers.append("Content-Type", "application/json");
                 // Fetch with a DELETE request to the server to delete the event
                 fetch(`/tools/logger/delete/${id}`, {
-                    method: 'DELETE'
+                    method: 'DELETE',
+                    headers: headers
                 })
                     .then((response) => {
                         if (response.ok) {
