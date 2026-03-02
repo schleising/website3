@@ -97,6 +97,7 @@ async def logger(request: Request):
 
 
 # PUT request to create a new logging type
+@logger_router.put("/create", response_class=JSONResponse)
 @logger_router.put("/create/", response_class=JSONResponse)
 async def create_logging_type(request: Request):
     # Get the JSON data from the request
@@ -146,6 +147,7 @@ async def create_logging_type(request: Request):
 
 
 # POST request to log an event
+@logger_router.post("/log", response_class=JSONResponse)
 @logger_router.post("/log/", response_class=JSONResponse)
 async def log_event(request: Request):
     # Get the JSON data from the request
@@ -211,6 +213,7 @@ async def log_event(request: Request):
 
 # Handler for the stats page
 @logger_router.get("/stats/{event_type}", response_class=HTMLResponse)
+@logger_router.get("/stats/{event_type}/", response_class=HTMLResponse)
 async def stats(event_type: str, request: Request):
     logging.info(f"Logger stats page requested for {event_type}")
 
@@ -231,6 +234,7 @@ async def stats(event_type: str, request: Request):
 
 # Handler for the charts page
 @logger_router.get("/charts/{event_type}", response_class=HTMLResponse)
+@logger_router.get("/charts/{event_type}/", response_class=HTMLResponse)
 async def charts(event_type: str, request: Request):
     logging.info(f"Logger charts page requested for {event_type}")
 
@@ -243,6 +247,7 @@ async def charts(event_type: str, request: Request):
 
 # Handler for an edit event type request
 @logger_router.put("/edit/{event_id}", response_class=JSONResponse)
+@logger_router.put("/edit/{event_id}/", response_class=JSONResponse)
 async def edit_event_type(event_id: str, request: Request):
     # Get the JSON data from the request
     data = await request.json()
@@ -307,6 +312,7 @@ async def edit_event_type(event_id: str, request: Request):
     
 # Handler for a delete event request
 @logger_router.delete("/delete/{event_id}", response_class=JSONResponse)
+@logger_router.delete("/delete/{event_id}/", response_class=JSONResponse)
 async def delete_event(event_id: str, request: Request):
     # Log the delete event request
     logging.info(f"Delete event requested: {event_id}")

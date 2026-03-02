@@ -27,7 +27,7 @@
       {{ log.log_date }}{% if log.log_date != "Never" %}Z{% endif %}</p>
     <p class="count" data-type="{{ log.event }}" id="{{ log.event }}-count">{{ log.count }}</p>
     <div class="stats-link-container">
-      <a class="stats-link" href="/tools/logger/stats/{{ log.event }}/">≡</a>
+      <a class="stats-link" href="/stats/{{ log.event }}/">≡</a>
       <a class="stats-link">📊</a>
     </div>
     {% endfor %}

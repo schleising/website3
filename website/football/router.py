@@ -59,6 +59,7 @@ async def get_live_matches(request: Request):
     )
 
 
+@football_router.get("/matches/{month}", response_class=HTMLResponse)
 @football_router.get("/matches/{month}/", response_class=HTMLResponse)
 async def get_months_matches(request: Request, month: int = Path(ge=1, le=12)):
     if month > 5:
@@ -85,6 +86,7 @@ async def get_months_matches(request: Request, month: int = Path(ge=1, le=12)):
     )
 
 
+@football_router.get("/matches/team/{team_id}", response_class=HTMLResponse)
 @football_router.get("/matches/team/{team_id}/", response_class=HTMLResponse)
 async def get_teams_matches(request: Request, team_id: int):
     team_name, matches = await retreive_team_matches(team_id)
@@ -101,6 +103,7 @@ async def get_teams_matches(request: Request, team_id: int):
     )
 
 
+@football_router.get("/table", response_class=HTMLResponse)
 @football_router.get("/table/", response_class=HTMLResponse)
 async def get_table(request: Request):
     table_list: list[LiveTableItem] = await get_table_db()
@@ -111,6 +114,7 @@ async def get_table(request: Request):
     )
 
 
+@football_router.get("/bet", response_class=HTMLResponse)
 @football_router.get("/bet/", response_class=HTMLResponse)
 async def get_bet_page(request: Request):
     return TEMPLATES.TemplateResponse(
@@ -118,11 +122,13 @@ async def get_bet_page(request: Request):
     )
 
 
+@football_router.get("/bet/data", response_model=FootballBetList)
 @football_router.get("/bet/data/", response_model=FootballBetList)
 async def get_bet_data(request: Request):
     return await create_bet_standings()
 
 
+@football_router.get("/api", response_model=SimplifiedFootballData)
 @football_router.get("/api/", response_model=SimplifiedFootballData)
 async def get_simplified_matches(request: Request) -> SimplifiedFootballData:
     # Get todays matches from the database
@@ -173,6 +179,7 @@ async def get_simplified_matches(request: Request) -> SimplifiedFootballData:
     return simplified_football_data
 
 
+@football_router.websocket("/ws")
 @football_router.websocket("/ws/")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
@@ -206,6 +213,7 @@ async def websocket_endpoint(websocket: WebSocket):
 
 
 # Endpoint to subscribe to push notifications
+@football_router.post("/subscribe", status_code=201)
 @football_router.post("/subscribe/", status_code=201)
 async def subscribe(request: Request, response: Response):
     data = await request.json()
@@ -224,6 +232,7 @@ async def subscribe(request: Request, response: Response):
 
 
 # Endpoint to unsubscribe from push notifications
+@football_router.delete("/unsubscribe", status_code=204)
 @football_router.delete("/unsubscribe/", status_code=204)
 async def unsubscribe(request: Request):
     data = await request.json()

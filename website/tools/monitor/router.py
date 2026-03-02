@@ -26,6 +26,7 @@ async def monitor(request: Request) -> HTMLResponse:
 
 
 # Endpoint to get the monitor data
+@monitor_router.get("/latest_data", response_class=JSONResponse)
 @monitor_router.get("/latest_data/", response_class=JSONResponse)
 async def latest_data() -> SensorDataPoints:
     logging.info("Monitor data requested")
@@ -78,6 +79,7 @@ async def get_data() -> SensorDataPoints:
 
 
 # Endpoint to get the timeseries data
+@monitor_router.get("/timeseries", response_class=JSONResponse)
 @monitor_router.get("/timeseries/", response_class=JSONResponse)
 async def timeseries() -> TimeseriesDataResponse:
     logging.info("Timeseries data requested")

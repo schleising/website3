@@ -19,6 +19,7 @@ async def converter(request: Request):
     return TEMPLATES.TemplateResponse('tools/transcoder/transcoder.html', {'request': request})
 
 # Gets the progress details for the transcoder
+@transcoder_router.get('/progress')
 @transcoder_router.get('/progress/')
 async def get_progress():
     try:

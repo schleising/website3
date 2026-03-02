@@ -19,6 +19,7 @@ async def get_aircraft_page(request: Request):
     return TEMPLATES.TemplateResponse('aircraft_db/aircraft_template.html', {'request': request})
 
 @aircraft_router.get('/tail_no/{tail_no}', response_model=AircraftModel | None)
+@aircraft_router.get('/tail_no/{tail_no}/', response_model=AircraftModel | None)
 async def get_ac(tail_no: str | None = None):
     reader = IrcaReader()
 
@@ -27,6 +28,7 @@ async def get_ac(tail_no: str | None = None):
         ac = await reader.get_ac_by_tail_no(tail_no.upper())
         return ac
 
+@aircraft_router.websocket("/ws")
 @aircraft_router.websocket("/ws/")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
