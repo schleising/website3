@@ -1,1 +1,1 @@
-const serviceWorkerScope = '/tools/converter/';
+const serviceWorkerScope = '/';

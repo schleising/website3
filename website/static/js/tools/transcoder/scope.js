@@ -1,1 +1,1 @@
-const serviceWorkerScope = '/tools/transcoder/';
+const serviceWorkerScope = '/';

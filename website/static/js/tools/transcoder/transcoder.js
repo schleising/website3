@@ -43,7 +43,7 @@ document.addEventListener('DOMContentLoaded', () => {
 async function getProgress() {
     const headers = new Headers();
     headers.append("Content-Type", "application/json");
-    fetch('/tools/transcoder/progress/', { headers })
+    fetch('/progress/', { headers })
         .then(response => response.json())
         .then(data => {
             // Check whether there is an object called error in the response

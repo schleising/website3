@@ -67,7 +67,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Check if the value is not empty
                 if (value !== '') {
                     // Fetch with a PUT request to the server to edit the event
-                    fetch(`/tools/logger/edit/${id}`, {
+                    fetch(`/edit/${id}`, {
                         method: 'PUT',
                         headers: {
                             'Content-Type': 'application/json'
@@ -138,7 +138,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const headers = new Headers();
                 headers.append("Content-Type", "application/json");
                 // Fetch with a DELETE request to the server to delete the event
-                fetch(`/tools/logger/delete/${id}`, {
+                fetch(`/delete/${id}`, {
                     method: 'DELETE',
                     headers: headers
                 })

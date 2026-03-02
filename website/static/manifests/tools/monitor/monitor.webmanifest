@@ -26,12 +26,12 @@
             "purpose": "maskable"
         }
     ],
-    "start_url": "/tools/monitor/",
+    "start_url": "/",
     "display": "standalone",
     "background_color": "#edf2fd",
     "theme_color": "#edf2fd",
     "orientation": "portrait",
-    "scope": "/tools/monitor/",
-    "id": "/tools/monitor/",
+    "scope": "/",
+    "id": "/",
     "description": "Monitor home's temperature and humidity"
 }

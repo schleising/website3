@@ -9,7 +9,7 @@
   <script defer src="/js/tools/monitor/scope.js?v1.0.0"></script>
   <script defer src="/js/tools/monitor/monitor.js?v1.0.0"></script>
   <link rel="icon" type="image/ico" sizes="48x48" href="/icons/tools/monitor/favicon-48x48.ico" />
-  <link rel="manifest" href="/manifests/tools/monitor/monitor.webmanifest" />
+  <link rel="manifest" href="/manifests/tools/monitor/monitor.webmanifest" crossorigin="use-credentials" />
   <title>Home Monitor</title>
 </head>
 
@@ -32,7 +32,7 @@
           <p class="monitor-data" id="temperature-{{ data.device_id }}"></p>
           <p class="monitor-title">Humidity:</p>
           <p class="monitor-data" id="humidity-{{ data.device_id }}"></p>
-          <div class="svg-container" id="svg-container-{{ data.device_id }}"">
+          <div class="svg-container" id="svg-container-{{ data.device_id }}">
             <svg id="chart-{{ data.device_id }}" class="chart-svg" xmlns="http://www.w3.org/2000/svg" xmlns: xlink="http://www.w3.org/1999/xlink">
             </svg>
           </div>

@@ -181,7 +181,7 @@ async function fetchSensorData() {
     const headers = new Headers();
     headers.append("Content-Type", "application/json");
     // Fetch the sensor data
-    fetch('/tools/monitor/latest_data/', { headers })
+    fetch('/latest_data/', { headers })
         .then(response => response.json())
         .then(response_data => {
             // Update the sensor data on the page
@@ -215,7 +215,7 @@ async function fetchTemperatureData() {
     const headers = new Headers();
     headers.append("Content-Type", "application/json");
     // Fetch the temperature data
-    fetch('/tools/monitor/timeseries/', { headers })
+    fetch('/timeseries/', { headers })
         .then(response => response.json())
         .then(response_data => {
             // Update the temperature data

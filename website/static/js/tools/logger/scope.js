@@ -1,1 +1,1 @@
-const serviceWorkerScope = '/tools/logger/';
+const serviceWorkerScope = '/';

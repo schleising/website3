@@ -5,7 +5,7 @@ from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 
-from . import sensors_collection, sensor_data_collection
+from . import sensor_data_collection
 from .models import SensorDataPoints, SensorData, SensorDataMessage, TimeseriesDataPoint, TimeseriesData, TimeseriesDataResponse
 
 # Set the base template location

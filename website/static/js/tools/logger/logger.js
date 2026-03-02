@@ -58,7 +58,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Check if the value is not empty
         if (value !== '') {
             // Fetch with a PUT request to the server to add the event
-            fetch('/tools/logger/create/', {
+            fetch('/create/', {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json'
@@ -110,8 +110,8 @@ document.addEventListener('DOMContentLoaded', () => {
             // Get the value of the button
             const value = button.innerText;
 
-            // Fetch with a POTS request to the server to add the event
-            fetch('/tools/logger/log/', {
+            // Fetch with a POST request to the server to add the event
+            fetch('/log/', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'

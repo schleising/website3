@@ -1,1 +1,1 @@
-const serviceWorkerScope = '/tools/monitor/';
+const serviceWorkerScope = '/';
