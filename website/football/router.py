@@ -179,7 +179,6 @@ async def get_simplified_matches(request: Request) -> SimplifiedFootballData:
     return simplified_football_data
 
 
-@football_router.websocket("/ws")
 @football_router.websocket("/ws/")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()

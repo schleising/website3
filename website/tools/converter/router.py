@@ -30,7 +30,6 @@ async def converter(request: Request):
     logging.info('Converter page requested')
     return TEMPLATES.TemplateResponse('tools/converter/converter.html', {'request': request})
 
-@converter_router.websocket("/ws")
 @converter_router.websocket("/ws/")
 async def converter_websocket(websocket: WebSocket):
     # Accept the websocket connection
