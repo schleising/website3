@@ -4,11 +4,11 @@ aiosignal==1.4.0
 annotated-doc==0.0.4
 annotated-types==0.7.0
 anyio==4.12.1
-attrs==25.4.0
+attrs==26.1.0
 bcrypt==5.0.0
 certifi==2026.2.25
 cffi==2.0.0
-charset-normalizer==3.4.5
+charset-normalizer==3.4.6
 click==8.3.1
 cryptography==46.0.5
 dnspython==2.8.0
@@ -30,7 +30,7 @@ multidict==6.7.1
 notify-run @ git+https://github.com/notify-run/notify.run.git@0b37558d54fda52d382a72cef05c05856c605c7b#subdirectory=py_client
 propcache==0.4.1
 py-vapid==1.9.4
-pyasn1==0.6.2
+pyasn1==0.6.3
 pycparser==3.0
 pydantic==2.12.5
 pydantic_core==2.41.5
@@ -51,6 +51,6 @@ starlette==0.52.1
 typing-inspection==0.4.2
 typing_extensions==4.15.0
 urllib3==2.6.3
-uvicorn==0.41.0
+uvicorn==0.42.0
 websockets==16.0
 yarl==1.23.0
