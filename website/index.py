@@ -123,11 +123,14 @@ app.include_router(tools_router)
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request, exc):
     return TEMPLATES.TemplateResponse(
-        "error.html", {"request": request, "error_str": str(exc)}, status_code=400
+        request,
+        "error.html",
+        {"request": request, "error_str": str(exc)},
+        status_code=400,
     )
 
 
 # Gets the homepage
 @app.get("/", response_class=HTMLResponse)
 async def root(request: Request):
-    return TEMPLATES.TemplateResponse("index.html", {"request": request})
+    return TEMPLATES.TemplateResponse(request, "index.html", {"request": request})

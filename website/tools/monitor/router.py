@@ -6,7 +6,14 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 
 from . import sensor_data_collection
-from .models import SensorDataPoints, SensorData, SensorDataMessage, TimeseriesDataPoint, TimeseriesData, TimeseriesDataResponse
+from .models import (
+    SensorDataPoints,
+    SensorData,
+    SensorDataMessage,
+    TimeseriesDataPoint,
+    TimeseriesData,
+    TimeseriesDataResponse,
+)
 
 # Set the base template location
 TEMPLATES = Jinja2Templates("/app/templates")
@@ -21,7 +28,9 @@ async def monitor(request: Request) -> HTMLResponse:
     logging.info("Monitor page requested")
     sensor_data = await get_data()
     return TEMPLATES.TemplateResponse(
-        "tools/monitor/monitor.html", {"request": request, "sensor_data": sensor_data}
+        request,
+        "tools/monitor/monitor.html",
+        {"request": request, "sensor_data": sensor_data},
     )
 
 
@@ -52,7 +61,11 @@ async def get_data() -> SensorDataPoints:
         )
 
         # Convert the data to a list
-        latest_data = [SensorData.model_validate(item["data"]) async for item in latest_data_db if item["data"]["device_name"] != "Office Thermometer"]
+        latest_data = [
+            SensorData.model_validate(item["data"])
+            async for item in latest_data_db
+            if item["data"]["device_name"] != "Office Thermometer"
+        ]
 
         # Sort the data by device_name
         latest_data.sort(key=lambda x: x.device_name)
@@ -102,7 +115,10 @@ async def timeseries() -> TimeseriesDataResponse:
     for device_name in device_names:
         # Get the data for the device
         data = sensor_data_collection.find(
-            {"device_name": device_name, "timestamp": {"$gte": datetime.now() - timedelta(days=1)}}
+            {
+                "device_name": device_name,
+                "timestamp": {"$gte": datetime.now() - timedelta(days=1)},
+            }
         ).sort([("timestamp", 1)])
 
         # Parse the data into a list of SensorData objects
@@ -119,7 +135,12 @@ async def timeseries() -> TimeseriesDataResponse:
         ]
 
         # Add the timeseries data to the list
-        timeseries_data.append(TimeseriesData(device_id=device_name.lower().replace(" ", "-"), data=timeseries_data_points))
+        timeseries_data.append(
+            TimeseriesData(
+                device_id=device_name.lower().replace(" ", "-"),
+                data=timeseries_data_points,
+            )
+        )
 
     # Return the timeseries data
     return TimeseriesDataResponse(data=timeseries_data)

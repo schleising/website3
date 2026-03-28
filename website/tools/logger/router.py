@@ -38,7 +38,7 @@ class LogWithCount(Log):
 
 
 class LogWithID(Log):
-    id: Annotated[ObjectId, ObjectIdPydanticAnnotation] = Field(..., alias='_id')
+    id: Annotated[ObjectId, ObjectIdPydanticAnnotation] = Field(..., alias="_id")
 
 
 # Gets the Logger page
@@ -49,7 +49,9 @@ async def logger(request: Request):
     # Get the event types from the database
     if event_collection is not None:
         event_types_from_db = event_collection.find()
-        event_types = [Event.model_validate(event).event async for event in event_types_from_db]
+        event_types = [
+            Event.model_validate(event).event async for event in event_types_from_db
+        ]
     else:
         event_types = []
 
@@ -92,7 +94,9 @@ async def logger(request: Request):
             last_logs.append(LogWithCount(event=event, log_date="Never", count=0))
 
     return TEMPLATES.TemplateResponse(
-        "tools/logger/logger.html", {"request": request, "last_logs": last_logs}
+        request,
+        "tools/logger/logger.html",
+        {"request": request, "last_logs": last_logs},
     )
 
 
@@ -223,10 +227,13 @@ async def stats(event_type: str, request: Request):
         logs_from_db = event_log_collection.find({"event": event_type}).sort(
             "log_date", -1
         )
-        logs = [LogWithID.model_validate(log).model_dump() async for log in logs_from_db]
+        logs = [
+            LogWithID.model_validate(log).model_dump() async for log in logs_from_db
+        ]
 
     # Return a template response
     return TEMPLATES.TemplateResponse(
+        request,
         "tools/logger/stats.html",
         {"request": request, "event": event_type, "logs": logs},
     )
@@ -244,6 +251,7 @@ async def charts(event_type: str, request: Request):
         status_code=404,
         headers={"Content-Type": "application/json"},
     )
+
 
 # Handler for an edit event type request
 @logger_router.put("/edit/{event_id}", response_class=JSONResponse)
@@ -309,7 +317,8 @@ async def edit_event_type(event_id: str, request: Request):
             status_code=500,
             headers={"Content-Type": "application/json"},
         )
-    
+
+
 # Handler for a delete event request
 @logger_router.delete("/delete/{event_id}", response_class=JSONResponse)
 @logger_router.delete("/delete/{event_id}/", response_class=JSONResponse)

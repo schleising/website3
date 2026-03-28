@@ -32,4 +32,4 @@ tools_router.include_router(monitor_router)
 @tools_router.get("/", response_class=HTMLResponse)
 async def tools_root(request: Request):
     logging.info("Tools page requested")
-    return TEMPLATES.TemplateResponse("tools/tools.html", {"request": request})
+    return TEMPLATES.TemplateResponse(request, "tools/tools.html", {"request": request})

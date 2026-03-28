@@ -49,6 +49,7 @@ async def get_live_matches(request: Request):
     )
     matches = update_match_timezone(matches)
     return TEMPLATES.TemplateResponse(
+        request,
         "football/match_template.html",
         {
             "request": request,
@@ -76,6 +77,7 @@ async def get_months_matches(request: Request, month: int = Path(ge=1, le=12)):
     matches = update_match_timezone(matches)
 
     return TEMPLATES.TemplateResponse(
+        request,
         "football/match_template.html",
         {
             "request": request,
@@ -93,6 +95,7 @@ async def get_teams_matches(request: Request, team_id: int):
     matches = update_match_timezone(matches)
 
     return TEMPLATES.TemplateResponse(
+        request,
         "football/match_template.html",
         {
             "request": request,
@@ -109,6 +112,7 @@ async def get_table(request: Request):
     table_list: list[LiveTableItem] = await get_table_db()
 
     return TEMPLATES.TemplateResponse(
+        request,
         "football/table_template.html",
         {"request": request, "title": "Premier League Table", "table_list": table_list},
     )
@@ -118,7 +122,7 @@ async def get_table(request: Request):
 @football_router.get("/bet/", response_class=HTMLResponse)
 async def get_bet_page(request: Request):
     return TEMPLATES.TemplateResponse(
-        "football/bet_template.html", {"request": request}
+        request, "football/bet_template.html", {"request": request}
     )
 
 

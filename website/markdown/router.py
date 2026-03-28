@@ -9,15 +9,19 @@ from .models import BaseMessage, MessageType, MarkdownDataMessage, BlogRequest
 
 from .markdown import convert_to_markdown, get_blog_list, get_blog_text
 
-# Set the Jinja template location
-TEMPLATES = Jinja2Templates('/app/templates')
+# Set the Jinja template location
+TEMPLATES = Jinja2Templates("/app/templates")
 
 # Create an account router
-markdown_router = APIRouter(prefix='/markdown')
+markdown_router = APIRouter(prefix="/markdown")
 
-@markdown_router.get('/', response_class=HTMLResponse)
+
+@markdown_router.get("/", response_class=HTMLResponse)
 async def editor(request: Request):
-    return TEMPLATES.TemplateResponse('/markdown/editor.html', {'request': request})
+    return TEMPLATES.TemplateResponse(
+        request, "/markdown/editor.html", {"request": request}
+    )
+
 
 @markdown_router.websocket("/ws/")
 async def websocket_endpoint(websocket: WebSocket):
@@ -26,7 +30,7 @@ async def websocket_endpoint(websocket: WebSocket):
     # Get the current user
     user = websocket.state.user
 
-    logging.debug(f'MD Websocket User: {user}')
+    logging.debug(f"MD Websocket User: {user}")
 
     try:
         while True:
@@ -47,7 +51,9 @@ async def websocket_endpoint(websocket: WebSocket):
                     markdown_data_message = MarkdownDataMessage.model_validate(msg.body)
 
                     # Convert the markdown text to HTML
-                    response_body = await convert_to_markdown(markdown_data_message, user)
+                    response_body = await convert_to_markdown(
+                        markdown_data_message, user
+                    )
 
                 case MessageType.GET_BLOG_LIST:
                     # Get the blog list
@@ -63,10 +69,12 @@ async def websocket_endpoint(websocket: WebSocket):
                     raise NotImplementedError
 
             # Generate the response message
-            response_msg = BaseMessage(message_type=msg.message_type, body=response_body.model_dump())
+            response_msg = BaseMessage(
+                message_type=msg.message_type, body=response_body.model_dump()
+            )
 
             # Send the response back to the client
             await websocket.send_text(response_msg.model_dump_json())
 
     except WebSocketDisconnect:
-        print('Socket Closed')
+        print("Socket Closed")
