@@ -532,13 +532,13 @@ body {
 .converted-file-stat {
     display: flex;
     flex-direction: column;
-    justify-content: flex-start;
+    justify-content: center;
     align-items: flex-start;
     gap: 0.08rem;
     min-width: 0;
     border-radius: 0.4rem;
     border: 1px solid hsla(214, 28%, 34%, 0.12);
-    padding: 0.26rem 0.24rem 0.26rem 0.26rem;
+    padding: 0.34rem 0.24rem 0.34rem 0.34rem;
     min-height: 2.62rem;
     background: hsla(0, 0%, 100%, 0.68);
 }
@@ -717,7 +717,7 @@ body {
     }
 
     .converted-file-stat {
-        padding: 0.14rem 0.18rem;
+        padding: 0.2rem 0.18rem 0.2rem 0.22rem;
         min-height: 2.4rem;
     }
 
