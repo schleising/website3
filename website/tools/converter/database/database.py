@@ -1,10 +1,11 @@
 from datetime import datetime, timedelta
 from pathlib import Path
+from typing import Any, Mapping
 
 from pymongo import DESCENDING, UpdateOne
 
 from .models import FileData, ConvertedFileDataFromDb
-from ..messages.messages import StatisticsMessage, ConvertedFileData
+from ..messages.messages import StatisticsMessage, ConvertedFileData, FileToConvertData
 from . import media_collection
 
 
@@ -72,6 +73,51 @@ class DatabaseTools:
             percentage_saved=round(compression_percentage),
         )
 
+    def _format_video_duration(self, duration_seconds: float | int | None) -> str:
+        if duration_seconds is None:
+            return "Unknown"
+
+        try:
+            total_seconds = int(float(duration_seconds))
+        except (TypeError, ValueError):
+            return "Unknown"
+
+        hours = total_seconds // 3600
+        minutes = (total_seconds % 3600) // 60
+        seconds = total_seconds % 60
+
+        if hours > 0:
+            return f"{hours}:{minutes:02d}:{seconds:02d}"
+
+        return f"{minutes}:{seconds:02d}"
+
+    def _get_codec_name(self, db_file: Mapping[str, Any], codec_type: str) -> str:
+        streams = db_file.get("video_information", {}).get("streams", [])
+
+        for stream in streams:
+            if stream.get("codec_type") == codec_type and stream.get("codec_name"):
+                return str(stream.get("codec_name")).upper()
+
+        return "Unknown"
+
+    def _create_file_to_convert_data(self, count: int, db_file: Mapping[str, Any]) -> FileToConvertData:
+        current_size = db_file.get("current_size") or db_file.get("pre_conversion_size") or 0
+
+        duration = (
+            db_file.get("video_information", {})
+            .get("format", {})
+            .get("duration")
+        )
+
+        return FileToConvertData(
+            file_data_id=f"file-to-convert-{count}",
+            filename=Path(db_file.get("filename", "Unknown")).name,
+            current_size=self._human_readable_file_size(float(current_size)),
+            video_codec=self._get_codec_name(db_file, "video"),
+            audio_codec=self._get_codec_name(db_file, "audio"),
+            video_duration=self._format_video_duration(duration),
+        )
+
     async def get_converted_files(self) -> list[ConvertedFileData]:
         if media_collection is None:
             return []
@@ -108,6 +154,36 @@ class DatabaseTools:
         ]
 
         return file_list
+
+    async def get_files_to_convert(self) -> list[FileToConvertData]:
+        if media_collection is None:
+            return []
+
+        db_file_cursor = media_collection.find(
+            {
+                "conversion_required": True,
+                "converted": False,
+                "converting": False,
+                "conversion_error": False,
+                "deleted": False,
+            },
+            sort=[("filename", 1)],
+            projection=[
+                "filename",
+                "current_size",
+                "pre_conversion_size",
+                "video_information.streams.codec_type",
+                "video_information.streams.codec_name",
+                "video_information.format.duration",
+            ],
+        )
+
+        db_file_list = await db_file_cursor.to_list(length=None)
+
+        return [
+            self._create_file_to_convert_data(count, db_file)
+            for count, db_file in enumerate(db_file_list)
+        ]
 
     async def get_converting_files(self) -> list[FileData] | None:
         if media_collection is None:

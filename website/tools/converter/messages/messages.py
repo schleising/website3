@@ -33,6 +33,17 @@ class ConvertedFileData(BaseModel):
 class ConvertedFilesMessage(BaseModel):
     converted_files: list[ConvertedFileData]
 
+class FileToConvertData(BaseModel):
+    file_data_id: str
+    filename: str
+    current_size: str
+    video_codec: str
+    audio_codec: str
+    video_duration: str
+
+class FilesToConvertMessage(BaseModel):
+    files_to_convert: list[FileToConvertData]
+
 class StatisticsMessage(BaseModel):
     total_files: int
     total_converted: int
@@ -51,4 +62,4 @@ class StatisticsMessage(BaseModel):
 
 class Message(BaseModel):
     messageType: MessageTypes
-    messageBody: ConvertingFilesMessage | ConvertedFilesMessage | StatisticsMessage | None
+    messageBody: ConvertingFilesMessage | ConvertedFilesMessage | FilesToConvertMessage | StatisticsMessage | None

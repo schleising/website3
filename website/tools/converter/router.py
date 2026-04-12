@@ -14,6 +14,7 @@ from .messages.messages import (
     ConvertingFilesMessage,
     ConvertingFileData,
     ConvertedFilesMessage,
+    FilesToConvertMessage,
     StatisticsMessage,
     MessageTypes,
     Message,
@@ -52,8 +53,14 @@ async def converter_websocket(websocket: WebSocket):
     # Variable to store the last converted files message
     last_converted_files_message: ConvertedFilesMessage | None = None
 
+    # Variable to store the last files-to-convert message
+    last_files_to_convert_message: FilesToConvertMessage | None = None
+
     # Variable to store the last statistics message
     last_statistics_message: StatisticsMessage | None = None
+
+    # Track which card view this websocket wants.
+    files_view = MessageTypes.CONVERTED_FILES
 
     try:
         # Loop forever
@@ -146,30 +153,46 @@ async def converter_websocket(websocket: WebSocket):
                             ).model_dump()
                         )
 
-                    # Get the files converted
-                    converted_files = await database_tools.get_converted_files()
-
-                    # Create a ConvertedFilesMessage from the database objects
-                    files_converted_message = ConvertedFilesMessage(
-                        converted_files=converted_files
-                    )
-
-                    # If the files converted message has changed send an update
-                    if files_converted_message != last_converted_files_message:
-                        # Create a Message from the ConvertedFilesMessage
-                        message = Message(
-                            messageType=MessageTypes.CONVERTED_FILES,
-                            messageBody=files_converted_message,
+                    if files_view == MessageTypes.FILES_TO_CONVERT:
+                        files_to_convert = await database_tools.get_files_to_convert()
+                        files_to_convert_message = FilesToConvertMessage(
+                            files_to_convert=files_to_convert
                         )
 
-                        # Log the files converted
-                        logging.debug(f"Files converted: {message}")
+                        if files_to_convert_message != last_files_to_convert_message:
+                            message = Message(
+                                messageType=MessageTypes.FILES_TO_CONVERT,
+                                messageBody=files_to_convert_message,
+                            )
 
-                        # Send the files converted
-                        await websocket.send_json(message.model_dump())
+                            logging.debug(f"Files to convert: {message}")
+                            await websocket.send_json(message.model_dump())
+                            last_files_to_convert_message = files_to_convert_message
+                    else:
+                        # Get the files converted
+                        converted_files = await database_tools.get_converted_files()
 
-                        # Set the last converted files message
-                        last_converted_files_message = files_converted_message
+                        # Create a ConvertedFilesMessage from the database objects
+                        files_converted_message = ConvertedFilesMessage(
+                            converted_files=converted_files
+                        )
+
+                        # If the files converted message has changed send an update
+                        if files_converted_message != last_converted_files_message:
+                            # Create a Message from the ConvertedFilesMessage
+                            message = Message(
+                                messageType=MessageTypes.CONVERTED_FILES,
+                                messageBody=files_converted_message,
+                            )
+
+                            # Log the files converted
+                            logging.debug(f"Files converted: {message}")
+
+                            # Send the files converted
+                            await websocket.send_json(message.model_dump())
+
+                            # Set the last converted files message
+                            last_converted_files_message = files_converted_message
 
                     # Get the statistics
                     statistics = await database_tools.get_statistics()
@@ -196,6 +219,18 @@ async def converter_websocket(websocket: WebSocket):
 
                     # Retry the conversion
                     await database_tools.retry_conversion_errors()
+
+                case "set_files_view":
+                    requested_view = msg.get("view", MessageTypes.CONVERTED_FILES)
+
+                    if requested_view == MessageTypes.FILES_TO_CONVERT:
+                        files_view = MessageTypes.FILES_TO_CONVERT
+                    else:
+                        files_view = MessageTypes.CONVERTED_FILES
+
+                    # Reset last payload cache so next ping sends the selected view.
+                    last_converted_files_message = None
+                    last_files_to_convert_message = None
 
                 case _:
                     # Log an error

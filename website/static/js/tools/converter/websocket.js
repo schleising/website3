@@ -16,6 +16,9 @@ var conversionNumber = 0;
 // An array to store the tab names
 var currentTabNames = [];
 
+// Track which cards are shown in the lower panel.
+var filesViewMode = 'converted_files';
+
 // Add a callback for state changes
 document.addEventListener('readystatechange', event => {
     if (event.target.readyState === "complete") {
@@ -34,6 +37,8 @@ document.addEventListener('readystatechange', event => {
         url = url + "ws/";
 
         console.log("URL: " + url)
+
+        initializeFilesViewButtons();
 
         // Check whether the websocket is open, if not open it
         openWebSocket();
@@ -237,6 +242,10 @@ function openWebSocket() {
 
                 break;
             case 'converted_files':
+                if (filesViewMode !== 'converted_files') {
+                    break;
+                }
+
                 // Get the files converted
                 filesConverted = message.messageBody;
 
@@ -257,6 +266,28 @@ function openWebSocket() {
                         appendConvertedFileCard(
                             document.getElementById("converted-files"),
                             filesConverted.converted_files[i]
+                        );
+                    }
+                }
+                break;
+            case 'files_to_convert':
+                if (filesViewMode !== 'files_to_convert') {
+                    break;
+                }
+
+                filesToConvert = message.messageBody;
+
+                if (filesToConvert == null) {
+                    document.getElementById("converted-files").innerText = "No files to convert";
+                    document.getElementById("last-day-count").innerText = "0";
+                } else {
+                    document.getElementById("converted-files").innerText = "";
+                    document.getElementById("last-day-count").innerText = filesToConvert.files_to_convert.length;
+
+                    for (i = 0; i < filesToConvert.files_to_convert.length; i++) {
+                        appendToConvertFileCard(
+                            document.getElementById("converted-files"),
+                            filesToConvert.files_to_convert[i]
                         );
                     }
                 }
@@ -344,6 +375,11 @@ function openWebSocket() {
 
     // Add the event listener
     ws.addEventListener('open', (event) => {
+        ws.send(JSON.stringify({
+            messageType: 'set_files_view',
+            view: filesViewMode
+        }));
+
         checkSocketAndSendMessage(event);
     });
 };
@@ -468,4 +504,61 @@ function appendConversionErrorsRow(element, errorCount) {
 
     rowElement.appendChild(retryButton);
     element.appendChild(rowElement);
+}
+
+function initializeFilesViewButtons() {
+    convertedButton = document.getElementById("show-converted-files");
+    toConvertButton = document.getElementById("show-to-convert-files");
+
+    if (convertedButton == null || toConvertButton == null) {
+        return;
+    }
+
+    convertedButton.onclick = function() {
+        setFilesViewMode('converted_files');
+    };
+
+    toConvertButton.onclick = function() {
+        setFilesViewMode('files_to_convert');
+    };
+}
+
+function setFilesViewMode(viewMode) {
+    filesViewMode = viewMode;
+
+    convertedButton = document.getElementById("show-converted-files");
+    toConvertButton = document.getElementById("show-to-convert-files");
+    filesViewTitle = document.getElementById("files-view-title");
+    filesContainer = document.getElementById("converted-files");
+    lastDayCount = document.getElementById("last-day-count");
+
+    if (convertedButton != null && toConvertButton != null) {
+        convertedButton.classList.toggle("active", viewMode === 'converted_files');
+        toConvertButton.classList.toggle("active", viewMode === 'files_to_convert');
+    }
+
+    if (filesViewTitle != null) {
+        if (viewMode === 'files_to_convert') {
+            filesViewTitle.innerText = "Files To Be Converted";
+        } else {
+            filesViewTitle.innerText = "Files Converted in Last Week";
+        }
+    }
+
+    if (filesContainer != null) {
+        filesContainer.innerText = "Loading...";
+    }
+
+    if (lastDayCount != null) {
+        lastDayCount.innerText = "0";
+    }
+
+    if (ws != null && ws.readyState == WebSocket.OPEN) {
+        ws.send(JSON.stringify({
+            messageType: 'set_files_view',
+            view: viewMode
+        }));
+
+        checkSocketAndSendMessage();
+    }
 }

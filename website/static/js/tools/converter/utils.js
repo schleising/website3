@@ -72,6 +72,34 @@ function appendConvertedFileCard(element, data) {
     return cardElement;
 }
 
+function appendToConvertFileCard(element, data) {
+    var cardElement = document.createElement("article");
+    cardElement.classList.add("converted-file-card");
+
+    var headerElement = document.createElement("div");
+    headerElement.classList.add("converted-file-header");
+    cardElement.appendChild(headerElement);
+
+    var titleElement = document.createElement("h4");
+    titleElement.classList.add("converted-file-name");
+    titleElement.innerText = data.filename;
+    headerElement.appendChild(titleElement);
+
+    var detailsElement = document.createElement("div");
+    detailsElement.classList.add("converted-file-details");
+    cardElement.appendChild(detailsElement);
+
+    codecValue = formatCodecValue(data.video_codec) + " / " + formatCodecValue(data.audio_codec);
+
+    appendCardStat(detailsElement, "Current Size", getCardValue(data.current_size, "--", false, false, true));
+    appendCardStat(detailsElement, "Video / Audio Codec", getCardValue(codecValue));
+    appendCardStat(detailsElement, "Duration", getCardValue(data.video_duration));
+
+    element.appendChild(cardElement);
+
+    return cardElement;
+}
+
 function appendCardStat(element, label, value) {
     var statElement = document.createElement("div");
     statElement.classList.add("converted-file-stat");
@@ -162,6 +190,14 @@ function parseSizeToGigabytes(value, sourceUnit = "") {
     }
 
     return numericValue;
+}
+
+function formatCodecValue(value) {
+    if (value == null || value === "") {
+        return "Unknown";
+    }
+
+    return String(value).toUpperCase();
 }
 
 function formatDateTime(dateTimeString) {
