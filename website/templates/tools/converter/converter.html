@@ -3,21 +3,24 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <link type="text/css" rel="stylesheet" href="/css/tools/converter/reset.css?v1.0.0" />
-    <link type="text/css" rel="stylesheet" href="/css/tools/converter/main.css?v1.0.0" />
-    <link type="text/css" rel="stylesheet" href="/css/tools/converter/file-stats-popup.css?v1.0.0" />
+    <link type="text/css" rel="stylesheet" href="/css/tools/converter/reset.css?v1.1.0" />
+    <link type="text/css" rel="stylesheet" href="/css/tools/converter/main.css?v1.1.0" />
+    <link type="text/css" rel="stylesheet" href="/css/tools/converter/file-stats-popup.css?v1.1.0" />
     <link rel="icon" type="image/ico" sizes="48x48" href="/icons/tools/converter/favicon-48x48.ico" />
     <link rel="manifest" href="/manifests/tools/converter/converter.webmanifest" crossorigin="use-credentials" />
-    <script defer src="/js/tools/converter/utils.js?v1.0.0"></script>
-    <script defer src="/js/tools/converter/websocket.js?v1.0.0"></script>
-    <script defer src="/js/tools/converter/scope.js?v1.0.0"></script>
-    <script defer src="/js/utils/subscribe.js?v1.0.0"></script>
+    <script defer src="/js/tools/converter/utils.js?v1.1.0"></script>
+    <script defer src="/js/tools/converter/websocket.js?v1.1.0"></script>
+    <script defer src="/js/tools/converter/scope.js?v1.1.0"></script>
+    <script defer src="/js/utils/subscribe.js?v1.1.0"></script>
     <title>Converter</title>
   </head>
   <body>
     <div class="outer">
       <div class="header">
-        <h2>Conversion Details</h2>
+        <div>
+          <h1>Converter Dashboard</h1>
+          <p class="subtitle">Live progress, compression stats, and recent completions</p>
+        </div>
         <button id="subscribe-button">Subscribe</button>
       </div>
       <div class="progress-area container-border">
@@ -40,9 +43,9 @@
         <div class="data-container container-border">
           <div class="data-header">
             <h3>Files Converted in Last Week</h3>
-            <div class="data-header-right" id="last-day-count"></div>
+            <div class="data-header-right" id="last-day-count">0</div>
           </div>
-          <div class="details-container details-container-reversed" id="converted-files">
+          <div class="converted-files-grid" id="converted-files">
           </div>
         </div>
       </div>

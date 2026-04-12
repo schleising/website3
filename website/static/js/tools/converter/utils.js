@@ -38,6 +38,34 @@ function appendKeyValueElement(element, key, value, additionalKeyClass = [], add
     return wrapperElement;
 }
 
+function appendConvertedFileCard(element, data) {
+    var cardElement = document.createElement("article");
+    cardElement.classList.add("converted-file-card");
+
+    var headerElement = document.createElement("div");
+    headerElement.classList.add("converted-file-header");
+    cardElement.appendChild(headerElement);
+
+    var titleElement = document.createElement("h4");
+    titleElement.classList.add("converted-file-name");
+    titleElement.innerText = data.filename;
+    headerElement.appendChild(titleElement);
+
+    var badgeElement = document.createElement("span");
+    badgeElement.classList.add("converted-file-badge");
+    badgeElement.innerText = data.percentage_saved.toFixed(0) + "%";
+    headerElement.appendChild(badgeElement);
+
+    var metaElement = document.createElement("p");
+    metaElement.classList.add("converted-file-meta");
+    metaElement.innerText = "Click for conversion details";
+    cardElement.appendChild(metaElement);
+
+    element.appendChild(cardElement);
+
+    return cardElement;
+}
+
 function addPopover(element, data) {
     // Create popover element
     var popoverElement = document.createElement("div");
@@ -57,7 +85,7 @@ function addPopover(element, data) {
 
     // Create the popup header
     var fileStatsPopupTitle = document.createElement("h4");
-    fileStatsPopupTitle.innerHTML = data.filename;
+    fileStatsPopupTitle.innerText = data.filename;
 
     fileStatsPopupHeader.appendChild(fileStatsPopupTitle);
 
