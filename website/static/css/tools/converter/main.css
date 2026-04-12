@@ -25,6 +25,7 @@ body {
 }
 
 body {
+    display: flex;
     font-family: "Outfit", "Avenir Next", "Segoe UI", sans-serif;
     color: var(--text-main);
     background:
@@ -32,18 +33,20 @@ body {
         radial-gradient(120% 120% at 100% 100%, hsla(205, 89%, 76%, 0.26) 0%, transparent 58%),
         linear-gradient(170deg, var(--bg-0), var(--bg-1));
     overflow-x: hidden;
-    overflow-y: auto;
+    overflow-y: hidden;
 }
 
 .outer {
     display: flex;
     flex-direction: column;
     align-items: stretch;
-    height: 100vh;
+    flex: 1 1 auto;
+    min-height: 0;
     gap: 0.68rem;
     padding: 0.72rem;
     max-width: 98rem;
     margin: 0 auto;
+    width: 100%;
 }
 
 .header {
@@ -223,7 +226,7 @@ body {
     grid-template-columns: auto minmax(0, 1fr);
     gap: 0.04rem 0;
     width: 100%;
-    overflow-y: auto;
+    overflow-y: visible;
     padding: 0.08rem 0 0;
 }
 
@@ -423,22 +426,23 @@ body {
     grid-template-columns: minmax(18rem, 0.95fr) minmax(20rem, 1.25fr);
     gap: 0.65rem;
     min-height: 0;
-    flex: 1;
-    overflow: hidden;
+    flex: 1 1 auto;
+    overflow-y: auto;
+    overflow-x: hidden;
 }
 
 .stats-container,
 .data-container {
     display: flex;
     flex-direction: column;
-    min-height: 0;
-    overflow: hidden;
+    min-height: auto;
+    overflow: visible;
 }
 
 .files-panel {
     display: flex;
     flex-direction: column;
-    min-height: 0;
+    min-height: auto;
 }
 
 .stats-container .details-container {
@@ -448,7 +452,7 @@ body {
 
 .data-container {
     padding: 0;
-    overflow: hidden;
+    overflow: visible;
 }
 
 .converted-files-grid {
@@ -456,9 +460,9 @@ body {
     grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
     gap: 0.44rem;
     width: 100%;
-    flex: 1 1 auto;
-    min-height: 0;
-    overflow-y: auto;
+    flex: 0 0 auto;
+    min-height: auto;
+    overflow-y: visible;
     padding: 0.1rem 0.52rem 0.52rem;
     align-content: start;
 }
