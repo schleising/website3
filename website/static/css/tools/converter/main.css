@@ -13,6 +13,9 @@
     --accent-soft: hsl(194, 54%, 93%);
     --ok-soft: hsl(150, 36%, 91%);
     --ok-strong: hsl(151, 52%, 27%);
+    --stats-value-font-size: 0.92rem;
+    --stats-value-font-weight: 700;
+    --stats-value-line-height: 1.2;
     --shadow-soft: 0 8px 24px hsla(208, 35%, 18%, 0.08);
     --shadow-panel: 0 14px 42px hsla(208, 32%, 18%, 0.11);
 }
@@ -485,8 +488,11 @@ body::after {
 }
 
 #statistics .data-value,
-#statistics .data-value-left {
-    font-size: 0.92rem;
+#statistics .data-value-left,
+.converted-file-stat-value {
+    font-size: var(--stats-value-font-size);
+    font-weight: var(--stats-value-font-weight);
+    line-height: var(--stats-value-line-height);
 }
 
 .conversion-errors-card {
@@ -818,9 +824,8 @@ body.dark-mode .theme-switch-thumb-moon {
 
 .converted-file-stat-value {
     color: var(--text-main);
-    font-size: 0.88rem;
-    font-weight: 600;
-    line-height: 1.2;
+    display: block;
+    letter-spacing: 0;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -1016,8 +1021,7 @@ body.dark-mode .filename::after {
     }
 
     .converted-file-stat-value {
-        font-size: 0.78rem;
-        letter-spacing: -0.01em;
+        letter-spacing: 0;
     }
 
 }
