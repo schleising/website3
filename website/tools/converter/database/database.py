@@ -17,7 +17,9 @@ class DatabaseTools:
         self._prediction_cache_time: datetime | None = None
         self._prediction_bitrates: list[float] = []
         self._prediction_saved_ratios_by_bitrate: list[float] = []
+        self._prediction_bitrate_band_ratios: dict[int, float] = {}
         self._prediction_codec_ratios: dict[str, float] = {}
+        self._prediction_size_bucket_ratios: dict[int, float] = {}
         self._prediction_global_ratio: float = 0.25
 
     def _human_readable_file_size(self, size: float) -> str:
@@ -130,11 +132,44 @@ class DatabaseTools:
 
         return f"{bit_rate:.0f} bps"
 
+    def _get_size_bucket_key(self, pre_conversion_size: float) -> int:
+        if pre_conversion_size < 750_000_000:
+            return 0
+        if pre_conversion_size < 1_500_000_000:
+            return 1
+        if pre_conversion_size < 3_000_000_000:
+            return 2
+        if pre_conversion_size < 6_000_000_000:
+            return 3
+        if pre_conversion_size < 12_000_000_000:
+            return 4
+        return 5
+
+    def _get_bitrate_band_key(self, bit_rate: float) -> int:
+        if bit_rate < 1_500_000:
+            return 0
+        if bit_rate < 2_500_000:
+            return 1
+        if bit_rate < 4_000_000:
+            return 2
+        if bit_rate < 6_000_000:
+            return 3
+        if bit_rate < 10_000_000:
+            return 4
+        return 5
+
     async def _get_prediction_models(
         self,
-    ) -> tuple[list[float], list[float], dict[str, float], float]:
+    ) -> tuple[
+        list[float],
+        list[float],
+        dict[int, float],
+        dict[str, float],
+        dict[int, float],
+        float,
+    ]:
         if media_collection is None:
-            return [], [], {}, 0.25
+            return [], [], {}, {}, {}, 0.25
 
         now = datetime.now()
         if (
@@ -144,7 +179,9 @@ class DatabaseTools:
             return (
                 self._prediction_bitrates,
                 self._prediction_saved_ratios_by_bitrate,
+                self._prediction_bitrate_band_ratios,
                 self._prediction_codec_ratios,
+                self._prediction_size_bucket_ratios,
                 self._prediction_global_ratio,
             )
 
@@ -165,11 +202,13 @@ class DatabaseTools:
                 "video_information.streams.codec_type",
                 "video_information.streams.codec_name",
             ],
-        ).limit(3000)
+        ).limit(10000)
 
-        db_file_list = await db_file_cursor.to_list(length=3000)
+        db_file_list = await db_file_cursor.to_list(length=10000)
 
         codec_ratios: dict[str, list[float]] = {}
+        bitrate_band_ratios: dict[int, list[float]] = {}
+        size_bucket_ratios: dict[int, list[float]] = {}
         global_ratios: list[float] = []
         bitrate_samples: list[tuple[float, float]] = []
 
@@ -194,6 +233,9 @@ class DatabaseTools:
 
             global_ratios.append(saved_ratio)
 
+            size_bucket = self._get_size_bucket_key(pre_size)
+            size_bucket_ratios.setdefault(size_bucket, []).append(saved_ratio)
+
             bit_rate = (
                 db_file.get("video_information", {})
                 .get("format", {})
@@ -206,6 +248,8 @@ class DatabaseTools:
 
             if parsed_bit_rate > 0:
                 bitrate_samples.append((parsed_bit_rate, saved_ratio))
+                bitrate_band = self._get_bitrate_band_key(parsed_bit_rate)
+                bitrate_band_ratios.setdefault(bitrate_band, []).append(saved_ratio)
 
             video_codec = self._get_codec_name(db_file, "video")
             if video_codec != "Unknown":
@@ -219,6 +263,18 @@ class DatabaseTools:
             codec: float(median(ratios)) for codec, ratios in codec_ratios.items() if len(ratios) > 0
         }
 
+        final_bitrate_band_ratios = {
+            band: float(median(ratios))
+            for band, ratios in bitrate_band_ratios.items()
+            if len(ratios) > 0
+        }
+
+        final_size_bucket_ratios = {
+            bucket: float(median(ratios))
+            for bucket, ratios in size_bucket_ratios.items()
+            if len(ratios) > 0
+        }
+
         bitrate_samples.sort(key=lambda item: item[0])
         final_bitrates = [item[0] for item in bitrate_samples]
         final_saved_ratios_by_bitrate = [item[1] for item in bitrate_samples]
@@ -226,13 +282,17 @@ class DatabaseTools:
         self._prediction_cache_time = now
         self._prediction_bitrates = final_bitrates
         self._prediction_saved_ratios_by_bitrate = final_saved_ratios_by_bitrate
+        self._prediction_bitrate_band_ratios = final_bitrate_band_ratios
         self._prediction_codec_ratios = final_codec_ratios
+        self._prediction_size_bucket_ratios = final_size_bucket_ratios
         self._prediction_global_ratio = global_ratio
 
         return (
             final_bitrates,
             final_saved_ratios_by_bitrate,
+            final_bitrate_band_ratios,
             final_codec_ratios,
+            final_size_bucket_ratios,
             global_ratio,
         )
 
@@ -264,11 +324,14 @@ class DatabaseTools:
 
     def _get_prediction_saved_ratio(
         self,
+        base_size: float,
         bit_rate: Any,
         video_codec: str,
         bitrates: list[float],
         saved_ratios_by_bitrate: list[float],
+        bitrate_band_ratios: Mapping[int, float],
         codec_ratios: Mapping[str, float],
+        size_bucket_ratios: Mapping[int, float],
         global_ratio: float,
     ) -> float:
         try:
@@ -288,6 +351,45 @@ class DatabaseTools:
         if ratio is None:
             ratio = global_ratio
 
+        if parsed_bit_rate > 0:
+            bitrate_band = self._get_bitrate_band_key(parsed_bit_rate)
+            bitrate_band_ratio = bitrate_band_ratios.get(bitrate_band)
+
+            if bitrate_band_ratio is not None:
+                if parsed_bit_rate < 4_000_000:
+                    bitrate_weight = 0.75
+                elif parsed_bit_rate < 8_000_000:
+                    bitrate_weight = 0.55
+                else:
+                    bitrate_weight = 0.35
+
+                ratio = (ratio * (1 - bitrate_weight)) + (
+                    bitrate_band_ratio * bitrate_weight
+                )
+
+                # Keep low-bitrate predictions conservative.
+                if parsed_bit_rate < 2_500_000:
+                    ratio = min(ratio, bitrate_band_ratio + 0.08)
+                elif parsed_bit_rate < 4_000_000:
+                    ratio = min(ratio, bitrate_band_ratio + 0.12)
+
+        size_bucket = self._get_size_bucket_key(base_size)
+        size_bucket_ratio = size_bucket_ratios.get(size_bucket)
+
+        if size_bucket_ratio is not None:
+            if base_size < 1_500_000_000:
+                size_weight = 0.7
+            elif base_size < 6_000_000_000:
+                size_weight = 0.5
+            else:
+                size_weight = 0.3
+
+            ratio = (ratio * (1 - size_weight)) + (size_bucket_ratio * size_weight)
+
+            # Keep small-file predictions conservative.
+            if base_size < 1_500_000_000:
+                ratio = min(ratio, size_bucket_ratio + 0.12)
+
         return max(0.0, min(ratio, 0.95))
 
     def _create_file_to_convert_data(
@@ -296,7 +398,9 @@ class DatabaseTools:
         db_file: Mapping[str, Any],
         bitrates: list[float],
         saved_ratios_by_bitrate: list[float],
+        bitrate_band_ratios: Mapping[int, float],
         codec_ratios: Mapping[str, float],
+        size_bucket_ratios: Mapping[int, float],
         global_ratio: float,
     ) -> FileToConvertData:
         current_size = db_file.get("current_size") or db_file.get("pre_conversion_size") or 0
@@ -327,11 +431,14 @@ class DatabaseTools:
 
             if base_size > 0:
                 saved_ratio = self._get_prediction_saved_ratio(
+                    base_size,
                     bit_rate,
                     video_codec,
                     bitrates,
                     saved_ratios_by_bitrate,
+                    bitrate_band_ratios,
                     codec_ratios,
+                    size_bucket_ratios,
                     global_ratio,
                 )
                 estimated_final_size = max(0.0, base_size * (1 - saved_ratio))
@@ -393,7 +500,14 @@ class DatabaseTools:
         if media_collection is None:
             return []
 
-        bitrates, saved_ratios_by_bitrate, codec_ratios, global_ratio = await self._get_prediction_models()
+        (
+            bitrates,
+            saved_ratios_by_bitrate,
+            bitrate_band_ratios,
+            codec_ratios,
+            size_bucket_ratios,
+            global_ratio,
+        ) = await self._get_prediction_models()
 
         db_file_cursor = media_collection.find(
             {
@@ -423,7 +537,9 @@ class DatabaseTools:
                 db_file,
                 bitrates,
                 saved_ratios_by_bitrate,
+                bitrate_band_ratios,
                 codec_ratios,
+                size_bucket_ratios,
                 global_ratio,
             )
             for count, db_file in enumerate(db_file_list)
