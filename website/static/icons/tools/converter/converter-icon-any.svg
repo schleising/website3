@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Converter icon">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ebf7ff"/>
+      <stop offset="1" stop-color="#bfe6f7"/>
+    </linearGradient>
+    <linearGradient id="chip" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1aa0de"/>
+      <stop offset="1" stop-color="#0d6da8"/>
+    </linearGradient>
+  </defs>
+
+  <rect x="24" y="24" width="464" height="464" rx="110" fill="url(#bg)"/>
+  <rect x="88" y="102" width="336" height="308" rx="56" fill="#ffffff" fill-opacity="0.96" stroke="#8bc8e6" stroke-width="10"/>
+
+  <rect x="128" y="154" width="256" height="42" rx="18" fill="#e6f3fb"/>
+  <rect x="128" y="222" width="168" height="28" rx="12" fill="#d8ecf8"/>
+  <rect x="128" y="266" width="120" height="28" rx="12" fill="#d8ecf8"/>
+
+  <path d="M262 328h84l-18-18a12 12 0 0 1 17-17l39 39a12 12 0 0 1 0 17l-39 39a12 12 0 0 1-17-17l18-18h-84a12 12 0 0 1 0-25z" fill="url(#chip)"/>
+  <path d="M250 344h-84l18 18a12 12 0 0 1-17 17l-39-39a12 12 0 0 1 0-17l39-39a12 12 0 0 1 17 17l-18 18h84a12 12 0 0 1 0 25z" fill="#22b573"/>
+</svg>
