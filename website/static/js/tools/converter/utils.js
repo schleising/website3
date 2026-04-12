@@ -56,200 +56,66 @@ function appendConvertedFileCard(element, data) {
     badgeElement.innerText = data.percentage_saved.toFixed(0) + "%";
     headerElement.appendChild(badgeElement);
 
-    var metaElement = document.createElement("p");
-    metaElement.classList.add("converted-file-meta");
-    metaElement.innerText = "Click for conversion details";
-    cardElement.appendChild(metaElement);
+    var detailsElement = document.createElement("div");
+    detailsElement.classList.add("converted-file-details");
+    cardElement.appendChild(detailsElement);
+
+    appendCardStat(detailsElement, "Original", getCardValue(data.pre_conversion_size));
+    appendCardStat(detailsElement, "New", getCardValue(data.current_size));
+    appendCardStat(detailsElement, "Ratio", getCardValue(data.percentage_saved, "--", true));
+    appendCardStat(detailsElement, "Start", getCardValue(data.start_conversion_time, "--", false, true));
+    appendCardStat(detailsElement, "End", getCardValue(data.end_conversion_time, "--", false, true));
+    appendCardStat(detailsElement, "Total", getCardValue(data.total_conversion_time));
 
     element.appendChild(cardElement);
 
     return cardElement;
 }
 
-function addPopover(element, data) {
-    // Create popover element
-    var popoverElement = document.createElement("div");
-    popoverElement.popover = "auto";
-    popoverElement.setAttribute("id", data.file_data_id);
+function appendCardStat(element, label, value) {
+    var statElement = document.createElement("div");
+    statElement.classList.add("converted-file-stat");
 
-    // Create popover content element
-    var fileStatsPopupContainer = document.createElement("div");
-    fileStatsPopupContainer.classList.add("file-stats-popup-container");
+    var labelElement = document.createElement("span");
+    labelElement.classList.add("converted-file-stat-label");
+    labelElement.innerText = label;
+    statElement.appendChild(labelElement);
 
-    popoverElement.appendChild(fileStatsPopupContainer);
+    var valueElement = document.createElement("span");
+    valueElement.classList.add("converted-file-stat-value");
+    valueElement.innerText = value;
+    statElement.appendChild(valueElement);
 
-    var fileStatsPopupHeader = document.createElement("div");
-    fileStatsPopupHeader.classList.add("file-stats-popup-header");
+    element.appendChild(statElement);
+}
 
-    fileStatsPopupContainer.appendChild(fileStatsPopupHeader);
+function getCardValue(value, fallback = "--", percentage = false, isDateTime = false) {
+    if (value == null || value === "") {
+        return fallback;
+    }
 
-    // Create the popup header
-    var fileStatsPopupTitle = document.createElement("h4");
-    fileStatsPopupTitle.innerText = data.filename;
+    if (isDateTime) {
+        return formatDateTime(value);
+    }
 
-    fileStatsPopupHeader.appendChild(fileStatsPopupTitle);
+    if (percentage) {
+        return value.toFixed(2) + "%";
+    }
 
-    // Create the popover body
-    var fileStatsPopupBody = document.createElement("div");
-    fileStatsPopupBody.classList.add("file-stats-popup-body");
+    return value;
+}
 
-    fileStatsPopupContainer.appendChild(fileStatsPopupBody);
+function formatDateTime(dateTimeString) {
+    var parsedDate = new Date(dateTimeString);
+    if (Number.isNaN(parsedDate.getTime())) {
+        return dateTimeString;
+    }
 
-    // Create the popover row
-    var fileStatsPopupRow = document.createElement("div");
-    fileStatsPopupRow.classList.add("file-stats-popup-row");
-
-    fileStatsPopupBody.appendChild(fileStatsPopupRow);
-
-    // Create the popover column
-    var fileStatsPopupFileColumn = document.createElement("div");
-    fileStatsPopupFileColumn.classList.add("file-stats-popup-col");
-
-    fileStatsPopupRow.appendChild(fileStatsPopupFileColumn);
-
-    // Create the Original Size key-value pair
-    originalSizeElement = document.createElement("div");
-    originalSizeElement.classList.add("file-stats-popup-data");
-
-    fileStatsPopupFileColumn.appendChild(originalSizeElement);
-
-    newElement = document.createElement("p");
-    newElement.classList.add("file-stats-popup-key");
-    newElement.innerText = "Original Size";
-
-    originalSizeElement.appendChild(newElement);
-
-    newElement = document.createElement("p");
-    newElement.classList.add("file-stats-popup-value");
-    newElement.innerText = data.pre_conversion_size;
-
-    originalSizeElement.appendChild(newElement);
-
-    // Create the New Size key-value pair
-    newSizeElement = document.createElement("div");
-    newSizeElement.classList.add("file-stats-popup-data");
-
-    fileStatsPopupFileColumn.appendChild(newSizeElement);
-
-    newElement = document.createElement("p");
-    newElement.classList.add("file-stats-popup-key");
-    newElement.innerText = "New Size";
-
-    newSizeElement.appendChild(newElement);
-
-    newElement = document.createElement("p");
-    newElement.classList.add("file-stats-popup-value");
-    newElement.innerText = data.current_size;
-
-    newSizeElement.appendChild(newElement);
-
-    // Create the Compression Ratio key-value pair
-    percentageSavedElement = document.createElement("div");
-    percentageSavedElement.classList.add("file-stats-popup-data");
-
-    fileStatsPopupFileColumn.appendChild(percentageSavedElement);
-
-    newElement = document.createElement("p");
-    newElement.classList.add("file-stats-popup-key");
-    newElement.innerText = "Compression Ratio";
-
-    percentageSavedElement.appendChild(newElement);
-
-    newElement = document.createElement("p");
-    newElement.classList.add("file-stats-popup-value");
-    newElement.innerText = data.percentage_saved + "%";
-
-    percentageSavedElement.appendChild(newElement);
-
-    // Time values
-    // Create the popover column
-    var fileStatsPopupFileColumn = document.createElement("div");
-    fileStatsPopupFileColumn.classList.add("file-stats-popup-col");
-
-    fileStatsPopupRow.appendChild(fileStatsPopupFileColumn);
-
-    // Create the Start Time key-value pair
-    startTimeElement = document.createElement("div");
-    startTimeElement.classList.add("file-stats-popup-data");
-
-    fileStatsPopupFileColumn.appendChild(startTimeElement);
-
-    newElement = document.createElement("p");
-    newElement.classList.add("file-stats-popup-key");
-    newElement.innerText = "Start Time";
-
-    startTimeElement.appendChild(newElement);
-
-    newElement = document.createElement("p");
-    newElement.classList.add("file-stats-popup-value");
-    startDate = new Date(data.start_conversion_time);
-    // Convert the date to a string in the format "Wed Jan 01"
-    dateString = startDate.toDateString().split(" ").slice(0, 3).join(" ");
-    // Convert the time to a string in the format "12:00"
-    timeString = startDate.toTimeString().split(":").slice(0, 2).join(":");
-    newElement.innerText = dateString + " " + timeString;
-
-    startTimeElement.appendChild(newElement);
-
-    // Create the End Time key-value pair
-    newSizeElement = document.createElement("div");
-    newSizeElement.classList.add("file-stats-popup-data");
-
-    fileStatsPopupFileColumn.appendChild(newSizeElement);
-
-    newElement = document.createElement("p");
-    newElement.classList.add("file-stats-popup-key");
-    newElement.innerText = "End Time";
-
-    newSizeElement.appendChild(newElement);
-
-    newElement = document.createElement("p");
-    newElement.classList.add("file-stats-popup-value");
-    endDate = new Date(data.end_conversion_time);
-    // Convert the date to a string in the format "Wed Jan 01"
-    dateString = endDate.toDateString().split(" ").slice(0, 3).join(" ");
-    // Convert the time to a string in the format "12:00"
-    timeString = endDate.toTimeString().split(":").slice(0, 2).join(":");
-    newElement.innerText = dateString + " " + timeString;
-
-    newSizeElement.appendChild(newElement);
-
-    // Create the Total Time key-value pair
-    percentageSavedElement = document.createElement("div");
-    percentageSavedElement.classList.add("file-stats-popup-data");
-
-    fileStatsPopupFileColumn.appendChild(percentageSavedElement);
-
-    newElement = document.createElement("p");
-    newElement.classList.add("file-stats-popup-key");
-    newElement.innerText = "Total Time";
-
-    percentageSavedElement.appendChild(newElement);
-
-    newElement = document.createElement("p");
-    newElement.classList.add("file-stats-popup-value");
-    newElement.innerText = data.total_conversion_time;
-
-    percentageSavedElement.appendChild(newElement);
-
-    // Append popover element as a child of the wrapper
-    element.appendChild(popoverElement);
-
-    element.addEventListener("click", function() {
-        // If the popover is already visible, hide it, otherwise show it
-        if (popoverElement.matches(".open")) {
-            popoverElement.classList.remove("open");
-            popoverElement.hidePopover();
-        }
-        else {
-            // Hide any other open popovers
-            var openPopovers = document.querySelectorAll(".open");
-            openPopovers.forEach(function(popover) {
-                popover.classList.remove("open");
-                popover.hidePopover();
-            });
-            popoverElement.classList.add("open");
-            popoverElement.showPopover();
-        }
-    });
+    return parsedDate.toLocaleString("en-GB", {
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false
+    }).replace(",", "");
 }

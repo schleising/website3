@@ -259,13 +259,10 @@ function openWebSocket() {
                     // Loop through the filenames
                     for (i = 0; i < filesConverted.converted_files.length; i++) {
                         // Append a card element to the converted-files element
-                        wrapperElement = appendConvertedFileCard(
+                        appendConvertedFileCard(
                             document.getElementById("converted-files"),
                             filesConverted.converted_files[i]
                         );
-
-                        // Add a popover to the wrapper element
-                        addPopover(wrapperElement, filesConverted.converted_files[i]);
                     }
                 }
                 break;

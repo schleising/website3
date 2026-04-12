@@ -38,8 +38,8 @@ body {
     flex-direction: column;
     align-items: stretch;
     min-height: 100vh;
-    gap: 0.9rem;
-    padding: 1rem;
+    gap: 0.68rem;
+    padding: 0.72rem;
     max-width: 98rem;
     margin: 0 auto;
 }
@@ -49,21 +49,21 @@ body {
     justify-content: space-between;
     align-items: flex-start;
     gap: 1rem;
-    padding: 0.25rem 0.35rem;
+    padding: 0.12rem 0.2rem;
 }
 
 .header h1 {
     margin: 0;
     font-family: "Space Grotesk", "Outfit", sans-serif;
-    font-size: clamp(1.8rem, 3.5vw, 2.4rem);
+    font-size: clamp(1.45rem, 3.1vw, 2rem);
     letter-spacing: -0.02em;
     line-height: 1.1;
 }
 
 .subtitle {
-    margin: 0.4rem 0 0;
+    margin: 0.2rem 0 0;
     color: var(--text-subtle);
-    font-size: 0.97rem;
+    font-size: 0.88rem;
 }
 
 #subscribe-button,
@@ -72,7 +72,7 @@ body {
     border-radius: 0.85rem;
     background: linear-gradient(180deg, var(--panel-strong), var(--panel));
     color: var(--text-main);
-    padding: 0.5rem 0.95rem;
+    padding: 0.38rem 0.72rem;
     font-weight: 600;
     box-shadow: var(--shadow-soft);
     transition: transform 140ms ease, box-shadow 160ms ease, border-color 160ms ease;
@@ -99,7 +99,7 @@ body {
 
 .container-border {
     border: 1px solid var(--line);
-    border-radius: 1rem;
+    border-radius: 0.85rem;
     box-shadow: var(--shadow-panel);
     backdrop-filter: blur(4px);
 }
@@ -108,31 +108,31 @@ body {
 .stats-container,
 .data-container {
     background: var(--panel);
-    padding: 0.75rem;
+    padding: 0.52rem;
 }
 
 .progress-area {
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: 0.34rem;
 }
 
 #conversion-header {
     display: flex;
     align-items: center;
-    gap: 0.4rem;
+    gap: 0.28rem;
     overflow-x: auto;
     width: 100%;
     margin: 0;
-    padding: 0.2rem 0;
+    padding: 0.1rem 0;
 }
 
 .conversion-button {
     border: 1px solid transparent;
-    border-radius: 0.7rem;
-    padding: 0.35rem 0.65rem;
+    border-radius: 0.58rem;
+    padding: 0.24rem 0.5rem;
     white-space: nowrap;
-    font-size: 0.92rem;
+    font-size: 0.82rem;
     font-weight: 600;
     color: var(--text-subtle);
     background: var(--accent-soft);
@@ -154,22 +154,22 @@ body {
     display: grid;
     grid-template-columns: auto 1fr;
     align-items: center;
-    gap: 0.45rem;
+    gap: 0.3rem;
     width: 100%;
     white-space: nowrap;
-    padding: 0.2rem 0.1rem 0.45rem;
+    padding: 0.1rem 0.05rem 0.24rem;
 }
 
 .data-header h3 {
     margin: 0;
-    font-size: 1.6rem;
+    font-size: 1.28rem;
     line-height: 1.1;
     letter-spacing: -0.01em;
 }
 
 .data-header-right {
     justify-self: end;
-    padding: 0.2rem 0.65rem;
+    padding: 0.12rem 0.5rem;
     border-radius: 999px;
     background: var(--accent-soft);
     color: var(--accent-strong);
@@ -179,10 +179,10 @@ body {
 .details-container {
     display: grid;
     grid-template-columns: auto 1fr;
-    gap: 0.12rem 0;
+    gap: 0.04rem 0;
     width: 100%;
     overflow-y: auto;
-    padding: 0.25rem 0 0;
+    padding: 0.08rem 0 0;
 }
 
 .key-value-wrapper {
@@ -196,8 +196,9 @@ body {
 .data-key,
 .data-value,
 .data-value-left {
-    padding: 0.22rem 0.35rem;
+    padding: 0.14rem 0.25rem;
     user-select: none;
+    font-size: 0.88rem;
 }
 
 .data-key {
@@ -218,7 +219,7 @@ body {
 .main {
     display: grid;
     grid-template-columns: minmax(18rem, 0.95fr) minmax(20rem, 1.25fr);
-    gap: 0.9rem;
+    gap: 0.65rem;
     min-height: 0;
     flex: 1;
 }
@@ -231,7 +232,7 @@ body {
 }
 
 .stats-container .details-container {
-    padding-top: 0.15rem;
+    padding-top: 0.05rem;
 }
 
 .data-container {
@@ -240,21 +241,21 @@ body {
 
 .converted-files-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr));
-    gap: 0.6rem;
+    grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+    gap: 0.44rem;
     width: 100%;
     overflow-y: auto;
-    padding: 0.35rem 0.05rem 0.15rem;
+    padding: 0.1rem 0.04rem 0.02rem;
     align-content: start;
 }
 
 .converted-file-card {
     border: 1px solid var(--line);
-    border-radius: 0.9rem;
-    padding: 0.62rem;
+    border-radius: 0.72rem;
+    padding: 0.45rem;
     background: linear-gradient(168deg, hsl(0, 0%, 100%), hsla(204, 95%, 96%, 0.92));
     box-shadow: var(--shadow-soft);
-    cursor: pointer;
+    cursor: default;
     transition: transform 160ms ease, box-shadow 180ms ease, border-color 160ms ease;
 }
 
@@ -268,14 +269,14 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    gap: 0.5rem;
+    gap: 0.34rem;
 }
 
 .converted-file-name {
     margin: 0;
     min-width: 0;
-    font-size: 0.96rem;
-    line-height: 1.25;
+    font-size: 0.84rem;
+    line-height: 1.2;
     letter-spacing: -0.01em;
     color: var(--text-main);
     display: -webkit-box;
@@ -288,30 +289,66 @@ body {
 
 .converted-file-badge {
     flex-shrink: 0;
-    padding: 0.16rem 0.48rem;
+    padding: 0.1rem 0.4rem;
     border-radius: 999px;
     background: var(--ok-soft);
     color: var(--ok-strong);
-    font-size: 0.8rem;
+    font-size: 0.72rem;
     font-weight: 700;
 }
 
-.converted-file-meta {
-    margin-top: 0.45rem;
-    font-size: 0.78rem;
+.converted-file-details {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.2rem 0.22rem;
+    margin-top: 0.22rem;
+    padding-top: 0.2rem;
+    border-top: 1px dashed hsla(214, 28%, 34%, 0.2);
+}
+
+.converted-file-stat {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: flex-start;
+    gap: 0.08rem;
+    min-width: 0;
+    border-radius: 0.4rem;
+    border: 1px solid hsla(214, 28%, 34%, 0.12);
+    padding: 0.18rem 0.24rem;
+    min-height: 2.72rem;
+    background: hsla(0, 0%, 100%, 0.68);
+}
+
+.converted-file-stat-label {
     color: var(--text-subtle);
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    line-height: 1.1;
+}
+
+.converted-file-stat-value {
+    color: var(--text-main);
+    font-size: 0.88rem;
+    font-weight: 600;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    width: 100%;
 }
 
 .conversion-progress {
     display: flex;
     align-items: center;
     width: 100%;
-    padding-top: 0.2rem;
+    padding-top: 0.1rem;
 }
 
 #file-progress {
     width: 100%;
-    height: 0.72rem;
+    height: 0.62rem;
     border: 0;
     border-radius: 999px;
     overflow: hidden;
@@ -345,7 +382,7 @@ body {
 
     .stats-container,
     .data-container {
-        min-height: 15rem;
+        min-height: 13rem;
     }
 
     .data-value-left {
@@ -355,8 +392,8 @@ body {
 
 @media screen and (max-width: 44rem) {
     .outer {
-        padding: 0.7rem;
-        gap: 0.7rem;
+        padding: 0.48rem;
+        gap: 0.48rem;
     }
 
     .header {
@@ -373,10 +410,24 @@ body {
     }
 
     .data-header h3 {
-        font-size: 1.35rem;
+        font-size: 1.12rem;
     }
 
     .converted-files-grid {
         grid-template-columns: 1fr;
+    }
+
+    .converted-file-stat {
+        padding: 0.14rem 0.18rem;
+        min-height: 2.4rem;
+    }
+
+    .converted-file-stat-label {
+        font-size: 0.64rem;
+    }
+
+    .converted-file-stat-value {
+        font-size: 0.78rem;
+        letter-spacing: -0.01em;
     }
 }
