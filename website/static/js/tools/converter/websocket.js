@@ -90,6 +90,16 @@ document.addEventListener("visibilitychange", event => {
     }
 });
 
+function setProgressBarVisible(isVisible) {
+    progressWrapperElement = document.querySelector(".conversion-progress");
+
+    if (progressWrapperElement == null) {
+        return;
+    }
+
+    progressWrapperElement.style.display = isVisible ? "flex" : "none";
+}
+
 // Function to open a web socket
 function openWebSocket() {
     if (url == null || url.length == 0) {
@@ -225,6 +235,8 @@ function openWebSocket() {
 
                 // Only show the conversion data if numFiles is greater than 0
                 if (numFiles > 0) {
+                        setProgressBarVisible(true);
+
                     // Set the active tab to the conversion number
                     document.getElementById("conversion-" + conversionNumber).className = "conversion-button active";
     
@@ -281,6 +293,8 @@ function openWebSocket() {
                     // Set the value of the file-progress element to the progress
                     document.getElementById("file-progress").value = conversionStatus.converting_files[conversionNumber].progress;
                 } else {
+                        setProgressBarVisible(false);
+
                     // Show no file status when there is no active conversion
                     progressElement.innerHTML = '<div class="current-empty-state">No file being converted</div>';
 
