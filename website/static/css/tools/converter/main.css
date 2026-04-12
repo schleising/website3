@@ -19,7 +19,7 @@
 
 html,
 body {
-    min-height: 100%;
+    height: 100%;
     margin: 0;
     padding: 0;
 }
@@ -31,13 +31,14 @@ body {
         radial-gradient(120% 110% at 0% 0%, hsla(191, 77%, 72%, 0.34) 0%, transparent 56%),
         radial-gradient(120% 120% at 100% 100%, hsla(205, 89%, 76%, 0.26) 0%, transparent 58%),
         linear-gradient(170deg, var(--bg-0), var(--bg-1));
+    overflow: hidden;
 }
 
 .outer {
     display: flex;
     flex-direction: column;
     align-items: stretch;
-    min-height: 100vh;
+    height: 100vh;
     gap: 0.68rem;
     padding: 0.72rem;
     max-width: 98rem;
@@ -47,9 +48,10 @@ body {
 .header {
     display: flex;
     justify-content: space-between;
-    align-items: flex-start;
+    align-items: center;
     gap: 1rem;
     padding: 0.12rem 0.2rem;
+    flex-wrap: nowrap;
 }
 
 .header h1 {
@@ -222,6 +224,7 @@ body {
     gap: 0.65rem;
     min-height: 0;
     flex: 1;
+    overflow: hidden;
 }
 
 .stats-container,
@@ -229,10 +232,12 @@ body {
     display: flex;
     flex-direction: column;
     min-height: 0;
+    overflow: hidden;
 }
 
 .stats-container .details-container {
     padding-top: 0.05rem;
+    overflow-y: visible;
 }
 
 .data-container {
@@ -244,6 +249,8 @@ body {
     grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
     gap: 0.44rem;
     width: 100%;
+    flex: 1 1 auto;
+    min-height: 0;
     overflow-y: auto;
     padding: 0.1rem 0.04rem 0.02rem;
     align-content: start;
@@ -378,11 +385,24 @@ body {
 @media screen and (max-width: 64rem) {
     .main {
         grid-template-columns: 1fr;
+        overflow-y: auto;
+        overflow-x: hidden;
     }
 
     .stats-container,
     .data-container {
-        min-height: 13rem;
+        min-height: auto;
+        overflow: visible;
+    }
+
+    .stats-container .details-container {
+        overflow-y: visible;
+    }
+
+    .converted-files-grid {
+        flex: 0 0 auto;
+        min-height: auto;
+        overflow-y: visible;
     }
 
     .data-value-left {
@@ -397,12 +417,8 @@ body {
     }
 
     .header {
-        flex-direction: column;
-        align-items: stretch;
-    }
-
-    #subscribe-button {
-        align-self: flex-end;
+        align-items: center;
+        gap: 0.6rem;
     }
 
     .data-header {
