@@ -19,6 +19,10 @@ var currentTabNames = [];
 // Track which cards are shown in the lower panel.
 var filesViewMode = 'converted_files';
 
+// Cache the latest payload for each lower-card view to avoid flicker on toggle.
+var cachedConvertedFiles = null;
+var cachedFilesToConvert = null;
+
 // Add a callback for state changes
 document.addEventListener('readystatechange', event => {
     if (event.target.readyState === "complete") {
@@ -242,54 +246,22 @@ function openWebSocket() {
 
                 break;
             case 'converted_files':
-                if (filesViewMode !== 'converted_files') {
-                    break;
-                }
-
                 // Get the files converted
                 filesConverted = message.messageBody;
 
-                // Check whether files converted is null
-                if (filesConverted == null) {
-                    document.getElementById("converted-files").innerText = "No files converted";
-                    document.getElementById("last-day-count").innerText = "0";
-                } else {
-                    // Clear the converted-files element
-                    document.getElementById("converted-files").innerText = "";
+                cachedConvertedFiles = filesConverted;
 
-                    // Add the number of files converted to the last-day-count element
-                    document.getElementById("last-day-count").innerText = filesConverted.converted_files.length;
-
-                    // Loop through the filenames
-                    for (i = 0; i < filesConverted.converted_files.length; i++) {
-                        // Append a card element to the converted-files element
-                        appendConvertedFileCard(
-                            document.getElementById("converted-files"),
-                            filesConverted.converted_files[i]
-                        );
-                    }
+                if (filesViewMode === 'converted_files') {
+                    renderConvertedFiles(cachedConvertedFiles);
                 }
                 break;
             case 'files_to_convert':
-                if (filesViewMode !== 'files_to_convert') {
-                    break;
-                }
-
                 filesToConvert = message.messageBody;
 
-                if (filesToConvert == null) {
-                    document.getElementById("converted-files").innerText = "No files to convert";
-                    document.getElementById("last-day-count").innerText = "0";
-                } else {
-                    document.getElementById("converted-files").innerText = "";
-                    document.getElementById("last-day-count").innerText = filesToConvert.files_to_convert.length;
+                cachedFilesToConvert = filesToConvert;
 
-                    for (i = 0; i < filesToConvert.files_to_convert.length; i++) {
-                        appendToConvertFileCard(
-                            document.getElementById("converted-files"),
-                            filesToConvert.files_to_convert[i]
-                        );
-                    }
+                if (filesViewMode === 'files_to_convert') {
+                    renderFilesToConvert(cachedFilesToConvert);
                 }
                 break;
             case 'statistics':
@@ -524,14 +496,15 @@ function initializeFilesViewButtons() {
 }
 
 function setFilesViewMode(viewMode) {
+    if (filesViewMode === viewMode) {
+        return;
+    }
+
     filesViewMode = viewMode;
 
     convertedButton = document.getElementById("show-converted-files");
     toConvertButton = document.getElementById("show-to-convert-files");
     filesViewTitle = document.getElementById("files-view-title");
-    filesContainer = document.getElementById("converted-files");
-    lastDayCount = document.getElementById("last-day-count");
-
     if (convertedButton != null && toConvertButton != null) {
         convertedButton.classList.toggle("active", viewMode === 'converted_files');
         toConvertButton.classList.toggle("active", viewMode === 'files_to_convert');
@@ -545,12 +518,10 @@ function setFilesViewMode(viewMode) {
         }
     }
 
-    if (filesContainer != null) {
-        filesContainer.innerText = "Loading...";
-    }
-
-    if (lastDayCount != null) {
-        lastDayCount.innerText = "0";
+    if (viewMode === 'files_to_convert' && cachedFilesToConvert != null) {
+        renderFilesToConvert(cachedFilesToConvert);
+    } else if (viewMode === 'converted_files' && cachedConvertedFiles != null) {
+        renderConvertedFiles(cachedConvertedFiles);
     }
 
     if (ws != null && ws.readyState == WebSocket.OPEN) {
@@ -560,5 +531,49 @@ function setFilesViewMode(viewMode) {
         }));
 
         checkSocketAndSendMessage();
+    }
+}
+
+function renderConvertedFiles(filesConverted) {
+    filesContainer = document.getElementById("converted-files");
+    lastDayCount = document.getElementById("last-day-count");
+
+    if (filesContainer == null || lastDayCount == null) {
+        return;
+    }
+
+    if (filesConverted == null) {
+        filesContainer.innerText = "No files converted";
+        lastDayCount.innerText = "0";
+        return;
+    }
+
+    filesContainer.innerText = "";
+    lastDayCount.innerText = filesConverted.converted_files.length;
+
+    for (i = 0; i < filesConverted.converted_files.length; i++) {
+        appendConvertedFileCard(filesContainer, filesConverted.converted_files[i]);
+    }
+}
+
+function renderFilesToConvert(filesToConvert) {
+    filesContainer = document.getElementById("converted-files");
+    lastDayCount = document.getElementById("last-day-count");
+
+    if (filesContainer == null || lastDayCount == null) {
+        return;
+    }
+
+    if (filesToConvert == null) {
+        filesContainer.innerText = "No files to convert";
+        lastDayCount.innerText = "0";
+        return;
+    }
+
+    filesContainer.innerText = "";
+    lastDayCount.innerText = filesToConvert.files_to_convert.length;
+
+    for (i = 0; i < filesToConvert.files_to_convert.length; i++) {
+        appendToConvertFileCard(filesContainer, filesToConvert.files_to_convert[i]);
     }
 }
