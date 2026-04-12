@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 180" role="img" aria-label="Football illustration">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#b6f7d2"/>
+      <stop offset="1" stop-color="#5ad3a2"/>
+    </linearGradient>
+  </defs>
+  <rect width="320" height="180" rx="20" fill="url(#bg)"/>
+  <rect x="24" y="22" width="272" height="136" rx="14" fill="#ffffff" fill-opacity="0.35"/>
+  <rect x="48" y="44" width="224" height="92" rx="8" fill="none" stroke="#0f5f47" stroke-width="5"/>
+  <line x1="160" y1="44" x2="160" y2="136" stroke="#0f5f47" stroke-width="5"/>
+  <circle cx="160" cy="90" r="20" fill="none" stroke="#0f5f47" stroke-width="5"/>
+  <circle cx="92" cy="90" r="10" fill="#0f5f47" fill-opacity="0.22"/>
+  <circle cx="228" cy="90" r="10" fill="#0f5f47" fill-opacity="0.22"/>
+</svg>

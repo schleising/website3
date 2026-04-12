@@ -21,6 +21,9 @@
 }
 
 .home-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
     height: 100%;
     border: 1px solid rgba(100, 149, 237, 0.35);
     border-radius: 0.7rem;
@@ -28,6 +31,15 @@
     background: linear-gradient(180deg, #ffffff 0%, #f4f8ff 100%);
     box-shadow: 0 6px 16px rgba(20, 40, 90, 0.08);
     transition: transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease;
+}
+
+.home-card-image {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    border-radius: 0.52rem;
+    object-fit: cover;
+    border: 1px solid rgba(42, 86, 146, 0.18);
+    background: #eff5ff;
 }
 
 .home-card-link:hover .home-card,
@@ -38,7 +50,7 @@
 }
 
 .home-card h4 {
-    margin: 0 0 0.4rem;
+    margin: 0;
     font-size: 1.16rem;
 }
 

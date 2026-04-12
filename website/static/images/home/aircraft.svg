@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 180" role="img" aria-label="Aircraft illustration">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#bfe4ff"/>
+      <stop offset="1" stop-color="#7cc3ff"/>
+    </linearGradient>
+  </defs>
+  <rect width="320" height="180" rx="20" fill="url(#sky)"/>
+  <circle cx="70" cy="52" r="16" fill="#ffffff" fill-opacity="0.65"/>
+  <circle cx="96" cy="52" r="12" fill="#ffffff" fill-opacity="0.7"/>
+  <circle cx="230" cy="42" r="12" fill="#ffffff" fill-opacity="0.6"/>
+  <circle cx="248" cy="42" r="10" fill="#ffffff" fill-opacity="0.7"/>
+  <path d="M58 102 L190 102 L252 78 L264 88 L218 114 L196 114 L176 132 L158 132 L164 114 L130 114 L102 136 L84 136 L102 114 L62 114 Z" fill="#1b4873"/>
+  <rect x="108" y="95" width="42" height="6" rx="3" fill="#8fd0ff"/>
+</svg>
