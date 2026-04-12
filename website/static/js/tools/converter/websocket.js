@@ -286,16 +286,16 @@ function openWebSocket() {
                                 label = "Total Files to Convert: ";
                                 break;
                             case 'gigabytes_before_conversion':
-                                label = "GB Before Conversion: ";
-                                value = value + " GB";
+                                label = "Size Before Conversion: ";
+                                value = formatSizeForDisplay(value, "GB");
                                 break;
                             case 'gigabytes_after_conversion':
-                                label = "GB After Conversion: ";
-                                value = value + " GB";
+                                label = "Size After Conversion: ";
+                                value = formatSizeForDisplay(value, "GB");
                                 break;
                             case 'gigabytes_saved':
-                                label = "GB Saved: ";
-                                value = value + " GB";
+                                label = "Space Saved: ";
+                                value = formatSizeForDisplay(value, "GB");
                                 break;
                             case 'percentage_saved':
                                 label = "Percentage Saved: ";

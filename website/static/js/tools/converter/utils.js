@@ -60,8 +60,8 @@ function appendConvertedFileCard(element, data) {
     detailsElement.classList.add("converted-file-details");
     cardElement.appendChild(detailsElement);
 
-    appendCardStat(detailsElement, "Original", getCardValue(data.pre_conversion_size));
-    appendCardStat(detailsElement, "New", getCardValue(data.current_size));
+    appendCardStat(detailsElement, "Original", getCardValue(data.pre_conversion_size, "--", false, false, true));
+    appendCardStat(detailsElement, "New", getCardValue(data.current_size, "--", false, false, true));
     appendCardStat(detailsElement, "Ratio", getCardValue(data.percentage_saved, "--", true));
     appendCardStat(detailsElement, "Start", getCardValue(data.start_conversion_time, "--", false, true));
     appendCardStat(detailsElement, "End", getCardValue(data.end_conversion_time, "--", false, true));
@@ -89,9 +89,13 @@ function appendCardStat(element, label, value) {
     element.appendChild(statElement);
 }
 
-function getCardValue(value, fallback = "--", percentage = false, isDateTime = false) {
+function getCardValue(value, fallback = "--", percentage = false, isDateTime = false, isSize = false) {
     if (value == null || value === "") {
         return fallback;
+    }
+
+    if (isSize) {
+        return formatSizeForDisplay(value);
     }
 
     if (isDateTime) {
@@ -103,6 +107,61 @@ function getCardValue(value, fallback = "--", percentage = false, isDateTime = f
     }
 
     return value;
+}
+
+function formatSizeForDisplay(value, sourceUnit = "") {
+    sizeGb = parseSizeToGigabytes(value, sourceUnit);
+
+    if (sizeGb == null) {
+        return String(value);
+    }
+
+    if (sizeGb >= 1024) {
+        return (sizeGb / 1024).toFixed(2) + " TB";
+    }
+
+    if (sizeGb >= 1) {
+        return sizeGb.toFixed(2) + " GB";
+    }
+
+    return (sizeGb * 1024).toFixed(2) + " MB";
+}
+
+function parseSizeToGigabytes(value, sourceUnit = "") {
+    if (typeof value === "number") {
+        if (sourceUnit === "TB") {
+            return value * 1024;
+        }
+
+        if (sourceUnit === "MB") {
+            return value / 1024;
+        }
+
+        // Default numeric values from backend stats are gigabytes.
+        return value;
+    }
+
+    if (typeof value !== "string") {
+        return null;
+    }
+
+    match = value.trim().match(/^([0-9]*\.?[0-9]+)\s*(MB|GB|TB)$/i);
+    if (match == null) {
+        return null;
+    }
+
+    numericValue = parseFloat(match[1]);
+    unit = match[2].toUpperCase();
+
+    if (unit === "TB") {
+        return numericValue * 1024;
+    }
+
+    if (unit === "MB") {
+        return numericValue / 1024;
+    }
+
+    return numericValue;
 }
 
 function formatDateTime(dateTimeString) {
