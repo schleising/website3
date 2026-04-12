@@ -1,20 +1,20 @@
 @import url("https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap");
 
 :root {
-    --bg-0: hsl(210, 35%, 97%);
-    --bg-1: hsl(205, 55%, 92%);
-    --panel: hsla(0, 0%, 100%, 0.82);
-    --panel-strong: hsla(0, 0%, 100%, 0.92);
-    --line: hsla(214, 28%, 34%, 0.16);
+    --bg-0: hsl(202, 38%, 97%);
+    --bg-1: hsl(197, 42%, 91%);
+    --panel: hsla(0, 0%, 100%, 0.84);
+    --panel-strong: hsla(0, 0%, 100%, 0.94);
+    --line: hsla(207, 24%, 32%, 0.16);
     --text-main: hsl(216, 26%, 17%);
     --text-subtle: hsl(216, 16%, 42%);
-    --accent: hsl(203, 86%, 46%);
-    --accent-strong: hsl(200, 95%, 36%);
-    --accent-soft: hsl(203, 92%, 95%);
-    --ok-soft: hsl(147, 44%, 92%);
-    --ok-strong: hsl(150, 60%, 26%);
-    --shadow-soft: 0 8px 24px hsla(216, 45%, 20%, 0.08);
-    --shadow-panel: 0 14px 42px hsla(216, 48%, 20%, 0.12);
+    --accent: hsl(197, 71%, 43%);
+    --accent-strong: hsl(193, 80%, 33%);
+    --accent-soft: hsl(194, 54%, 93%);
+    --ok-soft: hsl(150, 36%, 91%);
+    --ok-strong: hsl(151, 52%, 27%);
+    --shadow-soft: 0 8px 24px hsla(208, 35%, 18%, 0.08);
+    --shadow-panel: 0 14px 42px hsla(208, 32%, 18%, 0.11);
 }
 
 html,
@@ -29,8 +29,8 @@ body {
     font-family: "Outfit", "Avenir Next", "Segoe UI", sans-serif;
     color: var(--text-main);
     background:
-        radial-gradient(120% 110% at 0% 0%, hsla(191, 77%, 72%, 0.34) 0%, transparent 56%),
-        radial-gradient(120% 120% at 100% 100%, hsla(205, 89%, 76%, 0.26) 0%, transparent 58%),
+        radial-gradient(130% 120% at 0% 0%, hsla(183, 55%, 70%, 0.28) 0%, transparent 58%),
+        radial-gradient(120% 120% at 100% 100%, hsla(201, 68%, 75%, 0.24) 0%, transparent 60%),
         linear-gradient(170deg, var(--bg-0), var(--bg-1));
     overflow-x: hidden;
     overflow-y: auto;
@@ -109,7 +109,7 @@ body {
     border: 1px solid var(--line);
     border-radius: 0.85rem;
     box-shadow: var(--shadow-panel);
-    backdrop-filter: blur(4px);
+    backdrop-filter: blur(5px);
 }
 
 .progress-area,
@@ -207,15 +207,15 @@ body {
     font-size: 0.8rem;
     font-weight: 600;
     color: var(--text-subtle);
-    background: hsla(0, 0%, 100%, 0.62);
+    background: hsla(0, 0%, 100%, 0.68);
     transform: translateY(1px);
 }
 
 .files-view-button.active {
     color: var(--text-main);
     border-color: hsla(214, 28%, 34%, 0.24);
-    border-bottom-color: hsla(0, 0%, 100%, 0.94);
-    background: linear-gradient(180deg, hsla(0, 0%, 100%, 0.98), hsla(208, 82%, 97%, 0.92));
+    border-bottom-color: hsla(0, 0%, 100%, 0.96);
+    background: linear-gradient(180deg, hsla(0, 0%, 100%, 0.99), hsla(193, 76%, 96%, 0.9));
     transform: translateY(0);
 }
 
@@ -273,7 +273,7 @@ body {
     border: 1px solid hsla(214, 28%, 34%, 0.14);
     border-radius: 0.58rem;
     padding: 0.34rem 0.42rem;
-    background: linear-gradient(168deg, hsla(0, 0%, 100%, 0.88), hsla(205, 85%, 97%, 0.85));
+    background: linear-gradient(168deg, hsla(0, 0%, 100%, 0.9), hsla(194, 72%, 96%, 0.84));
     transition: transform 150ms ease, box-shadow 170ms ease, border-color 170ms ease;
 }
 
@@ -328,7 +328,7 @@ body {
     border: 1px solid hsla(214, 28%, 34%, 0.14);
     border-radius: 0.58rem;
     padding: 0.34rem 0.42rem;
-    background: linear-gradient(168deg, hsla(0, 0%, 100%, 0.88), hsla(205, 85%, 97%, 0.85));
+    background: linear-gradient(168deg, hsla(0, 0%, 100%, 0.9), hsla(194, 72%, 96%, 0.84));
     transition: transform 150ms ease, box-shadow 170ms ease, border-color 170ms ease;
 }
 
@@ -473,7 +473,7 @@ body {
     border: 1px solid var(--line);
     border-radius: 0.72rem;
     padding: 0.45rem;
-    background: linear-gradient(168deg, hsl(0, 0%, 100%), hsla(204, 95%, 96%, 0.92));
+    background: linear-gradient(168deg, hsl(0, 0%, 100%), hsla(193, 66%, 95%, 0.9));
     box-shadow: var(--shadow-soft);
     cursor: default;
     transition: transform 160ms ease, box-shadow 180ms ease, border-color 160ms ease;
@@ -576,7 +576,7 @@ body {
     border: 1px solid hsla(214, 28%, 34%, 0.12);
     padding: 0.34rem 0.24rem 0.34rem 0.34rem;
     min-height: 2.62rem;
-    background: hsla(0, 0%, 100%, 0.68);
+    background: linear-gradient(180deg, hsla(0, 0%, 100%, 0.78), hsla(193, 56%, 96%, 0.6));
 }
 
 .converted-file-stat-label {
@@ -614,17 +614,17 @@ body {
 }
 
 #file-progress::-webkit-progress-bar {
-    background-color: hsl(212, 26%, 90%);
+    background-color: hsl(198, 24%, 88%);
     border-radius: 999px;
 }
 
 #file-progress::-webkit-progress-value {
-    background: linear-gradient(90deg, hsl(203, 95%, 55%), hsl(199, 90%, 43%));
+    background: linear-gradient(90deg, hsl(197, 84%, 53%), hsl(191, 78%, 41%));
     border-radius: 999px;
 }
 
 #file-progress::-moz-progress-bar {
-    background: linear-gradient(90deg, hsl(203, 95%, 55%), hsl(199, 90%, 43%));
+    background: linear-gradient(90deg, hsl(197, 84%, 53%), hsl(191, 78%, 41%));
     border-radius: 999px;
 }
 
