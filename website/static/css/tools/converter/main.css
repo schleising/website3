@@ -515,8 +515,9 @@ body {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 0.2rem 0.22rem;
-    margin-top: 0.22rem;
-    padding-top: 0.2rem;
+    margin-top: 0.28rem;
+    padding-top: 0.26rem;
+    padding-left: 0.08rem;
     border-top: 1px dashed hsla(214, 28%, 34%, 0.2);
 }
 
@@ -533,8 +534,8 @@ body {
     min-width: 0;
     border-radius: 0.4rem;
     border: 1px solid hsla(214, 28%, 34%, 0.12);
-    padding: 0.18rem 0.24rem;
-    min-height: 2.72rem;
+    padding: 0.26rem 0.24rem 0.26rem 0.26rem;
+    min-height: 2.62rem;
     background: hsla(0, 0%, 100%, 0.68);
 }
 
