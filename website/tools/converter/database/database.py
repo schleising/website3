@@ -262,29 +262,15 @@ class DatabaseTools:
         nearest_ratios = [saved_ratios_by_bitrate[index] for index in nearest_indices]
         return float(median(nearest_ratios))
 
-    def _estimate_saved_space(
+    def _get_prediction_saved_ratio(
         self,
-        db_file: Mapping[str, Any],
         bit_rate: Any,
         video_codec: str,
         bitrates: list[float],
         saved_ratios_by_bitrate: list[float],
         codec_ratios: Mapping[str, float],
         global_ratio: float,
-    ) -> str:
-        base_size_value = db_file.get("pre_conversion_size") or db_file.get("current_size")
-
-        if base_size_value is None:
-            return "Unknown"
-
-        try:
-            base_size = float(base_size_value)
-        except (TypeError, ValueError):
-            return "Unknown"
-
-        if base_size <= 0:
-            return "Unknown"
-
+    ) -> float:
         try:
             parsed_bit_rate = float(bit_rate)
         except (TypeError, ValueError):
@@ -302,9 +288,7 @@ class DatabaseTools:
         if ratio is None:
             ratio = global_ratio
 
-        estimated_saved_size = max(0.0, base_size * ratio)
-
-        return self._human_readable_file_size(estimated_saved_size)
+        return max(0.0, min(ratio, 0.95))
 
     def _create_file_to_convert_data(
         self,
@@ -331,20 +315,38 @@ class DatabaseTools:
 
         video_codec = self._get_codec_name(db_file, "video")
 
+        base_size_value = db_file.get("pre_conversion_size") or db_file.get("current_size")
+        estimated_size_after_conversion = "Unknown"
+        estimated_percentage_saved = 0
+
+        if base_size_value is not None:
+            try:
+                base_size = float(base_size_value)
+            except (TypeError, ValueError):
+                base_size = 0
+
+            if base_size > 0:
+                saved_ratio = self._get_prediction_saved_ratio(
+                    bit_rate,
+                    video_codec,
+                    bitrates,
+                    saved_ratios_by_bitrate,
+                    codec_ratios,
+                    global_ratio,
+                )
+                estimated_final_size = max(0.0, base_size * (1 - saved_ratio))
+                estimated_size_after_conversion = self._human_readable_file_size(
+                    estimated_final_size
+                )
+                estimated_percentage_saved = round(saved_ratio * 100)
+
         return FileToConvertData(
             file_data_id=f"file-to-convert-{count}",
             filename=Path(db_file.get("filename", "Unknown")).name,
             current_size=self._human_readable_file_size(float(current_size)),
+            estimated_size_after_conversion=estimated_size_after_conversion,
+            estimated_percentage_saved=estimated_percentage_saved,
             bit_rate=self._format_bit_rate(bit_rate),
-            estimated_space_saved=self._estimate_saved_space(
-                db_file,
-                bit_rate,
-                video_codec,
-                bitrates,
-                saved_ratios_by_bitrate,
-                codec_ratios,
-                global_ratio,
-            ),
             video_codec=video_codec,
             audio_codec=self._get_codec_name(db_file, "audio"),
             video_duration=self._format_video_duration(duration),

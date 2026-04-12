@@ -62,7 +62,11 @@ function appendConvertedFileCard(element, data) {
 
     appendCardStat(detailsElement, "Original", getCardValue(data.pre_conversion_size, "--", false, false, true));
     appendCardStat(detailsElement, "New", getCardValue(data.current_size, "--", false, false, true));
-    appendCardStat(detailsElement, "Ratio", getCardValue(data.percentage_saved, "--", true));
+    convertedRatioValue = getCardValue(data.percentage_saved, "--");
+    if (convertedRatioValue !== "--") {
+        convertedRatioValue = Math.round(Number(convertedRatioValue)).toFixed(0) + "%";
+    }
+    appendCardStat(detailsElement, "Ratio", convertedRatioValue);
     appendCardStat(detailsElement, "Start", getCardValue(data.start_conversion_time, "--", false, true));
     appendCardStat(detailsElement, "End", getCardValue(data.end_conversion_time, "--", false, true));
     appendCardStat(detailsElement, "Total", getCardValue(data.total_conversion_time));
@@ -91,12 +95,17 @@ function appendToConvertFileCard(element, data) {
     cardElement.appendChild(detailsElement);
 
     codecValue = formatCodecValue(data.video_codec) + " / " + formatCodecValue(data.audio_codec);
+    predictedRatioValue = getCardValue(data.estimated_percentage_saved, "--");
+    if (predictedRatioValue !== "--") {
+        predictedRatioValue = Math.round(Number(predictedRatioValue)).toFixed(0) + "%";
+    }
 
     appendCardStat(detailsElement, "Current Size", getCardValue(data.current_size, "--", false, false, true));
-    appendCardStat(detailsElement, "Bit Rate", getCardValue(data.bit_rate));
-    appendCardStat(detailsElement, "Est. Save", getCardValue(data.estimated_space_saved, "--", false, false, true));
-    appendCardStat(detailsElement, "Video / Audio", getCardValue(codecValue));
+    appendCardStat(detailsElement, "Predicted Size", getCardValue(data.estimated_size_after_conversion, "--", false, false, true));
+    appendCardStat(detailsElement, "Predicted Ratio", predictedRatioValue);
     appendCardStat(detailsElement, "Duration", getCardValue(data.video_duration));
+    appendCardStat(detailsElement, "Bit Rate", getCardValue(data.bit_rate));
+    appendCardStat(detailsElement, "Codecs", getCardValue(codecValue));
 
     element.appendChild(cardElement);
 
