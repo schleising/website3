@@ -36,6 +36,17 @@ var filesViewMode = getStoredFilesViewMode();
 var cachedConvertedFiles = null;
 var cachedFilesToConvert = null;
 
+const statisticsScaffoldFields = [
+    { key: 'total_files', label: 'Total Files: ', type: 'number' },
+    { key: 'total_converted', label: 'Total Files Converted: ', type: 'number' },
+    { key: 'total_to_convert', label: 'Total Files to Convert: ', type: 'number' },
+    { key: 'gigabytes_before_conversion', label: 'Size Before Conversion: ', type: 'size' },
+    { key: 'gigabytes_after_conversion', label: 'Size After Conversion: ', type: 'size' },
+    { key: 'gigabytes_saved', label: 'Space Saved: ', type: 'size' },
+    { key: 'percentage_saved', label: 'Percentage Saved: ', type: 'percentage' },
+    { key: 'total_conversion_time', label: 'Total Conversion Time: ', type: 'text' }
+];
+
 // Add a callback for state changes
 document.addEventListener('readystatechange', event => {
     if (event.target.readyState === "complete") {
@@ -56,6 +67,7 @@ document.addEventListener('readystatechange', event => {
         console.log("URL: " + url)
 
         initializeFilesViewButtons();
+        initializeConverterScaffold();
         setupNetworkListeners();
         startConnectionWatchdog();
 
@@ -98,6 +110,128 @@ function setProgressBarVisible(isVisible) {
     }
 
     progressWrapperElement.style.display = isVisible ? "flex" : "none";
+}
+
+function initializeConverterScaffold() {
+    initializeCurrentConversionScaffold();
+    initializeStatisticsScaffold();
+    initializeFilesScaffold();
+    setProgressBarVisible(false);
+}
+
+function initializeCurrentConversionScaffold() {
+    progressElement = document.getElementById("progress-details");
+
+    if (progressElement == null) {
+        return;
+    }
+
+    ensureCurrentConversionLayout(progressElement);
+
+    updateFilenamePopupText(document.getElementById("filename-value"), "No file being converted");
+    setValueIfChanged("complete-value", "--");
+    setValueIfChanged("speed-value", "--");
+    setValueIfChanged("time_since_start-value", "--");
+    setValueIfChanged("time_remaining-value", "--");
+    setValueIfChanged("completion_time-value", "--");
+}
+
+function initializeStatisticsScaffold() {
+    statisticsElement = document.getElementById("statistics");
+
+    if (statisticsElement == null) {
+        return;
+    }
+
+    if (document.getElementById("total_files-value") != null) {
+        return;
+    }
+
+    statisticsElement.innerHTML = "";
+
+    for (field of statisticsScaffoldFields) {
+        appendKeyValueElement(statisticsElement, field.label, "--", [], [], field.key);
+    }
+}
+
+function initializeFilesScaffold() {
+    filesContainer = document.getElementById("converted-files");
+    lastDayCount = document.getElementById("last-day-count");
+
+    if (filesContainer == null || lastDayCount == null) {
+        return;
+    }
+
+    if (filesContainer.childElementCount > 0) {
+        return;
+    }
+
+    filesContainer.innerHTML = "";
+    lastDayCount.innerText = "--";
+
+    placeholderCount = 3;
+    for (i = 0; i < placeholderCount; i++) {
+        if (filesViewMode === 'files_to_convert') {
+            appendToConvertFileCard(filesContainer, {
+                filename: "Waiting for data...",
+                prediction_confidence: "Low",
+                current_size: "--",
+                estimated_size_after_conversion: "--",
+                estimated_percentage_saved: null,
+                video_duration: "--",
+                bit_rate: "--",
+                video_codec: "--",
+                audio_codec: "--"
+            });
+        } else {
+            appendConvertedFileCard(filesContainer, {
+                filename: "Waiting for data...",
+                percentage_saved: 0,
+                pre_conversion_size: "--",
+                current_size: "--",
+                start_conversion_time: "--",
+                end_conversion_time: "--",
+                total_conversion_time: "--"
+            });
+        }
+    }
+}
+
+function formatStatisticsValue(field, statistics) {
+    if (statistics == null || statistics[field.key] == null) {
+        return "--";
+    }
+
+    value = statistics[field.key];
+
+    if (field.type === 'size') {
+        return formatSizeForDisplay(value, "GB");
+    }
+
+    if (field.type === 'percentage') {
+        return value + "%";
+    }
+
+    return value;
+}
+
+function updateStatisticsValues(statistics) {
+    initializeStatisticsScaffold();
+
+    for (field of statisticsScaffoldFields) {
+        setValueIfChanged(field.key + "-value", String(formatStatisticsValue(field, statistics)));
+    }
+
+    existingErrorsRow = document.getElementById("conversion-errors-row");
+    if (statistics != null && statistics.conversion_errors > 0) {
+        if (existingErrorsRow == null) {
+            appendConversionErrorsRow(document.getElementById("statistics"), statistics.conversion_errors);
+        } else {
+            setValueIfChanged("conversion-errors-text", "Conversion Errors: " + statistics.conversion_errors);
+        }
+    } else if (existingErrorsRow != null) {
+        existingErrorsRow.remove();
+    }
 }
 
 // Function to open a web socket
@@ -295,8 +429,14 @@ function openWebSocket() {
                 } else {
                         setProgressBarVisible(false);
 
-                    // Show no file status when there is no active conversion
-                    progressElement.innerHTML = '<div class="current-empty-state">No file being converted</div>';
+                    // Keep scaffold mounted to avoid layout shifts when no file is active.
+                    ensureCurrentConversionLayout(progressElement);
+                    updateFilenamePopupText(document.getElementById("filename-value"), "No file being converted");
+                    setValueIfChanged("complete-value", "--");
+                    setValueIfChanged("speed-value", "--");
+                    setValueIfChanged("time_since_start-value", "--");
+                    setValueIfChanged("time_remaining-value", "--");
+                    setValueIfChanged("completion_time-value", "--");
 
                     // Set the value of the file-progress element to 0
                     document.getElementById("file-progress").value = 0;
@@ -337,75 +477,7 @@ function openWebSocket() {
                 // Get the statistics
                 statistics = message.messageBody;
 
-                // Check whether statistics is null
-                if (statistics == null) {
-                    // Set the innerHTML of the statistics element to "No statistics"
-                    document.getElementById("statistics").innerHTML = "No statistics";
-                } else {
-                    // Clear the statistics element
-                    document.getElementById("statistics").innerHTML = "";
-
-                    // Loop through the statistics
-                    for ([key, value] of Object.entries(statistics)) {
-                        switch (key) {
-                            case 'total_files':
-                                label = "Total Files: ";
-                                break;
-                            case 'total_converted':
-                                label = "Total Files Converted: ";
-                                break;
-                            case 'total_to_convert':
-                                label = "Total Files to Convert: ";
-                                break;
-                            case 'gigabytes_before_conversion':
-                                label = "Size Before Conversion: ";
-                                value = formatSizeForDisplay(value, "GB");
-                                break;
-                            case 'gigabytes_after_conversion':
-                                label = "Size After Conversion: ";
-                                value = formatSizeForDisplay(value, "GB");
-                                break;
-                            case 'gigabytes_saved':
-                                label = "Space Saved: ";
-                                value = formatSizeForDisplay(value, "GB");
-                                break;
-                            case 'percentage_saved':
-                                label = "Percentage Saved: ";
-                                value = value + "%";
-                                break;
-                            case 'total_conversion_time':
-                                label = "Total Conversion Time: ";
-                                break;
-                            case 'total_size_before_conversion_tb':
-                                continue;
-                            case 'total_size_after_conversion_tb':
-                                continue;
-                            case 'films_converted':
-                                continue;
-                            case 'films_to_convert':
-                                continue;
-                            case 'conversion_errors':
-                                // Render conversion errors separately as a dedicated full-width row.
-                                continue;
-                            case 'conversions_by_backend':
-                                // Ignore this key, we will loop through the values later
-                                continue;
-                            default:
-                                console.log("Unknown key: " + key);
-                        }
-
-                        // Create the statistics element
-                        appendKeyValueElement(document.getElementById("statistics"), label, value, [], [], key);
-                    }
-
-                    // Show a dedicated conversion errors row only when there are errors.
-                    if (statistics.conversion_errors > 0) {
-                        appendConversionErrorsRow(
-                            document.getElementById("statistics"),
-                            statistics.conversion_errors
-                        );
-                    }
-                }
+                updateStatisticsValues(statistics);
                 break;
             default:
                 console.log("Unknown message type received: " + event.data.messageType);
@@ -563,38 +635,7 @@ function setValueIfChanged(elementId, value) {
 }
 
 function updateCurrentConversionDetails(progressElement, fileData, completeString, expectedCompletionTime) {
-    // Build the modern panel layout once, then update values in place.
-    if (document.getElementById("current-conversion-layout") == null) {
-        progressElement.innerHTML = "";
-
-        layoutElement = document.createElement("div");
-        layoutElement.id = "current-conversion-layout";
-        layoutElement.classList.add("current-conversion-layout");
-
-        filenameRowElement = document.createElement("div");
-        filenameRowElement.classList.add("current-filename-row");
-        filenameValueElement = document.createElement("div");
-        filenameValueElement.id = "filename-value";
-        filenameValueElement.classList.add("filename");
-        filenameRowElement.appendChild(filenameValueElement);
-        layoutElement.appendChild(filenameRowElement);
-
-        completeSpeedRowElement = document.createElement("div");
-        completeSpeedRowElement.classList.add("current-stats-row", "current-stats-row-two");
-        completeSpeedRowElement.appendChild(createCurrentMetricBlock("complete", "Complete"));
-        completeSpeedRowElement.appendChild(createCurrentMetricBlock("speed", "Speed"));
-        layoutElement.appendChild(completeSpeedRowElement);
-
-        timeRowElement = document.createElement("div");
-        timeRowElement.classList.add("current-stats-row", "current-stats-row-three");
-        timeRowElement.appendChild(createCurrentMetricBlock("time_since_start", "Since Start"));
-        timeRowElement.appendChild(createCurrentMetricBlock("time_remaining", "Remaining"));
-        timeRowElement.appendChild(createCurrentMetricBlock("completion_time", "Completion"));
-        layoutElement.appendChild(timeRowElement);
-
-        progressElement.appendChild(layoutElement);
-        enableFilenamePopup(filenameRowElement, fileData.filename);
-    }
+    ensureCurrentConversionLayout(progressElement);
 
     filenameElement = document.getElementById("filename-value");
     if (filenameElement != null) {
@@ -606,6 +647,43 @@ function updateCurrentConversionDetails(progressElement, fileData, completeStrin
     setValueIfChanged("time_since_start-value", fileData.time_since_start);
     setValueIfChanged("time_remaining-value", fileData.time_remaining);
     setValueIfChanged("completion_time-value", expectedCompletionTime);
+}
+
+function ensureCurrentConversionLayout(progressElement) {
+    // Build the modern panel layout once, then update values in place.
+    if (document.getElementById("current-conversion-layout") != null) {
+        return;
+    }
+
+    progressElement.innerHTML = "";
+
+    layoutElement = document.createElement("div");
+    layoutElement.id = "current-conversion-layout";
+    layoutElement.classList.add("current-conversion-layout");
+
+    filenameRowElement = document.createElement("div");
+    filenameRowElement.classList.add("current-filename-row");
+    filenameValueElement = document.createElement("div");
+    filenameValueElement.id = "filename-value";
+    filenameValueElement.classList.add("filename");
+    filenameRowElement.appendChild(filenameValueElement);
+    layoutElement.appendChild(filenameRowElement);
+
+    completeSpeedRowElement = document.createElement("div");
+    completeSpeedRowElement.classList.add("current-stats-row", "current-stats-row-two");
+    completeSpeedRowElement.appendChild(createCurrentMetricBlock("complete", "Complete"));
+    completeSpeedRowElement.appendChild(createCurrentMetricBlock("speed", "Speed"));
+    layoutElement.appendChild(completeSpeedRowElement);
+
+    timeRowElement = document.createElement("div");
+    timeRowElement.classList.add("current-stats-row", "current-stats-row-three");
+    timeRowElement.appendChild(createCurrentMetricBlock("time_since_start", "Since Start"));
+    timeRowElement.appendChild(createCurrentMetricBlock("time_remaining", "Remaining"));
+    timeRowElement.appendChild(createCurrentMetricBlock("completion_time", "Completion"));
+    layoutElement.appendChild(timeRowElement);
+
+    progressElement.appendChild(layoutElement);
+    enableFilenamePopup(filenameRowElement, "No file being converted");
 }
 
 function createCurrentMetricBlock(idPrefix, label) {
@@ -630,9 +708,11 @@ function createCurrentMetricBlock(idPrefix, label) {
 function appendConversionErrorsRow(element, errorCount) {
     rowElement = document.createElement("div");
     rowElement.classList.add("conversion-errors-card");
+    rowElement.id = "conversion-errors-row";
 
     textElement = document.createElement("div");
     textElement.classList.add("conversion-errors-text");
+    textElement.id = "conversion-errors-text";
     textElement.innerText = "Conversion Errors: " + errorCount;
     rowElement.appendChild(textElement);
 
@@ -741,8 +821,7 @@ function renderConvertedFiles(filesConverted) {
     }
 
     if (filesConverted == null) {
-        filesContainer.innerText = "No files converted";
-        lastDayCount.innerText = "0";
+        initializeFilesScaffold();
         return;
     }
 
@@ -763,8 +842,7 @@ function renderFilesToConvert(filesToConvert) {
     }
 
     if (filesToConvert == null) {
-        filesContainer.innerText = "No files to convert";
-        lastDayCount.innerText = "0";
+        initializeFilesScaffold();
         return;
     }
 
