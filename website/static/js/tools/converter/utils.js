@@ -219,8 +219,7 @@ function formatDateTime(dateTimeString) {
     }
 
     return parsedDate.toLocaleString("en-GB", {
-        month: "short",
-        day: "numeric",
+        weekday: "short",
         hour: "2-digit",
         minute: "2-digit",
         hour12: false
