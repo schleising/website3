@@ -186,6 +186,8 @@ async function fetchSensorData() {
         .then(response_data => {
             // Update the sensor data on the page
             response_data.data.forEach(element => {
+                const containerElement = document.getElementById("data-container-" + element.device_id);
+
                 // Update the device name
                 document.getElementById("device-" + element.device_id).innerText = element.device_name;
 
@@ -196,7 +198,15 @@ async function fetchSensorData() {
 
                 // Update the status data
                 statusString = element.online ? "Online" : "Offline";
-                document.getElementById("status-" + element.device_id).innerText = statusString;
+                statusElement = document.getElementById("status-" + element.device_id);
+                statusElement.innerText = statusString;
+                statusElement.classList.toggle("status-online", element.online);
+                statusElement.classList.toggle("status-offline", !element.online);
+
+                if (containerElement != null) {
+                    containerElement.classList.toggle("device-online", element.online);
+                    containerElement.classList.toggle("device-offline", !element.online);
+                }
 
                 // Update the temperature data to 1 decimal place
                 document.getElementById("temperature-" + element.device_id).innerText = element.temperature.toFixed(1) + "°C";
