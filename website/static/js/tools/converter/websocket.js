@@ -313,8 +313,8 @@ function openWebSocket() {
                             case 'films_to_convert':
                                 continue;
                             case 'conversion_errors':
-                                label = "Conversion Errors: ";
-                                break;
+                                // Render conversion errors separately as a dedicated full-width row.
+                                continue;
                             case 'conversions_by_backend':
                                 // Ignore this key, we will loop through the values later
                                 continue;
@@ -325,37 +325,14 @@ function openWebSocket() {
                         // Create the statistics element
                         appendKeyValueElement(document.getElementById("statistics"), label, value, [], [], key);
                     }
-                }
 
-                // Check whether there are any conversion errors
-                if (statistics.conversion_errors > 0) {
-                    // Get the conversion errors element
-                    conversionErrorsElement = document.getElementById("conversion_errors-value");
-
-                    // Check whether we got the conversion errors element
-                    if (conversionErrorsElement == null) {
-                        console.error("Could not find conversion errors element");
-                        return;
+                    // Show a dedicated conversion errors row only when there are errors.
+                    if (statistics.conversion_errors > 0) {
+                        appendConversionErrorsRow(
+                            document.getElementById("statistics"),
+                            statistics.conversion_errors
+                        );
                     }
-
-                    // Create a button element
-                    retryButton = document.createElement("button");
-                    retryButton.className = "retry-button";
-                    retryButton.innerText = "Retry";
-
-                    // Set the onclick function of the retry button
-                    retryButton.onclick = function() {
-                        // Create the message
-                        msg = {
-                            messageType: 'retry'
-                        };
-
-                        // Convert the JSON to a string and send it to the server
-                        ws.send(JSON.stringify(msg));
-                    };
-
-                    // Append the retry button to the conversion errors element
-                    conversionErrorsElement.appendChild(retryButton);
                 }
                 break;
             default:
@@ -467,4 +444,28 @@ function createCurrentMetricBlock(idPrefix, label) {
     metricElement.appendChild(valueElement);
 
     return metricElement;
+}
+
+function appendConversionErrorsRow(element, errorCount) {
+    rowElement = document.createElement("div");
+    rowElement.classList.add("conversion-errors-card");
+
+    textElement = document.createElement("div");
+    textElement.classList.add("conversion-errors-text");
+    textElement.innerText = "Conversion Errors: " + errorCount;
+    rowElement.appendChild(textElement);
+
+    retryButton = document.createElement("button");
+    retryButton.className = "retry-button";
+    retryButton.innerText = "Retry";
+    retryButton.onclick = function() {
+        msg = {
+            messageType: 'retry'
+        };
+
+        ws.send(JSON.stringify(msg));
+    };
+
+    rowElement.appendChild(retryButton);
+    element.appendChild(rowElement);
 }

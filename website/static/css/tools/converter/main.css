@@ -321,6 +321,31 @@ body {
     font-size: 0.92rem;
 }
 
+.conversion-errors-card {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    min-width: 0;
+    border: 1px solid hsla(7, 72%, 45%, 0.24);
+    border-radius: 0.58rem;
+    padding: 0.36rem 0.46rem;
+    background: linear-gradient(168deg, hsla(7, 84%, 97%, 0.94), hsla(33, 100%, 97%, 0.9));
+}
+
+.conversion-errors-text {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: hsl(10, 62%, 34%);
+    text-align: left;
+    min-width: 0;
+}
+
+.conversion-errors-card .retry-button {
+    margin-left: auto;
+}
+
 .key-value-wrapper {
     display: contents;
 }
