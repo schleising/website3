@@ -38,6 +38,7 @@ class FileToConvertData(BaseModel):
     filename: str
     current_size: str
     bit_rate: str
+    estimated_space_saved: str
     video_codec: str
     audio_codec: str
     video_duration: str

@@ -1,5 +1,7 @@
 from datetime import datetime, timedelta
 from pathlib import Path
+from bisect import bisect_left
+from statistics import median
 from typing import Any, Mapping
 
 from pymongo import DESCENDING, UpdateOne
@@ -11,7 +13,12 @@ from . import media_collection
 
 class DatabaseTools:
     def __init__(self) -> None:
-        pass
+        self._prediction_cache_ttl = timedelta(minutes=5)
+        self._prediction_cache_time: datetime | None = None
+        self._prediction_bitrates: list[float] = []
+        self._prediction_saved_ratios_by_bitrate: list[float] = []
+        self._prediction_codec_ratios: dict[str, float] = {}
+        self._prediction_global_ratio: float = 0.25
 
     def _human_readable_file_size(self, size: float) -> str:
         # Convert the file size to a human-readable format
@@ -123,8 +130,190 @@ class DatabaseTools:
 
         return f"{bit_rate:.0f} bps"
 
+    async def _get_prediction_models(
+        self,
+    ) -> tuple[list[float], list[float], dict[str, float], float]:
+        if media_collection is None:
+            return [], [], {}, 0.25
+
+        now = datetime.now()
+        if (
+            self._prediction_cache_time is not None
+            and now - self._prediction_cache_time < self._prediction_cache_ttl
+        ):
+            return (
+                self._prediction_bitrates,
+                self._prediction_saved_ratios_by_bitrate,
+                self._prediction_codec_ratios,
+                self._prediction_global_ratio,
+            )
+
+        db_file_cursor = media_collection.find(
+            {
+                "conversion_required": True,
+                "converted": True,
+                "conversion_error": False,
+                "deleted": False,
+                "pre_conversion_size": {"$gt": 0},
+                "current_size": {"$gt": 0},
+            },
+            sort=[("end_conversion_time", DESCENDING)],
+            projection=[
+                "pre_conversion_size",
+                "current_size",
+                "video_information.format.bit_rate",
+                "video_information.streams.codec_type",
+                "video_information.streams.codec_name",
+            ],
+        ).limit(3000)
+
+        db_file_list = await db_file_cursor.to_list(length=3000)
+
+        codec_ratios: dict[str, list[float]] = {}
+        global_ratios: list[float] = []
+        bitrate_samples: list[tuple[float, float]] = []
+
+        for db_file in db_file_list:
+            pre_conversion_size = db_file.get("pre_conversion_size")
+            current_size = db_file.get("current_size")
+
+            if pre_conversion_size is None or current_size is None:
+                continue
+
+            try:
+                pre_size = float(pre_conversion_size)
+                current = float(current_size)
+            except (TypeError, ValueError):
+                continue
+
+            if pre_size <= 0:
+                continue
+
+            saved_ratio = (pre_size - current) / pre_size
+            saved_ratio = max(0.0, min(saved_ratio, 0.95))
+
+            global_ratios.append(saved_ratio)
+
+            bit_rate = (
+                db_file.get("video_information", {})
+                .get("format", {})
+                .get("bit_rate")
+            )
+            try:
+                parsed_bit_rate = float(bit_rate)
+            except (TypeError, ValueError):
+                parsed_bit_rate = 0.0
+
+            if parsed_bit_rate > 0:
+                bitrate_samples.append((parsed_bit_rate, saved_ratio))
+
+            video_codec = self._get_codec_name(db_file, "video")
+            if video_codec != "Unknown":
+                codec_ratios.setdefault(video_codec, []).append(saved_ratio)
+
+        global_ratio = self._prediction_global_ratio
+        if len(global_ratios) > 0:
+            global_ratio = float(median(global_ratios))
+
+        final_codec_ratios = {
+            codec: float(median(ratios)) for codec, ratios in codec_ratios.items() if len(ratios) > 0
+        }
+
+        bitrate_samples.sort(key=lambda item: item[0])
+        final_bitrates = [item[0] for item in bitrate_samples]
+        final_saved_ratios_by_bitrate = [item[1] for item in bitrate_samples]
+
+        self._prediction_cache_time = now
+        self._prediction_bitrates = final_bitrates
+        self._prediction_saved_ratios_by_bitrate = final_saved_ratios_by_bitrate
+        self._prediction_codec_ratios = final_codec_ratios
+        self._prediction_global_ratio = global_ratio
+
+        return (
+            final_bitrates,
+            final_saved_ratios_by_bitrate,
+            final_codec_ratios,
+            global_ratio,
+        )
+
+    def _estimate_saved_ratio_from_bitrate(
+        self,
+        bit_rate: float,
+        bitrates: list[float],
+        saved_ratios_by_bitrate: list[float],
+    ) -> float | None:
+        if bit_rate <= 0 or len(bitrates) == 0:
+            return None
+
+        insert_index = bisect_left(bitrates, bit_rate)
+        search_window = 80
+        window_start = max(0, insert_index - search_window)
+        window_end = min(len(bitrates), insert_index + search_window)
+
+        candidate_indices = range(window_start, window_end)
+        nearest_indices = sorted(
+            candidate_indices,
+            key=lambda index: abs(bitrates[index] - bit_rate),
+        )[:25]
+
+        if len(nearest_indices) < 8:
+            return None
+
+        nearest_ratios = [saved_ratios_by_bitrate[index] for index in nearest_indices]
+        return float(median(nearest_ratios))
+
+    def _estimate_saved_space(
+        self,
+        db_file: Mapping[str, Any],
+        bit_rate: Any,
+        video_codec: str,
+        bitrates: list[float],
+        saved_ratios_by_bitrate: list[float],
+        codec_ratios: Mapping[str, float],
+        global_ratio: float,
+    ) -> str:
+        base_size_value = db_file.get("pre_conversion_size") or db_file.get("current_size")
+
+        if base_size_value is None:
+            return "Unknown"
+
+        try:
+            base_size = float(base_size_value)
+        except (TypeError, ValueError):
+            return "Unknown"
+
+        if base_size <= 0:
+            return "Unknown"
+
+        try:
+            parsed_bit_rate = float(bit_rate)
+        except (TypeError, ValueError):
+            parsed_bit_rate = 0.0
+
+        ratio = self._estimate_saved_ratio_from_bitrate(
+            parsed_bit_rate,
+            bitrates,
+            saved_ratios_by_bitrate,
+        )
+
+        if ratio is None:
+            ratio = codec_ratios.get(video_codec)
+
+        if ratio is None:
+            ratio = global_ratio
+
+        estimated_saved_size = max(0.0, base_size * ratio)
+
+        return self._human_readable_file_size(estimated_saved_size)
+
     def _create_file_to_convert_data(
-        self, count: int, db_file: Mapping[str, Any]
+        self,
+        count: int,
+        db_file: Mapping[str, Any],
+        bitrates: list[float],
+        saved_ratios_by_bitrate: list[float],
+        codec_ratios: Mapping[str, float],
+        global_ratio: float,
     ) -> FileToConvertData:
         current_size = db_file.get("current_size") or db_file.get("pre_conversion_size") or 0
 
@@ -140,12 +329,23 @@ class DatabaseTools:
             .get("bit_rate")
         )
 
+        video_codec = self._get_codec_name(db_file, "video")
+
         return FileToConvertData(
             file_data_id=f"file-to-convert-{count}",
             filename=Path(db_file.get("filename", "Unknown")).name,
             current_size=self._human_readable_file_size(float(current_size)),
             bit_rate=self._format_bit_rate(bit_rate),
-            video_codec=self._get_codec_name(db_file, "video"),
+            estimated_space_saved=self._estimate_saved_space(
+                db_file,
+                bit_rate,
+                video_codec,
+                bitrates,
+                saved_ratios_by_bitrate,
+                codec_ratios,
+                global_ratio,
+            ),
+            video_codec=video_codec,
             audio_codec=self._get_codec_name(db_file, "audio"),
             video_duration=self._format_video_duration(duration),
         )
@@ -191,6 +391,8 @@ class DatabaseTools:
         if media_collection is None:
             return []
 
+        bitrates, saved_ratios_by_bitrate, codec_ratios, global_ratio = await self._get_prediction_models()
+
         db_file_cursor = media_collection.find(
             {
                 "conversion_required": True,
@@ -214,7 +416,14 @@ class DatabaseTools:
         db_file_list = await db_file_cursor.to_list(length=None)
 
         return [
-            self._create_file_to_convert_data(count, db_file)
+            self._create_file_to_convert_data(
+                count,
+                db_file,
+                bitrates,
+                saved_ratios_by_bitrate,
+                codec_ratios,
+                global_ratio,
+            )
             for count, db_file in enumerate(db_file_list)
         ]
 

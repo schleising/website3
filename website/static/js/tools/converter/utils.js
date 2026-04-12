@@ -94,6 +94,7 @@ function appendToConvertFileCard(element, data) {
 
     appendCardStat(detailsElement, "Current Size", getCardValue(data.current_size, "--", false, false, true));
     appendCardStat(detailsElement, "Bit Rate", getCardValue(data.bit_rate));
+    appendCardStat(detailsElement, "Est. Save", getCardValue(data.estimated_space_saved, "--", false, false, true));
     appendCardStat(detailsElement, "Video / Audio", getCardValue(codecValue));
     appendCardStat(detailsElement, "Duration", getCardValue(data.video_duration));
 
