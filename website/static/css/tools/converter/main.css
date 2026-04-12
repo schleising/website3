@@ -190,8 +190,135 @@ body {
 
 #progress-details {
     min-width: 0;
-    overflow-x: hidden;
-    overflow-y: visible;
+    display: block;
+    overflow: visible;
+}
+
+.current-conversion-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 0.42rem;
+    width: 100%;
+}
+
+.current-filename-row {
+    width: 100%;
+    min-width: 0;
+    border: 1px solid hsla(214, 28%, 34%, 0.14);
+    border-radius: 0.58rem;
+    padding: 0.42rem 0.5rem;
+    background: linear-gradient(168deg, hsla(0, 0%, 100%, 0.88), hsla(205, 85%, 97%, 0.85));
+}
+
+.current-stats-row {
+    display: grid;
+    gap: 0.42rem;
+    width: 100%;
+}
+
+.current-stats-row-two {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.current-stats-row-three {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.current-metric-card {
+    min-width: 0;
+    border: 1px solid hsla(214, 28%, 34%, 0.14);
+    border-radius: 0.58rem;
+    padding: 0.34rem 0.42rem;
+    background: linear-gradient(168deg, hsla(0, 0%, 100%, 0.88), hsla(205, 85%, 97%, 0.85));
+    transition: transform 150ms ease, box-shadow 170ms ease, border-color 170ms ease;
+}
+
+.current-metric-card:hover {
+    transform: translateY(-1px);
+    border-color: hsla(203, 86%, 46%, 0.28);
+    box-shadow: 0 8px 16px hsla(216, 45%, 20%, 0.12);
+}
+
+.current-metric-label {
+    font-size: 0.68rem;
+    line-height: 1.05;
+    color: hsl(216, 16%, 42%);
+    font-weight: 600;
+}
+
+.current-metric-value {
+    margin-top: 0.16rem;
+    font-size: 0.98rem;
+    line-height: 1.2;
+    font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.current-empty-state {
+    border: 1px dashed hsla(214, 28%, 34%, 0.22);
+    border-radius: 0.58rem;
+    padding: 0.5rem 0.6rem;
+    font-size: 0.88rem;
+    color: var(--text-subtle);
+    background: hsla(0, 0%, 100%, 0.74);
+}
+
+#progress-details,
+#statistics {
+    grid-template-columns: repeat(auto-fit, minmax(11.5rem, 1fr));
+    gap: 0.42rem;
+    align-content: start;
+    padding-top: 0.16rem;
+}
+
+#progress-details .key-value-wrapper,
+#statistics .key-value-wrapper {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: flex-start;
+    gap: 0.16rem;
+    min-width: 0;
+    border: 1px solid hsla(214, 28%, 34%, 0.14);
+    border-radius: 0.58rem;
+    padding: 0.34rem 0.42rem;
+    background: linear-gradient(168deg, hsla(0, 0%, 100%, 0.88), hsla(205, 85%, 97%, 0.85));
+    transition: transform 150ms ease, box-shadow 170ms ease, border-color 170ms ease;
+}
+
+#progress-details .key-value-wrapper:hover,
+#statistics .key-value-wrapper:hover {
+    transform: translateY(-1px);
+    border-color: hsla(203, 86%, 46%, 0.28);
+    box-shadow: 0 8px 16px hsla(216, 45%, 20%, 0.12);
+}
+
+#progress-details .data-key,
+#statistics .data-key {
+    padding: 0;
+    font-size: 0.68rem;
+    line-height: 1.05;
+    color: hsl(216, 16%, 42%);
+    font-weight: 600;
+}
+
+#progress-details .data-value,
+#progress-details .data-value-left,
+#statistics .data-value,
+#statistics .data-value-left {
+    padding: 0;
+    width: 100%;
+    text-align: left;
+    font-size: 0.98rem;
+    line-height: 1.2;
+    font-weight: 700;
+}
+
+#statistics .data-value,
+#statistics .data-value-left {
+    font-size: 0.92rem;
 }
 
 .key-value-wrapper {
@@ -199,7 +326,7 @@ body {
 }
 
 .key-value-wrapper:hover > * {
-    background-color: hsla(205, 90%, 54%, 0.09);
+    background-color: transparent;
 }
 
 .data-key,
@@ -507,4 +634,5 @@ body {
         font-size: 0.78rem;
         letter-spacing: -0.01em;
     }
+
 }

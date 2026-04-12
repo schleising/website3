@@ -218,8 +218,7 @@ function openWebSocket() {
                     document.getElementById("file-progress").value = conversionStatus.converting_files[conversionNumber].progress;
                 } else {
                     // Show no file status when there is no active conversion
-                    progressElement.innerHTML = "";
-                    appendKeyValueElement(progressElement, "No file being converted", "", [], []);
+                    progressElement.innerHTML = '<div class="current-empty-state">No file being converted</div>';
 
                     // Set the value of the file-progress element to 0
                     document.getElementById("file-progress").value = 0;
@@ -406,44 +405,66 @@ function setValueIfChanged(elementId, value) {
 }
 
 function updateCurrentConversionDetails(progressElement, fileData, completeString, expectedCompletionTime) {
-    // Build the rows once, then only update changed values.
-    if (document.getElementById("filename-value") == null) {
+    // Build the modern panel layout once, then update values in place.
+    if (document.getElementById("current-conversion-layout") == null) {
         progressElement.innerHTML = "";
 
-        filenameWrapperElement = appendKeyValueElement(progressElement, "Filename:", fileData.filename, [], ["filename", "data-value-left"], "filename");
-        enableFilenamePopup(filenameWrapperElement, fileData.filename);
-        appendKeyValueElement(progressElement, "Complete:", completeString, [], ["data-value-left"], "complete");
-        appendKeyValueElement(progressElement, "Time Since Start:", fileData.time_since_start, [], ["data-value-left"], "time_since_start");
-        appendKeyValueElement(progressElement, "Time Remaining:", fileData.time_remaining, [], ["data-value-left"], "time_remaining");
-        appendKeyValueElement(progressElement, "Completion Time:", expectedCompletionTime, [], ["data-value-left"], "completion_time");
+        layoutElement = document.createElement("div");
+        layoutElement.id = "current-conversion-layout";
+        layoutElement.classList.add("current-conversion-layout");
 
-        if (fileData.speed != null) {
-            appendKeyValueElement(progressElement, "Speed:", fileData.speed, [], ["data-value-left"], "speed");
-        }
+        filenameRowElement = document.createElement("div");
+        filenameRowElement.classList.add("current-filename-row");
+        filenameValueElement = document.createElement("div");
+        filenameValueElement.id = "filename-value";
+        filenameValueElement.classList.add("filename");
+        filenameRowElement.appendChild(filenameValueElement);
+        layoutElement.appendChild(filenameRowElement);
+
+        completeSpeedRowElement = document.createElement("div");
+        completeSpeedRowElement.classList.add("current-stats-row", "current-stats-row-two");
+        completeSpeedRowElement.appendChild(createCurrentMetricBlock("complete", "Complete"));
+        completeSpeedRowElement.appendChild(createCurrentMetricBlock("speed", "Speed"));
+        layoutElement.appendChild(completeSpeedRowElement);
+
+        timeRowElement = document.createElement("div");
+        timeRowElement.classList.add("current-stats-row", "current-stats-row-three");
+        timeRowElement.appendChild(createCurrentMetricBlock("time_since_start", "Since Start"));
+        timeRowElement.appendChild(createCurrentMetricBlock("time_remaining", "Remaining"));
+        timeRowElement.appendChild(createCurrentMetricBlock("completion_time", "Completion"));
+        layoutElement.appendChild(timeRowElement);
+
+        progressElement.appendChild(layoutElement);
+        enableFilenamePopup(filenameRowElement, fileData.filename);
     }
 
     filenameElement = document.getElementById("filename-value");
     if (filenameElement != null) {
         updateFilenamePopupText(filenameElement, fileData.filename);
     }
+
     setValueIfChanged("complete-value", completeString);
+    setValueIfChanged("speed-value", fileData.speed != null ? fileData.speed : "--");
     setValueIfChanged("time_since_start-value", fileData.time_since_start);
     setValueIfChanged("time_remaining-value", fileData.time_remaining);
     setValueIfChanged("completion_time-value", expectedCompletionTime);
+}
 
-    speedWrapperKey = document.getElementById("speed-key");
-    speedWrapperValue = document.getElementById("speed-value");
+function createCurrentMetricBlock(idPrefix, label) {
+    metricElement = document.createElement("div");
+    metricElement.classList.add("current-metric-card");
 
-    if (fileData.speed != null) {
-        if (speedWrapperKey == null || speedWrapperValue == null) {
-            appendKeyValueElement(progressElement, "Speed:", fileData.speed, [], ["data-value-left"], "speed");
-        } else {
-            setValueIfChanged("speed-value", fileData.speed);
-        }
-    } else {
-        if (speedWrapperKey != null && speedWrapperValue != null) {
-            speedWrapperKey.remove();
-            speedWrapperValue.remove();
-        }
-    }
+    labelElement = document.createElement("div");
+    labelElement.id = idPrefix + "-key";
+    labelElement.classList.add("current-metric-label");
+    labelElement.innerText = label;
+    metricElement.appendChild(labelElement);
+
+    valueElement = document.createElement("div");
+    valueElement.id = idPrefix + "-value";
+    valueElement.classList.add("current-metric-value");
+    valueElement.innerText = "--";
+    metricElement.appendChild(valueElement);
+
+    return metricElement;
 }
