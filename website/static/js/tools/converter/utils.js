@@ -87,12 +87,14 @@ function appendToConvertFileCard(element, data) {
 
     var detailsElement = document.createElement("div");
     detailsElement.classList.add("converted-file-details");
+    detailsElement.classList.add("to-convert-file-details");
     cardElement.appendChild(detailsElement);
 
     codecValue = formatCodecValue(data.video_codec) + " / " + formatCodecValue(data.audio_codec);
 
     appendCardStat(detailsElement, "Current Size", getCardValue(data.current_size, "--", false, false, true));
-    appendCardStat(detailsElement, "Video / Audio Codec", getCardValue(codecValue));
+    appendCardStat(detailsElement, "Bit Rate", getCardValue(data.bit_rate));
+    appendCardStat(detailsElement, "Video / Audio", getCardValue(codecValue));
     appendCardStat(detailsElement, "Duration", getCardValue(data.video_duration));
 
     element.appendChild(cardElement);

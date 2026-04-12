@@ -100,7 +100,32 @@ class DatabaseTools:
 
         return "Unknown"
 
-    def _create_file_to_convert_data(self, count: int, db_file: Mapping[str, Any]) -> FileToConvertData:
+    def _format_bit_rate(self, bit_rate_value: Any) -> str:
+        if bit_rate_value is None:
+            return "Unknown"
+
+        try:
+            bit_rate = float(bit_rate_value)
+        except (TypeError, ValueError):
+            return "Unknown"
+
+        if bit_rate <= 0:
+            return "Unknown"
+
+        if bit_rate >= 1_000_000_000:
+            return f"{(bit_rate / 1_000_000_000):.2f} Gbps"
+
+        if bit_rate >= 1_000_000:
+            return f"{(bit_rate / 1_000_000):.2f} Mbps"
+
+        if bit_rate >= 1_000:
+            return f"{(bit_rate / 1_000):.2f} Kbps"
+
+        return f"{bit_rate:.0f} bps"
+
+    def _create_file_to_convert_data(
+        self, count: int, db_file: Mapping[str, Any]
+    ) -> FileToConvertData:
         current_size = db_file.get("current_size") or db_file.get("pre_conversion_size") or 0
 
         duration = (
@@ -109,10 +134,17 @@ class DatabaseTools:
             .get("duration")
         )
 
+        bit_rate = (
+            db_file.get("video_information", {})
+            .get("format", {})
+            .get("bit_rate")
+        )
+
         return FileToConvertData(
             file_data_id=f"file-to-convert-{count}",
             filename=Path(db_file.get("filename", "Unknown")).name,
             current_size=self._human_readable_file_size(float(current_size)),
+            bit_rate=self._format_bit_rate(bit_rate),
             video_codec=self._get_codec_name(db_file, "video"),
             audio_codec=self._get_codec_name(db_file, "audio"),
             video_duration=self._format_video_duration(duration),
@@ -167,7 +199,7 @@ class DatabaseTools:
                 "conversion_error": False,
                 "deleted": False,
             },
-            sort=[("filename", 1)],
+            sort=[("video_information.format.bit_rate", DESCENDING)],
             projection=[
                 "filename",
                 "current_size",
@@ -175,6 +207,7 @@ class DatabaseTools:
                 "video_information.streams.codec_type",
                 "video_information.streams.codec_name",
                 "video_information.format.duration",
+                "video_information.format.bit_rate",
             ],
         )
 

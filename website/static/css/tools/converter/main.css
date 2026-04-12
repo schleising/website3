@@ -520,6 +520,10 @@ body {
     border-top: 1px dashed hsla(214, 28%, 34%, 0.2);
 }
 
+.to-convert-file-details {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
 .converted-file-stat {
     display: flex;
     flex-direction: column;
