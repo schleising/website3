@@ -34,6 +34,8 @@ body {
         linear-gradient(170deg, var(--bg-0), var(--bg-1));
     overflow-x: hidden;
     overflow-y: auto;
+    -webkit-user-select: none;
+    user-select: none;
 }
 
 .outer {
