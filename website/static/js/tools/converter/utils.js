@@ -260,7 +260,7 @@ function enableFilenamePopup(wrapperElement, filename) {
     }
 
     filenameElement.dataset.fullFilename = filename;
-    filenameElement.title = filename;
+    filenameElement.removeAttribute("title");
     filenameTextElement.innerText = filename;
     filenameElement.setAttribute("tabindex", "0");
 
@@ -312,5 +312,5 @@ function updateFilenamePopupText(filenameElement, filename) {
 
     filenameTextElement.innerText = filename;
     filenameElement.dataset.fullFilename = filename;
-    filenameElement.title = filename;
+    filenameElement.removeAttribute("title");
 }

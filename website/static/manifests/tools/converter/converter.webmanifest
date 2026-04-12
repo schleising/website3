@@ -34,6 +34,9 @@
         }
     ],
     "start_url": "/",
+    "display_override": [
+        "standalone"
+    ],
     "display": "standalone",
     "background_color": "#ebf6fc",
     "theme_color": "#d7edf7",

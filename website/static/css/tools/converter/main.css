@@ -24,6 +24,10 @@ body {
     padding: 0;
 }
 
+html {
+    background-color: hsl(197, 42%, 91%);
+}
+
 body {
     display: flex;
     font-family: "Outfit", "Avenir Next", "Segoe UI", sans-serif;
@@ -36,6 +40,18 @@ body {
     overflow-y: auto;
     -webkit-user-select: none;
     user-select: none;
+}
+
+body::after {
+    content: "";
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: env(safe-area-inset-bottom, 0);
+    background: transparent;
+    pointer-events: none;
+    z-index: 5;
 }
 
 .outer {
@@ -60,6 +76,12 @@ body {
     flex-wrap: nowrap;
 }
 
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.42rem;
+}
+
 .header h1 {
     margin: 0;
     font-family: "Space Grotesk", "Outfit", sans-serif;
@@ -75,6 +97,7 @@ body {
 }
 
 #subscribe-button,
+.header-actions #theme-toggle-button,
 .retry-button {
     border: 1px solid var(--line);
     border-radius: 0.85rem;
@@ -97,6 +120,102 @@ body {
     opacity: 0.7;
     transform: none;
     box-shadow: none;
+}
+
+.header-actions #theme-toggle-button {
+    padding: 0;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+    min-width: 0;
+}
+
+.header-actions #theme-toggle-button:hover {
+    transform: none;
+    box-shadow: none;
+    border-color: transparent;
+}
+
+.theme-switch {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 3.85rem;
+    height: 2.18rem;
+    border-radius: 999px;
+    cursor: pointer;
+}
+
+.theme-switch:focus-visible {
+    outline: 2px solid hsla(203, 86%, 46%, 0.58);
+    outline-offset: 2px;
+}
+
+.theme-switch-track {
+    position: relative;
+    display: inline-flex;
+    width: 100%;
+    height: 100%;
+    border: 1px solid hsla(214, 28%, 34%, 0.2);
+    border-radius: 999px;
+    background: linear-gradient(180deg, hsla(0, 0%, 100%, 0.98), hsla(194, 66%, 92%, 0.9));
+    box-shadow: var(--shadow-soft);
+    overflow: hidden;
+    transition: background 190ms ease, border-color 170ms ease;
+}
+
+.theme-switch-track-icon {
+    position: absolute;
+    top: 50%;
+    width: 0.82rem;
+    height: 0.82rem;
+    stroke: hsla(209, 26%, 40%, 0.72);
+    fill: none;
+    stroke-width: 1.9;
+    transform: translateY(-50%);
+    pointer-events: none;
+}
+
+.theme-switch-track-icon-sun {
+    left: 0.36rem;
+}
+
+.theme-switch-track-icon-moon {
+    right: 0.36rem;
+    fill: hsla(209, 26%, 40%, 0.72);
+    stroke: none;
+}
+
+.theme-switch-thumb {
+    position: absolute;
+    top: 0.12rem;
+    left: 0.12rem;
+    width: 1.94rem;
+    height: 1.94rem;
+    border-radius: 999px;
+    background: linear-gradient(180deg, hsl(0, 0%, 100%), hsl(191, 64%, 92%));
+    box-shadow: 0 3px 8px hsla(216, 36%, 16%, 0.22);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 240ms cubic-bezier(0.22, 1, 0.36, 1), background 190ms ease;
+}
+
+.theme-switch-thumb-icon {
+    width: 1rem;
+    height: 1rem;
+}
+
+.theme-switch-thumb-sun {
+    fill: hsl(37, 95%, 52%);
+    opacity: 1;
+    transition: opacity 160ms ease;
+}
+
+.theme-switch-thumb-moon {
+    fill: hsl(202, 65%, 34%);
+    opacity: 0;
+    transition: opacity 160ms ease;
 }
 
 .retry-button {
@@ -254,6 +373,11 @@ body {
     background: linear-gradient(168deg, hsla(0, 0%, 100%, 0.88), hsla(205, 85%, 97%, 0.85));
 }
 
+.current-filename-row .filename,
+.current-filename-row .filename-text {
+    color: var(--text-main);
+}
+
 .current-stats-row {
     display: grid;
     gap: 0.42rem;
@@ -286,7 +410,7 @@ body {
 .current-metric-label {
     font-size: 0.68rem;
     line-height: 1.05;
-    color: hsl(216, 16%, 42%);
+    color: var(--text-subtle);
     font-weight: 600;
 }
 
@@ -344,7 +468,7 @@ body {
     padding: 0;
     font-size: 0.68rem;
     line-height: 1.05;
-    color: hsl(216, 16%, 42%);
+    color: var(--text-subtle);
     font-weight: 600;
 }
 
@@ -526,6 +650,111 @@ body {
     border-color: hsla(6, 68%, 40%, 0.28);
 }
 
+body.dark-mode {
+    --bg-0: hsl(214, 24%, 12%);
+    --bg-1: hsl(206, 26%, 16%);
+    --panel: hsla(214, 24%, 18%, 0.9);
+    --panel-strong: hsla(214, 24%, 22%, 0.95);
+    --line: hsla(206, 35%, 70%, 0.2);
+    --text-main: hsl(209, 30%, 92%);
+    --text-subtle: hsl(209, 18%, 72%);
+    --accent: hsl(193, 64%, 52%);
+    --accent-strong: hsl(188, 68%, 40%);
+    --accent-soft: hsla(192, 35%, 26%, 0.65);
+    --ok-soft: hsla(149, 38%, 26%, 0.75);
+    --ok-strong: hsl(147, 62%, 78%);
+    --shadow-soft: 0 8px 24px hsla(214, 36%, 6%, 0.3);
+    --shadow-panel: 0 14px 42px hsla(214, 36%, 5%, 0.38);
+}
+
+html.dark-mode {
+    background-color: hsl(214, 24%, 12%);
+}
+
+body.dark-mode::after {
+    background: hsl(214, 24%, 12%);
+}
+
+body.dark-mode .files-view-button {
+    background: hsla(214, 22%, 20%, 0.82);
+}
+
+body.dark-mode .files-view-button.active {
+    border-bottom-color: hsla(214, 24%, 22%, 0.95);
+    background: linear-gradient(180deg, hsla(214, 24%, 26%, 0.96), hsla(202, 36%, 20%, 0.92));
+}
+
+body.dark-mode .current-metric-card,
+body.dark-mode #progress-details .key-value-wrapper,
+body.dark-mode #statistics .key-value-wrapper,
+body.dark-mode .converted-file-card {
+    border-color: hsla(206, 28%, 68%, 0.2);
+    background: linear-gradient(168deg, hsla(214, 24%, 24%, 0.9), hsla(198, 34%, 20%, 0.84));
+}
+
+body.dark-mode .current-filename-row {
+    border-color: hsla(206, 28%, 68%, 0.2);
+    background: linear-gradient(168deg, hsla(214, 24%, 24%, 0.92), hsla(198, 34%, 20%, 0.86));
+}
+
+body.dark-mode .converted-file-stat {
+    border-color: hsla(206, 28%, 68%, 0.18);
+    background: linear-gradient(180deg, hsla(214, 22%, 22%, 0.85), hsla(197, 28%, 18%, 0.7));
+}
+
+body.dark-mode #file-progress::-webkit-progress-bar {
+    background-color: hsl(208, 20%, 26%);
+}
+
+body.dark-mode #file-progress::-moz-progress-bar {
+    background: linear-gradient(90deg, hsl(193, 72%, 54%), hsl(188, 68%, 43%));
+}
+
+body.dark-mode .prediction-confidence-high {
+    background: hsla(147, 44%, 28%, 0.9);
+    color: hsl(143, 69%, 83%);
+    border-color: hsla(143, 69%, 83%, 0.18);
+}
+
+body.dark-mode .prediction-confidence-medium {
+    background: hsla(38, 56%, 30%, 0.9);
+    color: hsl(41, 88%, 84%);
+    border-color: hsla(41, 88%, 84%, 0.2);
+}
+
+body.dark-mode .prediction-confidence-low {
+    background: hsla(6, 52%, 30%, 0.9);
+    color: hsl(5, 82%, 84%);
+    border-color: hsla(5, 82%, 84%, 0.2);
+}
+
+body.dark-mode .theme-switch-track {
+    border-color: hsla(206, 30%, 70%, 0.26);
+    background: linear-gradient(180deg, hsla(214, 24%, 28%, 0.96), hsla(198, 32%, 22%, 0.92));
+}
+
+body.dark-mode .theme-switch-track-icon {
+    stroke: hsla(210, 36%, 86%, 0.68);
+}
+
+body.dark-mode .theme-switch-track-icon-moon {
+    fill: hsla(210, 36%, 86%, 0.68);
+}
+
+body.dark-mode .theme-switch-thumb {
+    transform: translateX(1.67rem);
+    background: linear-gradient(180deg, hsl(208, 28%, 30%), hsl(208, 26%, 22%));
+}
+
+body.dark-mode .theme-switch-thumb-sun {
+    opacity: 0;
+}
+
+body.dark-mode .theme-switch-thumb-moon {
+    opacity: 1;
+    fill: hsl(209, 34%, 86%);
+}
+
 .converted-file-name {
     margin: 0;
     min-width: 0;
@@ -690,6 +919,13 @@ body {
     transform: translateX(-50%) translateY(0) scaleX(1);
 }
 
+body.dark-mode .filename::after {
+    border-color: hsla(206, 32%, 74%, 0.24) !important;
+    background: hsla(214, 30%, 12%, 0.98) !important;
+    color: hsl(210, 20%, 96%) !important;
+    box-shadow: 0 10px 22px hsla(214, 44%, 5%, 0.45);
+}
+
 @media screen and (max-width: 64rem) {
     .main {
         grid-template-columns: 1fr;
@@ -719,6 +955,20 @@ body {
 }
 
 @media screen and (max-width: 44rem) {
+    .theme-switch {
+        width: 3.36rem;
+        height: 1.9rem;
+    }
+
+    .theme-switch-thumb {
+        width: 1.66rem;
+        height: 1.66rem;
+    }
+
+    body.dark-mode .theme-switch-thumb {
+        transform: translateX(1.46rem);
+    }
+
     .outer {
         padding: 0.48rem;
         gap: 0.48rem;
