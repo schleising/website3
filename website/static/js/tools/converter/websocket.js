@@ -7,6 +7,17 @@ var url;
 // Variable to identify the timer in use
 var timer = 0;
 
+// Reconnect/watchdog state for network transitions.
+var reconnectTimer = 0;
+var reconnectAttempt = 0;
+var watchdogTimer = 0;
+var lastMessageTimestamp = 0;
+var lastPingTimestamp = 0;
+
+const watchdogIntervalMs = 3000;
+const staleConnectionMs = 9000;
+const minPingIntervalMs = 1500;
+
 // Variable to identify whether the page is visible, set to true by default as the page is visible when it loads
 var visible = true;
 
@@ -45,6 +56,8 @@ document.addEventListener('readystatechange', event => {
         console.log("URL: " + url)
 
         initializeFilesViewButtons();
+        setupNetworkListeners();
+        startConnectionWatchdog();
 
         // Check whether the websocket is open, if not open it
         openWebSocket();
@@ -79,12 +92,52 @@ document.addEventListener("visibilitychange", event => {
 
 // Function to open a web socket
 function openWebSocket() {
+    if (url == null || url.length == 0) {
+        return;
+    }
+
+    if (ws != null && (ws.readyState == WebSocket.OPEN || ws.readyState == WebSocket.CONNECTING)) {
+        return;
+    }
+
+    if (reconnectTimer != 0) {
+        clearTimeout(reconnectTimer);
+        reconnectTimer = 0;
+    }
+
     console.log("Opening Websocket")
     // Create a new WebSocket
     ws = new WebSocket(url);
 
+    // Setup callback for close/error events
+    ws.onclose = event => {
+        console.log("Websocket closed", event.code, event.reason);
+
+        if (timer != 0) {
+            clearTimeout(timer);
+            timer = 0;
+        }
+
+        ws = null;
+
+        if (visible) {
+            scheduleReconnect("socket-closed");
+        }
+    };
+
+    ws.onerror = event => {
+        console.log("Websocket error", event);
+
+        // Ensure broken sockets progress to onclose so reconnect logic runs.
+        if (ws != null && ws.readyState == WebSocket.OPEN) {
+            ws.close();
+        }
+    };
+
     // Setup callback for onmessage event
     ws.onmessage = event => {
+        lastMessageTimestamp = Date.now();
+
         // Parse the message into a json object
         message = JSON.parse(event.data);
 
@@ -349,6 +402,9 @@ function openWebSocket() {
 
     // Add the event listener
     ws.addEventListener('open', (event) => {
+        reconnectAttempt = 0;
+        lastMessageTimestamp = Date.now();
+
         ws.send(JSON.stringify({
             messageType: 'set_files_view',
             view: filesViewMode
@@ -360,12 +416,12 @@ function openWebSocket() {
 
 function checkSocketAndSendMessage(event) {
     // Send the messsage, checking that the socket is open
-    if (ws.readyState == WebSocket.OPEN) {
+    if (ws != null && ws.readyState == WebSocket.OPEN) {
         // If the socket is open send the message
         sendMessage(event);
-    } else if (ws.readyState != WebSocket.CONNECTING) {
+    } else if (ws == null || ws.readyState != WebSocket.CONNECTING) {
         // If the socket is not open or connecting, open a new socket
-        openWebSocket();
+        scheduleReconnect("check-socket");
     }
 };
 
@@ -376,8 +432,109 @@ function sendMessage(event) {
     };
 
     // Convert the JSON to a string and send it to the server
-    ws.send(JSON.stringify(msg));
+    try {
+        if (ws != null && ws.readyState == WebSocket.OPEN) {
+            ws.send(JSON.stringify(msg));
+            lastPingTimestamp = Date.now();
+        }
+    } catch (error) {
+        console.log("Websocket send failed", error);
+        forceReconnect("send-failed");
+    }
 };
+
+function scheduleReconnect(reason, immediate = false) {
+    if (!visible) {
+        return;
+    }
+
+    if (reconnectTimer != 0) {
+        return;
+    }
+
+    if (navigator.onLine === false) {
+        return;
+    }
+
+    baseDelayMs = immediate ? 0 : Math.min(1000 * Math.pow(2, reconnectAttempt), 12000);
+    jitterMs = Math.floor(Math.random() * 400);
+    reconnectDelayMs = baseDelayMs + jitterMs;
+
+    reconnectAttempt = reconnectAttempt + 1;
+    console.log("Scheduling websocket reconnect:", reason, reconnectDelayMs + "ms");
+
+    reconnectTimer = setTimeout(() => {
+        reconnectTimer = 0;
+        openWebSocket();
+    }, reconnectDelayMs);
+}
+
+function forceReconnect(reason) {
+    console.log("Force websocket reconnect:", reason);
+
+    if (ws != null) {
+        try {
+            ws.close();
+        } catch (error) {
+            console.log("Websocket close failed", error);
+        }
+    }
+
+    ws = null;
+    scheduleReconnect(reason, true);
+}
+
+function startConnectionWatchdog() {
+    if (watchdogTimer != 0) {
+        return;
+    }
+
+    watchdogTimer = setInterval(() => {
+        if (!visible) {
+            return;
+        }
+
+        if (navigator.onLine === false) {
+            return;
+        }
+
+        if (ws == null || ws.readyState == WebSocket.CLOSED) {
+            scheduleReconnect("watchdog-closed", true);
+            return;
+        }
+
+        if (ws.readyState != WebSocket.OPEN) {
+            return;
+        }
+
+        nowMs = Date.now();
+
+        if (lastMessageTimestamp > 0 && nowMs - lastMessageTimestamp > staleConnectionMs) {
+            forceReconnect("watchdog-stale");
+            return;
+        }
+
+        if (nowMs - lastPingTimestamp > minPingIntervalMs) {
+            checkSocketAndSendMessage();
+        }
+    }, watchdogIntervalMs);
+}
+
+function setupNetworkListeners() {
+    window.addEventListener("online", () => {
+        console.log("Network online");
+        scheduleReconnect("browser-online", true);
+    });
+
+    window.addEventListener("offline", () => {
+        console.log("Network offline");
+
+        if (timer != 0) {
+            clearTimeout(timer);
+            timer = 0;
+        }
+    });
+}
 
 function setValueIfChanged(elementId, value) {
     element = document.getElementById(elementId);
