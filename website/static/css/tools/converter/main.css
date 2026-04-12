@@ -490,6 +490,40 @@ body {
     gap: 0.34rem;
 }
 
+.prediction-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.22rem;
+    flex-shrink: 0;
+}
+
+.prediction-confidence-badge {
+    padding: 0.1rem 0.38rem;
+    border-radius: 999px;
+    font-size: 0.66rem;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    border: 1px solid transparent;
+}
+
+.prediction-confidence-high {
+    background: hsla(145, 52%, 90%, 0.95);
+    color: hsl(152, 62%, 24%);
+    border-color: hsla(152, 62%, 32%, 0.25);
+}
+
+.prediction-confidence-medium {
+    background: hsla(39, 100%, 89%, 0.95);
+    color: hsl(30, 72%, 30%);
+    border-color: hsla(30, 72%, 38%, 0.28);
+}
+
+.prediction-confidence-low {
+    background: hsla(7, 92%, 92%, 0.95);
+    color: hsl(6, 68%, 33%);
+    border-color: hsla(6, 68%, 40%, 0.28);
+}
+
 .converted-file-name {
     margin: 0;
     min-width: 0;

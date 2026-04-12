@@ -301,7 +301,7 @@ class DatabaseTools:
         bit_rate: float,
         bitrates: list[float],
         saved_ratios_by_bitrate: list[float],
-    ) -> float | None:
+    ) -> tuple[float, int] | None:
         if bit_rate <= 0 or len(bitrates) == 0:
             return None
 
@@ -320,7 +320,7 @@ class DatabaseTools:
             return None
 
         nearest_ratios = [saved_ratios_by_bitrate[index] for index in nearest_indices]
-        return float(median(nearest_ratios))
+        return float(median(nearest_ratios)), len(nearest_indices)
 
     def _get_prediction_saved_ratio(
         self,
@@ -333,23 +333,54 @@ class DatabaseTools:
         codec_ratios: Mapping[str, float],
         size_bucket_ratios: Mapping[int, float],
         global_ratio: float,
-    ) -> float:
+    ) -> tuple[float, str, str]:
         try:
             parsed_bit_rate = float(bit_rate)
         except (TypeError, ValueError):
             parsed_bit_rate = 0.0
 
-        ratio = self._estimate_saved_ratio_from_bitrate(
+        confidence = "Low"
+        basis = "Global fallback"
+
+        bitrate_prediction = self._estimate_saved_ratio_from_bitrate(
             parsed_bit_rate,
             bitrates,
             saved_ratios_by_bitrate,
         )
 
+        if bitrate_prediction is not None:
+            ratio, nearest_count = bitrate_prediction
+            basis = f"Bitrate nearest neighbors ({nearest_count} samples)"
+
+            if nearest_count >= 20:
+                confidence = "High"
+            elif nearest_count >= 12:
+                confidence = "Medium"
+            else:
+                confidence = "Low"
+        else:
+            ratio = None
+
         if ratio is None:
-            ratio = codec_ratios.get(video_codec)
+            bitrate_band_ratio = None
+            if parsed_bit_rate > 0:
+                bitrate_band = self._get_bitrate_band_key(parsed_bit_rate)
+                bitrate_band_ratio = bitrate_band_ratios.get(bitrate_band)
+
+            if bitrate_band_ratio is not None:
+                ratio = bitrate_band_ratio
+                confidence = "Medium"
+                basis = "Bitrate band median"
+            else:
+                ratio = codec_ratios.get(video_codec)
+                if ratio is not None:
+                    confidence = "Low"
+                    basis = f"Codec fallback ({video_codec})"
 
         if ratio is None:
             ratio = global_ratio
+            confidence = "Low"
+            basis = "Global fallback"
 
         if parsed_bit_rate > 0:
             bitrate_band = self._get_bitrate_band_key(parsed_bit_rate)
@@ -373,6 +404,9 @@ class DatabaseTools:
                 elif parsed_bit_rate < 4_000_000:
                     ratio = min(ratio, bitrate_band_ratio + 0.12)
 
+                if "Bitrate" not in basis:
+                    basis = basis + " + bitrate band calibration"
+
         size_bucket = self._get_size_bucket_key(base_size)
         size_bucket_ratio = size_bucket_ratios.get(size_bucket)
 
@@ -390,7 +424,9 @@ class DatabaseTools:
             if base_size < 1_500_000_000:
                 ratio = min(ratio, size_bucket_ratio + 0.12)
 
-        return max(0.0, min(ratio, 0.95))
+            basis = basis + " + size calibration"
+
+        return max(0.0, min(ratio, 0.95)), confidence, basis
 
     def _create_file_to_convert_data(
         self,
@@ -430,7 +466,7 @@ class DatabaseTools:
                 base_size = 0
 
             if base_size > 0:
-                saved_ratio = self._get_prediction_saved_ratio(
+                saved_ratio, prediction_confidence, _ = self._get_prediction_saved_ratio(
                     base_size,
                     bit_rate,
                     video_codec,
@@ -446,6 +482,10 @@ class DatabaseTools:
                     estimated_final_size
                 )
                 estimated_percentage_saved = round(saved_ratio * 100)
+            else:
+                prediction_confidence = "Low"
+        else:
+            prediction_confidence = "Low"
 
         return FileToConvertData(
             file_data_id=f"file-to-convert-{count}",
@@ -453,6 +493,7 @@ class DatabaseTools:
             current_size=self._human_readable_file_size(float(current_size)),
             estimated_size_after_conversion=estimated_size_after_conversion,
             estimated_percentage_saved=estimated_percentage_saved,
+            prediction_confidence=prediction_confidence,
             bit_rate=self._format_bit_rate(bit_rate),
             video_codec=video_codec,
             audio_codec=self._get_codec_name(db_file, "audio"),

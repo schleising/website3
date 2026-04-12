@@ -16,8 +16,10 @@ var conversionNumber = 0;
 // An array to store the tab names
 var currentTabNames = [];
 
+const filesViewStorageKey = 'converter.filesViewMode';
+
 // Track which cards are shown in the lower panel.
-var filesViewMode = 'converted_files';
+var filesViewMode = getStoredFilesViewMode();
 
 // Cache the latest payload for each lower-card view to avoid flicker on toggle.
 var cachedConvertedFiles = null;
@@ -493,14 +495,17 @@ function initializeFilesViewButtons() {
     toConvertButton.onclick = function() {
         setFilesViewMode('files_to_convert');
     };
+
+    setFilesViewMode(filesViewMode, true);
 }
 
-function setFilesViewMode(viewMode) {
-    if (filesViewMode === viewMode) {
+function setFilesViewMode(viewMode, forceUpdate = false) {
+    if (filesViewMode === viewMode && !forceUpdate) {
         return;
     }
 
     filesViewMode = viewMode;
+    persistFilesViewMode(viewMode);
 
     convertedButton = document.getElementById("show-converted-files");
     toConvertButton = document.getElementById("show-to-convert-files");
@@ -531,6 +536,28 @@ function setFilesViewMode(viewMode) {
         }));
 
         checkSocketAndSendMessage();
+    }
+}
+
+function getStoredFilesViewMode() {
+    try {
+        storedMode = localStorage.getItem(filesViewStorageKey);
+    } catch (error) {
+        return 'converted_files';
+    }
+
+    if (storedMode === 'files_to_convert') {
+        return 'files_to_convert';
+    }
+
+    return 'converted_files';
+}
+
+function persistFilesViewMode(viewMode) {
+    try {
+        localStorage.setItem(filesViewStorageKey, viewMode);
+    } catch (error) {
+        // Ignore storage write failures.
     }
 }
 

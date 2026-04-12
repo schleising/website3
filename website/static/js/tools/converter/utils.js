@@ -89,6 +89,20 @@ function appendToConvertFileCard(element, data) {
     titleElement.innerText = data.filename;
     headerElement.appendChild(titleElement);
 
+    var predictionMetaElement = document.createElement("div");
+    predictionMetaElement.classList.add("prediction-meta");
+
+    var confidenceElement = document.createElement("span");
+    confidenceElement.classList.add("prediction-confidence-badge");
+
+    confidenceText = getCardValue(data.prediction_confidence, "Low");
+    confidenceClass = String(confidenceText).trim().toLowerCase();
+    confidenceElement.classList.add("prediction-confidence-" + confidenceClass);
+    confidenceElement.innerText = confidenceText;
+    predictionMetaElement.appendChild(confidenceElement);
+
+    headerElement.appendChild(predictionMetaElement);
+
     var detailsElement = document.createElement("div");
     detailsElement.classList.add("converted-file-details");
     detailsElement.classList.add("to-convert-file-details");
