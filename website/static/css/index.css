@@ -1,0 +1,62 @@
+.home-cards {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+}
+
+.home-cards-title {
+    margin: 0;
+}
+
+.home-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.9rem;
+}
+
+.home-card-link {
+    text-decoration: none;
+    color: inherit;
+}
+
+.home-card {
+    height: 100%;
+    border: 1px solid rgba(100, 149, 237, 0.35);
+    border-radius: 0.7rem;
+    padding: 1rem;
+    background: linear-gradient(180deg, #ffffff 0%, #f4f8ff 100%);
+    box-shadow: 0 6px 16px rgba(20, 40, 90, 0.08);
+    transition: transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease;
+}
+
+.home-card-link:hover .home-card,
+.home-card-link:focus-visible .home-card {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 24px rgba(20, 40, 90, 0.16);
+    border-color: rgba(100, 149, 237, 0.7);
+}
+
+.home-card h4 {
+    margin: 0 0 0.4rem;
+    font-size: 1.16rem;
+}
+
+.home-card p {
+    margin: 0;
+    color: #38507d;
+    font-size: 0.98rem;
+    line-height: 1.35;
+}
+
+@media screen and (max-width: 72rem) {
+    .home-cards-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media screen and (max-width: 48rem) {
+    .home-cards-grid {
+        grid-template-columns: 1fr;
+    }
+}

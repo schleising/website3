@@ -1,11 +1,55 @@
 {% extends "base.html" %}
 
+{% block head %}
+<link rel="stylesheet" href="/css/index.css?v1.0.0">
+{% endblock %}
+
 {% block header %}
 <h3 class="header-text">This is the Header</h3>
 {% endblock %}
 
 {% block content %}
-<h3>Here is the Content</h3>
+<section class="home-cards" aria-label="Home page links">
+	<h3 class="home-cards-title">Quick Links</h3>
+	<div class="home-cards-grid">
+		<a class="home-card-link" href="/football/">
+			<article class="home-card">
+				<h4>Football</h4>
+				<p>View live scores, tables, and match details.</p>
+			</article>
+		</a>
+
+		<a class="home-card-link" href="/aircraft/">
+			<article class="home-card">
+				<h4>OpenSky Database</h4>
+				<p>Search and browse aircraft database records.</p>
+			</article>
+		</a>
+
+		<a class="home-card-link" href="/blog/">
+			<article class="home-card">
+				<h4>Blog</h4>
+				<p>Read posts and updates.</p>
+			</article>
+		</a>
+
+		{% if request.state.user != None %}
+		<a class="home-card-link" href="/markdown/">
+			<article class="home-card">
+				<h4>Markdown Editor</h4>
+				<p>Create and edit markdown content.</p>
+			</article>
+		</a>
+		{% else %}
+		<a class="home-card-link" href="/account/login/">
+			<article class="home-card">
+				<h4>Login</h4>
+				<p>Sign in to access member-only pages.</p>
+			</article>
+		</a>
+		{% endif %}
+	</div>
+</section>
 {% endblock %}
 
 {% block footer %}
