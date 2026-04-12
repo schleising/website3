@@ -119,3 +119,78 @@ function formatDateTime(dateTimeString) {
         hour12: false
     }).replace(",", "");
 }
+
+function enableFilenamePopup(wrapperElement, filename) {
+    if (wrapperElement == null) {
+        return;
+    }
+
+    var filenameElement = wrapperElement.querySelector(".filename");
+    if (filenameElement == null) {
+        return;
+    }
+
+    var filenameTextElement = filenameElement.querySelector(".filename-text");
+    if (filenameTextElement == null) {
+        filenameTextElement = document.createElement("span");
+        filenameTextElement.classList.add("filename-text");
+        filenameTextElement.innerText = filenameElement.innerText;
+        filenameElement.innerText = "";
+        filenameElement.appendChild(filenameTextElement);
+    }
+
+    filenameElement.dataset.fullFilename = filename;
+    filenameElement.title = filename;
+    filenameTextElement.innerText = filename;
+    filenameElement.setAttribute("tabindex", "0");
+
+    if (filenameElement.dataset.popupBound === "true") {
+        return;
+    }
+
+    filenameElement.dataset.popupBound = "true";
+
+    filenameElement.addEventListener("click", function(event) {
+        event.stopPropagation();
+        filenameElement.classList.toggle("filename-expanded");
+    });
+
+    filenameElement.addEventListener("keydown", function(event) {
+        if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            filenameElement.classList.toggle("filename-expanded");
+        }
+    });
+
+    filenameElement.addEventListener("blur", function() {
+        filenameElement.classList.remove("filename-expanded");
+    });
+
+    if (document.body.dataset.filenamePopupOutsideBound !== "true") {
+        document.body.dataset.filenamePopupOutsideBound = "true";
+        document.addEventListener("click", function() {
+            openElements = document.querySelectorAll(".filename.filename-expanded");
+            openElements.forEach(function(element) {
+                element.classList.remove("filename-expanded");
+            });
+        });
+    }
+}
+
+function updateFilenamePopupText(filenameElement, filename) {
+    if (filenameElement == null) {
+        return;
+    }
+
+    var filenameTextElement = filenameElement.querySelector(".filename-text");
+    if (filenameTextElement == null) {
+        filenameTextElement = document.createElement("span");
+        filenameTextElement.classList.add("filename-text");
+        filenameElement.innerText = "";
+        filenameElement.appendChild(filenameTextElement);
+    }
+
+    filenameTextElement.innerText = filename;
+    filenameElement.dataset.fullFilename = filename;
+    filenameElement.title = filename;
+}

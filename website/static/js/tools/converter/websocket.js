@@ -82,9 +82,8 @@ function openWebSocket() {
                 // Get the conversion status
                 conversionStatus = message.messageBody;
 
-                // Get the progress element and clear it
+                // Get the progress element
                 progressElement = document.getElementById("progress-details");
-                progressElement.innerHTML = "";
 
                 // Get the number of files being converted
                 numFiles = conversionStatus.converting_files.length;
@@ -202,27 +201,24 @@ function openWebSocket() {
                     // Format the expected completion time into a string with the format %A HH:MM
                     expected_completion_time = expected_completion_time.toLocaleString('en-GB', {weekday: 'long', hour12: false, hour: '2-digit', minute: '2-digit'});
 
-                    // Append key / value elements to the progress-details element
-                    appendKeyValueElement(progressElement, "Filename:", conversionStatus.converting_files[conversionNumber].filename, [], ["filename", "data-value-left"]);
-
                     completeString = conversionStatus.converting_files[conversionNumber].progress.toFixed(2) + "%";
 
                     if (conversionStatus.converting_files[conversionNumber].copying) {
                         completeString = completeString + " (Copying)";
                     }
 
-                    appendKeyValueElement(progressElement, "Complete:", completeString, [], ["data-value-left"]);
-                    appendKeyValueElement(progressElement, "Time Since Start:", conversionStatus.converting_files[conversionNumber].time_since_start, [], ["data-value-left"]);
-                    appendKeyValueElement(progressElement, "Time Remaining:", conversionStatus.converting_files[conversionNumber].time_remaining, [], ["data-value-left"]);
-                    appendKeyValueElement(progressElement, "Completion Time:", expected_completion_time, [], ["data-value-left"]);
-                    if (conversionStatus.converting_files[conversionNumber].speed != null) {
-                        appendKeyValueElement(progressElement, "Speed:", conversionStatus.converting_files[conversionNumber].speed, [], ["data-value-left"]);
-                    }
+                    updateCurrentConversionDetails(
+                        progressElement,
+                        conversionStatus.converting_files[conversionNumber],
+                        completeString,
+                        expected_completion_time
+                    );
 
                     // Set the value of the file-progress element to the progress
                     document.getElementById("file-progress").value = conversionStatus.converting_files[conversionNumber].progress;
                 } else {
-                    // Append a key value element to the progress element
+                    // Show no file status when there is no active conversion
+                    progressElement.innerHTML = "";
                     appendKeyValueElement(progressElement, "No file being converted", "", [], []);
 
                     // Set the value of the file-progress element to 0
@@ -396,3 +392,58 @@ function sendMessage(event) {
     // Convert the JSON to a string and send it to the server
     ws.send(JSON.stringify(msg));
 };
+
+function setValueIfChanged(elementId, value) {
+    element = document.getElementById(elementId);
+
+    if (element == null) {
+        return;
+    }
+
+    if (element.innerText !== value) {
+        element.innerText = value;
+    }
+}
+
+function updateCurrentConversionDetails(progressElement, fileData, completeString, expectedCompletionTime) {
+    // Build the rows once, then only update changed values.
+    if (document.getElementById("filename-value") == null) {
+        progressElement.innerHTML = "";
+
+        filenameWrapperElement = appendKeyValueElement(progressElement, "Filename:", fileData.filename, [], ["filename", "data-value-left"], "filename");
+        enableFilenamePopup(filenameWrapperElement, fileData.filename);
+        appendKeyValueElement(progressElement, "Complete:", completeString, [], ["data-value-left"], "complete");
+        appendKeyValueElement(progressElement, "Time Since Start:", fileData.time_since_start, [], ["data-value-left"], "time_since_start");
+        appendKeyValueElement(progressElement, "Time Remaining:", fileData.time_remaining, [], ["data-value-left"], "time_remaining");
+        appendKeyValueElement(progressElement, "Completion Time:", expectedCompletionTime, [], ["data-value-left"], "completion_time");
+
+        if (fileData.speed != null) {
+            appendKeyValueElement(progressElement, "Speed:", fileData.speed, [], ["data-value-left"], "speed");
+        }
+    }
+
+    filenameElement = document.getElementById("filename-value");
+    if (filenameElement != null) {
+        updateFilenamePopupText(filenameElement, fileData.filename);
+    }
+    setValueIfChanged("complete-value", completeString);
+    setValueIfChanged("time_since_start-value", fileData.time_since_start);
+    setValueIfChanged("time_remaining-value", fileData.time_remaining);
+    setValueIfChanged("completion_time-value", expectedCompletionTime);
+
+    speedWrapperKey = document.getElementById("speed-key");
+    speedWrapperValue = document.getElementById("speed-value");
+
+    if (fileData.speed != null) {
+        if (speedWrapperKey == null || speedWrapperValue == null) {
+            appendKeyValueElement(progressElement, "Speed:", fileData.speed, [], ["data-value-left"], "speed");
+        } else {
+            setValueIfChanged("speed-value", fileData.speed);
+        }
+    } else {
+        if (speedWrapperKey != null && speedWrapperValue != null) {
+            speedWrapperKey.remove();
+            speedWrapperValue.remove();
+        }
+    }
+}

@@ -180,11 +180,17 @@ body {
 
 .details-container {
     display: grid;
-    grid-template-columns: auto 1fr;
+    grid-template-columns: auto minmax(0, 1fr);
     gap: 0.04rem 0;
     width: 100%;
     overflow-y: auto;
     padding: 0.08rem 0 0;
+}
+
+#progress-details {
+    min-width: 0;
+    overflow-x: hidden;
+    overflow-y: visible;
 }
 
 .key-value-wrapper {
@@ -211,11 +217,13 @@ body {
 .data-value {
     text-align: right;
     font-weight: 600;
+    min-width: 0;
 }
 
 .data-value-left {
     text-align: left;
     font-weight: 600;
+    min-width: 0;
 }
 
 .main {
@@ -377,9 +385,61 @@ body {
 }
 
 .filename {
+    position: relative;
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    overflow: visible;
+    cursor: pointer;
+}
+
+.filename-text {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+}
+
+.filename::after {
+    content: attr(data-full-filename);
+    position: absolute;
+    right: 0;
+    left: auto;
+    top: calc(100% + 0.2rem);
+    min-width: 0;
+    max-width: min(34rem, calc(100vw - 1rem));
+    width: max-content;
+    padding: 0.36rem 0.5rem;
+    border-radius: 0.45rem;
+    border: 1px solid hsla(214, 28%, 34%, 0.22);
+    background: hsla(216, 26%, 15%, 0.96);
+    color: hsl(0, 0%, 100%);
+    font-size: 0.78rem;
+    line-height: 1.2;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    box-shadow: 0 10px 22px hsla(216, 45%, 16%, 0.35);
+    z-index: 20;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(-0.1rem);
+    transition: opacity 120ms ease, transform 120ms ease;
+}
+
+@media screen and (max-width: 44rem) {
+    .filename::after {
+        max-width: calc(100vw - 0.7rem);
+    }
+}
+
+.filename:hover::after,
+.filename:focus-visible::after,
+.filename.filename-expanded::after {
+    opacity: 1;
+    transform: translateY(0);
 }
 
 @media screen and (max-width: 64rem) {
