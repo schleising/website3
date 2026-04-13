@@ -130,6 +130,12 @@ const constellations = [
     }
 ];
 
+const polarisCoordinates = {
+    name: "Polaris",
+    ra: 37.95,
+    dec: 89.26
+};
+
 const planetaryElements = {
     Mercury: { N0: 48.3313, N1: 3.24587e-5, i0: 7.0047, i1: 5e-8, w0: 29.1241, w1: 1.01444e-5, a0: 0.387098, a1: 0, e0: 0.205635, e1: 5.59e-10, M0: 168.6562, M1: 4.0923344368 },
     Venus: { N0: 76.6799, N1: 2.4659e-5, i0: 3.3946, i1: 2.75e-8, w0: 54.891, w1: 1.38374e-5, a0: 0.72333, a1: 0, e0: 0.006773, e1: -1.302e-9, M0: 48.0052, M1: 1.6021302244 },
@@ -369,6 +375,39 @@ function drawConstellationOverlay(ctx, cx, cy, radius, skyContext) {
     }
 }
 
+function drawPolarisOverlay(ctx, cx, cy, radius, skyContext) {
+    if (skyContext == null) {
+        return;
+    }
+
+    const { date, latitude, longitude } = skyContext;
+    const horizontal = getHorizontalCoordinatesFromEquatorial(
+        polarisCoordinates.ra,
+        polarisCoordinates.dec,
+        date,
+        latitude,
+        longitude
+    );
+
+    if (horizontal.altitudeDegrees < 0) {
+        return;
+    }
+
+    const point = projectToSky(horizontal.azimuthDegrees, horizontal.altitudeDegrees, cx, cy, radius);
+    ctx.beginPath();
+    ctx.arc(point.x, point.y, 4.5, 0, Math.PI * 2);
+    ctx.fillStyle = "hsl(50, 100%, 82%)";
+    ctx.fill();
+    ctx.strokeStyle = "hsla(220, 45%, 12%, 0.9)";
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    ctx.fillStyle = "hsla(53, 100%, 88%, 0.96)";
+    ctx.font = "12px Outfit, sans-serif";
+    ctx.textAlign = "left";
+    ctx.fillText(polarisCoordinates.name, point.x + 7, point.y - 8);
+}
+
 function drawSkyDiagram(targetCanvas, visiblePlanets, skyContext = null) {
     if (targetCanvas == null) {
         return;
@@ -426,6 +465,7 @@ function drawSkyDiagram(targetCanvas, visiblePlanets, skyContext = null) {
     ctx.fillText("W", cx - radius - 10, cy + 4);
 
     drawConstellationOverlay(ctx, cx, cy, radius, skyContext);
+    drawPolarisOverlay(ctx, cx, cy, radius, skyContext);
 
     if (visiblePlanets.length === 0) {
         ctx.fillStyle = "hsla(210, 26%, 88%, 0.86)";
