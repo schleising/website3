@@ -1794,10 +1794,6 @@ function drawSkyArView(targetCanvas, skyContext = null) {
     drawArMarker("Moon", moonHorizontal.azimuthDegrees, moonHorizontal.altitudeDegrees, "#f7fbff", 4.1);
 
     for (const star of nakedEyeStars) {
-        if (star.mag > 2.2) {
-            continue;
-        }
-
         const horizontal = getHorizontalCoordinatesFromEquatorial(
             star.ra,
             star.dec,
@@ -1807,16 +1803,33 @@ function drawSkyArView(targetCanvas, skyContext = null) {
             { precessFromJ2000: true }
         );
 
-        const point = projectArPoint(horizontal.azimuthDegrees, horizontal.altitudeDegrees);
-        if (point == null) {
-            continue;
-        }
+        const starRadius = Math.max(1.2, Math.min(3.1, 3.2 - Math.max(-1, Math.min(6, star.mag)) * 0.34));
+        drawArMarker(
+            star.name,
+            horizontal.azimuthDegrees,
+            horizontal.altitudeDegrees,
+            "hsla(44, 100%, 92%, 0.95)",
+            starRadius
+        );
+    }
 
-        ctx.beginPath();
-        ctx.arc(point.x, point.y, 2.1, 0, Math.PI * 2);
-        const starAlpha = horizontal.altitudeDegrees < 0 ? 0.42 : 0.9;
-        ctx.fillStyle = `hsla(44, 100%, 92%, ${starAlpha})`;
-        ctx.fill();
+    for (const target of deepSkyObjects) {
+        const horizontal = getHorizontalCoordinatesFromEquatorial(
+            target.ra,
+            target.dec,
+            date,
+            latitude,
+            longitude,
+            { precessFromJ2000: true }
+        );
+
+        drawArMarker(
+            target.name,
+            horizontal.azimuthDegrees,
+            horizontal.altitudeDegrees,
+            "hsla(186, 88%, 72%, 0.95)",
+            2.6
+        );
     }
 
     ctx.fillStyle = skyPalette.labelFill;
