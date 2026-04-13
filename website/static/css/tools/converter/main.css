@@ -13,6 +13,12 @@
     --accent-soft: hsl(194, 54%, 93%);
     --ok-soft: hsl(150, 36%, 91%);
     --ok-strong: hsl(151, 52%, 27%);
+    --current-empty-bg: hsla(0, 0%, 100%, 0.74);
+    --current-empty-border: hsla(214, 28%, 34%, 0.22);
+    --filename-popup-bg: hsla(216, 26%, 15%, 0.96);
+    --filename-popup-border: hsla(214, 28%, 34%, 0.22);
+    --filename-popup-text: hsl(0, 0%, 100%);
+    --filename-popup-shadow: 0 10px 22px hsla(216, 45%, 16%, 0.35);
     --stats-value-font-size: 0.92rem;
     --stats-value-font-weight: 700;
     --stats-value-line-height: 1.2;
@@ -428,12 +434,12 @@ body::after {
 }
 
 .current-empty-state {
-    border: 1px dashed hsla(214, 28%, 34%, 0.22);
+    border: 1px dashed var(--current-empty-border);
     border-radius: 0.58rem;
     padding: 0.5rem 0.6rem;
     font-size: 0.88rem;
     color: var(--text-subtle);
-    background: hsla(0, 0%, 100%, 0.74);
+    background: var(--current-empty-bg);
 }
 
 #progress-details,
@@ -669,6 +675,12 @@ body.dark-mode {
     --accent-soft: hsla(192, 35%, 26%, 0.65);
     --ok-soft: hsla(149, 38%, 26%, 0.75);
     --ok-strong: hsl(147, 62%, 78%);
+    --current-empty-bg: hsla(214, 24%, 24%, 0.9);
+    --current-empty-border: hsla(206, 28%, 68%, 0.2);
+    --filename-popup-bg: hsla(214, 30%, 12%, 0.98);
+    --filename-popup-border: hsla(206, 32%, 74%, 0.24);
+    --filename-popup-text: hsl(210, 20%, 96%);
+    --filename-popup-shadow: 0 10px 22px hsla(214, 44%, 5%, 0.45);
     --shadow-soft: 0 8px 24px hsla(214, 36%, 6%, 0.3);
     --shadow-panel: 0 14px 42px hsla(214, 36%, 5%, 0.38);
 }
@@ -893,14 +905,14 @@ body.dark-mode .theme-switch-thumb-moon {
     width: max-content;
     padding: 0.36rem 0.5rem;
     border-radius: 0.45rem;
-    border: 1px solid hsla(214, 28%, 34%, 0.22);
-    background: hsla(216, 26%, 15%, 0.96);
-    color: hsl(0, 0%, 100%);
+    border: 1px solid var(--filename-popup-border);
+    background: var(--filename-popup-bg);
+    color: var(--filename-popup-text);
     font-size: 0.78rem;
     line-height: 1.2;
     white-space: normal;
     overflow-wrap: anywhere;
-    box-shadow: 0 10px 22px hsla(216, 45%, 16%, 0.35);
+    box-shadow: var(--filename-popup-shadow);
     z-index: 20;
     opacity: 0;
     pointer-events: none;
@@ -922,13 +934,6 @@ body.dark-mode .theme-switch-thumb-moon {
 .filename.filename-expanded::after {
     opacity: 1;
     transform: translateX(-50%) translateY(0) scaleX(1);
-}
-
-body.dark-mode .filename::after {
-    border-color: hsla(206, 32%, 74%, 0.24) !important;
-    background: hsla(214, 30%, 12%, 0.98) !important;
-    color: hsl(210, 20%, 96%) !important;
-    box-shadow: 0 10px 22px hsla(214, 44%, 5%, 0.45);
 }
 
 @media screen and (max-width: 64rem) {
