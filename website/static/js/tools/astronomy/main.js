@@ -17,6 +17,33 @@ const civilEndElement = document.getElementById("civil-end");
 const moonCanvas = document.getElementById("moon-canvas");
 const moonNameElement = document.getElementById("moon-name");
 const moonDetailsElement = document.getElementById("moon-details");
+const planetWindowElement = document.getElementById("planet-window");
+const planetListElement = document.getElementById("planet-list");
+
+const planetaryElements = {
+    Mercury: { N0: 48.3313, N1: 3.24587e-5, i0: 7.0047, i1: 5e-8, w0: 29.1241, w1: 1.01444e-5, a0: 0.387098, a1: 0, e0: 0.205635, e1: 5.59e-10, M0: 168.6562, M1: 4.0923344368 },
+    Venus: { N0: 76.6799, N1: 2.4659e-5, i0: 3.3946, i1: 2.75e-8, w0: 54.891, w1: 1.38374e-5, a0: 0.72333, a1: 0, e0: 0.006773, e1: -1.302e-9, M0: 48.0052, M1: 1.6021302244 },
+    Mars: { N0: 49.5574, N1: 2.11081e-5, i0: 1.8497, i1: -1.78e-8, w0: 286.5016, w1: 2.92961e-5, a0: 1.523688, a1: 0, e0: 0.093405, e1: 2.516e-9, M0: 18.6021, M1: 0.5240207766 },
+    Jupiter: { N0: 100.4542, N1: 2.76854e-5, i0: 1.303, i1: -1.557e-7, w0: 273.8777, w1: 1.64505e-5, a0: 5.20256, a1: 0, e0: 0.048498, e1: 4.469e-9, M0: 19.895, M1: 0.0830853001 },
+    Saturn: { N0: 113.6634, N1: 2.3898e-5, i0: 2.4886, i1: -1.081e-7, w0: 339.3939, w1: 2.97661e-5, a0: 9.55475, a1: 0, e0: 0.055546, e1: -9.499e-9, M0: 316.967, M1: 0.0334442282 },
+    Uranus: { N0: 74.0005, N1: 1.3978e-5, i0: 0.7733, i1: 1.9e-8, w0: 96.6612, w1: 3.0565e-5, a0: 19.18171, a1: -1.55e-8, e0: 0.047318, e1: 7.45e-9, M0: 142.5905, M1: 0.011725806 },
+    Neptune: { N0: 131.7806, N1: 3.0173e-5, i0: 1.77, i1: -2.55e-7, w0: 272.8461, w1: -6.027e-6, a0: 30.05826, a1: 3.313e-8, e0: 0.008606, e1: 2.15e-9, M0: 260.2471, M1: 0.005995147 }
+};
+
+const earthElements = {
+    N0: 0,
+    N1: 0,
+    i0: 0,
+    i1: 0,
+    w0: 282.9404,
+    w1: 4.70935e-5,
+    a0: 1,
+    a1: 0,
+    e0: 0.016709,
+    e1: -1.151e-9,
+    M0: 356.047,
+    M1: 0.9856002585
+};
 
 function formatLocalTime(isoString) {
     const date = new Date(isoString);
@@ -25,6 +52,161 @@ function formatLocalTime(isoString) {
         minute: "2-digit",
         second: "2-digit"
     });
+}
+
+function formatClockTime(date) {
+    return date.toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit"
+    });
+}
+
+function toRadians(degrees) {
+    return degrees * (Math.PI / 180);
+}
+
+function toDegrees(radians) {
+    return radians * (180 / Math.PI);
+}
+
+function normalizeDegrees(degrees) {
+    let angle = degrees % 360;
+    if (angle < 0) {
+        angle += 360;
+    }
+
+    return angle;
+}
+
+function toJulianDate(date) {
+    return date.getTime() / 86400000 + 2440587.5;
+}
+
+function solveEccentricAnomaly(meanAnomalyRadians, eccentricity) {
+    let eccentricAnomaly = meanAnomalyRadians + eccentricity * Math.sin(meanAnomalyRadians) * (1 + eccentricity * Math.cos(meanAnomalyRadians));
+
+    for (let i = 0; i < 5; i++) {
+        const delta = (eccentricAnomaly - eccentricity * Math.sin(eccentricAnomaly) - meanAnomalyRadians) / (1 - eccentricity * Math.cos(eccentricAnomaly));
+        eccentricAnomaly -= delta;
+    }
+
+    return eccentricAnomaly;
+}
+
+function getHeliocentricCoordinates(elements, d) {
+    const N = toRadians(normalizeDegrees(elements.N0 + elements.N1 * d));
+    const i = toRadians(elements.i0 + elements.i1 * d);
+    const w = toRadians(normalizeDegrees(elements.w0 + elements.w1 * d));
+    const a = elements.a0 + elements.a1 * d;
+    const e = elements.e0 + elements.e1 * d;
+    const M = toRadians(normalizeDegrees(elements.M0 + elements.M1 * d));
+
+    const E = solveEccentricAnomaly(M, e);
+    const xv = a * (Math.cos(E) - e);
+    const yv = a * (Math.sqrt(1 - e * e) * Math.sin(E));
+
+    const v = Math.atan2(yv, xv);
+    const r = Math.sqrt(xv * xv + yv * yv);
+
+    const xh = r * (Math.cos(N) * Math.cos(v + w) - Math.sin(N) * Math.sin(v + w) * Math.cos(i));
+    const yh = r * (Math.sin(N) * Math.cos(v + w) + Math.cos(N) * Math.sin(v + w) * Math.cos(i));
+    const zh = r * (Math.sin(v + w) * Math.sin(i));
+
+    return { x: xh, y: yh, z: zh };
+}
+
+function getPlanetAltitudeDegrees(planetName, date, latitude, longitude) {
+    const jd = toJulianDate(date);
+    const d = jd - 2451543.5;
+
+    const earth = getHeliocentricCoordinates(earthElements, d);
+    const planet = getHeliocentricCoordinates(planetaryElements[planetName], d);
+
+    const xg = planet.x - earth.x;
+    const yg = planet.y - earth.y;
+    const zg = planet.z - earth.z;
+
+    const obliquity = toRadians(23.4393 - 3.563e-7 * d);
+
+    const xeq = xg;
+    const yeq = yg * Math.cos(obliquity) - zg * Math.sin(obliquity);
+    const zeq = yg * Math.sin(obliquity) + zg * Math.cos(obliquity);
+
+    const rightAscension = Math.atan2(yeq, xeq);
+    const declination = Math.atan2(zeq, Math.sqrt(xeq * xeq + yeq * yeq));
+
+    const gmst = normalizeDegrees(280.46061837 + 360.98564736629 * (jd - 2451545));
+    const lst = normalizeDegrees(gmst + longitude);
+    const hourAngle = toRadians(normalizeDegrees(lst - normalizeDegrees(toDegrees(rightAscension))));
+
+    const latitudeRadians = toRadians(latitude);
+    const altitude = Math.asin(
+        Math.sin(declination) * Math.sin(latitudeRadians)
+            + Math.cos(declination) * Math.cos(latitudeRadians) * Math.cos(hourAngle)
+    );
+
+    return toDegrees(altitude);
+}
+
+function getEveningWindow(civilTwilightEndIso) {
+    const start = new Date(civilTwilightEndIso);
+    const end = new Date(start);
+    end.setHours(24, 0, 0, 0);
+
+    if (end <= start) {
+        end.setDate(end.getDate() + 1);
+    }
+
+    return { start, end };
+}
+
+function renderVisiblePlanets(civilTwilightEndIso, latitude, longitude) {
+    const { start, end } = getEveningWindow(civilTwilightEndIso);
+    planetWindowElement.innerText = `Window: ${formatClockTime(start)} to ${formatClockTime(end)}`;
+
+    const sampleStepMs = 20 * 60 * 1000;
+    const visibilityThreshold = 10;
+    const visiblePlanets = [];
+
+    for (const planetName of Object.keys(planetaryElements)) {
+        let maxAltitude = -90;
+        let bestTime = start;
+
+        for (let t = start.getTime(); t <= end.getTime(); t += sampleStepMs) {
+            const sampleDate = new Date(t);
+            const altitude = getPlanetAltitudeDegrees(planetName, sampleDate, latitude, longitude);
+
+            if (altitude > maxAltitude) {
+                maxAltitude = altitude;
+                bestTime = sampleDate;
+            }
+        }
+
+        if (maxAltitude >= visibilityThreshold) {
+            visiblePlanets.push({
+                planetName,
+                maxAltitude,
+                bestTime
+            });
+        }
+    }
+
+    planetListElement.innerHTML = "";
+
+    if (visiblePlanets.length === 0) {
+        const item = document.createElement("li");
+        item.innerText = "No major planets rise above 10 degrees in this window.";
+        planetListElement.appendChild(item);
+        return;
+    }
+
+    visiblePlanets.sort((a, b) => b.maxAltitude - a.maxAltitude);
+
+    for (const planet of visiblePlanets) {
+        const item = document.createElement("li");
+        item.innerText = `${planet.planetName}: up to ${planet.maxAltitude.toFixed(0)} degrees at ${formatClockTime(planet.bestTime)}`;
+        planetListElement.appendChild(item);
+    }
 }
 
 function normalizePhase(phaseFraction) {
@@ -139,8 +321,11 @@ async function updateSunTimes(lat, lon) {
         sunsetElement.innerText = formatLocalTime(result.sunset);
         civilBeginElement.innerText = formatLocalTime(result.civil_twilight_begin);
         civilEndElement.innerText = formatLocalTime(result.civil_twilight_end);
+        renderVisiblePlanets(result.civil_twilight_end, lat, lon);
         sunStatus.innerText = `Updated ${new Date().toLocaleTimeString()}`;
     } catch (error) {
+        planetWindowElement.innerText = "Window: --";
+        planetListElement.innerHTML = "<li>Planet visibility unavailable.</li>";
         sunStatus.innerText = "Could not fetch sun times. Please try again.";
         console.error(error);
     }

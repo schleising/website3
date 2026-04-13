@@ -3,8 +3,8 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <link rel="stylesheet" href="/css/tools/astronomy/main.css?v1.0.0">
-    <script defer src="/js/tools/astronomy/main.js?v1.0.1"></script>
+    <link rel="stylesheet" href="/css/tools/astronomy/main.css?v1.0.1">
+    <script defer src="/js/tools/astronomy/main.js?v1.0.2"></script>
     <title>Astronomy</title>
   </head>
   <body>
@@ -28,10 +28,18 @@
           <h2>Sun Times</h2>
           <p id="location-readout" class="meta">Using manual coordinates</p>
           <div class="times">
+            <div><span>Civil Twilight Start</span><strong id="civil-begin">--</strong></div>
             <div><span>Sunrise</span><strong id="sunrise">--</strong></div>
             <div><span>Sunset</span><strong id="sunset">--</strong></div>
-            <div><span>Civil Twilight Start</span><strong id="civil-begin">--</strong></div>
             <div><span>Civil Twilight End</span><strong id="civil-end">--</strong></div>
+          </div>
+          <div class="planet-visibility">
+            <h3>Planets Visible This Evening</h3>
+            <p id="planet-window" class="meta">Window: --</p>
+            <ul id="planet-list" class="planet-list">
+              <li>Calculating...</li>
+            </ul>
+            <p class="meta">Approximate visibility above 10 degrees altitude.</p>
           </div>
           <p id="sun-status" class="meta">Waiting for data...</p>
         </article>
