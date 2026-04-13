@@ -146,18 +146,25 @@ function syncSidebarWidths() {
     const rightAvailable = !rightSidebar.classList.contains("hidden-sidebar");
     const rightWidth = rightAvailable ? measureSidebarContentWidth(rightSidebar) : 0;
     const contentWidth = Math.max(leftWidth, rightWidth);
-    if (contentWidth > 0) {
+    const overlayMode = isOverlaySidebarMode();
+
+    if (!overlayMode && contentWidth > 0) {
         sharedSidebarWidthPx = Math.max(sharedSidebarWidthPx, contentWidth);
     }
 
-    const finalWidth = sharedSidebarWidthPx;
-
-    if (finalWidth > 0) {
-        leftSidebar.style.width = finalWidth + "px";
-        rightSidebar.style.width = finalWidth + "px";
+    if (overlayMode) {
+        if (leftWidth > 0) {
+            leftSidebar.style.width = leftWidth + "px";
+        }
+        if (rightAvailable && rightWidth > 0) {
+            rightSidebar.style.width = rightWidth + "px";
+        }
+    } else if (sharedSidebarWidthPx > 0) {
+        leftSidebar.style.width = sharedSidebarWidthPx + "px";
+        rightSidebar.style.width = sharedSidebarWidthPx + "px";
     }
 
-    updateSidebarCollapseMode(finalWidth, rightAvailable);
+    updateSidebarCollapseMode(Math.max(contentWidth, sharedSidebarWidthPx), rightAvailable);
 }
 
 function measureSidebarContentWidth(sidebar) {
