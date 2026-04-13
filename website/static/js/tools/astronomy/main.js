@@ -114,9 +114,7 @@ const fullscreenSkyViewState = {
 };
 
 const arCatalogConfig = {
-    maxStarMagnitude: 4.8,
-    milkyWayHalfWidthDegrees: 11,
-    milkyWaySampleStepDegrees: 2
+    maxStarMagnitude: 4.8
 };
 
 const arCatalogAssetPaths = {
@@ -134,8 +132,7 @@ const arCatalogState = {
     loadPromise: null,
     stars: [],
     constellations: [],
-    deepSkyObjects: [],
-    milkyWayBandSamples: []
+    deepSkyObjects: []
 };
 
 const arCompassDirections = [
@@ -671,43 +668,6 @@ function getArStarLabel(starId, starNameEntry) {
     return starId.length > 0 ? `HIP ${starId}` : "Catalog Star";
 }
 
-function galacticToEquatorialCoordinates(longitudeDegrees, latitudeDegrees) {
-    const longitudeRadians = toRadians(longitudeDegrees);
-    const latitudeRadians = toRadians(latitudeDegrees);
-
-    const galacticX = Math.cos(latitudeRadians) * Math.cos(longitudeRadians);
-    const galacticY = Math.cos(latitudeRadians) * Math.sin(longitudeRadians);
-    const galacticZ = Math.sin(latitudeRadians);
-
-    // Transform from galactic to J2000 equatorial using the transpose of the ICRS->Galactic matrix.
-    const equatorialX = -0.0548755604 * galacticX + 0.4941094279 * galacticY - 0.8676661490 * galacticZ;
-    const equatorialY = -0.8734370902 * galacticX - 0.4448296300 * galacticY - 0.1980763734 * galacticZ;
-    const equatorialZ = -0.4838350155 * galacticX + 0.7469822445 * galacticY + 0.4559837762 * galacticZ;
-
-    return {
-        ra: normalizeDegrees(toDegrees(Math.atan2(equatorialY, equatorialX))),
-        dec: toDegrees(Math.asin(Math.max(-1, Math.min(1, equatorialZ))))
-    };
-}
-
-function buildMilkyWayBandSamples(halfWidthDegrees = 11, sampleStepDegrees = 2) {
-    const samples = [];
-
-    for (let longitudeDegrees = 0; longitudeDegrees <= 360; longitudeDegrees += sampleStepDegrees) {
-        const top = galacticToEquatorialCoordinates(longitudeDegrees, halfWidthDegrees);
-        const bottom = galacticToEquatorialCoordinates(longitudeDegrees, -halfWidthDegrees);
-        const center = galacticToEquatorialCoordinates(longitudeDegrees, 0);
-
-        samples.push({
-            top,
-            bottom,
-            center
-        });
-    }
-
-    return samples;
-}
-
 async function ensureArCatalogLoaded() {
     if (arCatalogState.isLoaded || arCatalogState.hasLoadError) {
         return;
@@ -926,11 +886,6 @@ async function ensureArCatalogLoaded() {
                 const bMag = b.mag == null ? Number.POSITIVE_INFINITY : b.mag;
                 return aMag - bMag;
             });
-
-        arCatalogState.milkyWayBandSamples = buildMilkyWayBandSamples(
-            arCatalogConfig.milkyWayHalfWidthDegrees,
-            arCatalogConfig.milkyWaySampleStepDegrees
-        );
 
         arCatalogState.isLoaded = true;
     })()
@@ -2374,86 +2329,6 @@ function drawSkyArView(targetCanvas, skyContext = null) {
 
     ctx.restore();
 
-    if (arCatalogState.milkyWayBandSamples.length > 1) {
-        const projectedBandSamples = arCatalogState.milkyWayBandSamples.map(sample => {
-            const topHorizontal = getHorizontalCoordinatesFromEquatorial(
-                sample.top.ra,
-                sample.top.dec,
-                date,
-                latitude,
-                longitude,
-                { precessFromJ2000: true }
-            );
-            const bottomHorizontal = getHorizontalCoordinatesFromEquatorial(
-                sample.bottom.ra,
-                sample.bottom.dec,
-                date,
-                latitude,
-                longitude,
-                { precessFromJ2000: true }
-            );
-            const centerSource = sample.center || sample.top;
-            const centerHorizontal = getHorizontalCoordinatesFromEquatorial(
-                centerSource.ra,
-                centerSource.dec,
-                date,
-                latitude,
-                longitude,
-                { precessFromJ2000: true }
-            );
-
-            return {
-                top: projectArPoint(topHorizontal.azimuthDegrees, topHorizontal.altitudeDegrees),
-                bottom: projectArPoint(bottomHorizontal.azimuthDegrees, bottomHorizontal.altitudeDegrees),
-                center: projectArPoint(centerHorizontal.azimuthDegrees, centerHorizontal.altitudeDegrees),
-                centerAltitude: centerHorizontal.altitudeDegrees
-            };
-        });
-
-        ctx.save();
-        ctx.lineCap = "round";
-        ctx.lineJoin = "round";
-        for (let sampleIndex = 0; sampleIndex < projectedBandSamples.length - 1; sampleIndex += 1) {
-            const current = projectedBandSamples[sampleIndex];
-            const next = projectedBandSamples[sampleIndex + 1];
-            if (current.center == null || next.center == null) {
-                continue;
-            }
-
-            const centerDistance = Math.hypot(next.center.x - current.center.x, next.center.y - current.center.y);
-            if (centerDistance > Math.min(width, height) * 0.34) {
-                continue;
-            }
-
-            const currentThickness = current.top != null && current.bottom != null
-                ? Math.hypot(current.top.x - current.bottom.x, current.top.y - current.bottom.y)
-                : height * 0.18;
-            const nextThickness = next.top != null && next.bottom != null
-                ? Math.hypot(next.top.x - next.bottom.x, next.top.y - next.bottom.y)
-                : height * 0.18;
-            const bandWidth = Math.max(16, Math.min(height * 0.4, (currentThickness + nextThickness) * 0.5));
-            const averageAltitude = (current.centerAltitude + next.centerAltitude) / 2;
-            const baseAlpha = averageAltitude < 0 ? 0.06 : 0.14;
-
-            ctx.globalAlpha = baseAlpha;
-            ctx.strokeStyle = "hsla(197, 64%, 84%, 0.92)";
-            ctx.lineWidth = bandWidth;
-            ctx.beginPath();
-            ctx.moveTo(current.center.x, current.center.y);
-            ctx.lineTo(next.center.x, next.center.y);
-            ctx.stroke();
-
-            ctx.globalAlpha = baseAlpha * 0.72;
-            ctx.strokeStyle = "hsla(208, 92%, 92%, 0.92)";
-            ctx.lineWidth = bandWidth * 0.34;
-            ctx.beginPath();
-            ctx.moveTo(current.center.x, current.center.y);
-            ctx.lineTo(next.center.x, next.center.y);
-            ctx.stroke();
-        }
-        ctx.restore();
-    }
-
     ctx.save();
     ctx.lineWidth = 1.15;
     for (const constellation of activeConstellations) {
@@ -2557,36 +2432,87 @@ function drawSkyArView(targetCanvas, skyContext = null) {
         return { color: "hsla(186, 88%, 72%, 0.95)", radius: 2.8 };
     };
 
+    const solarBodyDiametersKm = {
+        Sun: 1392700,
+        Moon: 3474.8,
+        Mercury: 4879.4,
+        Venus: 12103.6,
+        Mars: 6779,
+        Jupiter: 139820,
+        Saturn: 116460,
+        Uranus: 50724,
+        Neptune: 49244
+    };
+
+    const getSolarSystemArRadius = bodyName => {
+        const bodyDiameter = solarBodyDiametersKm[bodyName];
+        if (!Number.isFinite(bodyDiameter)) {
+            return 6;
+        }
+
+        const minDiameter = solarBodyDiametersKm.Moon;
+        const maxDiameter = solarBodyDiametersKm.Sun;
+        const normalizedDiameter = (Math.log10(bodyDiameter) - Math.log10(minDiameter))
+            / (Math.log10(maxDiameter) - Math.log10(minDiameter));
+        const minRadius = Math.max(5, Math.min(width, height) * 0.015);
+        const maxRadius = Math.max(16, Math.min(width, height) * 0.06);
+
+        return minRadius + normalizedDiameter * (maxRadius - minRadius);
+    };
+
     for (const planetName of allPlanetNames) {
         const horizontal = getPlanetHorizontalCoordinates(planetName, date, latitude, longitude);
+        const planetRadius = getSolarSystemArRadius(planetName);
         drawArMarker(
             planetName,
             horizontal.azimuthDegrees,
             horizontal.altitudeDegrees,
             planetColors[planetName] || "#ffffff",
-            3.4,
-            { avoidLabelCollisions: true }
+            planetRadius,
+            {
+                showLabel: true,
+                avoidLabelCollisions: false,
+                labelFontSize: 12,
+                labelXOffset: planetRadius + 5,
+                labelYOffset: -1
+            }
         );
     }
 
     const sunHorizontal = getSunHorizontalCoordinates(date, latitude, longitude);
+    const sunRadius = getSolarSystemArRadius("Sun");
     drawArMarker(
         "Sun",
         sunHorizontal.azimuthDegrees,
         sunHorizontal.altitudeDegrees,
         "hsl(45, 100%, 62%)",
-        4.1,
-        { avoidLabelCollisions: true }
+        sunRadius,
+        {
+            showLabel: true,
+            avoidLabelCollisions: false,
+            labelFontSize: 13,
+            labelXOffset: sunRadius + 6,
+            labelYOffset: -1,
+            labelColor: "hsla(46, 100%, 90%, 0.98)"
+        }
     );
 
     const moonHorizontal = getMoonHorizontalCoordinates(date, latitude, longitude);
+    const moonRadius = getSolarSystemArRadius("Moon");
     drawArMarker(
         "Moon",
         moonHorizontal.azimuthDegrees,
         moonHorizontal.altitudeDegrees,
         "#f7fbff",
-        4.1,
-        { avoidLabelCollisions: true }
+        moonRadius,
+        {
+            showLabel: true,
+            avoidLabelCollisions: false,
+            labelFontSize: 12,
+            labelXOffset: moonRadius + 6,
+            labelYOffset: -1,
+            labelColor: "hsla(210, 40%, 96%, 0.98)"
+        }
     );
 
     for (const star of activeStars) {
@@ -2601,7 +2527,7 @@ function drawSkyArView(targetCanvas, skyContext = null) {
 
         const starMagnitude = Number.isFinite(star.mag) ? star.mag : arCatalogConfig.maxStarMagnitude;
         const starRadius = Math.max(1.08, Math.min(3.2, 3.45 - Math.max(-1, Math.min(6, starMagnitude)) * 0.34));
-        const showStarLabel = starMagnitude <= 2.4;
+        const showStarLabel = starMagnitude <= 2.3;
         drawArMarker(
             typeof star.name === "string" && star.name.trim().length > 0 ? star.name : "Catalog Star",
             horizontal.azimuthDegrees,
@@ -2610,8 +2536,8 @@ function drawSkyArView(targetCanvas, skyContext = null) {
             starRadius,
             {
                 showLabel: showStarLabel,
-                avoidLabelCollisions: true,
-                labelFontSize: 10
+                avoidLabelCollisions: !showStarLabel,
+                labelFontSize: showStarLabel ? 11 : 10
             }
         );
     }
@@ -2629,7 +2555,7 @@ function drawSkyArView(targetCanvas, skyContext = null) {
         const markerStyle = getDeepSkyMarkerStyle(target);
         const targetName = typeof target.name === "string" ? target.name.trim() : "";
         const targetMagnitude = Number.isFinite(target.mag) ? target.mag : Number.POSITIVE_INFINITY;
-        const showDeepSkyLabel = /^m\s*\d+/i.test(targetName) || targetMagnitude <= 6.4;
+        const showDeepSkyLabel = /^m\s*\d+/i.test(targetName) || targetMagnitude <= 5.2;
         drawArMarker(
             targetName.length > 0 ? targetName : "Deep Sky Object",
             horizontal.azimuthDegrees,
@@ -2638,8 +2564,8 @@ function drawSkyArView(targetCanvas, skyContext = null) {
             markerStyle.radius,
             {
                 showLabel: showDeepSkyLabel,
-                avoidLabelCollisions: true,
-                labelFontSize: 10
+                avoidLabelCollisions: !showDeepSkyLabel,
+                labelFontSize: showDeepSkyLabel ? 11 : 10
             }
         );
     }
