@@ -1756,6 +1756,10 @@ function drawSkyArView(targetCanvas, skyContext = null) {
             return;
         }
 
+        const isBelowHorizon = altitudeDegrees < 0;
+        ctx.save();
+        ctx.globalAlpha = isBelowHorizon ? 0.48 : 1;
+
         ctx.beginPath();
         ctx.arc(point.x, point.y, radius, 0, Math.PI * 2);
         ctx.fillStyle = color;
@@ -1769,15 +1773,12 @@ function drawSkyArView(targetCanvas, skyContext = null) {
         ctx.textAlign = "left";
         ctx.textBaseline = "middle";
         ctx.fillText(name, point.x + 7, point.y - 1);
+        ctx.restore();
     };
 
     const { date, latitude, longitude } = skyContext;
     for (const planetName of allPlanetNames) {
         const horizontal = getPlanetHorizontalCoordinates(planetName, date, latitude, longitude);
-        if (horizontal.altitudeDegrees < -10) {
-            continue;
-        }
-
         drawArMarker(
             planetName,
             horizontal.azimuthDegrees,
@@ -1787,14 +1788,10 @@ function drawSkyArView(targetCanvas, skyContext = null) {
     }
 
     const sunHorizontal = getSunHorizontalCoordinates(date, latitude, longitude);
-    if (sunHorizontal.altitudeDegrees >= -10) {
-        drawArMarker("Sun", sunHorizontal.azimuthDegrees, sunHorizontal.altitudeDegrees, "hsl(45, 100%, 62%)", 4.1);
-    }
+    drawArMarker("Sun", sunHorizontal.azimuthDegrees, sunHorizontal.altitudeDegrees, "hsl(45, 100%, 62%)", 4.1);
 
     const moonHorizontal = getMoonHorizontalCoordinates(date, latitude, longitude);
-    if (moonHorizontal.altitudeDegrees >= -10) {
-        drawArMarker("Moon", moonHorizontal.azimuthDegrees, moonHorizontal.altitudeDegrees, "#f7fbff", 4.1);
-    }
+    drawArMarker("Moon", moonHorizontal.azimuthDegrees, moonHorizontal.altitudeDegrees, "#f7fbff", 4.1);
 
     for (const star of nakedEyeStars) {
         if (star.mag > 2.2) {
@@ -1809,9 +1806,6 @@ function drawSkyArView(targetCanvas, skyContext = null) {
             longitude,
             { precessFromJ2000: true }
         );
-        if (horizontal.altitudeDegrees < -10) {
-            continue;
-        }
 
         const point = projectArPoint(horizontal.azimuthDegrees, horizontal.altitudeDegrees);
         if (point == null) {
@@ -1820,7 +1814,8 @@ function drawSkyArView(targetCanvas, skyContext = null) {
 
         ctx.beginPath();
         ctx.arc(point.x, point.y, 2.1, 0, Math.PI * 2);
-        ctx.fillStyle = "hsla(44, 100%, 92%, 0.9)";
+        const starAlpha = horizontal.altitudeDegrees < 0 ? 0.42 : 0.9;
+        ctx.fillStyle = `hsla(44, 100%, 92%, ${starAlpha})`;
         ctx.fill();
     }
 
