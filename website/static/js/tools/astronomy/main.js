@@ -113,6 +113,50 @@ const fullscreenSkyViewState = {
     pinchStartScale: 1
 };
 
+const arCatalogConfig = {
+    maxStarMagnitude: 4.8,
+    milkyWayHalfWidthDegrees: 11,
+    milkyWaySampleStepDegrees: 2
+};
+
+const arCatalogAssetPaths = {
+    stars: "/js/tools/astronomy/data/stars.6.json",
+    starNames: "/js/tools/astronomy/data/starnames.json",
+    constellationLines: "/js/tools/astronomy/data/constellations.lines.json",
+    constellationNames: "/js/tools/astronomy/data/constellations.json",
+    messier: "/js/tools/astronomy/data/messier.json",
+    brightDeepSky: "/js/tools/astronomy/data/dsos.bright.json"
+};
+
+const arCatalogState = {
+    isLoaded: false,
+    hasLoadError: false,
+    loadPromise: null,
+    stars: [],
+    constellations: [],
+    deepSkyObjects: [],
+    milkyWayBandSamples: []
+};
+
+const arCompassDirections = [
+    { label: "N", azimuthDegrees: 0 },
+    { label: "NNE", azimuthDegrees: 22.5 },
+    { label: "NE", azimuthDegrees: 45 },
+    { label: "ENE", azimuthDegrees: 67.5 },
+    { label: "E", azimuthDegrees: 90 },
+    { label: "ESE", azimuthDegrees: 112.5 },
+    { label: "SE", azimuthDegrees: 135 },
+    { label: "SSE", azimuthDegrees: 157.5 },
+    { label: "S", azimuthDegrees: 180 },
+    { label: "SSW", azimuthDegrees: 202.5 },
+    { label: "SW", azimuthDegrees: 225 },
+    { label: "WSW", azimuthDegrees: 247.5 },
+    { label: "W", azimuthDegrees: 270 },
+    { label: "WNW", azimuthDegrees: 292.5 },
+    { label: "NW", azimuthDegrees: 315 },
+    { label: "NNW", azimuthDegrees: 337.5 }
+];
+
 const skyHistoryStateKey = "astronomySkyView";
 const skyHistoryViewMain = "main";
 const skyHistoryViewFullscreen = "fullscreen";
@@ -586,6 +630,320 @@ function initializeSkyHistoryNavigation() {
     });
 }
 
+function toFiniteNumber(value) {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+}
+
+async function fetchArCatalogJson(path) {
+    const response = await fetch(path, { cache: "force-cache" });
+    if (!response.ok) {
+        throw new Error(`Failed to load ${path} (${response.status})`);
+    }
+
+    return response.json();
+}
+
+function getArStarLabel(starId, starNameEntry) {
+    if (starNameEntry != null && typeof starNameEntry === "object") {
+        const properName = typeof starNameEntry.name === "string" ? starNameEntry.name.trim() : "";
+        if (properName.length > 0) {
+            return properName;
+        }
+
+        const designation = typeof starNameEntry.desig === "string" ? starNameEntry.desig.trim() : "";
+        if (designation.length > 0) {
+            return designation;
+        }
+
+        const constellationAbbreviation = typeof starNameEntry.c === "string" ? starNameEntry.c.trim() : "";
+        const bayer = typeof starNameEntry.bayer === "string" ? starNameEntry.bayer.trim() : "";
+        if (bayer.length > 0) {
+            return constellationAbbreviation.length > 0 ? `${bayer} ${constellationAbbreviation}` : bayer;
+        }
+
+        const flamsteed = typeof starNameEntry.flam === "string" ? starNameEntry.flam.trim() : "";
+        if (flamsteed.length > 0) {
+            return constellationAbbreviation.length > 0 ? `${flamsteed} ${constellationAbbreviation}` : flamsteed;
+        }
+    }
+
+    return starId.length > 0 ? `HIP ${starId}` : "Catalog Star";
+}
+
+function galacticToEquatorialCoordinates(longitudeDegrees, latitudeDegrees) {
+    const longitudeRadians = toRadians(longitudeDegrees);
+    const latitudeRadians = toRadians(latitudeDegrees);
+
+    const galacticX = Math.cos(latitudeRadians) * Math.cos(longitudeRadians);
+    const galacticY = Math.cos(latitudeRadians) * Math.sin(longitudeRadians);
+    const galacticZ = Math.sin(latitudeRadians);
+
+    // Transform from galactic to J2000 equatorial using the transpose of the ICRS->Galactic matrix.
+    const equatorialX = -0.0548755604 * galacticX + 0.4941094279 * galacticY - 0.8676661490 * galacticZ;
+    const equatorialY = -0.8734370902 * galacticX - 0.4448296300 * galacticY - 0.1980763734 * galacticZ;
+    const equatorialZ = -0.4838350155 * galacticX + 0.7469822445 * galacticY + 0.4559837762 * galacticZ;
+
+    return {
+        ra: normalizeDegrees(toDegrees(Math.atan2(equatorialY, equatorialX))),
+        dec: toDegrees(Math.asin(Math.max(-1, Math.min(1, equatorialZ))))
+    };
+}
+
+function buildMilkyWayBandSamples(halfWidthDegrees = 11, sampleStepDegrees = 2) {
+    const samples = [];
+
+    for (let longitudeDegrees = 0; longitudeDegrees <= 360; longitudeDegrees += sampleStepDegrees) {
+        const top = galacticToEquatorialCoordinates(longitudeDegrees, halfWidthDegrees);
+        const bottom = galacticToEquatorialCoordinates(longitudeDegrees, -halfWidthDegrees);
+
+        samples.push({
+            top,
+            bottom
+        });
+    }
+
+    return samples;
+}
+
+async function ensureArCatalogLoaded() {
+    if (arCatalogState.isLoaded || arCatalogState.hasLoadError) {
+        return;
+    }
+
+    if (arCatalogState.loadPromise != null) {
+        return arCatalogState.loadPromise;
+    }
+
+    arCatalogState.loadPromise = (async () => {
+        const [
+            starsPayload,
+            starNamesPayload,
+            constellationLinesPayload,
+            constellationNamesPayload,
+            messierPayload,
+            brightDeepSkyPayload
+        ] = await Promise.all([
+            fetchArCatalogJson(arCatalogAssetPaths.stars),
+            fetchArCatalogJson(arCatalogAssetPaths.starNames),
+            fetchArCatalogJson(arCatalogAssetPaths.constellationLines),
+            fetchArCatalogJson(arCatalogAssetPaths.constellationNames),
+            fetchArCatalogJson(arCatalogAssetPaths.messier),
+            fetchArCatalogJson(arCatalogAssetPaths.brightDeepSky)
+        ]);
+
+        const starNameLookup = starNamesPayload != null && typeof starNamesPayload === "object"
+            ? starNamesPayload
+            : {};
+
+        arCatalogState.stars = (starsPayload.features || [])
+            .map(feature => {
+                const coordinates = feature?.geometry?.coordinates;
+                if (!Array.isArray(coordinates) || coordinates.length < 2) {
+                    return null;
+                }
+
+                const ra = toFiniteNumber(coordinates[0]);
+                const dec = toFiniteNumber(coordinates[1]);
+                const mag = toFiniteNumber(feature?.properties?.mag);
+                if (ra == null || dec == null || mag == null || mag > arCatalogConfig.maxStarMagnitude) {
+                    return null;
+                }
+
+                const starId = String(feature?.id ?? "");
+                const starNameEntry = starId.length > 0 ? starNameLookup[starId] : null;
+                return {
+                    id: starId,
+                    name: getArStarLabel(starId, starNameEntry),
+                    ra: normalizeDegrees(ra),
+                    dec,
+                    mag
+                };
+            })
+            .filter(star => star != null)
+            .sort((a, b) => a.mag - b.mag);
+
+        const constellationNameLookup = new Map(
+            (constellationNamesPayload.features || [])
+                .map(feature => {
+                    const identifier = typeof feature?.id === "string" ? feature.id : "";
+                    if (identifier.length === 0) {
+                        return null;
+                    }
+
+                    const displayName = typeof feature?.properties?.name === "string" && feature.properties.name.trim().length > 0
+                        ? feature.properties.name.trim()
+                        : identifier;
+                    return [identifier, displayName];
+                })
+                .filter(entry => entry != null)
+        );
+
+        arCatalogState.constellations = (constellationLinesPayload.features || [])
+            .map(feature => {
+                const lineGroups = feature?.geometry?.coordinates;
+                if (!Array.isArray(lineGroups)) {
+                    return null;
+                }
+
+                const segments = lineGroups
+                    .map(segment => {
+                        if (!Array.isArray(segment)) {
+                            return null;
+                        }
+
+                        const normalizedSegment = segment
+                            .map(point => {
+                                if (!Array.isArray(point) || point.length < 2) {
+                                    return null;
+                                }
+
+                                const ra = toFiniteNumber(point[0]);
+                                const dec = toFiniteNumber(point[1]);
+                                if (ra == null || dec == null) {
+                                    return null;
+                                }
+
+                                return {
+                                    ra: normalizeDegrees(ra),
+                                    dec
+                                };
+                            })
+                            .filter(point => point != null);
+
+                        return normalizedSegment.length >= 2 ? normalizedSegment : null;
+                    })
+                    .filter(segment => segment != null);
+
+                if (segments.length === 0) {
+                    return null;
+                }
+
+                const identifier = typeof feature?.id === "string" ? feature.id : "Constellation";
+                return {
+                    id: identifier,
+                    name: constellationNameLookup.get(identifier) || identifier,
+                    segments
+                };
+            })
+            .filter(constellation => constellation != null);
+
+        const deepSkyLookup = new Map();
+        const addDeepSkyObject = ({ key, name, ra, dec, type = "dso", mag = null }) => {
+            if (typeof name !== "string" || name.trim().length === 0) {
+                return;
+            }
+
+            if (!Number.isFinite(ra) || !Number.isFinite(dec)) {
+                return;
+            }
+
+            const normalizedKey = key || `${name}-${Math.round(ra * 1000)}-${Math.round(dec * 1000)}`;
+            const nextItem = {
+                name: name.trim(),
+                ra: normalizeDegrees(ra),
+                dec,
+                type,
+                mag: Number.isFinite(mag) ? mag : null
+            };
+
+            const existingItem = deepSkyLookup.get(normalizedKey);
+            if (existingItem == null) {
+                deepSkyLookup.set(normalizedKey, nextItem);
+                return;
+            }
+
+            const existingMag = existingItem.mag == null ? Number.POSITIVE_INFINITY : existingItem.mag;
+            const nextMag = nextItem.mag == null ? Number.POSITIVE_INFINITY : nextItem.mag;
+            if (nextMag < existingMag) {
+                deepSkyLookup.set(normalizedKey, nextItem);
+            }
+        };
+
+        for (const feature of messierPayload.features || []) {
+            const coordinates = feature?.geometry?.coordinates;
+            if (!Array.isArray(coordinates) || coordinates.length < 2) {
+                continue;
+            }
+
+            const ra = toFiniteNumber(coordinates[0]);
+            const dec = toFiniteNumber(coordinates[1]);
+            if (ra == null || dec == null) {
+                continue;
+            }
+
+            const props = feature?.properties || {};
+            const labelOptions = [props.alt, props.name, props.desig, feature?.id]
+                .filter(value => typeof value === "string" && value.trim().length > 0)
+                .map(value => value.trim());
+            const name = labelOptions[0] || "Messier Object";
+            const mag = toFiniteNumber(props.mag);
+
+            addDeepSkyObject({
+                key: `messier-${String(feature?.id ?? name)}`,
+                name,
+                ra,
+                dec,
+                type: typeof props.type === "string" ? props.type.toLowerCase() : "messier",
+                mag
+            });
+        }
+
+        for (const feature of brightDeepSkyPayload.features || []) {
+            const coordinates = feature?.geometry?.coordinates;
+            if (!Array.isArray(coordinates) || coordinates.length < 2) {
+                continue;
+            }
+
+            const ra = toFiniteNumber(coordinates[0]);
+            const dec = toFiniteNumber(coordinates[1]);
+            if (ra == null || dec == null) {
+                continue;
+            }
+
+            const props = feature?.properties || {};
+            const labelOptions = [props.desig, props.name, feature?.id]
+                .filter(value => typeof value === "string" && value.trim().length > 0)
+                .map(value => value.trim());
+            const name = labelOptions[0] || "Deep Sky Object";
+            const mag = toFiniteNumber(props.mag);
+
+            addDeepSkyObject({
+                key: `bright-${String(feature?.id ?? name)}`,
+                name,
+                ra,
+                dec,
+                type: typeof props.type === "string" ? props.type.toLowerCase() : "dso",
+                mag
+            });
+        }
+
+        arCatalogState.deepSkyObjects = Array.from(deepSkyLookup.values())
+            .sort((a, b) => {
+                const aMag = a.mag == null ? Number.POSITIVE_INFINITY : a.mag;
+                const bMag = b.mag == null ? Number.POSITIVE_INFINITY : b.mag;
+                return aMag - bMag;
+            });
+
+        arCatalogState.milkyWayBandSamples = buildMilkyWayBandSamples(
+            arCatalogConfig.milkyWayHalfWidthDegrees,
+            arCatalogConfig.milkyWaySampleStepDegrees
+        );
+
+        arCatalogState.isLoaded = true;
+    })()
+        .catch(error => {
+            arCatalogState.hasLoadError = true;
+            console.error("Expanded AR catalog load failed", error);
+        })
+        .finally(() => {
+            arCatalogState.loadPromise = null;
+            scheduleRerenderSkyForCurrentInputs();
+        });
+
+    return arCatalogState.loadPromise;
+}
+
 function isMobileArEligible() {
     return window.matchMedia("(max-width: 56rem) and (pointer: coarse)").matches;
 }
@@ -788,6 +1146,7 @@ async function setSkyArModeEnabled(nextEnabled) {
         skyArViewState.hasReceivedOrientation = false;
         skyArViewState.hasAbsoluteHeading = false;
         skyArViewState.headingDegrees = null;
+        void ensureArCatalogLoaded();
 
         if (skyArViewState.orientationListener == null) {
             skyArViewState.orientationListener = handleSkyArOrientation;
@@ -1860,59 +2219,200 @@ function drawSkyArView(targetCanvas, skyContext = null) {
     };
 
     const { date, latitude, longitude } = skyContext;
+    if (!arCatalogState.isLoaded && !arCatalogState.hasLoadError) {
+        void ensureArCatalogLoaded();
+    }
+
+    const activeStars = arCatalogState.isLoaded && arCatalogState.stars.length > 0
+        ? arCatalogState.stars
+        : nakedEyeStars;
+    const activeDeepSkyObjects = arCatalogState.isLoaded && arCatalogState.deepSkyObjects.length > 0
+        ? arCatalogState.deepSkyObjects
+        : deepSkyObjects;
+    const activeConstellations = arCatalogState.isLoaded && arCatalogState.constellations.length > 0
+        ? arCatalogState.constellations
+        : constellations.map(constellation => {
+            const segments = constellation.lines
+                .map(([fromStar, toStar]) => {
+                    const fromCoordinates = constellation.stars[fromStar];
+                    const toCoordinates = constellation.stars[toStar];
+                    if (fromCoordinates == null || toCoordinates == null) {
+                        return null;
+                    }
+
+                    return [
+                        { ra: fromCoordinates.ra, dec: fromCoordinates.dec },
+                        { ra: toCoordinates.ra, dec: toCoordinates.dec }
+                    ];
+                })
+                .filter(segment => segment != null);
+
+            return {
+                name: constellation.name,
+                segments
+            };
+        });
+
+    const horizonPoints = [];
+    for (let deltaAzimuth = -fovHorizontal / 2 - 3; deltaAzimuth <= fovHorizontal / 2 + 3; deltaAzimuth += 1.4) {
+        const horizonPoint = projectArPoint(normalizeDegrees(viewAzimuth + deltaAzimuth), 0);
+        if (horizonPoint != null) {
+            horizonPoints.push(horizonPoint);
+        }
+    }
+
+    if (horizonPoints.length >= 2) {
+        const horizonTop = Math.min(...horizonPoints.map(point => point.y));
+        const horizonGradient = ctx.createLinearGradient(0, horizonTop, 0, height);
+        horizonGradient.addColorStop(0, "hsla(205, 26%, 20%, 0.02)");
+        horizonGradient.addColorStop(1, "hsla(205, 30%, 4%, 0.36)");
+
+        ctx.save();
+        ctx.fillStyle = horizonGradient;
+        ctx.beginPath();
+        ctx.moveTo(horizonPoints[0].x, height);
+        for (const point of horizonPoints) {
+            ctx.lineTo(point.x, point.y);
+        }
+        ctx.lineTo(horizonPoints[horizonPoints.length - 1].x, height);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.strokeStyle = "hsla(190, 84%, 86%, 0.62)";
+        ctx.lineWidth = 1.6;
+        ctx.beginPath();
+        ctx.moveTo(horizonPoints[0].x, horizonPoints[0].y);
+        for (const point of horizonPoints.slice(1)) {
+            ctx.lineTo(point.x, point.y);
+        }
+        ctx.stroke();
+        ctx.restore();
+    }
+
     ctx.save();
-    ctx.lineWidth = 1.2;
+    ctx.font = "700 10px Outfit, sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "bottom";
+    ctx.strokeStyle = "hsla(216, 52%, 8%, 0.92)";
+    ctx.fillStyle = "hsla(190, 100%, 90%, 0.95)";
+    ctx.lineWidth = 2.4;
+    ctx.shadowColor = "hsla(214, 58%, 6%, 0.9)";
+    ctx.shadowBlur = 5;
 
-    for (const constellation of constellations) {
-        const projectedStars = {};
-        let labelXSum = 0;
-        let labelYSum = 0;
-        let labelPointCount = 0;
-        let belowHorizonPointCount = 0;
-        let visibleSegmentCount = 0;
+    for (const compassDirection of arCompassDirections) {
+        const point = projectArPoint(compassDirection.azimuthDegrees, 0);
+        if (point == null) {
+            continue;
+        }
 
-        for (const [starName, coordinates] of Object.entries(constellation.stars)) {
-            const horizontal = getHorizontalCoordinatesFromEquatorial(
-                coordinates.ra,
-                coordinates.dec,
+        ctx.beginPath();
+        ctx.moveTo(point.x, point.y - 4);
+        ctx.lineTo(point.x, point.y + 4);
+        ctx.stroke();
+        ctx.strokeText(compassDirection.label, point.x, point.y - 8);
+        ctx.fillText(compassDirection.label, point.x, point.y - 8);
+    }
+
+    ctx.restore();
+
+    if (arCatalogState.milkyWayBandSamples.length > 1) {
+        const projectedBandSamples = arCatalogState.milkyWayBandSamples.map(sample => {
+            const topHorizontal = getHorizontalCoordinatesFromEquatorial(
+                sample.top.ra,
+                sample.top.dec,
+                date,
+                latitude,
+                longitude,
+                { precessFromJ2000: true }
+            );
+            const bottomHorizontal = getHorizontalCoordinatesFromEquatorial(
+                sample.bottom.ra,
+                sample.bottom.dec,
                 date,
                 latitude,
                 longitude,
                 { precessFromJ2000: true }
             );
 
-            const point = projectArPoint(horizontal.azimuthDegrees, horizontal.altitudeDegrees);
-            if (point == null) {
-                continue;
-            }
-
-            projectedStars[starName] = {
-                x: point.x,
-                y: point.y,
-                altitudeDegrees: horizontal.altitudeDegrees
+            return {
+                top: projectArPoint(topHorizontal.azimuthDegrees, topHorizontal.altitudeDegrees),
+                bottom: projectArPoint(bottomHorizontal.azimuthDegrees, bottomHorizontal.altitudeDegrees),
+                averageAltitude: (topHorizontal.altitudeDegrees + bottomHorizontal.altitudeDegrees) / 2
             };
+        });
 
-            labelXSum += point.x;
-            labelYSum += point.y;
-            labelPointCount += 1;
-            if (horizontal.altitudeDegrees < 0) {
-                belowHorizonPointCount += 1;
-            }
-        }
-
-        for (const [fromStar, toStar] of constellation.lines) {
-            const from = projectedStars[fromStar];
-            const to = projectedStars[toStar];
-            if (from == null || to == null) {
+        ctx.save();
+        for (let sampleIndex = 0; sampleIndex < projectedBandSamples.length - 1; sampleIndex += 1) {
+            const current = projectedBandSamples[sampleIndex];
+            const next = projectedBandSamples[sampleIndex + 1];
+            if (current.top == null || current.bottom == null || next.top == null || next.bottom == null) {
                 continue;
             }
 
-            const isBelowHorizonSegment = from.altitudeDegrees < 0 && to.altitudeDegrees < 0;
-            ctx.globalAlpha = isBelowHorizonSegment ? 0.28 : 0.56;
+            const segmentAverageAltitude = (current.averageAltitude + next.averageAltitude) / 2;
+            ctx.globalAlpha = segmentAverageAltitude < 0 ? 0.08 : 0.18;
+            ctx.fillStyle = "hsla(197, 64%, 84%, 0.92)";
+            ctx.beginPath();
+            ctx.moveTo(current.top.x, current.top.y);
+            ctx.lineTo(next.top.x, next.top.y);
+            ctx.lineTo(next.bottom.x, next.bottom.y);
+            ctx.lineTo(current.bottom.x, current.bottom.y);
+            ctx.closePath();
+            ctx.fill();
+        }
+        ctx.restore();
+    }
+
+    ctx.save();
+    ctx.lineWidth = 1.15;
+    for (const constellation of activeConstellations) {
+        let labelXSum = 0;
+        let labelYSum = 0;
+        let labelPointCount = 0;
+        let belowHorizonPointCount = 0;
+        let visibleSegmentCount = 0;
+
+        for (const segment of constellation.segments) {
+            const projectedSegment = [];
+            let segmentAltitudeSum = 0;
+
+            for (const pointCoordinates of segment) {
+                const horizontal = getHorizontalCoordinatesFromEquatorial(
+                    pointCoordinates.ra,
+                    pointCoordinates.dec,
+                    date,
+                    latitude,
+                    longitude,
+                    { precessFromJ2000: true }
+                );
+
+                const point = projectArPoint(horizontal.azimuthDegrees, horizontal.altitudeDegrees);
+                if (point == null) {
+                    continue;
+                }
+
+                projectedSegment.push(point);
+                segmentAltitudeSum += horizontal.altitudeDegrees;
+                labelXSum += point.x;
+                labelYSum += point.y;
+                labelPointCount += 1;
+                if (horizontal.altitudeDegrees < 0) {
+                    belowHorizonPointCount += 1;
+                }
+            }
+
+            if (projectedSegment.length < 2) {
+                continue;
+            }
+
+            const segmentAverageAltitude = segmentAltitudeSum / projectedSegment.length;
+            ctx.globalAlpha = segmentAverageAltitude < 0 ? 0.24 : 0.58;
             ctx.strokeStyle = "hsla(201, 78%, 84%, 0.9)";
             ctx.beginPath();
-            ctx.moveTo(from.x, from.y);
-            ctx.lineTo(to.x, to.y);
+            ctx.moveTo(projectedSegment[0].x, projectedSegment[0].y);
+            for (const point of projectedSegment.slice(1)) {
+                ctx.lineTo(point.x, point.y);
+            }
             ctx.stroke();
             visibleSegmentCount += 1;
         }
@@ -1942,6 +2442,23 @@ function drawSkyArView(targetCanvas, skyContext = null) {
 
     ctx.restore();
 
+    const getDeepSkyMarkerStyle = target => {
+        const objectType = typeof target.type === "string" ? target.type.toLowerCase() : "";
+        if (objectType.includes("neb")) {
+            return { color: "hsla(191, 92%, 74%, 0.96)", radius: 3.2 };
+        }
+
+        if (objectType.includes("gal")) {
+            return { color: "hsla(212, 96%, 78%, 0.96)", radius: 3.2 };
+        }
+
+        if (objectType.includes("cluster") || objectType.includes("oc") || objectType.includes("gc")) {
+            return { color: "hsla(171, 88%, 74%, 0.96)", radius: 3.0 };
+        }
+
+        return { color: "hsla(186, 88%, 72%, 0.95)", radius: 2.8 };
+    };
+
     for (const planetName of allPlanetNames) {
         const horizontal = getPlanetHorizontalCoordinates(planetName, date, latitude, longitude);
         drawArMarker(
@@ -1958,7 +2475,7 @@ function drawSkyArView(targetCanvas, skyContext = null) {
     const moonHorizontal = getMoonHorizontalCoordinates(date, latitude, longitude);
     drawArMarker("Moon", moonHorizontal.azimuthDegrees, moonHorizontal.altitudeDegrees, "#f7fbff", 4.1);
 
-    for (const star of nakedEyeStars) {
+    for (const star of activeStars) {
         const horizontal = getHorizontalCoordinatesFromEquatorial(
             star.ra,
             star.dec,
@@ -1968,9 +2485,10 @@ function drawSkyArView(targetCanvas, skyContext = null) {
             { precessFromJ2000: true }
         );
 
-        const starRadius = Math.max(1.2, Math.min(3.1, 3.2 - Math.max(-1, Math.min(6, star.mag)) * 0.34));
+        const starMagnitude = Number.isFinite(star.mag) ? star.mag : arCatalogConfig.maxStarMagnitude;
+        const starRadius = Math.max(1.08, Math.min(3.2, 3.45 - Math.max(-1, Math.min(6, starMagnitude)) * 0.34));
         drawArMarker(
-            star.name,
+            typeof star.name === "string" && star.name.trim().length > 0 ? star.name : "Catalog Star",
             horizontal.azimuthDegrees,
             horizontal.altitudeDegrees,
             "hsla(44, 100%, 92%, 0.95)",
@@ -1978,7 +2496,7 @@ function drawSkyArView(targetCanvas, skyContext = null) {
         );
     }
 
-    for (const target of deepSkyObjects) {
+    for (const target of activeDeepSkyObjects) {
         const horizontal = getHorizontalCoordinatesFromEquatorial(
             target.ra,
             target.dec,
@@ -1988,12 +2506,13 @@ function drawSkyArView(targetCanvas, skyContext = null) {
             { precessFromJ2000: true }
         );
 
+        const markerStyle = getDeepSkyMarkerStyle(target);
         drawArMarker(
-            target.name,
+            typeof target.name === "string" && target.name.trim().length > 0 ? target.name : "Deep Sky Object",
             horizontal.azimuthDegrees,
             horizontal.altitudeDegrees,
-            "hsla(186, 88%, 72%, 0.95)",
-            2.6
+            markerStyle.color,
+            markerStyle.radius
         );
     }
 
