@@ -1157,72 +1157,6 @@ function getMoonHorizontalCoordinates(date, latitude, longitude) {
     };
 }
 
-function drawMoonPath(ctx, cx, cy, radius, skyContext, occupiedLabelBoxes = []) {
-    if (skyContext == null) {
-        return;
-    }
-
-    const { date, latitude, longitude, windowStart, windowEnd } = skyContext;
-    const start = windowStart == null ? new Date(date.getTime() - 45 * 60 * 1000) : windowStart;
-    const end = windowEnd == null ? new Date(date.getTime() + 45 * 60 * 1000) : windowEnd;
-    const sampleStepMs = 20 * 60 * 1000;
-    const samples = [];
-    const labelScale = getSkyLabelScale(ctx.canvas);
-
-    for (let t = start.getTime(); t <= end.getTime(); t += sampleStepMs) {
-        const sampleDate = new Date(t);
-        const horizontal = getMoonHorizontalCoordinates(sampleDate, latitude, longitude);
-        if (horizontal.altitudeDegrees >= 0) {
-            samples.push(horizontal);
-        }
-    }
-
-    if (samples.length > 1) {
-        ctx.beginPath();
-        samples.forEach((sample, index) => {
-            const point = projectToSky(sample.azimuthDegrees, sample.altitudeDegrees, cx, cy, radius);
-            if (index === 0) {
-                ctx.moveTo(point.x, point.y);
-            } else {
-                ctx.lineTo(point.x, point.y);
-            }
-        });
-        ctx.strokeStyle = "#f1f6ff";
-        ctx.lineWidth = 1.8;
-        ctx.lineCap = "round";
-        ctx.lineJoin = "round";
-        ctx.stroke();
-
-        const labelSample = samples[Math.floor(samples.length / 2)];
-        const labelPoint = projectToSky(labelSample.azimuthDegrees, labelSample.altitudeDegrees, cx, cy, radius);
-        drawSkyLabel(ctx, "Moon path", labelPoint.x, labelPoint.y, occupiedLabelBoxes, {
-            fontSize: Math.round(11 * labelScale),
-            fillStyle: "#f1f6ff"
-        });
-    }
-
-    const moonNow = getMoonHorizontalCoordinates(date, latitude, longitude);
-    if (moonNow.altitudeDegrees < 0) {
-        return;
-    }
-
-    const moonNowPoint = projectToSky(moonNow.azimuthDegrees, moonNow.altitudeDegrees, cx, cy, radius);
-    reserveSkyMarkerSpace(occupiedLabelBoxes, moonNowPoint.x, moonNowPoint.y);
-    ctx.beginPath();
-    ctx.arc(moonNowPoint.x, moonNowPoint.y, 5, 0, Math.PI * 2);
-    ctx.fillStyle = "#f7fbff";
-    ctx.fill();
-    ctx.strokeStyle = "hsla(218, 36%, 14%, 0.9)";
-    ctx.lineWidth = 1;
-    ctx.stroke();
-
-    drawSkyLabel(ctx, "Moon", moonNowPoint.x, moonNowPoint.y, occupiedLabelBoxes, {
-        fontSize: Math.round(12 * labelScale),
-        fillStyle: "#f7fbff",
-        preferBelow: true
-    });
-}
-
 function drawSunMarker(ctx, cx, cy, radius, skyContext, occupiedLabelBoxes = []) {
     if (skyContext == null) {
         return;
@@ -1252,6 +1186,36 @@ function drawSunMarker(ctx, cx, cy, radius, skyContext, occupiedLabelBoxes = [])
     drawSkyLabel(ctx, "Sun", point.x, point.y, occupiedLabelBoxes, {
         fontSize: Math.round(12 * labelScale),
         fillStyle: "hsla(48, 100%, 82%, 0.96)",
+        preferBelow: true
+    });
+}
+
+function drawMoonMarker(ctx, cx, cy, radius, skyContext, occupiedLabelBoxes = []) {
+    if (skyContext == null) {
+        return;
+    }
+
+    const { date, latitude, longitude } = skyContext;
+    const moonHorizontal = getMoonHorizontalCoordinates(date, latitude, longitude);
+    if (moonHorizontal.altitudeDegrees < 0) {
+        return;
+    }
+
+    const labelScale = getSkyLabelScale(ctx.canvas);
+    const point = projectToSky(moonHorizontal.azimuthDegrees, moonHorizontal.altitudeDegrees, cx, cy, radius);
+    reserveSkyMarkerSpace(occupiedLabelBoxes, point.x, point.y, 18);
+
+    ctx.beginPath();
+    ctx.arc(point.x, point.y, 5, 0, Math.PI * 2);
+    ctx.fillStyle = "#f7fbff";
+    ctx.fill();
+    ctx.strokeStyle = "hsla(218, 36%, 14%, 0.9)";
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    drawSkyLabel(ctx, "Moon", point.x, point.y, occupiedLabelBoxes, {
+        fontSize: Math.round(12 * labelScale),
+        fillStyle: "#f7fbff",
         preferBelow: true
     });
 }
@@ -1532,7 +1496,7 @@ function drawSkyDiagram(targetCanvas, visiblePlanets, skyContext = null) {
     drawDeepSkyHighlights(ctx, cx, cy, radius, skyContext, occupiedLabelBoxes);
     drawPolarisOverlay(ctx, cx, cy, radius, skyContext, occupiedLabelBoxes);
     drawSunMarker(ctx, cx, cy, radius, skyContext, occupiedLabelBoxes);
-    drawMoonPath(ctx, cx, cy, radius, skyContext, occupiedLabelBoxes);
+    drawMoonMarker(ctx, cx, cy, radius, skyContext, occupiedLabelBoxes);
     if (visiblePlanets.length === 0) {
         ctx.fillStyle = "hsla(210, 26%, 88%, 0.86)";
         ctx.font = `${Math.round(13 * labelScale)}px Outfit, sans-serif`;
@@ -1568,8 +1532,6 @@ function drawSkyDiagram(targetCanvas, visiblePlanets, skyContext = null) {
 
 function renderVisiblePlanets(latitude, longitude) {
     const skySampleDate = getSkyRenderDate();
-    const pathWindowStart = new Date(skySampleDate.getTime() - 90 * 60 * 1000);
-    const pathWindowEnd = new Date(skySampleDate.getTime() + 90 * 60 * 1000);
     planetWindowElement.innerText = `Snapshot: ${formatLocalTime(skySampleDate.toISOString())}`;
 
     const visiblePlanets = [];
@@ -1601,9 +1563,7 @@ function renderVisiblePlanets(latitude, longitude) {
     latestSkyContext = {
         date: skySampleDate,
         latitude,
-        longitude,
-        windowStart: pathWindowStart,
-        windowEnd: pathWindowEnd
+        longitude
     };
 
     if (visiblePlanets.length === 0) {
