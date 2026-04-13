@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <link rel="stylesheet" href="/css/tools/astronomy/main.css?v1.0.4">
-    <script defer src="/js/tools/astronomy/main.js?v1.0.11"></script>
+    <script defer src="/js/tools/astronomy/main.js?v1.0.13"></script>
     <title>Astronomy</title>
   </head>
   <body>
@@ -33,15 +33,15 @@
             <div><span>Civil Twilight End</span><strong id="civil-end">--</strong></div>
           </div>
           <div class="planet-visibility">
-            <h3>Planets Visible This Evening</h3>
-            <p id="planet-window" class="meta">Window: --</p>
+            <h3>Planets Visible Right Now</h3>
+            <p id="planet-window" class="meta">Snapshot: --</p>
             <ul id="planet-list" class="planet-list">
               <li>Calculating...</li>
             </ul>
             <div class="sky-diagram-wrap">
-              <canvas id="sky-canvas" width="280" height="280" role="img" aria-label="Sky diagram for visible evening planets"></canvas>
+              <canvas id="sky-canvas" width="280" height="280" role="img" aria-label="Sky diagram for current astronomical objects"></canvas>
             </div>
-            <p class="meta">Approximate visibility above 10 degrees altitude.</p>
+            <p class="meta">Approximate current positions. Satellite paths show near-term tracks.</p>
           </div>
           <p id="sun-status" class="meta">Waiting for data...</p>
         </article>

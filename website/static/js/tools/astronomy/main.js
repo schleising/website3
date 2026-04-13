@@ -494,11 +494,19 @@ function buildSatellitePathSegments(skyContext) {
     const end = windowEnd == null ? new Date(date.getTime() + 45 * 60 * 1000) : windowEnd;
     const sampleStepMs = 6 * 60 * 1000;
 
+    const sampleTimes = [];
+    for (let t = start.getTime(); t <= end.getTime(); t += sampleStepMs) {
+        sampleTimes.push(t);
+    }
+    sampleTimes.push(date.getTime());
+    sampleTimes.sort((a, b) => a - b);
+
     return satelliteTracks.map(track => {
         const segments = [];
         let activeSegment = [];
+        let previousHorizontal = null;
 
-        for (let t = start.getTime(); t <= end.getTime(); t += sampleStepMs) {
+        for (const t of sampleTimes) {
             const sampleDate = new Date(t);
             const horizontal = getSatelliteHorizontalCoordinates(track, sampleDate, latitude, longitude);
 
@@ -507,10 +515,25 @@ function buildSatellitePathSegments(skyContext) {
                     segments.push(activeSegment);
                 }
                 activeSegment = [];
+                previousHorizontal = null;
                 continue;
             }
 
+            if (previousHorizontal != null) {
+                const azimuthJump = Math.abs(horizontal.azimuthDegrees - previousHorizontal.azimuthDegrees);
+                const wrapsNorth = azimuthJump > 180 && Math.min(horizontal.azimuthDegrees, previousHorizontal.azimuthDegrees) < 40
+                    && Math.max(horizontal.azimuthDegrees, previousHorizontal.azimuthDegrees) > 320;
+
+                if (wrapsNorth) {
+                    if (activeSegment.length > 1) {
+                        segments.push(activeSegment);
+                    }
+                    activeSegment = [];
+                }
+            }
+
             activeSegment.push(horizontal);
+            previousHorizontal = horizontal;
         }
 
         if (activeSegment.length > 1) {
@@ -818,7 +841,11 @@ function drawSkyDiagram(targetCanvas, visiblePlanets, skyContext = null) {
 
     ctx.textAlign = "left";
     for (const planet of visiblePlanets) {
-        const planetPoint = projectToSky(planet.bestAzimuth, planet.maxAltitude, cx, cy, radius);
+        if (planet.displayAltitude < 0) {
+            continue;
+        }
+
+        const planetPoint = projectToSky(planet.displayAzimuth, planet.displayAltitude, cx, cy, radius);
         const x = planetPoint.x;
         const y = planetPoint.y;
 
@@ -836,38 +863,22 @@ function drawSkyDiagram(targetCanvas, visiblePlanets, skyContext = null) {
     }
 }
 
-function renderVisiblePlanets(civilTwilightEndIso, latitude, longitude) {
-    const { start, end } = getEveningWindow(civilTwilightEndIso);
-    const skySampleDate = new Date((start.getTime() + end.getTime()) / 2);
-    planetWindowElement.innerText = `Window: ${formatClockTime(start)} to ${formatClockTime(end)}`;
+function renderVisiblePlanets(_civilTwilightEndIso, latitude, longitude) {
+    const skySampleDate = new Date();
+    const pathWindowStart = new Date(skySampleDate.getTime() - 90 * 60 * 1000);
+    const pathWindowEnd = new Date(skySampleDate.getTime() + 90 * 60 * 1000);
+    planetWindowElement.innerText = `Snapshot: ${skySampleDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}`;
 
-    const sampleStepMs = 20 * 60 * 1000;
-    const visibilityThreshold = 10;
     const visiblePlanets = [];
 
     for (const planetName of Object.keys(planetaryElements)) {
-        let maxAltitude = -90;
-        let bestTime = start;
-        let bestAzimuth = 0;
+        const displayCoordinates = getPlanetHorizontalCoordinates(planetName, skySampleDate, latitude, longitude);
 
-        for (let t = start.getTime(); t <= end.getTime(); t += sampleStepMs) {
-            const sampleDate = new Date(t);
-            const horizontalCoordinates = getPlanetHorizontalCoordinates(planetName, sampleDate, latitude, longitude);
-            const altitude = horizontalCoordinates.altitudeDegrees;
-
-            if (altitude > maxAltitude) {
-                maxAltitude = altitude;
-                bestTime = sampleDate;
-                bestAzimuth = horizontalCoordinates.azimuthDegrees;
-            }
-        }
-
-        if (maxAltitude >= visibilityThreshold) {
+        if (displayCoordinates.altitudeDegrees >= 0) {
             visiblePlanets.push({
                 planetName,
-                maxAltitude,
-                bestTime,
-                bestAzimuth
+                displayAltitude: displayCoordinates.altitudeDegrees,
+                displayAzimuth: displayCoordinates.azimuthDegrees
             });
         }
     }
@@ -879,13 +890,13 @@ function renderVisiblePlanets(civilTwilightEndIso, latitude, longitude) {
         date: skySampleDate,
         latitude,
         longitude,
-        windowStart: start,
-        windowEnd: end
+        windowStart: pathWindowStart,
+        windowEnd: pathWindowEnd
     };
 
     if (visiblePlanets.length === 0) {
         const item = document.createElement("li");
-        item.innerText = "No major planets rise above 10 degrees in this window.";
+        item.innerText = "No major planets are currently above the horizon.";
         planetListElement.appendChild(item);
         drawSkyDiagram(skyCanvas, [], latestSkyContext);
 
@@ -896,11 +907,11 @@ function renderVisiblePlanets(civilTwilightEndIso, latitude, longitude) {
         return;
     }
 
-    visiblePlanets.sort((a, b) => b.maxAltitude - a.maxAltitude);
+    visiblePlanets.sort((a, b) => b.displayAltitude - a.displayAltitude);
 
     for (const planet of visiblePlanets) {
         const item = document.createElement("li");
-        item.innerText = `${planet.planetName}: up to ${planet.maxAltitude.toFixed(0)} degrees at ${formatClockTime(planet.bestTime)}`;
+        item.innerText = `${planet.planetName}: ${planet.displayAltitude.toFixed(0)} degrees above horizon now`;
         planetListElement.appendChild(item);
     }
 
