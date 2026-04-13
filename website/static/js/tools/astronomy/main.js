@@ -127,13 +127,78 @@ const constellations = [
             ["Sadr", "Gienah"],
             ["Sadr", "Delta"]
         ]
+    },
+    {
+        name: "Scorpius",
+        stars: {
+            Antares: { ra: 247.35, dec: -26.43 },
+            Acrab: { ra: 241.36, dec: -19.81 },
+            Dschubba: { ra: 240.08, dec: -22.62 },
+            Sargas: { ra: 263.4, dec: -42.99 },
+            Shaula: { ra: 263.4, dec: -37.1 },
+            Lesath: { ra: 262.69, dec: -37.3 }
+        },
+        lines: [
+            ["Acrab", "Dschubba"],
+            ["Dschubba", "Antares"],
+            ["Antares", "Sargas"],
+            ["Sargas", "Shaula"],
+            ["Shaula", "Lesath"]
+        ]
+    },
+    {
+        name: "Crux",
+        stars: {
+            Acrux: { ra: 186.65, dec: -63.1 },
+            Mimosa: { ra: 191.93, dec: -59.69 },
+            Gacrux: { ra: 187.79, dec: -57.11 },
+            Delta: { ra: 183.79, dec: -58.75 }
+        },
+        lines: [
+            ["Gacrux", "Acrux"],
+            ["Mimosa", "Delta"]
+        ]
+    },
+    {
+        name: "Centaurus",
+        stars: {
+            RigilKent: { ra: 219.9, dec: -60.83 },
+            Hadar: { ra: 210.96, dec: -60.37 },
+            Menkent: { ra: 211.67, dec: -36.37 },
+            Alnair: { ra: 208.89, dec: -47.29 }
+        },
+        lines: [
+            ["RigilKent", "Hadar"],
+            ["Hadar", "Alnair"],
+            ["Alnair", "Menkent"]
+        ]
+    },
+    {
+        name: "Carina",
+        stars: {
+            Canopus: { ra: 95.99, dec: -52.7 },
+            Miaplacidus: { ra: 138.3, dec: -69.72 },
+            Avior: { ra: 125.63, dec: -59.51 },
+            Aspidiske: { ra: 139.27, dec: -59.28 }
+        },
+        lines: [
+            ["Canopus", "Avior"],
+            ["Avior", "Aspidiske"],
+            ["Aspidiske", "Miaplacidus"]
+        ]
     }
 ];
 
-const polarisCoordinates = {
+const northPoleStar = {
     name: "Polaris",
     ra: 37.95,
     dec: 89.26
+};
+
+const southPoleStar = {
+    name: "Sigma Octantis",
+    ra: 21.08,
+    dec: -88.96
 };
 
 const planetaryElements = {
@@ -381,31 +446,43 @@ function drawPolarisOverlay(ctx, cx, cy, radius, skyContext) {
     }
 
     const { date, latitude, longitude } = skyContext;
-    const horizontal = getHorizontalCoordinatesFromEquatorial(
-        polarisCoordinates.ra,
-        polarisCoordinates.dec,
-        date,
-        latitude,
-        longitude
-    );
+    const poleStarCandidates = [];
 
-    if (horizontal.altitudeDegrees < 0) {
-        return;
+    if (latitude >= -5) {
+        poleStarCandidates.push(northPoleStar);
     }
 
-    const point = projectToSky(horizontal.azimuthDegrees, horizontal.altitudeDegrees, cx, cy, radius);
-    ctx.beginPath();
-    ctx.arc(point.x, point.y, 4.5, 0, Math.PI * 2);
-    ctx.fillStyle = "hsl(50, 100%, 82%)";
-    ctx.fill();
-    ctx.strokeStyle = "hsla(220, 45%, 12%, 0.9)";
-    ctx.lineWidth = 1;
-    ctx.stroke();
+    if (latitude <= 5) {
+        poleStarCandidates.push(southPoleStar);
+    }
 
-    ctx.fillStyle = "hsla(53, 100%, 88%, 0.96)";
-    ctx.font = "12px Outfit, sans-serif";
-    ctx.textAlign = "left";
-    ctx.fillText(polarisCoordinates.name, point.x + 7, point.y - 8);
+    for (const poleStar of poleStarCandidates) {
+        const horizontal = getHorizontalCoordinatesFromEquatorial(
+            poleStar.ra,
+            poleStar.dec,
+            date,
+            latitude,
+            longitude
+        );
+
+        if (horizontal.altitudeDegrees < 0) {
+            continue;
+        }
+
+        const point = projectToSky(horizontal.azimuthDegrees, horizontal.altitudeDegrees, cx, cy, radius);
+        ctx.beginPath();
+        ctx.arc(point.x, point.y, 4.5, 0, Math.PI * 2);
+        ctx.fillStyle = "hsl(50, 100%, 82%)";
+        ctx.fill();
+        ctx.strokeStyle = "hsla(220, 45%, 12%, 0.9)";
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        ctx.fillStyle = "hsla(53, 100%, 88%, 0.96)";
+        ctx.font = "12px Outfit, sans-serif";
+        ctx.textAlign = "left";
+        ctx.fillText(poleStar.name, point.x + 7, point.y - 8);
+    }
 }
 
 function drawSkyDiagram(targetCanvas, visiblePlanets, skyContext = null) {
