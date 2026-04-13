@@ -64,6 +64,7 @@ const planetListFullscreenElement = document.getElementById("planet-list-fullscr
 const skyCanvas = document.getElementById("sky-canvas");
 const skyFullscreenElement = document.getElementById("sky-fullscreen");
 const skyFullscreenStageElement = document.getElementById("sky-fullscreen-stage");
+const skyFullscreenHudElement = document.getElementById("sky-fullscreen-hud");
 const skyCloseButton = document.getElementById("sky-close-button");
 const skyFullscreenCanvas = document.getElementById("sky-canvas-fullscreen");
 const skyTimeSlider = document.getElementById("sky-time-slider");
@@ -83,6 +84,7 @@ let isLocationRequestInProgress = false;
 let requestCurrentLocation = async () => false;
 let skyTimeOffsetMinutes = 0;
 let skyTimePlayIntervalId = null;
+let pendingSkyRerenderFrameId = null;
 
 const fullscreenSkyViewState = {
     scale: 1,
@@ -430,7 +432,9 @@ function setTimePlayButtonsState(isPlaying) {
     }
 }
 
-function renderPlanetStatusList(targetListElement, planetStatuses) {
+function renderPlanetStatusList(targetListElement, planetStatuses, options = {}) {
+    const { compactNamesOnly = false } = options;
+
     if (targetListElement == null) {
         return;
     }
@@ -445,16 +449,19 @@ function renderPlanetStatusList(targetListElement, planetStatuses) {
         nameSpan.className = "planet-name";
         nameSpan.innerText = status.planetName;
 
-        const stateSpan = document.createElement("span");
-        stateSpan.className = "planet-status";
-        if (status.isVisible) {
-            stateSpan.innerText = `Visible ${status.displayAltitude.toFixed(0)} deg`;
-        } else {
-            stateSpan.innerText = `Below horizon ${Math.abs(status.displayAltitude).toFixed(0)} deg`;
+        if (!compactNamesOnly) {
+            const stateSpan = document.createElement("span");
+            stateSpan.className = "planet-status";
+            if (status.isVisible) {
+                stateSpan.innerText = `Visible ${status.displayAltitude.toFixed(0)} deg`;
+            } else {
+                stateSpan.innerText = `Below horizon ${Math.abs(status.displayAltitude).toFixed(0)} deg`;
+            }
+
+            item.appendChild(stateSpan);
         }
 
         item.appendChild(nameSpan);
-        item.appendChild(stateSpan);
         targetListElement.appendChild(item);
     }
 }
@@ -474,6 +481,17 @@ function rerenderSkyForCurrentInputs() {
     }
 
     renderVisiblePlanets(coordinates.lat, coordinates.lon);
+}
+
+function scheduleRerenderSkyForCurrentInputs() {
+    if (pendingSkyRerenderFrameId != null) {
+        return;
+    }
+
+    pendingSkyRerenderFrameId = window.requestAnimationFrame(() => {
+        pendingSkyRerenderFrameId = null;
+        rerenderSkyForCurrentInputs();
+    });
 }
 
 function toRadians(degrees) {
@@ -859,14 +877,15 @@ function resizeCanvasToDisplaySize(targetCanvas, maxPixelSize = 2800) {
         return;
     }
 
-    const rect = targetCanvas.getBoundingClientRect();
-    if (rect.width <= 0 || rect.height <= 0) {
+    const logicalWidth = targetCanvas.clientWidth || parseFloat(getComputedStyle(targetCanvas).width);
+    const logicalHeight = targetCanvas.clientHeight || parseFloat(getComputedStyle(targetCanvas).height);
+    if (!Number.isFinite(logicalWidth) || !Number.isFinite(logicalHeight) || logicalWidth <= 0 || logicalHeight <= 0) {
         return;
     }
 
     const devicePixelRatio = window.devicePixelRatio || 1;
-    const desiredWidth = Math.min(maxPixelSize, Math.round(rect.width * devicePixelRatio));
-    const desiredHeight = Math.min(maxPixelSize, Math.round(rect.height * devicePixelRatio));
+    const desiredWidth = Math.min(maxPixelSize, Math.round(logicalWidth * devicePixelRatio));
+    const desiredHeight = Math.min(maxPixelSize, Math.round(logicalHeight * devicePixelRatio));
 
     if (targetCanvas.width !== desiredWidth || targetCanvas.height !== desiredHeight) {
         targetCanvas.width = Math.max(1, desiredWidth);
@@ -879,7 +898,7 @@ function getSkyLabelScale(targetCanvas) {
         return 1;
     }
 
-    const logicalWidth = targetCanvas.getBoundingClientRect().width || targetCanvas.clientWidth || targetCanvas.width;
+    const logicalWidth = targetCanvas.clientWidth || parseFloat(getComputedStyle(targetCanvas).width) || targetCanvas.width;
     if (logicalWidth >= 980) {
         return 1.9;
     }
@@ -1296,7 +1315,7 @@ function drawStarfieldOverlay(ctx, cx, cy, radius, skyContext, occupiedLabelBoxe
 
     const { date, latitude, longitude } = skyContext;
     const labelScale = getSkyLabelScale(ctx.canvas);
-    const logicalWidth = ctx.canvas.getBoundingClientRect().width || ctx.canvas.clientWidth || ctx.canvas.width;
+    const logicalWidth = ctx.canvas.clientWidth || parseFloat(getComputedStyle(ctx.canvas).width) || ctx.canvas.width;
     const magnitudeLimit = logicalWidth >= 980 ? 5.1 : logicalWidth >= 720 ? 4.7 : 4.3;
 
     for (const star of nakedEyeStars) {
@@ -1395,9 +1414,8 @@ function drawSkyDiagram(targetCanvas, visiblePlanets, skyContext = null) {
         return;
     }
 
-    const canvasRect = targetCanvas.getBoundingClientRect();
-    const width = canvasRect.width || targetCanvas.clientWidth || targetCanvas.width;
-    const height = canvasRect.height || targetCanvas.clientHeight || targetCanvas.height;
+    const width = targetCanvas.clientWidth || parseFloat(getComputedStyle(targetCanvas).width) || targetCanvas.width;
+    const height = targetCanvas.clientHeight || parseFloat(getComputedStyle(targetCanvas).height) || targetCanvas.height;
     const dpr = width > 0 ? targetCanvas.width / width : 1;
 
     ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -1515,7 +1533,7 @@ function renderVisiblePlanets(latitude, longitude) {
     }
 
     renderPlanetStatusList(planetListElement, planetStatuses);
-    renderPlanetStatusList(planetListFullscreenElement, planetStatuses);
+    renderPlanetStatusList(planetListFullscreenElement, planetStatuses, { compactNamesOnly: true });
 
     latestVisiblePlanets = visiblePlanets;
     latestSkyContext = {
@@ -1684,7 +1702,23 @@ function initializeFullscreenSkyInteractions() {
         return;
     }
 
+    if (skyFullscreenHudElement != null) {
+        const swallowHudEvent = event => {
+            event.stopPropagation();
+        };
+
+        ["pointerdown", "pointermove", "pointerup", "pointercancel", "wheel", "mousedown", "mouseup", "touchstart", "touchmove", "touchend", "click"].forEach(
+            eventName => {
+                skyFullscreenHudElement.addEventListener(eventName, swallowHudEvent);
+            }
+        );
+    }
+
     skyFullscreenStageElement.addEventListener("wheel", event => {
+        if (event.target !== skyFullscreenCanvas) {
+            return;
+        }
+
         event.preventDefault();
         const zoomFactor = event.deltaY < 0 ? 1.12 : 0.9;
         fullscreenSkyViewState.scale = clampScale(fullscreenSkyViewState.scale * zoomFactor);
@@ -1692,6 +1726,10 @@ function initializeFullscreenSkyInteractions() {
     }, { passive: false });
 
     skyFullscreenStageElement.addEventListener("pointerdown", event => {
+        if (event.target !== skyFullscreenCanvas) {
+            return;
+        }
+
         skyFullscreenStageElement.setPointerCapture(event.pointerId);
         fullscreenSkyViewState.pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
 
@@ -1823,7 +1861,7 @@ function initializeTimeTravelControls() {
 
             stopSkyTimePlayback();
             setSkyTimeOffset(target);
-            rerenderSkyForCurrentInputs();
+            scheduleRerenderSkyForCurrentInputs();
         });
     };
 
@@ -1838,7 +1876,7 @@ function initializeTimeTravelControls() {
         buttonElement.addEventListener("click", () => {
             stopSkyTimePlayback();
             setSkyTimeOffset(0);
-            rerenderSkyForCurrentInputs();
+            scheduleRerenderSkyForCurrentInputs();
         });
     };
 
@@ -1861,7 +1899,7 @@ function initializeTimeTravelControls() {
             skyTimePlayIntervalId = window.setInterval(() => {
                 const nextOffset = skyTimeOffsetMinutes >= 720 ? -720 : skyTimeOffsetMinutes + 10;
                 setSkyTimeOffset(nextOffset);
-                rerenderSkyForCurrentInputs();
+                scheduleRerenderSkyForCurrentInputs();
             }, 350);
         });
     };
@@ -2296,7 +2334,7 @@ async function initializePage() {
     initializeFullscreenSkyInteractions();
 
     window.addEventListener("resize", () => {
-        rerenderSkyForCurrentInputs();
+        scheduleRerenderSkyForCurrentInputs();
     });
 
     let usedCurrentLocation = false;

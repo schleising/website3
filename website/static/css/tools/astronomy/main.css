@@ -538,12 +538,8 @@ body {
 
 .sky-fullscreen-hud {
     position: absolute;
-    top: 0.82rem;
-    left: 0.82rem;
+    inset: 0;
     z-index: 6;
-    width: min(24rem, calc(100% - 1.64rem));
-    display: grid;
-    gap: 0.55rem;
     pointer-events: none;
 }
 
@@ -565,10 +561,12 @@ body {
 }
 
 .sky-fullscreen-indicators .planet-list {
-    margin-top: 0.42rem;
-    max-height: min(40vh, 21rem);
+    margin-top: 0.28rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.28rem;
+    max-height: min(24vh, 8.5rem);
     overflow-y: auto;
-    padding-right: 0.12rem;
 }
 
 .sky-fullscreen-controls .time-travel-controls {
@@ -580,6 +578,54 @@ body {
 
 .sky-fullscreen-controls .time-travel-header label {
     color: hsl(0, 0%, 96%);
+}
+
+.sky-fullscreen-indicators {
+    position: absolute;
+    top: 0.82rem;
+    left: 0.82rem;
+    width: min(20rem, calc(100% - 1.64rem));
+}
+
+.sky-fullscreen-indicators .planet-status-item {
+    min-height: auto;
+    padding: 0.18rem 0.45rem;
+    border-left-width: 3px;
+    border-radius: 999px;
+}
+
+.sky-fullscreen-indicators .planet-name {
+    font-size: 0.8rem;
+}
+
+.sky-fullscreen-indicators .planet-status {
+    display: none;
+}
+
+.sky-fullscreen-controls {
+    position: absolute;
+    left: 0.82rem;
+    right: 0.82rem;
+    bottom: 0.82rem;
+    max-width: min(58rem, calc(100% - 1.64rem));
+}
+
+.fullscreen-slider-row {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 0.55rem;
+}
+
+.fullscreen-slider-row label {
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: hsl(0, 0%, 96%);
+}
+
+.sky-fullscreen-controls .time-travel-actions {
+    margin-top: 0.4rem;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .sky-fullscreen-controls .time-travel-label {
@@ -813,8 +859,27 @@ body.dark-mode .sky-fullscreen-panel {
     }
 
     .sky-fullscreen-hud {
-        width: min(22rem, calc(100% - 1.1rem));
+        inset: 0;
+    }
+
+    .sky-fullscreen-indicators {
         top: 0.55rem;
         left: 0.55rem;
+        width: min(18rem, calc(100% - 1.1rem));
+    }
+
+    .sky-fullscreen-controls {
+        left: 0.55rem;
+        right: 0.55rem;
+        bottom: 0.55rem;
+    }
+
+    .fullscreen-slider-row {
+        grid-template-columns: 1fr;
+        gap: 0.36rem;
+    }
+
+    .fullscreen-slider-row label {
+        display: none;
     }
 }
