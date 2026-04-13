@@ -1,4 +1,5 @@
 const sunriseApi = "/sun-times/";
+const satelliteTracksApi = "/satellite-tracks/";
 const synodicMonthDays = 29.53058867;
 const knownNewMoonUtcMs = Date.UTC(2000, 0, 6, 18, 14, 0);
 const astronomicalUnitLightTimeDays = 0.0057755183;
@@ -68,6 +69,7 @@ const skyCloseButton = document.getElementById("sky-close-button");
 const skyFullscreenCanvas = document.getElementById("sky-canvas-fullscreen");
 
 let latestVisiblePlanets = [];
+let latestSatellitePaths = [];
 let latestSkyContext = null;
 
 const fullscreenSkyViewState = {
@@ -888,76 +890,8 @@ function getMoonHorizontalCoordinates(date, latitude, longitude) {
     };
 }
 
-function buildSatellitePathSegments(skyContext) {
-    if (skyContext == null) {
-        return [];
-    }
-
-    const { date, latitude, longitude, windowStart, windowEnd } = skyContext;
-    const start = windowStart == null ? new Date(date.getTime() - 45 * 60 * 1000) : windowStart;
-    const end = windowEnd == null ? new Date(date.getTime() + 45 * 60 * 1000) : windowEnd;
-    const sampleStepMs = 6 * 60 * 1000;
-
-    const sampleTimes = [];
-    for (let t = start.getTime(); t <= end.getTime(); t += sampleStepMs) {
-        sampleTimes.push(t);
-    }
-    sampleTimes.push(date.getTime());
-    sampleTimes.sort((a, b) => a - b);
-
-    return satelliteTracks.map(track => {
-        const segments = [];
-        let activeSegment = [];
-        let previousHorizontal = null;
-
-        for (const t of sampleTimes) {
-            const sampleDate = new Date(t);
-            const horizontal = getSatelliteHorizontalCoordinates(track, sampleDate, latitude, longitude);
-
-            if (horizontal.altitudeDegrees < 0) {
-                if (activeSegment.length > 1) {
-                    segments.push(activeSegment);
-                }
-                activeSegment = [];
-                previousHorizontal = null;
-                continue;
-            }
-
-            if (previousHorizontal != null) {
-                const azimuthJump = Math.abs(horizontal.azimuthDegrees - previousHorizontal.azimuthDegrees);
-                const wrapsNorth = azimuthJump > 180 && Math.min(horizontal.azimuthDegrees, previousHorizontal.azimuthDegrees) < 40
-                    && Math.max(horizontal.azimuthDegrees, previousHorizontal.azimuthDegrees) > 320;
-
-                if (wrapsNorth) {
-                    if (activeSegment.length > 1) {
-                        segments.push(activeSegment);
-                    }
-                    activeSegment = [];
-                }
-            }
-
-            activeSegment.push(horizontal);
-            previousHorizontal = horizontal;
-        }
-
-        if (activeSegment.length > 1) {
-            segments.push(activeSegment);
-        }
-
-        const currentHorizontal = getSatelliteHorizontalCoordinates(track, date, latitude, longitude);
-        const isCurrentlyVisible = currentHorizontal.altitudeDegrees >= 0;
-
-        return {
-            name: track.name,
-            color: track.color,
-            segments,
-            currentHorizontal: isCurrentlyVisible ? currentHorizontal : null
-        };
-    });
-}
-
 function drawSatellitePaths(ctx, cx, cy, radius, skyContext, occupiedLabelBoxes = []) {
-    const paths = buildSatellitePathSegments(skyContext);
+    const paths = latestSatellitePaths;
     const labelScale = getSkyLabelScale(ctx.canvas);
 
     for (const path of paths) {
@@ -1012,6 +946,24 @@ function drawSatellitePaths(ctx, cx, cy, radius, skyContext, occupiedLabelBoxes 
             fillStyle: path.color,
             preferBelow: true
         });
+    }
+}
+
+async function updateSatelliteTracks(lat, lon) {
+    const requestUrl = `${satelliteTracksApi}?lat=${lat}&lon=${lon}`;
+
+    try {
+        const response = await fetch(requestUrl);
+        const payload = await response.json();
+
+        if (payload.status !== "OK") {
+            throw new Error("Satellite API did not return OK status");
+        }
+
+        latestSatellitePaths = Array.isArray(payload.satellites) ? payload.satellites : [];
+    } catch (error) {
+        latestSatellitePaths = [];
+        console.error(error);
     }
 }
 
@@ -1345,99 +1297,6 @@ function renderVisiblePlanets(_civilTwilightEndIso, latitude, longitude) {
     }
 }
 
-function normalizePhase(phaseFraction) {
-    let phase = phaseFraction % 1;
-    if (phase < 0) {
-        phase += 1;
-    }
-
-    return phase;
-}
-
-function getMoonPhaseData(now) {
-    const dayMs = 24 * 60 * 60 * 1000;
-    const phaseAgeDays = ((now.getTime() - knownNewMoonUtcMs) / dayMs) % synodicMonthDays;
-    const age = phaseAgeDays < 0 ? phaseAgeDays + synodicMonthDays : phaseAgeDays;
-    const phase = normalizePhase(age / synodicMonthDays);
-    const illumination = 0.5 * (1 - Math.cos(2 * Math.PI * phase));
-
-    let name = "New Moon";
-    if (phase >= 0.0625 && phase < 0.1875) {
-        name = "Waxing Crescent";
-    } else if (phase >= 0.1875 && phase < 0.3125) {
-        name = "First Quarter";
-    } else if (phase >= 0.3125 && phase < 0.4375) {
-        name = "Waxing Gibbous";
-    } else if (phase >= 0.4375 && phase < 0.5625) {
-        name = "Full Moon";
-    } else if (phase >= 0.5625 && phase < 0.6875) {
-        name = "Waning Gibbous";
-    } else if (phase >= 0.6875 && phase < 0.8125) {
-        name = "Last Quarter";
-    } else if (phase >= 0.8125 && phase < 0.9375) {
-        name = "Waning Crescent";
-    }
-
-    return {
-        age,
-        phase,
-        illumination,
-        name
-    };
-}
-
-function drawMoonPhaseImage(canvas, phase) {
-    const ctx = canvas.getContext("2d");
-    const width = canvas.width;
-    const height = canvas.height;
-    const cx = width / 2;
-    const cy = height / 2;
-    const radius = Math.min(width, height) * 0.42;
-
-    const lit = [240, 245, 255];
-    const dark = [36, 43, 64];
-
-    const theta = 2 * Math.PI * phase;
-    const sunX = Math.sin(theta);
-    const sunY = 0;
-    const sunZ = -Math.cos(theta);
-
-    ctx.clearRect(0, 0, width, height);
-
-    const imageData = ctx.createImageData(width, height);
-    const data = imageData.data;
-
-    for (let y = 0; y < height; y++) {
-        for (let x = 0; x < width; x++) {
-            const dx = (x - cx) / radius;
-            const dy = (y - cy) / radius;
-            const d2 = dx * dx + dy * dy;
-
-            if (d2 > 1) {
-                continue;
-            }
-
-            const dz = Math.sqrt(1 - d2);
-            const dot = dx * sunX + dy * sunY + dz * sunZ;
-            const color = dot > 0 ? lit : dark;
-            const i = (y * width + x) * 4;
-
-            data[i] = color[0];
-            data[i + 1] = color[1];
-            data[i + 2] = color[2];
-            data[i + 3] = 255;
-        }
-    }
-
-    ctx.putImageData(imageData, 0, 0);
-
-    ctx.beginPath();
-    ctx.arc(cx, cy, radius, 0, 2 * Math.PI);
-    ctx.strokeStyle = "hsla(212, 38%, 90%, 0.55)";
-    ctx.lineWidth = 2;
-    ctx.stroke();
-}
-
 async function updateSunTimes(lat, lon) {
     sunStatus.innerText = "Fetching sun times...";
 
@@ -1457,12 +1316,14 @@ async function updateSunTimes(lat, lon) {
         sunsetElement.innerText = formatLocalTime(result.sunset);
         civilBeginElement.innerText = formatLocalTime(result.civil_twilight_begin);
         civilEndElement.innerText = formatLocalTime(result.civil_twilight_end);
+        await updateSatelliteTracks(lat, lon);
         renderVisiblePlanets(result.civil_twilight_end, lat, lon);
         sunStatus.innerText = `Updated ${formatLocalTime(new Date().toISOString())}`;
     } catch (error) {
         planetWindowElement.innerText = "Window: --";
         planetListElement.innerHTML = "<li>Planet visibility unavailable.</li>";
         latestVisiblePlanets = [];
+        latestSatellitePaths = [];
         latestSkyContext = null;
         drawSkyDiagram(skyCanvas, []);
 
