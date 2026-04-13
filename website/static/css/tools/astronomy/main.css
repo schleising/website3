@@ -58,6 +58,12 @@ body {
     align-items: end;
 }
 
+.controls-title {
+    grid-column: 1 / -1;
+    margin: 0;
+    font-size: 1rem;
+}
+
 .controls label {
     font-size: 0.8rem;
     color: var(--muted);
