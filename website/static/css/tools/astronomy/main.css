@@ -500,6 +500,29 @@ body {
     border-bottom: 1px solid hsla(214, 32%, 78%, 0.22);
 }
 
+.sky-fullscreen-toolbar-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.mobile-ar-only {
+    display: none;
+}
+
+@media (max-width: 56rem) and (pointer: coarse) {
+    .mobile-ar-only {
+        display: inline-flex;
+    }
+}
+
+.sky-ar-status {
+    margin: 0 0 0.35rem;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: hsla(24, 100%, 92%, 0.94);
+}
+
 .sky-fullscreen-toolbar button {
     height: 2rem;
     border-radius: 0.6rem;
@@ -903,6 +926,10 @@ body.dark-mode .sky-fullscreen-indicators .planet-status-item {
 
 body.dark-mode .sky-fullscreen-indicators .planet-status-item.visible {
     background: linear-gradient(90deg, hsla(214, 24%, 30%, 0.36), hsla(193, 42%, 30%, 0.32));
+}
+
+body.dark-mode .sky-ar-status {
+    color: hsla(192, 88%, 86%, 0.92);
 }
 
 @media (max-width: 40rem) {

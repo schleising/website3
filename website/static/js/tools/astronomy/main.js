@@ -65,6 +65,8 @@ const skyCanvas = document.getElementById("sky-canvas");
 const skyFullscreenElement = document.getElementById("sky-fullscreen");
 const skyFullscreenStageElement = document.getElementById("sky-fullscreen-stage");
 const skyFullscreenHudElement = document.getElementById("sky-fullscreen-hud");
+const skyArToggleButton = document.getElementById("sky-ar-toggle-button");
+const skyArStatusElement = document.getElementById("sky-ar-status");
 const skyCloseButton = document.getElementById("sky-close-button");
 const skyFullscreenCanvas = document.getElementById("sky-canvas-fullscreen");
 const skyTimeSlider = document.getElementById("sky-time-slider");
@@ -85,6 +87,17 @@ let requestCurrentLocation = async () => false;
 let skyTimeOffsetMinutes = 0;
 let skyTimePlayIntervalId = null;
 let pendingSkyRerenderFrameId = null;
+
+const skyArViewState = {
+    isSupported: typeof window !== "undefined" && typeof window.DeviceOrientationEvent !== "undefined",
+    isEnabled: false,
+    headingDegrees: null,
+    altitudeDegrees: 18,
+    orientationListener: null,
+    liveRerenderIntervalId: null,
+    hasReceivedOrientation: false,
+    hasAbsoluteHeading: false
+};
 
 const fullscreenSkyViewState = {
     scale: 1,
@@ -492,6 +505,230 @@ function scheduleRerenderSkyForCurrentInputs() {
         pendingSkyRerenderFrameId = null;
         rerenderSkyForCurrentInputs();
     });
+}
+
+function isMobileArEligible() {
+    return window.matchMedia("(max-width: 56rem) and (pointer: coarse)").matches;
+}
+
+function setFullscreenTimeTravelControlsDisabled(isDisabled) {
+    [
+        skyTimeSliderFullscreen,
+        skyTimeNowButtonFullscreen,
+        skyTimePlayButtonFullscreen
+    ].forEach(element => {
+        if (element != null) {
+            element.disabled = isDisabled;
+        }
+    });
+}
+
+function updateSkyArUiState() {
+    if (skyArToggleButton != null) {
+        const canUseAr = skyArViewState.isSupported && isMobileArEligible();
+        skyArToggleButton.hidden = !canUseAr;
+        skyArToggleButton.disabled = !canUseAr;
+        skyArToggleButton.setAttribute("aria-pressed", skyArViewState.isEnabled ? "true" : "false");
+        skyArToggleButton.innerText = skyArViewState.isEnabled ? "Stop AR" : "AR View";
+    }
+
+    if (skyArStatusElement != null) {
+        if (!skyArViewState.isEnabled) {
+            skyArStatusElement.hidden = true;
+            return;
+        }
+
+        const headingText = Number.isFinite(skyArViewState.headingDegrees)
+            ? `${Math.round(skyArViewState.headingDegrees)} deg`
+            : "calibrating";
+        const altitudeText = `${Math.round(skyArViewState.altitudeDegrees)} deg alt`;
+        skyArStatusElement.innerText = `AR live | Heading ${headingText} | ${altitudeText}`;
+        skyArStatusElement.hidden = false;
+    }
+}
+
+function stopSkyArLiveRerender() {
+    if (skyArViewState.liveRerenderIntervalId != null) {
+        clearInterval(skyArViewState.liveRerenderIntervalId);
+        skyArViewState.liveRerenderIntervalId = null;
+    }
+}
+
+function startSkyArLiveRerender() {
+    stopSkyArLiveRerender();
+    skyArViewState.liveRerenderIntervalId = window.setInterval(() => {
+        scheduleRerenderSkyForCurrentInputs();
+    }, 1000);
+}
+
+function getSkyArHeadingDegrees(event) {
+    if (Number.isFinite(event.webkitCompassHeading)) {
+        return normalizeDegrees(event.webkitCompassHeading);
+    }
+
+    if (Number.isFinite(event.alpha) && Number.isFinite(event.beta) && Number.isFinite(event.gamma)) {
+        // Tilt-compensated compass heading from DeviceOrientation alpha/beta/gamma.
+        const x = toRadians(event.beta);
+        const y = toRadians(event.gamma);
+        const z = toRadians(event.alpha);
+
+        const cX = Math.cos(x);
+        const cY = Math.cos(y);
+        const cZ = Math.cos(z);
+        const sX = Math.sin(x);
+        const sY = Math.sin(y);
+        const sZ = Math.sin(z);
+
+        const vx = -cZ * sY - sZ * sX * cY;
+        const vy = -sZ * sY + cZ * sX * cY;
+        if (Math.hypot(vx, vy) < 0.0001) {
+            return null;
+        }
+
+        return normalizeDegrees(toDegrees(Math.atan2(vx, vy)));
+    }
+
+    if (Number.isFinite(event.alpha)) {
+        return normalizeDegrees(360 - event.alpha);
+    }
+
+    return null;
+}
+
+function smoothHeadingDegrees(previousHeadingDegrees, nextHeadingDegrees, smoothingFactor = 0.28) {
+    if (!Number.isFinite(previousHeadingDegrees)) {
+        return normalizeDegrees(nextHeadingDegrees);
+    }
+
+    const delta = normalizeDegrees180(nextHeadingDegrees - previousHeadingDegrees);
+    return normalizeDegrees(previousHeadingDegrees + delta * smoothingFactor);
+}
+
+function getSkyArAltitudeDegrees(event) {
+    const beta = Number.isFinite(event.beta) ? event.beta : 0;
+    const gamma = Number.isFinite(event.gamma) ? event.gamma : 0;
+    const screenOrientationAngle = Number.isFinite(window.screen?.orientation?.angle)
+        ? normalizeDegrees(window.screen.orientation.angle)
+        : normalizeDegrees(Number(window.orientation) || 0);
+
+    let altitudeDegrees;
+    if (screenOrientationAngle >= 45 && screenOrientationAngle < 135) {
+        // Landscape-right: use gamma for vertical pitch.
+        altitudeDegrees = gamma - 90;
+    } else if (screenOrientationAngle >= 225 && screenOrientationAngle < 315) {
+        // Landscape-left: gamma sign is mirrored.
+        altitudeDegrees = -90 - gamma;
+    } else if (screenOrientationAngle >= 135 && screenOrientationAngle < 225) {
+        // Upside-down portrait.
+        altitudeDegrees = 90 - beta;
+    } else {
+        // Upright portrait: beta near 90deg corresponds to horizon.
+        altitudeDegrees = beta - 90;
+    }
+
+    return Math.max(-85, Math.min(90, altitudeDegrees));
+}
+
+function handleSkyArOrientation(event) {
+    const hasCompassHeading = Number.isFinite(event.webkitCompassHeading);
+    const hasFullOrientation = Number.isFinite(event.alpha) && Number.isFinite(event.beta) && Number.isFinite(event.gamma);
+    const eventHasAbsoluteHeading = hasCompassHeading || (event.absolute === true && hasFullOrientation);
+    if (eventHasAbsoluteHeading) {
+        skyArViewState.hasAbsoluteHeading = true;
+    }
+
+    // Prefer absolute heading events when available to avoid gyro drift.
+    if (skyArViewState.hasAbsoluteHeading && !eventHasAbsoluteHeading) {
+        return;
+    }
+
+    const altitude = getSkyArAltitudeDegrees(event);
+    let heading = getSkyArHeadingDegrees(event);
+
+    // Heading becomes numerically unstable near zenith/nadir; hold last stable value there.
+    if (Math.abs(altitude) > 78 && Number.isFinite(skyArViewState.headingDegrees)) {
+        heading = skyArViewState.headingDegrees;
+    } else if (heading != null) {
+        heading = smoothHeadingDegrees(skyArViewState.headingDegrees, heading);
+    }
+
+    if (heading != null) {
+        skyArViewState.headingDegrees = heading;
+    }
+
+    skyArViewState.altitudeDegrees = altitude;
+    skyArViewState.hasReceivedOrientation = true;
+    updateSkyArUiState();
+    scheduleRerenderSkyForCurrentInputs();
+}
+
+async function requestSkyArPermissionIfNeeded() {
+    if (typeof DeviceOrientationEvent === "undefined") {
+        return false;
+    }
+
+    const requestPermission = DeviceOrientationEvent.requestPermission;
+    if (typeof requestPermission !== "function") {
+        return true;
+    }
+
+    try {
+        const permission = await requestPermission.call(DeviceOrientationEvent);
+        return permission === "granted";
+    } catch {
+        return false;
+    }
+}
+
+async function setSkyArModeEnabled(nextEnabled) {
+    if (!skyArViewState.isSupported || !isMobileArEligible()) {
+        skyArViewState.isEnabled = false;
+        updateSkyArUiState();
+        return;
+    }
+
+    if (nextEnabled) {
+        const permissionGranted = await requestSkyArPermissionIfNeeded();
+        if (!permissionGranted) {
+            sunStatus.innerText = "AR access requires motion permission on this device.";
+            skyArViewState.isEnabled = false;
+            updateSkyArUiState();
+            return;
+        }
+
+        stopSkyTimePlayback();
+        setSkyTimeOffset(0);
+        setFullscreenTimeTravelControlsDisabled(true);
+        resetFullscreenSkyTransform();
+
+        skyArViewState.isEnabled = true;
+        skyArViewState.hasReceivedOrientation = false;
+        skyArViewState.hasAbsoluteHeading = false;
+        skyArViewState.headingDegrees = null;
+
+        if (skyArViewState.orientationListener == null) {
+            skyArViewState.orientationListener = handleSkyArOrientation;
+        }
+
+        window.addEventListener("deviceorientationabsolute", skyArViewState.orientationListener, true);
+        window.addEventListener("deviceorientation", skyArViewState.orientationListener, true);
+        startSkyArLiveRerender();
+        updateSkyArUiState();
+        scheduleRerenderSkyForCurrentInputs();
+        return;
+    }
+
+    skyArViewState.isEnabled = false;
+    setFullscreenTimeTravelControlsDisabled(false);
+    stopSkyArLiveRerender();
+
+    if (skyArViewState.orientationListener != null) {
+        window.removeEventListener("deviceorientationabsolute", skyArViewState.orientationListener, true);
+        window.removeEventListener("deviceorientation", skyArViewState.orientationListener, true);
+    }
+
+    updateSkyArUiState();
+    scheduleRerenderSkyForCurrentInputs();
 }
 
 function toRadians(degrees) {
@@ -1427,6 +1664,179 @@ function drawDeepSkyHighlights(ctx, cx, cy, radius, skyContext, occupiedLabelBox
     }
 }
 
+function getSkyPalette() {
+    const isStargazingMode = document.body != null && document.body.classList.contains("stargazing-mode");
+    if (isStargazingMode) {
+        return {
+            gradientInner: "hsl(8, 58%, 14%)",
+            gradientOuter: "hsl(0, 60%, 7%)",
+            ringStroke: "hsla(20, 66%, 78%, 0.24)",
+            horizonStroke: "hsla(20, 70%, 84%, 0.48)",
+            axisStroke: "hsla(22, 54%, 76%, 0.18)",
+            cardinalFill: "hsla(24, 92%, 90%, 0.9)",
+            noVisibleFill: "hsla(22, 72%, 84%, 0.88)",
+            markerStroke: "hsla(10, 48%, 12%, 0.82)",
+            labelFill: "hsla(24, 92%, 90%, 0.92)"
+        };
+    }
+
+    return {
+        gradientInner: "hsl(216, 58%, 20%)",
+        gradientOuter: "hsl(232, 58%, 8%)",
+        ringStroke: "hsla(210, 38%, 84%, 0.28)",
+        horizonStroke: "hsla(210, 52%, 90%, 0.55)",
+        axisStroke: "hsla(212, 32%, 88%, 0.2)",
+        cardinalFill: "hsla(0, 0%, 100%, 0.84)",
+        noVisibleFill: "hsla(210, 26%, 88%, 0.86)",
+        markerStroke: "hsla(216, 38%, 16%, 0.8)",
+        labelFill: "hsla(0, 0%, 100%, 0.92)"
+    };
+}
+
+function drawSkyArView(targetCanvas, skyContext = null) {
+    if (targetCanvas == null || skyContext == null) {
+        return;
+    }
+
+    resizeCanvasToDisplaySize(targetCanvas);
+
+    const ctx = targetCanvas.getContext("2d");
+    if (ctx == null) {
+        return;
+    }
+
+    const width = targetCanvas.clientWidth || parseFloat(getComputedStyle(targetCanvas).width) || targetCanvas.width;
+    const height = targetCanvas.clientHeight || parseFloat(getComputedStyle(targetCanvas).height) || targetCanvas.height;
+    const dpr = width > 0 ? targetCanvas.width / width : 1;
+    const cx = width / 2;
+    const cy = height / 2;
+
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, targetCanvas.width, targetCanvas.height);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    const skyPalette = getSkyPalette();
+    const gradient = ctx.createLinearGradient(0, 0, 0, height);
+    gradient.addColorStop(0, skyPalette.gradientInner);
+    gradient.addColorStop(1, skyPalette.gradientOuter);
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, width, height);
+
+    const viewAzimuth = Number.isFinite(skyArViewState.headingDegrees) ? skyArViewState.headingDegrees : 0;
+    const viewAltitude = skyArViewState.altitudeDegrees;
+    const fovHorizontal = 78;
+    const fovVertical = 64;
+
+    ctx.strokeStyle = skyPalette.axisStroke;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(cx, 0);
+    ctx.lineTo(cx, height);
+    ctx.moveTo(0, cy);
+    ctx.lineTo(width, cy);
+    ctx.stroke();
+
+    const projectArPoint = (azimuthDegrees, altitudeDegrees) => {
+        const deltaAz = normalizeDegrees180(azimuthDegrees - viewAzimuth);
+        const deltaAlt = altitudeDegrees - viewAltitude;
+        const inFrame = Math.abs(deltaAz) <= fovHorizontal / 2 && Math.abs(deltaAlt) <= fovVertical / 2;
+        if (!inFrame) {
+            return null;
+        }
+
+        return {
+            x: cx + deltaAz / (fovHorizontal / 2) * cx,
+            y: cy - deltaAlt / (fovVertical / 2) * cy
+        };
+    };
+
+    const drawArMarker = (name, azimuthDegrees, altitudeDegrees, color, radius = 3.4) => {
+        const point = projectArPoint(azimuthDegrees, altitudeDegrees);
+        if (point == null) {
+            return;
+        }
+
+        ctx.beginPath();
+        ctx.arc(point.x, point.y, radius, 0, Math.PI * 2);
+        ctx.fillStyle = color;
+        ctx.fill();
+        ctx.strokeStyle = skyPalette.markerStroke;
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        ctx.fillStyle = skyPalette.labelFill;
+        ctx.font = "11px Outfit, sans-serif";
+        ctx.textAlign = "left";
+        ctx.textBaseline = "middle";
+        ctx.fillText(name, point.x + 7, point.y - 1);
+    };
+
+    const { date, latitude, longitude } = skyContext;
+    for (const planetName of allPlanetNames) {
+        const horizontal = getPlanetHorizontalCoordinates(planetName, date, latitude, longitude);
+        if (horizontal.altitudeDegrees < -10) {
+            continue;
+        }
+
+        drawArMarker(
+            planetName,
+            horizontal.azimuthDegrees,
+            horizontal.altitudeDegrees,
+            planetColors[planetName] || "#ffffff"
+        );
+    }
+
+    const sunHorizontal = getSunHorizontalCoordinates(date, latitude, longitude);
+    if (sunHorizontal.altitudeDegrees >= -10) {
+        drawArMarker("Sun", sunHorizontal.azimuthDegrees, sunHorizontal.altitudeDegrees, "hsl(45, 100%, 62%)", 4.1);
+    }
+
+    const moonHorizontal = getMoonHorizontalCoordinates(date, latitude, longitude);
+    if (moonHorizontal.altitudeDegrees >= -10) {
+        drawArMarker("Moon", moonHorizontal.azimuthDegrees, moonHorizontal.altitudeDegrees, "#f7fbff", 4.1);
+    }
+
+    for (const star of nakedEyeStars) {
+        if (star.mag > 2.2) {
+            continue;
+        }
+
+        const horizontal = getHorizontalCoordinatesFromEquatorial(
+            star.ra,
+            star.dec,
+            date,
+            latitude,
+            longitude,
+            { precessFromJ2000: true }
+        );
+        if (horizontal.altitudeDegrees < -10) {
+            continue;
+        }
+
+        const point = projectArPoint(horizontal.azimuthDegrees, horizontal.altitudeDegrees);
+        if (point == null) {
+            continue;
+        }
+
+        ctx.beginPath();
+        ctx.arc(point.x, point.y, 2.1, 0, Math.PI * 2);
+        ctx.fillStyle = "hsla(44, 100%, 92%, 0.9)";
+        ctx.fill();
+    }
+
+    ctx.fillStyle = skyPalette.labelFill;
+    ctx.font = "600 12px Outfit, sans-serif";
+    ctx.textAlign = "left";
+    ctx.fillText(`AR heading ${Math.round(viewAzimuth)} deg`, 14, 18);
+    ctx.fillText(`Looking ${Math.round(viewAltitude)} deg alt`, 14, 36);
+
+    if (!skyArViewState.hasReceivedOrientation) {
+        ctx.textAlign = "center";
+        ctx.font = "600 13px Outfit, sans-serif";
+        ctx.fillText("Move phone to calibrate AR view", cx, cy + 22);
+    }
+}
+
 function drawSkyDiagram(targetCanvas, visiblePlanets, skyContext = null) {
     if (targetCanvas == null) {
         return;
@@ -1452,28 +1862,7 @@ function drawSkyDiagram(targetCanvas, visiblePlanets, skyContext = null) {
     const radius = Math.min(width, height) * 0.39;
     const labelScale = getSkyLabelScale(targetCanvas);
     const occupiedLabelBoxes = [];
-    const isStargazingMode = document.body != null && document.body.classList.contains("stargazing-mode");
-    const skyPalette = isStargazingMode
-        ? {
-            gradientInner: "hsl(8, 58%, 14%)",
-            gradientOuter: "hsl(0, 60%, 7%)",
-            ringStroke: "hsla(20, 66%, 78%, 0.24)",
-            horizonStroke: "hsla(20, 70%, 84%, 0.48)",
-            axisStroke: "hsla(22, 54%, 76%, 0.18)",
-            cardinalFill: "hsla(24, 92%, 90%, 0.9)",
-            noVisibleFill: "hsla(22, 72%, 84%, 0.88)",
-            markerStroke: "hsla(10, 48%, 12%, 0.82)"
-        }
-        : {
-            gradientInner: "hsl(216, 58%, 20%)",
-            gradientOuter: "hsl(232, 58%, 8%)",
-            ringStroke: "hsla(210, 38%, 84%, 0.28)",
-            horizonStroke: "hsla(210, 52%, 90%, 0.55)",
-            axisStroke: "hsla(212, 32%, 88%, 0.2)",
-            cardinalFill: "hsla(0, 0%, 100%, 0.84)",
-            noVisibleFill: "hsla(210, 26%, 88%, 0.86)",
-            markerStroke: "hsla(216, 38%, 16%, 0.8)"
-        };
+    const skyPalette = getSkyPalette();
 
     const gradient = ctx.createRadialGradient(cx, cy * 0.75, radius * 0.15, cx, cy, radius * 1.15);
     gradient.addColorStop(0, skyPalette.gradientInner);
@@ -1552,6 +1941,19 @@ function drawSkyDiagram(targetCanvas, visiblePlanets, skyContext = null) {
     }
 }
 
+function drawActiveFullscreenSky() {
+    if (skyFullscreenCanvas == null) {
+        return;
+    }
+
+    if (skyArViewState.isEnabled && isMobileArEligible()) {
+        drawSkyArView(skyFullscreenCanvas, latestSkyContext);
+        return;
+    }
+
+    drawSkyDiagram(skyFullscreenCanvas, latestVisiblePlanets, latestSkyContext);
+}
+
 function renderVisiblePlanets(latitude, longitude) {
     const skySampleDate = getSkyRenderDate();
     planetWindowElement.innerText = `Snapshot: ${formatLocalTime(skySampleDate.toISOString())}`;
@@ -1592,7 +1994,7 @@ function renderVisiblePlanets(latitude, longitude) {
         drawSkyDiagram(skyCanvas, [], latestSkyContext);
 
         if (skyFullscreenElement != null && !skyFullscreenElement.hidden) {
-            drawSkyDiagram(skyFullscreenCanvas, [], latestSkyContext);
+            drawActiveFullscreenSky();
         }
 
         return;
@@ -1603,7 +2005,7 @@ function renderVisiblePlanets(latitude, longitude) {
     drawSkyDiagram(skyCanvas, visiblePlanets, latestSkyContext);
 
     if (skyFullscreenElement != null && !skyFullscreenElement.hidden) {
-        drawSkyDiagram(skyFullscreenCanvas, visiblePlanets, latestSkyContext);
+        drawActiveFullscreenSky();
     }
 
     updateMoonPhase(skySampleDate);
@@ -1641,7 +2043,7 @@ async function updateSunTimes(lat, lon) {
         drawSkyDiagram(skyCanvas, []);
 
         if (skyFullscreenElement != null && !skyFullscreenElement.hidden) {
-            drawSkyDiagram(skyFullscreenCanvas, []);
+            drawActiveFullscreenSky();
         }
 
         sunStatus.innerText = "Could not fetch sun times. Please try again.";
@@ -1695,7 +2097,8 @@ function openSkyFullscreen() {
     }
 
     skyFullscreenElement.hidden = false;
-    drawSkyDiagram(skyFullscreenCanvas, latestVisiblePlanets, latestSkyContext);
+    updateSkyArUiState();
+    drawActiveFullscreenSky();
     resetFullscreenSkyTransform();
     requestSkyFullscreen();
 }
@@ -1705,6 +2108,7 @@ function closeSkyFullscreen() {
         return;
     }
 
+    void setSkyArModeEnabled(false);
     skyFullscreenElement.hidden = true;
     resetFullscreenSkyTransform();
 
@@ -1734,6 +2138,13 @@ function initializeFullscreenSkyInteractions() {
         skyCloseButton.addEventListener("click", closeSkyFullscreen);
     }
 
+    if (skyArToggleButton != null) {
+        skyArToggleButton.addEventListener("click", async () => {
+            await setSkyArModeEnabled(!skyArViewState.isEnabled);
+            drawActiveFullscreenSky();
+        });
+    }
+
     if (skyFullscreenElement != null) {
         skyFullscreenElement.addEventListener("click", event => {
             if (event.target === skyFullscreenElement) {
@@ -1759,6 +2170,10 @@ function initializeFullscreenSkyInteractions() {
     }
 
     skyFullscreenStageElement.addEventListener("wheel", event => {
+        if (skyArViewState.isEnabled) {
+            return;
+        }
+
         if (event.target !== skyFullscreenCanvas) {
             return;
         }
@@ -1770,6 +2185,10 @@ function initializeFullscreenSkyInteractions() {
     }, { passive: false });
 
     skyFullscreenStageElement.addEventListener("pointerdown", event => {
+        if (skyArViewState.isEnabled) {
+            return;
+        }
+
         if (event.target !== skyFullscreenCanvas) {
             return;
         }
@@ -1792,6 +2211,10 @@ function initializeFullscreenSkyInteractions() {
     });
 
     skyFullscreenStageElement.addEventListener("pointermove", event => {
+        if (skyArViewState.isEnabled) {
+            return;
+        }
+
         if (!fullscreenSkyViewState.pointers.has(event.pointerId)) {
             return;
         }
@@ -2376,8 +2799,13 @@ async function initializePage() {
     initializeShareSkyCard();
     const locationController = initializeLocationButton();
     initializeFullscreenSkyInteractions();
+    updateSkyArUiState();
 
     window.addEventListener("resize", () => {
+        updateSkyArUiState();
+        if (skyArViewState.isEnabled && !isMobileArEligible()) {
+            void setSkyArModeEnabled(false);
+        }
         scheduleRerenderSkyForCurrentInputs();
     });
 
