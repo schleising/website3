@@ -1,6 +1,7 @@
 const sunriseApi = "/sun-times/";
 const synodicMonthDays = 29.53058867;
 const knownNewMoonUtcMs = Date.UTC(2000, 0, 6, 18, 14, 0);
+const astronomicalUnitLightTimeDays = 0.0057755183;
 
 const latitudeInput = document.getElementById("latitude");
 const longitudeInput = document.getElementById("longitude");
@@ -326,8 +327,71 @@ function normalizeDegrees(degrees) {
     return angle;
 }
 
+function normalizeDegrees180(degrees) {
+    let angle = normalizeDegrees(degrees);
+    if (angle > 180) {
+        angle -= 360;
+    }
+
+    return angle;
+}
+
 function toJulianDate(date) {
     return date.getTime() / 86400000 + 2440587.5;
+}
+
+function toJulianCenturies(jd) {
+    return (jd - 2451545) / 36525;
+}
+
+function getMeanObliquityRadians(jd) {
+    const T = toJulianCenturies(jd);
+    const arcSeconds = 84381.448 - 46.815 * T - 0.00059 * T * T + 0.001813 * T * T * T;
+    return toRadians(arcSeconds / 3600);
+}
+
+function getGreenwichMeanSiderealTimeDegrees(jd) {
+    const T = toJulianCenturies(jd);
+    return normalizeDegrees(
+        280.46061837
+            + 360.98564736629 * (jd - 2451545)
+            + 0.000387933 * T * T
+            - (T * T * T) / 38710000
+    );
+}
+
+function getAtmosphericRefractionDegrees(altitudeDegrees) {
+    if (altitudeDegrees <= -1 || altitudeDegrees >= 90) {
+        return 0;
+    }
+
+    const refractionArcMinutes = 1.02 / Math.tan(toRadians(altitudeDegrees + 10.3 / (altitudeDegrees + 5.11)));
+    return refractionArcMinutes / 60;
+}
+
+function precessJ2000ToDate(raDegrees, decDegrees, jd) {
+    const T = toJulianCenturies(jd);
+    const zetaArcSeconds = 2306.2181 * T + 0.30188 * T * T + 0.017998 * T * T * T;
+    const zArcSeconds = 2306.2181 * T + 1.09468 * T * T + 0.018203 * T * T * T;
+    const thetaArcSeconds = 2004.3109 * T - 0.42665 * T * T - 0.041833 * T * T * T;
+
+    const zeta = toRadians(zetaArcSeconds / 3600);
+    const z = toRadians(zArcSeconds / 3600);
+    const theta = toRadians(thetaArcSeconds / 3600);
+
+    const rightAscension = toRadians(raDegrees);
+    const declination = toRadians(decDegrees);
+
+    const A = Math.cos(declination) * Math.sin(rightAscension + zeta);
+    const B = Math.cos(theta) * Math.cos(declination) * Math.cos(rightAscension + zeta)
+        - Math.sin(theta) * Math.sin(declination);
+    const C = Math.sin(theta) * Math.cos(declination) * Math.cos(rightAscension + zeta)
+        + Math.cos(theta) * Math.sin(declination);
+
+    return {
+        rightAscensionDegrees: normalizeDegrees(toDegrees(Math.atan2(A, B) + z)),
+        declinationDegrees: toDegrees(Math.asin(C))
+    };
 }
 
 function solveEccentricAnomaly(meanAnomalyRadians, eccentricity) {
@@ -341,7 +405,52 @@ function solveEccentricAnomaly(meanAnomalyRadians, eccentricity) {
     return eccentricAnomaly;
 }
 
-function getHeliocentricCoordinates(elements, d) {
+function getMeanAnomalyDegrees(elements, d) {
+    return normalizeDegrees(elements.M0 + elements.M1 * d);
+}
+
+function applyOuterPlanetPerturbations(planetName, d, longitudeRadians, latitudeRadians) {
+    let deltaLongitudeDegrees = 0;
+    let deltaLatitudeDegrees = 0;
+
+    const Mj = getMeanAnomalyDegrees(planetaryElements.Jupiter, d);
+    const Ms = getMeanAnomalyDegrees(planetaryElements.Saturn, d);
+    const Mu = getMeanAnomalyDegrees(planetaryElements.Uranus, d);
+
+    if (planetName === "Jupiter") {
+        deltaLongitudeDegrees += -0.332 * Math.sin(toRadians(2 * Mj - 5 * Ms - 67.6));
+        deltaLongitudeDegrees += -0.056 * Math.sin(toRadians(2 * Mj - 2 * Ms + 21));
+        deltaLongitudeDegrees += 0.042 * Math.sin(toRadians(3 * Mj - 5 * Ms + 21));
+        deltaLongitudeDegrees += -0.036 * Math.sin(toRadians(Mj - 2 * Ms));
+        deltaLongitudeDegrees += 0.022 * Math.cos(toRadians(Mj - Ms));
+        deltaLongitudeDegrees += 0.023 * Math.sin(toRadians(2 * Mj - 3 * Ms + 52));
+        deltaLongitudeDegrees += -0.016 * Math.sin(toRadians(Mj - 5 * Ms - 69));
+    }
+
+    if (planetName === "Saturn") {
+        deltaLongitudeDegrees += 0.812 * Math.sin(toRadians(2 * Mj - 5 * Ms - 67.6));
+        deltaLongitudeDegrees += -0.229 * Math.cos(toRadians(2 * Mj - 4 * Ms - 2));
+        deltaLongitudeDegrees += 0.119 * Math.sin(toRadians(Mj - 2 * Ms - 3));
+        deltaLongitudeDegrees += 0.046 * Math.sin(toRadians(2 * Mj - 6 * Ms - 69));
+        deltaLongitudeDegrees += 0.014 * Math.sin(toRadians(Mj - 3 * Ms + 32));
+
+        deltaLatitudeDegrees += -0.020 * Math.cos(toRadians(2 * Mj - 4 * Ms - 2));
+        deltaLatitudeDegrees += 0.018 * Math.sin(toRadians(2 * Mj - 6 * Ms - 49));
+    }
+
+    if (planetName === "Uranus") {
+        deltaLongitudeDegrees += 0.040 * Math.sin(toRadians(Ms - 2 * Mu + 6));
+        deltaLongitudeDegrees += 0.035 * Math.sin(toRadians(Ms - 3 * Mu + 33));
+        deltaLongitudeDegrees += -0.015 * Math.sin(toRadians(Mj - Mu + 20));
+    }
+
+    return {
+        longitudeRadians: longitudeRadians + toRadians(deltaLongitudeDegrees),
+        latitudeRadians: latitudeRadians + toRadians(deltaLatitudeDegrees)
+    };
+}
+
+function getHeliocentricCoordinates(elements, d, planetName = null) {
     const N = toRadians(normalizeDegrees(elements.N0 + elements.N1 * d));
     const i = toRadians(elements.i0 + elements.i1 * d);
     const w = toRadians(normalizeDegrees(elements.w0 + elements.w1 * d));
@@ -356,9 +465,19 @@ function getHeliocentricCoordinates(elements, d) {
     const v = Math.atan2(yv, xv);
     const r = Math.sqrt(xv * xv + yv * yv);
 
-    const xh = r * (Math.cos(N) * Math.cos(v + w) - Math.sin(N) * Math.sin(v + w) * Math.cos(i));
-    const yh = r * (Math.sin(N) * Math.cos(v + w) + Math.cos(N) * Math.sin(v + w) * Math.cos(i));
-    const zh = r * (Math.sin(v + w) * Math.sin(i));
+    let xh = r * (Math.cos(N) * Math.cos(v + w) - Math.sin(N) * Math.sin(v + w) * Math.cos(i));
+    let yh = r * (Math.sin(N) * Math.cos(v + w) + Math.cos(N) * Math.sin(v + w) * Math.cos(i));
+    let zh = r * (Math.sin(v + w) * Math.sin(i));
+
+    if (planetName != null) {
+        const longitudeRadians = Math.atan2(yh, xh);
+        const latitudeRadians = Math.atan2(zh, Math.sqrt(xh * xh + yh * yh));
+        const perturbation = applyOuterPlanetPerturbations(planetName, d, longitudeRadians, latitudeRadians);
+
+        xh = r * Math.cos(perturbation.longitudeRadians) * Math.cos(perturbation.latitudeRadians);
+        yh = r * Math.sin(perturbation.longitudeRadians) * Math.cos(perturbation.latitudeRadians);
+        zh = r * Math.sin(perturbation.latitudeRadians);
+    }
 
     return { x: xh, y: yh, z: zh };
 }
@@ -367,41 +486,40 @@ function getPlanetHorizontalCoordinates(planetName, date, latitude, longitude) {
     const jd = toJulianDate(date);
     const d = jd - 2451543.5;
 
-    const earth = getHeliocentricCoordinates(earthElements, d);
-    const planet = getHeliocentricCoordinates(planetaryElements[planetName], d);
+    const earth = getHeliocentricCoordinates(earthElements, d, null);
+    let lightTimeDays = 0;
+    let xg = 0;
+    let yg = 0;
+    let zg = 0;
 
-    const xg = planet.x - earth.x;
-    const yg = planet.y - earth.y;
-    const zg = planet.z - earth.z;
+    // One refinement pass is enough for apparent planetary position accuracy in this UI.
+    for (let i = 0; i < 2; i++) {
+        const planet = getHeliocentricCoordinates(planetaryElements[planetName], d - lightTimeDays, planetName);
+        xg = planet.x - earth.x;
+        yg = planet.y - earth.y;
+        zg = planet.z - earth.z;
 
-    const obliquity = toRadians(23.4393 - 3.563e-7 * d);
+        const geocentricDistanceAu = Math.sqrt(xg * xg + yg * yg + zg * zg);
+        lightTimeDays = geocentricDistanceAu * astronomicalUnitLightTimeDays;
+    }
+
+    const obliquity = getMeanObliquityRadians(jd);
 
     const xeq = xg;
     const yeq = yg * Math.cos(obliquity) - zg * Math.sin(obliquity);
     const zeq = yg * Math.sin(obliquity) + zg * Math.cos(obliquity);
 
-    const rightAscension = Math.atan2(yeq, xeq);
-    const declination = Math.atan2(zeq, Math.sqrt(xeq * xeq + yeq * yeq));
+    const rightAscensionDegrees = normalizeDegrees(toDegrees(Math.atan2(yeq, xeq)));
+    const declinationDegrees = toDegrees(Math.atan2(zeq, Math.sqrt(xeq * xeq + yeq * yeq)));
 
-    const gmst = normalizeDegrees(280.46061837 + 360.98564736629 * (jd - 2451545));
-    const lst = normalizeDegrees(gmst + longitude);
-    const hourAngle = toRadians(normalizeDegrees(lst - normalizeDegrees(toDegrees(rightAscension))));
-
-    const latitudeRadians = toRadians(latitude);
-    const altitude = Math.asin(
-        Math.sin(declination) * Math.sin(latitudeRadians)
-            + Math.cos(declination) * Math.cos(latitudeRadians) * Math.cos(hourAngle)
+    return getHorizontalCoordinatesFromEquatorial(
+        rightAscensionDegrees,
+        declinationDegrees,
+        date,
+        latitude,
+        longitude,
+        { applyRefraction: true }
     );
-
-    const azimuth = Math.atan2(
-        Math.sin(hourAngle),
-        Math.cos(hourAngle) * Math.sin(latitudeRadians) - Math.tan(declination) * Math.cos(latitudeRadians)
-    );
-
-    return {
-        altitudeDegrees: toDegrees(altitude),
-        azimuthDegrees: normalizeDegrees(toDegrees(azimuth) + 180)
-    };
 }
 
 function getEveningWindow(civilTwilightEndIso) {
@@ -416,14 +534,25 @@ function getEveningWindow(civilTwilightEndIso) {
     return { start, end };
 }
 
-function getHorizontalCoordinatesFromEquatorial(raDegrees, decDegrees, date, latitude, longitude) {
+function getHorizontalCoordinatesFromEquatorial(raDegrees, decDegrees, date, latitude, longitude, options = {}) {
+    const { applyRefraction = true, precessFromJ2000 = false } = options;
     const jd = toJulianDate(date);
-    const gmst = normalizeDegrees(280.46061837 + 360.98564736629 * (jd - 2451545));
+
+    let workingRaDegrees = raDegrees;
+    let workingDecDegrees = decDegrees;
+
+    if (precessFromJ2000) {
+        const precessed = precessJ2000ToDate(raDegrees, decDegrees, jd);
+        workingRaDegrees = precessed.rightAscensionDegrees;
+        workingDecDegrees = precessed.declinationDegrees;
+    }
+
+    const gmst = getGreenwichMeanSiderealTimeDegrees(jd);
     const lst = normalizeDegrees(gmst + longitude);
-    const hourAngle = toRadians(normalizeDegrees(lst - raDegrees));
+    const hourAngle = toRadians(normalizeDegrees180(lst - workingRaDegrees));
 
     const latitudeRadians = toRadians(latitude);
-    const declination = toRadians(decDegrees);
+    const declination = toRadians(workingDecDegrees);
 
     const altitude = Math.asin(
         Math.sin(declination) * Math.sin(latitudeRadians)
@@ -435,8 +564,13 @@ function getHorizontalCoordinatesFromEquatorial(raDegrees, decDegrees, date, lat
         Math.cos(hourAngle) * Math.sin(latitudeRadians) - Math.tan(declination) * Math.cos(latitudeRadians)
     );
 
+    let altitudeDegrees = toDegrees(altitude);
+    if (applyRefraction) {
+        altitudeDegrees += getAtmosphericRefractionDegrees(altitudeDegrees);
+    }
+
     return {
-        altitudeDegrees: toDegrees(altitude),
+        altitudeDegrees,
         azimuthDegrees: normalizeDegrees(toDegrees(azimuth) + 180)
     };
 }
@@ -481,6 +615,13 @@ function getMoonEquatorialCoordinates(date) {
     const e = 0.0549;
     const M = normalizeDegrees(115.3654 + 13.0649929509 * d);
 
+    const Ms = getMeanAnomalyDegrees(earthElements, d);
+    const ws = normalizeDegrees(earthElements.w0 + earthElements.w1 * d);
+    const Ls = normalizeDegrees(Ms + ws);
+    const Lm = normalizeDegrees(M + w + N);
+    const D = normalizeDegrees(Lm - Ls);
+    const F = normalizeDegrees(Lm - N);
+
     const E = solveEccentricAnomaly(toRadians(M), e);
     const xv = a * (Math.cos(E) - e);
     const yv = a * (Math.sqrt(1 - e * e) * Math.sin(E));
@@ -494,31 +635,80 @@ function getMoonEquatorialCoordinates(date) {
 
     const xh = r * (Math.cos(Nrad) * Math.cos(v + wrad) - Math.sin(Nrad) * Math.sin(v + wrad) * Math.cos(irad));
     const yh = r * (Math.sin(Nrad) * Math.cos(v + wrad) + Math.cos(Nrad) * Math.sin(v + wrad) * Math.cos(irad));
-    const zh = r * (Math.sin(v + wrad) * Math.sin(irad));
+    const zh = r * Math.sin(v + wrad) * Math.sin(irad);
 
-    const obliquity = toRadians(23.4393 - 3.563e-7 * d);
-    const xeq = xh;
-    const yeq = yh * Math.cos(obliquity) - zh * Math.sin(obliquity);
-    const zeq = yh * Math.sin(obliquity) + zh * Math.cos(obliquity);
+    let eclipticLongitudeDegrees = normalizeDegrees(toDegrees(Math.atan2(yh, xh)));
+    let eclipticLatitudeDegrees = toDegrees(Math.atan2(zh, Math.sqrt(xh * xh + yh * yh)));
+
+    eclipticLongitudeDegrees += -1.274 * Math.sin(toRadians(M - 2 * D));
+    eclipticLongitudeDegrees += 0.658 * Math.sin(toRadians(2 * D));
+    eclipticLongitudeDegrees += -0.186 * Math.sin(toRadians(Ms));
+    eclipticLongitudeDegrees += -0.059 * Math.sin(toRadians(2 * M - 2 * D));
+    eclipticLongitudeDegrees += -0.057 * Math.sin(toRadians(M - 2 * D + Ms));
+    eclipticLongitudeDegrees += 0.053 * Math.sin(toRadians(M + 2 * D));
+    eclipticLongitudeDegrees += 0.046 * Math.sin(toRadians(2 * D - Ms));
+    eclipticLongitudeDegrees += 0.041 * Math.sin(toRadians(M - Ms));
+    eclipticLongitudeDegrees += -0.035 * Math.sin(toRadians(D));
+    eclipticLongitudeDegrees += -0.031 * Math.sin(toRadians(M + Ms));
+    eclipticLongitudeDegrees += -0.015 * Math.sin(toRadians(2 * F - 2 * D));
+    eclipticLongitudeDegrees += 0.011 * Math.sin(toRadians(M - 4 * D));
+
+    eclipticLatitudeDegrees += -0.173 * Math.sin(toRadians(F - 2 * D));
+    eclipticLatitudeDegrees += -0.055 * Math.sin(toRadians(M - F - 2 * D));
+    eclipticLatitudeDegrees += -0.046 * Math.sin(toRadians(M + F - 2 * D));
+    eclipticLatitudeDegrees += 0.033 * Math.sin(toRadians(F + 2 * D));
+    eclipticLatitudeDegrees += 0.017 * Math.sin(toRadians(2 * M + F));
+
+    const distanceEarthRadii = r
+        - 0.58 * Math.cos(toRadians(M - 2 * D))
+        - 0.46 * Math.cos(toRadians(2 * D));
+
+    const eclipticLongitude = toRadians(normalizeDegrees(eclipticLongitudeDegrees));
+    const eclipticLatitude = toRadians(eclipticLatitudeDegrees);
+
+    const correctedXh = distanceEarthRadii * Math.cos(eclipticLongitude) * Math.cos(eclipticLatitude);
+    const correctedYh = distanceEarthRadii * Math.sin(eclipticLongitude) * Math.cos(eclipticLatitude);
+    const correctedZh = distanceEarthRadii * Math.sin(eclipticLatitude);
+
+    const obliquity = getMeanObliquityRadians(jd);
+    const xeq = correctedXh;
+    const yeq = correctedYh * Math.cos(obliquity) - correctedZh * Math.sin(obliquity);
+    const zeq = correctedYh * Math.sin(obliquity) + correctedZh * Math.cos(obliquity);
 
     const rightAscension = normalizeDegrees(toDegrees(Math.atan2(yeq, xeq)));
     const declination = toDegrees(Math.atan2(zeq, Math.sqrt(xeq * xeq + yeq * yeq)));
 
     return {
         rightAscension,
-        declination
+        declination,
+        distanceEarthRadii
     };
 }
 
 function getMoonHorizontalCoordinates(date, latitude, longitude) {
     const equatorial = getMoonEquatorialCoordinates(date);
-    return getHorizontalCoordinatesFromEquatorial(
+    const geocentricHorizontal = getHorizontalCoordinatesFromEquatorial(
         equatorial.rightAscension,
         equatorial.declination,
         date,
         latitude,
-        longitude
+        longitude,
+        { applyRefraction: false }
     );
+
+    const parallaxRadians = Math.asin(Math.min(1, 1 / equatorial.distanceEarthRadii));
+    const geocentricAltitudeRadians = toRadians(geocentricHorizontal.altitudeDegrees);
+    const parallaxAdjustment = Math.asin(
+        Math.max(-1, Math.min(1, Math.cos(geocentricAltitudeRadians) * Math.sin(parallaxRadians)))
+    );
+
+    let topocentricAltitudeDegrees = geocentricHorizontal.altitudeDegrees - toDegrees(parallaxAdjustment);
+    topocentricAltitudeDegrees += getAtmosphericRefractionDegrees(topocentricAltitudeDegrees);
+
+    return {
+        altitudeDegrees: topocentricAltitudeDegrees,
+        azimuthDegrees: geocentricHorizontal.azimuthDegrees
+    };
 }
 
 function buildSatellitePathSegments(skyContext) {
@@ -726,7 +916,8 @@ function drawConstellationOverlay(ctx, cx, cy, radius, skyContext) {
                 coordinates.dec,
                 date,
                 latitude,
-                longitude
+                longitude,
+                { precessFromJ2000: true }
             );
 
             if (horizontal.altitudeDegrees < 0) {
@@ -785,7 +976,8 @@ function drawPolarisOverlay(ctx, cx, cy, radius, skyContext) {
             poleStar.dec,
             date,
             latitude,
-            longitude
+            longitude,
+            { precessFromJ2000: true }
         );
 
         if (horizontal.altitudeDegrees < 0) {
