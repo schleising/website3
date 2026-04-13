@@ -19,6 +19,17 @@ const moonNameElement = document.getElementById("moon-name");
 const moonDetailsElement = document.getElementById("moon-details");
 const planetWindowElement = document.getElementById("planet-window");
 const planetListElement = document.getElementById("planet-list");
+const skyCanvas = document.getElementById("sky-canvas");
+
+const planetColors = {
+    Mercury: "#f7d7a6",
+    Venus: "#fff4c4",
+    Mars: "#ff9c88",
+    Jupiter: "#e9d0b2",
+    Saturn: "#ead9a2",
+    Uranus: "#9fe7e9",
+    Neptune: "#95bcff"
+};
 
 const planetaryElements = {
     Mercury: { N0: 48.3313, N1: 3.24587e-5, i0: 7.0047, i1: 5e-8, w0: 29.1241, w1: 1.01444e-5, a0: 0.387098, a1: 0, e0: 0.205635, e1: 5.59e-10, M0: 168.6562, M1: 4.0923344368 },
@@ -115,7 +126,7 @@ function getHeliocentricCoordinates(elements, d) {
     return { x: xh, y: yh, z: zh };
 }
 
-function getPlanetAltitudeDegrees(planetName, date, latitude, longitude) {
+function getPlanetHorizontalCoordinates(planetName, date, latitude, longitude) {
     const jd = toJulianDate(date);
     const d = jd - 2451543.5;
 
@@ -145,7 +156,15 @@ function getPlanetAltitudeDegrees(planetName, date, latitude, longitude) {
             + Math.cos(declination) * Math.cos(latitudeRadians) * Math.cos(hourAngle)
     );
 
-    return toDegrees(altitude);
+    const azimuth = Math.atan2(
+        Math.sin(hourAngle),
+        Math.cos(hourAngle) * Math.sin(latitudeRadians) - Math.tan(declination) * Math.cos(latitudeRadians)
+    );
+
+    return {
+        altitudeDegrees: toDegrees(altitude),
+        azimuthDegrees: normalizeDegrees(toDegrees(azimuth) + 180)
+    };
 }
 
 function getEveningWindow(civilTwilightEndIso) {
@@ -160,6 +179,90 @@ function getEveningWindow(civilTwilightEndIso) {
     return { start, end };
 }
 
+function drawSkyDiagram(visiblePlanets) {
+    if (skyCanvas == null) {
+        return;
+    }
+
+    const ctx = skyCanvas.getContext("2d");
+    if (ctx == null) {
+        return;
+    }
+
+    const width = skyCanvas.width;
+    const height = skyCanvas.height;
+    const cx = width / 2;
+    const cy = height / 2;
+    const radius = Math.min(width, height) * 0.39;
+
+    ctx.clearRect(0, 0, width, height);
+
+    const gradient = ctx.createRadialGradient(cx, cy * 0.75, radius * 0.15, cx, cy, radius * 1.15);
+    gradient.addColorStop(0, "hsl(216, 58%, 20%)");
+    gradient.addColorStop(1, "hsl(232, 58%, 8%)");
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, width, height);
+
+    for (const alt of [30, 60]) {
+        const ringRadius = (90 - alt) / 90 * radius;
+        ctx.beginPath();
+        ctx.arc(cx, cy, ringRadius, 0, Math.PI * 2);
+        ctx.strokeStyle = "hsla(210, 38%, 84%, 0.28)";
+        ctx.lineWidth = 1;
+        ctx.stroke();
+    }
+
+    ctx.beginPath();
+    ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+    ctx.strokeStyle = "hsla(210, 52%, 90%, 0.55)";
+    ctx.lineWidth = 1.4;
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(cx, cy - radius);
+    ctx.lineTo(cx, cy + radius);
+    ctx.moveTo(cx - radius, cy);
+    ctx.lineTo(cx + radius, cy);
+    ctx.strokeStyle = "hsla(212, 32%, 88%, 0.2)";
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    ctx.fillStyle = "hsla(0, 0%, 100%, 0.84)";
+    ctx.font = "12px Outfit, sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("N", cx, cy - radius - 7);
+    ctx.fillText("S", cx, cy + radius + 16);
+    ctx.fillText("E", cx + radius + 10, cy + 4);
+    ctx.fillText("W", cx - radius - 10, cy + 4);
+
+    if (visiblePlanets.length === 0) {
+        ctx.fillStyle = "hsla(210, 26%, 88%, 0.86)";
+        ctx.font = "13px Outfit, sans-serif";
+        ctx.fillText("No visible planets", cx, cy + 4);
+        return;
+    }
+
+    ctx.textAlign = "left";
+    for (const planet of visiblePlanets) {
+        const radialDistance = (90 - planet.maxAltitude) / 90 * radius;
+        const azimuthRadians = toRadians(planet.bestAzimuth);
+        const x = cx + radialDistance * Math.sin(azimuthRadians);
+        const y = cy - radialDistance * Math.cos(azimuthRadians);
+
+        ctx.beginPath();
+        ctx.arc(x, y, 4.2, 0, Math.PI * 2);
+        ctx.fillStyle = planetColors[planet.planetName] || "#ffffff";
+        ctx.fill();
+        ctx.strokeStyle = "hsla(216, 38%, 16%, 0.8)";
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        ctx.fillStyle = "hsla(0, 0%, 100%, 0.92)";
+        ctx.font = "12px Outfit, sans-serif";
+        ctx.fillText(planet.planetName, x + 7, y - 7);
+    }
+}
+
 function renderVisiblePlanets(civilTwilightEndIso, latitude, longitude) {
     const { start, end } = getEveningWindow(civilTwilightEndIso);
     planetWindowElement.innerText = `Window: ${formatClockTime(start)} to ${formatClockTime(end)}`;
@@ -171,14 +274,17 @@ function renderVisiblePlanets(civilTwilightEndIso, latitude, longitude) {
     for (const planetName of Object.keys(planetaryElements)) {
         let maxAltitude = -90;
         let bestTime = start;
+        let bestAzimuth = 0;
 
         for (let t = start.getTime(); t <= end.getTime(); t += sampleStepMs) {
             const sampleDate = new Date(t);
-            const altitude = getPlanetAltitudeDegrees(planetName, sampleDate, latitude, longitude);
+            const horizontalCoordinates = getPlanetHorizontalCoordinates(planetName, sampleDate, latitude, longitude);
+            const altitude = horizontalCoordinates.altitudeDegrees;
 
             if (altitude > maxAltitude) {
                 maxAltitude = altitude;
                 bestTime = sampleDate;
+                bestAzimuth = horizontalCoordinates.azimuthDegrees;
             }
         }
 
@@ -186,7 +292,8 @@ function renderVisiblePlanets(civilTwilightEndIso, latitude, longitude) {
             visiblePlanets.push({
                 planetName,
                 maxAltitude,
-                bestTime
+                bestTime,
+                bestAzimuth
             });
         }
     }
@@ -197,6 +304,7 @@ function renderVisiblePlanets(civilTwilightEndIso, latitude, longitude) {
         const item = document.createElement("li");
         item.innerText = "No major planets rise above 10 degrees in this window.";
         planetListElement.appendChild(item);
+        drawSkyDiagram([]);
         return;
     }
 
@@ -207,6 +315,8 @@ function renderVisiblePlanets(civilTwilightEndIso, latitude, longitude) {
         item.innerText = `${planet.planetName}: up to ${planet.maxAltitude.toFixed(0)} degrees at ${formatClockTime(planet.bestTime)}`;
         planetListElement.appendChild(item);
     }
+
+    drawSkyDiagram(visiblePlanets);
 }
 
 function normalizePhase(phaseFraction) {
@@ -326,6 +436,7 @@ async function updateSunTimes(lat, lon) {
     } catch (error) {
         planetWindowElement.innerText = "Window: --";
         planetListElement.innerHTML = "<li>Planet visibility unavailable.</li>";
+        drawSkyDiagram([]);
         sunStatus.innerText = "Could not fetch sun times. Please try again.";
         console.error(error);
     }
@@ -400,6 +511,7 @@ function initializePage() {
 
     refreshFromInputs();
     updateMoonPhase();
+    drawSkyDiagram([]);
 }
 
 document.addEventListener("DOMContentLoaded", initializePage);

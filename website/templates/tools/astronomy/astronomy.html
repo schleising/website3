@@ -3,8 +3,8 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <link rel="stylesheet" href="/css/tools/astronomy/main.css?v1.0.1">
-    <script defer src="/js/tools/astronomy/main.js?v1.0.2"></script>
+    <link rel="stylesheet" href="/css/tools/astronomy/main.css?v1.0.2">
+    <script defer src="/js/tools/astronomy/main.js?v1.0.3"></script>
     <title>Astronomy</title>
   </head>
   <body>
@@ -39,6 +39,9 @@
             <ul id="planet-list" class="planet-list">
               <li>Calculating...</li>
             </ul>
+            <div class="sky-diagram-wrap">
+              <canvas id="sky-canvas" width="280" height="280" role="img" aria-label="Sky diagram for visible evening planets"></canvas>
+            </div>
             <p class="meta">Approximate visibility above 10 degrees altitude.</p>
           </div>
           <p id="sun-status" class="meta">Waiting for data...</p>

@@ -146,6 +146,20 @@ body {
     font-size: 0.9rem;
 }
 
+.sky-diagram-wrap {
+    margin-top: 0.55rem;
+    display: flex;
+    justify-content: center;
+}
+
+#sky-canvas {
+    width: min(17.5rem, 82vw);
+    height: min(17.5rem, 82vw);
+    border-radius: 0.9rem;
+    border: 1px solid var(--line);
+    background: linear-gradient(180deg, hsl(220, 42%, 14%), hsl(231, 52%, 8%));
+}
+
 .moon-card {
     display: flex;
     flex-direction: column;
