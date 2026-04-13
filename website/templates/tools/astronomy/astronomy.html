@@ -10,9 +10,9 @@
     <link rel="icon" type="image/svg+xml" sizes="any" href="/icons/tools/astronomy/astronomy-icon-any.svg?v1.0.2">
     <link rel="apple-touch-icon" href="/icons/tools/astronomy/android-chrome-192x192.png?v1.0.2">
     <link rel="manifest" href="/manifests/tools/astronomy/astronomy.webmanifest?v1.0.3" crossorigin="use-credentials">
-    <link rel="stylesheet" href="/css/tools/astronomy/main.css?v1.0.14">
+    <link rel="stylesheet" href="/css/tools/astronomy/main.css?v1.0.15">
     <script defer src="/js/tools/astronomy/theme-toggle.js?v1.0.0"></script>
-    <script defer src="/js/tools/astronomy/main.js?v1.1.5"></script>
+    <script defer src="/js/tools/astronomy/main.js?v1.1.6"></script>
     <title>Astronomy</title>
   </head>
   <body>
@@ -150,6 +150,28 @@
         <button id="sky-close-button" type="button">Close</button>
       </div>
       <div id="sky-fullscreen-stage" class="sky-fullscreen-stage" aria-label="Fullscreen sky map stage">
+        <div class="sky-fullscreen-hud" aria-label="Fullscreen sky controls and indicators">
+          <section class="sky-fullscreen-panel sky-fullscreen-indicators">
+            <h3>Planet Visibility</h3>
+            <ul id="planet-list-fullscreen" class="planet-list">
+              <li class="planet-status-item"><span class="planet-name">Loading...</span></li>
+            </ul>
+          </section>
+          <section class="sky-fullscreen-panel sky-fullscreen-controls">
+            <div class="time-travel-controls">
+              <div class="time-travel-header">
+                <label for="sky-time-slider-fullscreen">Time Travel</label>
+                <span id="sky-time-label-fullscreen" class="time-travel-label">Live now</span>
+              </div>
+              <input id="sky-time-slider-fullscreen" type="range" min="-720" max="720" step="5" value="0" aria-label="Fullscreen sky time offset slider">
+              <div class="time-travel-actions">
+                <button id="sky-time-now-button-fullscreen" type="button">Now</button>
+                <button id="sky-time-play-button-fullscreen" type="button" aria-pressed="false">Animate Night</button>
+                <button id="share-sky-button-fullscreen" type="button">Share Sky Card</button>
+              </div>
+            </div>
+          </section>
+        </div>
         <canvas id="sky-canvas-fullscreen" width="1200" height="1200" role="img" aria-label="Fullscreen sky diagram"></canvas>
       </div>
     </div>

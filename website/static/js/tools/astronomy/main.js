@@ -60,16 +60,22 @@ const moonNameElement = document.getElementById("moon-name");
 const moonDetailsElement = document.getElementById("moon-details");
 const planetWindowElement = document.getElementById("planet-window");
 const planetListElement = document.getElementById("planet-list");
+const planetListFullscreenElement = document.getElementById("planet-list-fullscreen");
 const skyCanvas = document.getElementById("sky-canvas");
 const skyFullscreenElement = document.getElementById("sky-fullscreen");
 const skyFullscreenStageElement = document.getElementById("sky-fullscreen-stage");
 const skyCloseButton = document.getElementById("sky-close-button");
 const skyFullscreenCanvas = document.getElementById("sky-canvas-fullscreen");
 const skyTimeSlider = document.getElementById("sky-time-slider");
+const skyTimeSliderFullscreen = document.getElementById("sky-time-slider-fullscreen");
 const skyTimeLabel = document.getElementById("sky-time-label");
+const skyTimeLabelFullscreen = document.getElementById("sky-time-label-fullscreen");
 const skyTimeNowButton = document.getElementById("sky-time-now-button");
+const skyTimeNowButtonFullscreen = document.getElementById("sky-time-now-button-fullscreen");
 const skyTimePlayButton = document.getElementById("sky-time-play-button");
+const skyTimePlayButtonFullscreen = document.getElementById("sky-time-play-button-fullscreen");
 const shareSkyButton = document.getElementById("share-sky-button");
+const shareSkyButtonFullscreen = document.getElementById("share-sky-button-fullscreen");
 
 let latestVisiblePlanets = [];
 let latestSkyContext = null;
@@ -403,11 +409,54 @@ function formatSkyOffsetLabel(offsetMinutes) {
 }
 
 function updateSkyTimeLabel() {
-    if (skyTimeLabel == null) {
+    const labelText = formatSkyOffsetLabel(skyTimeOffsetMinutes);
+    if (skyTimeLabel != null) {
+        skyTimeLabel.innerText = labelText;
+    }
+    if (skyTimeLabelFullscreen != null) {
+        skyTimeLabelFullscreen.innerText = labelText;
+    }
+}
+
+function setTimePlayButtonsState(isPlaying) {
+    const buttons = [skyTimePlayButton, skyTimePlayButtonFullscreen];
+    for (const button of buttons) {
+        if (button == null) {
+            continue;
+        }
+
+        button.setAttribute("aria-pressed", isPlaying ? "true" : "false");
+        button.innerText = isPlaying ? "Stop Animation" : "Animate Night";
+    }
+}
+
+function renderPlanetStatusList(targetListElement, planetStatuses) {
+    if (targetListElement == null) {
         return;
     }
 
-    skyTimeLabel.innerText = formatSkyOffsetLabel(skyTimeOffsetMinutes);
+    targetListElement.innerHTML = "";
+    for (const status of planetStatuses) {
+        const item = document.createElement("li");
+        item.className = `planet-status-item ${status.isVisible ? "visible" : "not-visible"}`;
+        item.style.setProperty("--planet-color", planetColors[status.planetName] || "#dce9ff");
+
+        const nameSpan = document.createElement("span");
+        nameSpan.className = "planet-name";
+        nameSpan.innerText = status.planetName;
+
+        const stateSpan = document.createElement("span");
+        stateSpan.className = "planet-status";
+        if (status.isVisible) {
+            stateSpan.innerText = `Visible ${status.displayAltitude.toFixed(0)} deg`;
+        } else {
+            stateSpan.innerText = `Below horizon ${Math.abs(status.displayAltitude).toFixed(0)} deg`;
+        }
+
+        item.appendChild(nameSpan);
+        item.appendChild(stateSpan);
+        targetListElement.appendChild(item);
+    }
 }
 
 function getCoordinatesFromInputsOrNull() {
@@ -1465,29 +1514,8 @@ function renderVisiblePlanets(latitude, longitude) {
         }
     }
 
-    planetListElement.innerHTML = "";
-
-    for (const status of planetStatuses) {
-        const item = document.createElement("li");
-        item.className = `planet-status-item ${status.isVisible ? "visible" : "not-visible"}`;
-        item.style.setProperty("--planet-color", planetColors[status.planetName] || "#dce9ff");
-
-        const nameSpan = document.createElement("span");
-        nameSpan.className = "planet-name";
-        nameSpan.innerText = status.planetName;
-
-        const stateSpan = document.createElement("span");
-        stateSpan.className = "planet-status";
-        if (status.isVisible) {
-            stateSpan.innerText = `Visible ${status.displayAltitude.toFixed(0)} deg`;
-        } else {
-            stateSpan.innerText = `Below horizon ${Math.abs(status.displayAltitude).toFixed(0)} deg`;
-        }
-
-        item.appendChild(nameSpan);
-        item.appendChild(stateSpan);
-        planetListElement.appendChild(item);
-    }
+    renderPlanetStatusList(planetListElement, planetStatuses);
+    renderPlanetStatusList(planetListFullscreenElement, planetStatuses);
 
     latestVisiblePlanets = visiblePlanets;
     latestSkyContext = {
@@ -1543,6 +1571,9 @@ async function updateSunTimes(lat, lon) {
     } catch (error) {
         planetWindowElement.innerText = "Window: --";
         planetListElement.innerHTML = "<li>Planet visibility unavailable.</li>";
+        if (planetListFullscreenElement != null) {
+            planetListFullscreenElement.innerHTML = "<li class=\"planet-status-item\"><span class=\"planet-name\">Planet visibility unavailable.</span></li>";
+        }
         latestVisiblePlanets = [];
         latestSkyContext = null;
         drawSkyDiagram(skyCanvas, []);
@@ -1757,18 +1788,20 @@ function stopSkyTimePlayback() {
         skyTimePlayIntervalId = null;
     }
 
-    if (skyTimePlayButton != null) {
-        skyTimePlayButton.setAttribute("aria-pressed", "false");
-        skyTimePlayButton.innerText = "Animate Night";
-    }
+    setTimePlayButtonsState(false);
 }
 
 function setSkyTimeOffset(nextOffsetMinutes, { syncSlider = true } = {}) {
     const clamped = Math.max(-720, Math.min(720, Math.round(nextOffsetMinutes / 5) * 5));
     skyTimeOffsetMinutes = clamped;
 
-    if (syncSlider && skyTimeSlider != null) {
-        skyTimeSlider.value = String(clamped);
+    if (syncSlider) {
+        if (skyTimeSlider != null) {
+            skyTimeSlider.value = String(clamped);
+        }
+        if (skyTimeSliderFullscreen != null) {
+            skyTimeSliderFullscreen.value = String(clamped);
+        }
     }
 
     updateSkyTimeLabel();
@@ -1777,36 +1810,53 @@ function setSkyTimeOffset(nextOffsetMinutes, { syncSlider = true } = {}) {
 function initializeTimeTravelControls() {
     setSkyTimeOffset(0);
 
-    if (skyTimeSlider != null) {
-        skyTimeSlider.addEventListener("input", event => {
+    const attachSliderHandler = sliderElement => {
+        if (sliderElement == null) {
+            return;
+        }
+
+        sliderElement.addEventListener("input", event => {
             const target = Number.parseInt(event.target.value, 10);
             if (!Number.isFinite(target)) {
                 return;
             }
 
             stopSkyTimePlayback();
-            setSkyTimeOffset(target, { syncSlider: false });
+            setSkyTimeOffset(target);
             rerenderSkyForCurrentInputs();
         });
-    }
+    };
 
-    if (skyTimeNowButton != null) {
-        skyTimeNowButton.addEventListener("click", () => {
+    attachSliderHandler(skyTimeSlider);
+    attachSliderHandler(skyTimeSliderFullscreen);
+
+    const attachNowHandler = buttonElement => {
+        if (buttonElement == null) {
+            return;
+        }
+
+        buttonElement.addEventListener("click", () => {
             stopSkyTimePlayback();
             setSkyTimeOffset(0);
             rerenderSkyForCurrentInputs();
         });
-    }
+    };
 
-    if (skyTimePlayButton != null) {
-        skyTimePlayButton.addEventListener("click", () => {
+    attachNowHandler(skyTimeNowButton);
+    attachNowHandler(skyTimeNowButtonFullscreen);
+
+    const attachPlayHandler = buttonElement => {
+        if (buttonElement == null) {
+            return;
+        }
+
+        buttonElement.addEventListener("click", () => {
             if (skyTimePlayIntervalId != null) {
                 stopSkyTimePlayback();
                 return;
             }
 
-            skyTimePlayButton.setAttribute("aria-pressed", "true");
-            skyTimePlayButton.innerText = "Stop Animation";
+            setTimePlayButtonsState(true);
 
             skyTimePlayIntervalId = window.setInterval(() => {
                 const nextOffset = skyTimeOffsetMinutes >= 720 ? -720 : skyTimeOffsetMinutes + 10;
@@ -1814,7 +1864,10 @@ function initializeTimeTravelControls() {
                 rerenderSkyForCurrentInputs();
             }, 350);
         });
-    }
+    };
+
+    attachPlayHandler(skyTimePlayButton);
+    attachPlayHandler(skyTimePlayButtonFullscreen);
 }
 
 function buildSkyShareCardBlob() {
@@ -1886,13 +1939,20 @@ function buildSkyShareCardBlob() {
 }
 
 function initializeShareSkyCard() {
-    if (shareSkyButton == null) {
+    const shareButtons = [shareSkyButton, shareSkyButtonFullscreen].filter(button => button != null);
+    if (shareButtons.length === 0) {
         return;
     }
 
-    shareSkyButton.addEventListener("click", async () => {
-        shareSkyButton.disabled = true;
-        shareSkyButton.innerText = "Preparing...";
+    const setShareButtonsBusyState = isBusy => {
+        for (const button of shareButtons) {
+            button.disabled = isBusy;
+            button.innerText = isBusy ? "Preparing..." : "Share Sky Card";
+        }
+    };
+
+    const handleShare = async () => {
+        setShareButtonsBusyState(true);
 
         try {
             const blob = await buildSkyShareCardBlob();
@@ -1923,10 +1983,13 @@ function initializeShareSkyCard() {
             console.error(error);
             sunStatus.innerText = "Could not create sky card right now.";
         } finally {
-            shareSkyButton.disabled = false;
-            shareSkyButton.innerText = "Share Sky Card";
+            setShareButtonsBusyState(false);
         }
-    });
+    };
+
+    for (const button of shareButtons) {
+        button.addEventListener("click", handleShare);
+    }
 }
 
 function findCityPickerOption(value) {

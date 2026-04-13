@@ -536,6 +536,67 @@ body {
     justify-content: center;
 }
 
+.sky-fullscreen-hud {
+    position: absolute;
+    top: 0.82rem;
+    left: 0.82rem;
+    z-index: 6;
+    width: min(24rem, calc(100% - 1.64rem));
+    display: grid;
+    gap: 0.55rem;
+    pointer-events: none;
+}
+
+.sky-fullscreen-panel {
+    pointer-events: auto;
+    border: 1px solid hsla(208, 34%, 76%, 0.22);
+    border-radius: 0.75rem;
+    background: hsla(218, 30%, 12%, 0.72);
+    backdrop-filter: blur(8px);
+    color: hsl(0, 0%, 96%);
+    padding: 0.5rem;
+}
+
+.sky-fullscreen-panel h3 {
+    margin: 0;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: hsla(191, 78%, 84%, 0.96);
+}
+
+.sky-fullscreen-indicators .planet-list {
+    margin-top: 0.42rem;
+    max-height: min(40vh, 21rem);
+    overflow-y: auto;
+    padding-right: 0.12rem;
+}
+
+.sky-fullscreen-controls .time-travel-controls {
+    margin-top: 0;
+    border: 0;
+    padding: 0;
+    background: transparent;
+}
+
+.sky-fullscreen-controls .time-travel-header label {
+    color: hsl(0, 0%, 96%);
+}
+
+.sky-fullscreen-controls .time-travel-label {
+    color: hsla(198, 84%, 88%, 0.92);
+}
+
+.sky-fullscreen-controls .time-travel-actions button {
+    border-color: hsla(198, 56%, 74%, 0.34);
+    background: linear-gradient(180deg, hsla(205, 36%, 92%, 0.18), hsla(205, 36%, 92%, 0.08));
+    color: hsla(0, 0%, 98%, 0.94);
+}
+
+.sky-fullscreen-controls #sky-time-play-button-fullscreen[aria-pressed="true"] {
+    border-color: hsla(191, 70%, 72%, 0.6);
+    background: linear-gradient(180deg, hsla(191, 70%, 72%, 0.26), hsla(191, 70%, 72%, 0.14));
+}
+
 #sky-canvas-fullscreen {
     width: min(92vmin, 1200px);
     height: min(92vmin, 1200px);
@@ -701,6 +762,11 @@ body.dark-mode .sky-fullscreen-toolbar button:hover {
     background: linear-gradient(180deg, hsla(193, 62%, 44%, 0.58), hsla(193, 62%, 30%, 0.52));
 }
 
+body.dark-mode .sky-fullscreen-panel {
+    border-color: hsla(208, 34%, 74%, 0.24);
+    background: hsla(214, 30%, 10%, 0.78);
+}
+
 @media (max-width: 40rem) {
     .controls {
         grid-template-columns: 1fr;
@@ -744,5 +810,11 @@ body.dark-mode .sky-fullscreen-toolbar button:hover {
 
     .time-travel-actions {
         grid-template-columns: 1fr;
+    }
+
+    .sky-fullscreen-hud {
+        width: min(22rem, calc(100% - 1.1rem));
+        top: 0.55rem;
+        left: 0.55rem;
     }
 }
