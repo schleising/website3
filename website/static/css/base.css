@@ -23,7 +23,7 @@ body {
 
 body {
     margin: 0rem;
-    font-family: "Plus Jakarta Sans", "Segoe UI", sans-serif;
+    font-family: "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif;
     color: var(--text);
     background: var(--page-bg);
     display: flex;
@@ -106,7 +106,7 @@ body.collapsed-sidebars .header-mobile-action {
 
 h3.header-text {
     margin: 0rem;
-    font-family: "Space Grotesk", "Plus Jakarta Sans", sans-serif;
+    font-family: "Trebuchet MS", "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif;
     letter-spacing: 0.02em;
     font-weight: 600;
 }
