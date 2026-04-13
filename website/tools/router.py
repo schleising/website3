@@ -8,6 +8,7 @@ from .converter.router import converter_router
 from .transcoder.router import transcoder_router
 from .logger.router import logger_router
 from .monitor.router import monitor_router
+from .astronomy.router import astronomy_router
 
 # Set the base template location
 TEMPLATES = Jinja2Templates("/app/templates")
@@ -26,6 +27,9 @@ tools_router.include_router(logger_router)
 
 # Add the monitor router
 tools_router.include_router(monitor_router)
+
+# Add the astronomy router
+tools_router.include_router(astronomy_router)
 
 
 # Gets the Tools page

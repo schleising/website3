@@ -1,0 +1,152 @@
+:root {
+    --bg: hsl(205, 42%, 96%);
+    --bg-2: hsl(197, 46%, 91%);
+    --panel: hsla(0, 0%, 100%, 0.86);
+    --line: hsla(215, 22%, 30%, 0.14);
+    --text: hsl(220, 27%, 17%);
+    --muted: hsl(216, 13%, 40%);
+    --accent: hsl(196, 76%, 42%);
+}
+
+* {
+    box-sizing: border-box;
+}
+
+html,
+body {
+    margin: 0;
+    min-height: 100%;
+    font-family: "Outfit", "Segoe UI", sans-serif;
+    color: var(--text);
+    background:
+        radial-gradient(130% 120% at 0% 0%, hsla(188, 66%, 72%, 0.28), transparent 60%),
+        radial-gradient(120% 120% at 100% 100%, hsla(210, 70%, 76%, 0.2), transparent 60%),
+        linear-gradient(170deg, var(--bg), var(--bg-2));
+}
+
+.app-shell {
+    max-width: 64rem;
+    margin: 0 auto;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+}
+
+.hero h1 {
+    margin: 0;
+    font-size: clamp(1.6rem, 4vw, 2.4rem);
+}
+
+.hero p {
+    margin: 0.2rem 0 0;
+    color: var(--muted);
+}
+
+.card {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 0.9rem;
+    padding: 0.8rem;
+    box-shadow: 0 12px 28px hsla(215, 40%, 16%, 0.08);
+}
+
+.controls {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem;
+    align-items: end;
+}
+
+.controls label {
+    font-size: 0.8rem;
+    color: var(--muted);
+}
+
+.controls input,
+.controls button {
+    height: 2.2rem;
+    border-radius: 0.65rem;
+    border: 1px solid var(--line);
+    font: inherit;
+}
+
+.controls input {
+    padding: 0 0.6rem;
+    background: hsla(0, 0%, 100%, 0.9);
+}
+
+.controls button {
+    background: linear-gradient(160deg, hsl(0, 0%, 100%), hsl(192, 72%, 95%));
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+    gap: 0.8rem;
+}
+
+.card h2 {
+    margin: 0 0 0.35rem;
+    font-size: 1.2rem;
+}
+
+.times {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.35rem;
+}
+
+.times div {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    border: 1px solid var(--line);
+    border-radius: 0.65rem;
+    padding: 0.4rem 0.55rem;
+    background: hsla(0, 0%, 100%, 0.68);
+}
+
+.times span {
+    color: var(--muted);
+    font-size: 0.86rem;
+}
+
+.times strong {
+    font-size: 0.92rem;
+}
+
+.meta {
+    margin: 0.45rem 0 0;
+    color: var(--muted);
+    font-size: 0.86rem;
+}
+
+.moon-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+#moon-canvas {
+    width: min(13rem, 70vw);
+    height: min(13rem, 70vw);
+    border-radius: 999px;
+    background: radial-gradient(circle at 35% 30%, hsl(225, 30%, 14%), hsl(231, 36%, 8%));
+    border: 1px solid hsla(212, 35%, 72%, 0.22);
+}
+
+.moon-name {
+    margin: 0.6rem 0 0;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--accent);
+}
+
+@media (max-width: 40rem) {
+    .controls {
+        grid-template-columns: 1fr;
+    }
+}

@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link rel="stylesheet" href="/css/tools/astronomy/main.css?v1.0.0">
+    <script defer src="/js/tools/astronomy/main.js?v1.0.1"></script>
+    <title>Astronomy</title>
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="hero">
+        <h1>Astronomy</h1>
+        <p>Sunrise, sunset, civil twilight, and the live moon phase.</p>
+      </header>
+
+      <section class="card controls" aria-label="Location controls">
+        <label for="latitude">Latitude</label>
+        <input id="latitude" type="number" step="0.0001" value="51.5074">
+        <label for="longitude">Longitude</label>
+        <input id="longitude" type="number" step="0.0001" value="-0.1278">
+        <button id="refresh-button" type="button">Refresh</button>
+        <button id="location-button" type="button">Use My Location</button>
+      </section>
+
+      <section class="grid">
+        <article class="card sun-card" aria-live="polite">
+          <h2>Sun Times</h2>
+          <p id="location-readout" class="meta">Using manual coordinates</p>
+          <div class="times">
+            <div><span>Sunrise</span><strong id="sunrise">--</strong></div>
+            <div><span>Sunset</span><strong id="sunset">--</strong></div>
+            <div><span>Civil Twilight Start</span><strong id="civil-begin">--</strong></div>
+            <div><span>Civil Twilight End</span><strong id="civil-end">--</strong></div>
+          </div>
+          <p id="sun-status" class="meta">Waiting for data...</p>
+        </article>
+
+        <article class="card moon-card">
+          <h2>Current Moon Phase</h2>
+          <canvas id="moon-canvas" width="220" height="220" role="img" aria-label="Current moon phase image"></canvas>
+          <p id="moon-name" class="moon-name">--</p>
+          <p id="moon-details" class="meta">--</p>
+        </article>
+      </section>
+    </main>
+  </body>
+</html>
