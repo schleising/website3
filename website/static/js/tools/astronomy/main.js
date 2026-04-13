@@ -58,6 +58,9 @@ const civilEndElement = document.getElementById("civil-end");
 const moonCanvas = document.getElementById("moon-canvas");
 const moonNameElement = document.getElementById("moon-name");
 const moonDetailsElement = document.getElementById("moon-details");
+const moonPhaseOffsetSlider = document.getElementById("moon-phase-offset-slider");
+const moonPhaseOffsetLabel = document.getElementById("moon-phase-offset-label");
+const moonPhaseDateElement = document.getElementById("moon-phase-date");
 const planetWindowElement = document.getElementById("planet-window");
 const planetListElement = document.getElementById("planet-list");
 const planetListFullscreenElement = document.getElementById("planet-list-fullscreen");
@@ -87,6 +90,8 @@ let requestCurrentLocation = async () => false;
 let skyTimeOffsetMinutes = 0;
 let skyTimePlayIntervalId = null;
 let pendingSkyRerenderFrameId = null;
+let moonPhaseOffsetDays = 0;
+let moonPhaseReferenceDate = new Date();
 
 const skyArViewState = {
     isSupported: typeof window !== "undefined" && typeof window.DeviceOrientationEvent !== "undefined",
@@ -451,6 +456,27 @@ function formatClockTime(date) {
         minute: "2-digit",
         timeZoneName: "short"
     });
+}
+
+function formatMoonPhaseDate(date) {
+    return date.toLocaleDateString(undefined, {
+        weekday: "short",
+        year: "numeric",
+        month: "short",
+        day: "numeric"
+    });
+}
+
+function formatMoonPhaseOffsetLabel(offsetDays) {
+    if (offsetDays === 0) {
+        return "Today";
+    }
+
+    const absoluteDays = Math.abs(offsetDays);
+    const dayUnit = absoluteDays === 1 ? "day" : "days";
+    return offsetDays > 0
+        ? `+${absoluteDays} ${dayUnit}`
+        : `-${absoluteDays} ${dayUnit}`;
 }
 
 function getSkyRenderDate() {
@@ -2736,6 +2762,8 @@ function renderVisiblePlanets(latitude, longitude) {
         longitude
     };
 
+    updateMoonPhase(skySampleDate);
+
     if (visiblePlanets.length === 0) {
         drawSkyDiagram(skyCanvas, [], latestSkyContext);
 
@@ -2753,8 +2781,6 @@ function renderVisiblePlanets(latitude, longitude) {
     if (skyFullscreenElement != null && !skyFullscreenElement.hidden) {
         drawActiveFullscreenSky();
     }
-
-    updateMoonPhase(skySampleDate);
 }
 
 async function updateSunTimes(lat, lon) {
@@ -2798,11 +2824,51 @@ async function updateSunTimes(lat, lon) {
 }
 
 function updateMoonPhase(date = new Date()) {
-    const phaseData = getMoonPhaseData(date);
+    const resolvedDate = date instanceof Date ? new Date(date.getTime()) : new Date(date);
+    moonPhaseReferenceDate = Number.isFinite(resolvedDate.getTime()) ? resolvedDate : new Date();
+
+    const phaseDate = new Date(moonPhaseReferenceDate.getTime() + moonPhaseOffsetDays * 86400000);
+    const phaseData = getMoonPhaseData(phaseDate);
     drawMoonPhaseImage(moonCanvas, phaseData.phase);
 
     moonNameElement.innerText = phaseData.name;
     moonDetailsElement.innerText = `Illumination: ${(phaseData.illumination * 100).toFixed(1)}% | Age: ${phaseData.age.toFixed(1)} days`;
+
+    if (moonPhaseOffsetLabel != null) {
+        moonPhaseOffsetLabel.innerText = formatMoonPhaseOffsetLabel(moonPhaseOffsetDays);
+    }
+
+    if (moonPhaseDateElement != null) {
+        const absoluteDays = Math.abs(moonPhaseOffsetDays);
+        const dayUnit = absoluteDays === 1 ? "day" : "days";
+        const relativeDescriptor = moonPhaseOffsetDays === 0
+            ? "today"
+            : moonPhaseOffsetDays > 0
+                ? `${absoluteDays} ${dayUnit} ahead`
+                : `${absoluteDays} ${dayUnit} ago`;
+        moonPhaseDateElement.innerText = `Date: ${formatMoonPhaseDate(phaseDate)} (${relativeDescriptor})`;
+    }
+}
+
+function initializeMoonPhaseControls() {
+    if (moonPhaseOffsetSlider == null) {
+        return;
+    }
+
+    moonPhaseOffsetSlider.value = String(moonPhaseOffsetDays);
+    if (moonPhaseOffsetLabel != null) {
+        moonPhaseOffsetLabel.innerText = formatMoonPhaseOffsetLabel(moonPhaseOffsetDays);
+    }
+
+    moonPhaseOffsetSlider.addEventListener("input", event => {
+        const sliderValue = Number.parseInt(event.target.value, 10);
+        if (!Number.isFinite(sliderValue)) {
+            return;
+        }
+
+        moonPhaseOffsetDays = Math.max(-14, Math.min(14, sliderValue));
+        updateMoonPhase(moonPhaseReferenceDate);
+    });
 }
 
 function applyFullscreenSkyTransform() {
@@ -3591,6 +3657,7 @@ async function initializePage() {
     initializeProgressiveWebApp();
     initializeCityPicker();
     initializeTimeTravelControls();
+    initializeMoonPhaseControls();
     initializeShareSkyCard();
     const locationController = initializeLocationButton();
     initializeFullscreenSkyInteractions();

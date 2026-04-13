@@ -12,7 +12,7 @@
     <link rel="manifest" href="/manifests/tools/astronomy/astronomy.webmanifest?v1.0.3" crossorigin="use-credentials">
     <link rel="stylesheet" href="/css/tools/astronomy/main.css?v1.0.25">
     <script defer src="/js/tools/astronomy/theme-toggle.js?v1.0.3"></script>
-    <script defer src="/js/tools/astronomy/main.js?v1.1.31"></script>
+    <script defer src="/js/tools/astronomy/main.js?v1.1.32"></script>
     <title>Astronomy</title>
   </head>
   <body class="dark-mode">
@@ -128,10 +128,18 @@
         </article>
 
         <article class="card moon-card">
-          <h2>Current Moon Phase</h2>
+          <h2>Moon Phase Explorer</h2>
           <canvas id="moon-canvas" width="220" height="220" role="img" aria-label="Current moon phase image"></canvas>
           <p id="moon-name" class="moon-name">--</p>
           <p id="moon-details" class="meta">--</p>
+          <div class="moon-phase-controls">
+            <div class="moon-phase-header">
+              <label for="moon-phase-offset-slider">Date Offset</label>
+              <span id="moon-phase-offset-label" class="time-travel-label">Today</span>
+            </div>
+            <input id="moon-phase-offset-slider" type="range" min="-14" max="14" step="1" value="0" aria-label="Moon phase date offset slider in days">
+          </div>
+          <p id="moon-phase-date" class="meta moon-phase-date">Date: --</p>
         </article>
       </section>
     </main>
