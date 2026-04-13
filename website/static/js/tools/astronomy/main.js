@@ -590,6 +590,122 @@ function projectToSky(azimuthDegrees, altitudeDegrees, cx, cy, radius) {
     };
 }
 
+function getSkyLabelScale(targetCanvas) {
+    if (targetCanvas == null) {
+        return 1;
+    }
+
+    return targetCanvas.width >= 1000 ? 2.15 : 1;
+}
+
+function intersectsLabelBox(labelBox, occupiedLabelBoxes) {
+    return occupiedLabelBoxes.some(box => {
+        return !(
+            labelBox.x + labelBox.width < box.x
+            || labelBox.x > box.x + box.width
+            || labelBox.y + labelBox.height < box.y
+            || labelBox.y > box.y + box.height
+        );
+    });
+}
+
+function getLabelBoxOverlapArea(labelBox, occupiedLabelBoxes) {
+    let totalOverlapArea = 0;
+
+    for (const box of occupiedLabelBoxes) {
+        const overlapWidth = Math.max(0, Math.min(labelBox.x + labelBox.width, box.x + box.width) - Math.max(labelBox.x, box.x));
+        const overlapHeight = Math.max(0, Math.min(labelBox.y + labelBox.height, box.y + box.height) - Math.max(labelBox.y, box.y));
+        totalOverlapArea += overlapWidth * overlapHeight;
+    }
+
+    return totalOverlapArea;
+}
+
+function reserveSkyMarkerSpace(occupiedLabelBoxes, anchorX, anchorY, radius = 18) {
+    occupiedLabelBoxes.push({
+        x: anchorX - radius,
+        y: anchorY - radius,
+        width: radius * 2,
+        height: radius * 2
+    });
+}
+
+function drawSkyLabel(ctx, text, anchorX, anchorY, occupiedLabelBoxes, options = {}) {
+    const {
+        fontSize = 12,
+        fillStyle = "hsla(0, 0%, 100%, 0.92)",
+        textAlign = "left",
+        shadowColor = "hsla(218, 44%, 8%, 0.88)",
+        shadowBlur = 8,
+        preferBelow = false
+    } = options;
+
+    ctx.save();
+    ctx.font = `${fontSize}px Outfit, sans-serif`;
+    ctx.textAlign = textAlign;
+    ctx.textBaseline = "middle";
+
+    const textMetrics = ctx.measureText(text);
+    const textWidth = textMetrics.width;
+    const boxHeight = Math.round(fontSize * 1.2);
+    const padding = 4;
+    const candidateOffsets = preferBelow
+        ? [[10, 14], [10, -14], [14, 0], [-textWidth - 14, 0], [12, 28], [12, -28], [24, 14], [-textWidth - 24, 14], [24, -14], [-textWidth - 24, -14], [0, 30], [0, -30]]
+        : [[10, -12], [10, 14], [14, 0], [-textWidth - 14, 0], [12, -28], [12, 28], [24, -14], [-textWidth - 24, -14], [24, 14], [-textWidth - 24, 14], [0, -30], [0, 30]];
+
+    let chosenPosition = null;
+    let bestFallbackPosition = null;
+    let lowestOverlapArea = Number.POSITIVE_INFINITY;
+
+    for (const [offsetX, offsetY] of candidateOffsets) {
+        let drawX = anchorX + offsetX;
+        if (textAlign === "center") {
+            drawX = anchorX + offsetX;
+        }
+
+        const drawY = anchorY + offsetY;
+        const boxX = textAlign === "center" ? drawX - textWidth / 2 - padding : drawX - padding;
+        const boxY = drawY - boxHeight / 2 - padding;
+        const labelBox = {
+            x: boxX,
+            y: boxY,
+            width: textWidth + padding * 2,
+            height: boxHeight + padding * 2
+        };
+
+        if (!intersectsLabelBox(labelBox, occupiedLabelBoxes)) {
+            chosenPosition = { drawX, drawY, labelBox };
+            break;
+        }
+
+        const overlapArea = getLabelBoxOverlapArea(labelBox, occupiedLabelBoxes);
+        if (overlapArea < lowestOverlapArea) {
+            lowestOverlapArea = overlapArea;
+            bestFallbackPosition = { drawX, drawY, labelBox };
+        }
+    }
+
+    if (chosenPosition == null) {
+        chosenPosition = bestFallbackPosition || {
+            drawX: textAlign === "center" ? anchorX : anchorX + 10,
+            drawY: anchorY + (preferBelow ? 14 : -12),
+            labelBox: {
+                x: (textAlign === "center" ? anchorX - textWidth / 2 : anchorX + 10) - padding,
+                y: anchorY + (preferBelow ? 14 : -12) - boxHeight / 2 - padding,
+                width: textWidth + padding * 2,
+                height: boxHeight + padding * 2
+            }
+        };
+    }
+
+    occupiedLabelBoxes.push(chosenPosition.labelBox);
+    ctx.fillStyle = fillStyle;
+    ctx.shadowColor = shadowColor;
+    ctx.shadowBlur = shadowBlur;
+    ctx.fillText(text, chosenPosition.drawX, chosenPosition.drawY);
+    ctx.restore();
+}
+
 function getSatelliteHorizontalCoordinates(track, date, latitude, longitude) {
     const elapsedMinutes = (date.getTime() - track.epochMs) / (60 * 1000);
     const orbitalRate = 360 / track.periodMinutes;
@@ -784,8 +900,9 @@ function buildSatellitePathSegments(skyContext) {
     });
 }
 
-function drawSatellitePaths(ctx, cx, cy, radius, skyContext) {
+function drawSatellitePaths(ctx, cx, cy, radius, skyContext, occupiedLabelBoxes = []) {
     const paths = buildSatellitePathSegments(skyContext);
+    const labelScale = getSkyLabelScale(ctx.canvas);
 
     for (const path of paths) {
         ctx.strokeStyle = path.color;
@@ -812,10 +929,11 @@ function drawSatellitePaths(ctx, cx, cy, radius, skyContext) {
             const labelIndex = Math.floor(segment.length / 2);
             const labelSample = segment[labelIndex];
             const labelPoint = projectToSky(labelSample.azimuthDegrees, labelSample.altitudeDegrees, cx, cy, radius);
-            ctx.fillStyle = path.color;
-            ctx.font = "11px Outfit, sans-serif";
-            ctx.textAlign = "left";
-            ctx.fillText(`${path.name} path`, labelPoint.x + 6, labelPoint.y - 4);
+            drawSkyLabel(ctx, `${path.name} path`, labelPoint.x, labelPoint.y, occupiedLabelBoxes, {
+                fontSize: Math.round(11 * labelScale),
+                fillStyle: path.color,
+                preferBelow: true
+            });
             break;
         }
 
@@ -824,6 +942,7 @@ function drawSatellitePaths(ctx, cx, cy, radius, skyContext) {
         }
 
         const nowPoint = projectToSky(path.currentHorizontal.azimuthDegrees, path.currentHorizontal.altitudeDegrees, cx, cy, radius);
+        reserveSkyMarkerSpace(occupiedLabelBoxes, nowPoint.x, nowPoint.y);
         ctx.beginPath();
         ctx.arc(nowPoint.x, nowPoint.y, 3.8, 0, Math.PI * 2);
         ctx.fillStyle = path.color;
@@ -832,14 +951,15 @@ function drawSatellitePaths(ctx, cx, cy, radius, skyContext) {
         ctx.lineWidth = 1;
         ctx.stroke();
 
-        ctx.fillStyle = path.color;
-        ctx.font = "11px Outfit, sans-serif";
-        ctx.textAlign = "left";
-        ctx.fillText(`${path.name} now`, nowPoint.x + 6, nowPoint.y + 2);
+        drawSkyLabel(ctx, `${path.name} now`, nowPoint.x, nowPoint.y, occupiedLabelBoxes, {
+            fontSize: Math.round(11 * labelScale),
+            fillStyle: path.color,
+            preferBelow: true
+        });
     }
 }
 
-function drawMoonPath(ctx, cx, cy, radius, skyContext) {
+function drawMoonPath(ctx, cx, cy, radius, skyContext, occupiedLabelBoxes = []) {
     if (skyContext == null) {
         return;
     }
@@ -849,6 +969,7 @@ function drawMoonPath(ctx, cx, cy, radius, skyContext) {
     const end = windowEnd == null ? new Date(date.getTime() + 45 * 60 * 1000) : windowEnd;
     const sampleStepMs = 20 * 60 * 1000;
     const samples = [];
+    const labelScale = getSkyLabelScale(ctx.canvas);
 
     for (let t = start.getTime(); t <= end.getTime(); t += sampleStepMs) {
         const sampleDate = new Date(t);
@@ -876,10 +997,10 @@ function drawMoonPath(ctx, cx, cy, radius, skyContext) {
 
         const labelSample = samples[Math.floor(samples.length / 2)];
         const labelPoint = projectToSky(labelSample.azimuthDegrees, labelSample.altitudeDegrees, cx, cy, radius);
-        ctx.fillStyle = "#f1f6ff";
-        ctx.font = "11px Outfit, sans-serif";
-        ctx.textAlign = "left";
-        ctx.fillText("Moon path", labelPoint.x + 6, labelPoint.y - 6);
+        drawSkyLabel(ctx, "Moon path", labelPoint.x, labelPoint.y, occupiedLabelBoxes, {
+            fontSize: Math.round(11 * labelScale),
+            fillStyle: "#f1f6ff"
+        });
     }
 
     const moonNow = getMoonHorizontalCoordinates(date, latitude, longitude);
@@ -888,6 +1009,7 @@ function drawMoonPath(ctx, cx, cy, radius, skyContext) {
     }
 
     const moonNowPoint = projectToSky(moonNow.azimuthDegrees, moonNow.altitudeDegrees, cx, cy, radius);
+    reserveSkyMarkerSpace(occupiedLabelBoxes, moonNowPoint.x, moonNowPoint.y);
     ctx.beginPath();
     ctx.arc(moonNowPoint.x, moonNowPoint.y, 5, 0, Math.PI * 2);
     ctx.fillStyle = "#f7fbff";
@@ -896,18 +1018,20 @@ function drawMoonPath(ctx, cx, cy, radius, skyContext) {
     ctx.lineWidth = 1;
     ctx.stroke();
 
-    ctx.fillStyle = "#f7fbff";
-    ctx.font = "12px Outfit, sans-serif";
-    ctx.textAlign = "left";
-    ctx.fillText("Moon now", moonNowPoint.x + 7, moonNowPoint.y + 1);
+    drawSkyLabel(ctx, "Moon now", moonNowPoint.x, moonNowPoint.y, occupiedLabelBoxes, {
+        fontSize: Math.round(12 * labelScale),
+        fillStyle: "#f7fbff",
+        preferBelow: true
+    });
 }
 
-function drawConstellationOverlay(ctx, cx, cy, radius, skyContext) {
+function drawConstellationOverlay(ctx, cx, cy, radius, skyContext, occupiedLabelBoxes = []) {
     if (skyContext == null) {
         return;
     }
 
     const { date, latitude, longitude } = skyContext;
+    const labelScale = getSkyLabelScale(ctx.canvas);
     ctx.strokeStyle = "hsla(204, 65%, 80%, 0.34)";
     ctx.fillStyle = "hsla(204, 65%, 82%, 0.82)";
     ctx.lineWidth = 1;
@@ -953,18 +1077,22 @@ function drawConstellationOverlay(ctx, cx, cy, radius, skyContext) {
 
         const labelAnchor = projectedStars[Object.keys(projectedStars)[0]];
         if (labelAnchor != null) {
-            ctx.font = "11px Outfit, sans-serif";
-            ctx.fillText(constellation.name, labelAnchor.x + 5, labelAnchor.y + 12);
+            drawSkyLabel(ctx, constellation.name, labelAnchor.x, labelAnchor.y, occupiedLabelBoxes, {
+                fontSize: Math.round(11 * labelScale),
+                fillStyle: "hsla(204, 65%, 82%, 0.82)",
+                preferBelow: true
+            });
         }
     }
 }
 
-function drawPolarisOverlay(ctx, cx, cy, radius, skyContext) {
+function drawPolarisOverlay(ctx, cx, cy, radius, skyContext, occupiedLabelBoxes = []) {
     if (skyContext == null) {
         return;
     }
 
     const { date, latitude, longitude } = skyContext;
+    const labelScale = getSkyLabelScale(ctx.canvas);
     const poleStarCandidates = [];
 
     if (latitude >= -5) {
@@ -990,6 +1118,7 @@ function drawPolarisOverlay(ctx, cx, cy, radius, skyContext) {
         }
 
         const point = projectToSky(horizontal.azimuthDegrees, horizontal.altitudeDegrees, cx, cy, radius);
+        reserveSkyMarkerSpace(occupiedLabelBoxes, point.x, point.y);
         ctx.beginPath();
         ctx.arc(point.x, point.y, 4.5, 0, Math.PI * 2);
         ctx.fillStyle = "hsl(50, 100%, 82%)";
@@ -998,10 +1127,10 @@ function drawPolarisOverlay(ctx, cx, cy, radius, skyContext) {
         ctx.lineWidth = 1;
         ctx.stroke();
 
-        ctx.fillStyle = "hsla(53, 100%, 88%, 0.96)";
-        ctx.font = "12px Outfit, sans-serif";
-        ctx.textAlign = "left";
-        ctx.fillText(poleStar.name, point.x + 7, point.y - 8);
+        drawSkyLabel(ctx, poleStar.name, point.x, point.y, occupiedLabelBoxes, {
+            fontSize: Math.round(12 * labelScale),
+            fillStyle: "hsla(53, 100%, 88%, 0.96)"
+        });
     }
 }
 
@@ -1020,6 +1149,8 @@ function drawSkyDiagram(targetCanvas, visiblePlanets, skyContext = null) {
     const cx = width / 2;
     const cy = height / 2;
     const radius = Math.min(width, height) * 0.39;
+    const labelScale = getSkyLabelScale(targetCanvas);
+    const occupiedLabelBoxes = [];
 
     ctx.clearRect(0, 0, width, height);
 
@@ -1054,21 +1185,21 @@ function drawSkyDiagram(targetCanvas, visiblePlanets, skyContext = null) {
     ctx.stroke();
 
     ctx.fillStyle = "hsla(0, 0%, 100%, 0.84)";
-    ctx.font = "12px Outfit, sans-serif";
+    ctx.font = `${Math.round(12 * labelScale)}px Outfit, sans-serif`;
     ctx.textAlign = "center";
     ctx.fillText("N", cx, cy - radius - 7);
     ctx.fillText("S", cx, cy + radius + 16);
     ctx.fillText("E", cx + radius + 10, cy + 4);
     ctx.fillText("W", cx - radius - 10, cy + 4);
 
-    drawConstellationOverlay(ctx, cx, cy, radius, skyContext);
-    drawPolarisOverlay(ctx, cx, cy, radius, skyContext);
-    drawMoonPath(ctx, cx, cy, radius, skyContext);
-    drawSatellitePaths(ctx, cx, cy, radius, skyContext);
+    drawConstellationOverlay(ctx, cx, cy, radius, skyContext, occupiedLabelBoxes);
+    drawPolarisOverlay(ctx, cx, cy, radius, skyContext, occupiedLabelBoxes);
+    drawMoonPath(ctx, cx, cy, radius, skyContext, occupiedLabelBoxes);
+    drawSatellitePaths(ctx, cx, cy, radius, skyContext, occupiedLabelBoxes);
 
     if (visiblePlanets.length === 0) {
         ctx.fillStyle = "hsla(210, 26%, 88%, 0.86)";
-        ctx.font = "13px Outfit, sans-serif";
+        ctx.font = `${Math.round(13 * labelScale)}px Outfit, sans-serif`;
         ctx.fillText("No visible planets", cx, cy + 4);
         return;
     }
@@ -1082,6 +1213,7 @@ function drawSkyDiagram(targetCanvas, visiblePlanets, skyContext = null) {
         const planetPoint = projectToSky(planet.displayAzimuth, planet.displayAltitude, cx, cy, radius);
         const x = planetPoint.x;
         const y = planetPoint.y;
+        reserveSkyMarkerSpace(occupiedLabelBoxes, x, y);
 
         ctx.beginPath();
         ctx.arc(x, y, 4.2, 0, Math.PI * 2);
@@ -1091,9 +1223,10 @@ function drawSkyDiagram(targetCanvas, visiblePlanets, skyContext = null) {
         ctx.lineWidth = 1;
         ctx.stroke();
 
-        ctx.fillStyle = "hsla(0, 0%, 100%, 0.92)";
-        ctx.font = "12px Outfit, sans-serif";
-        ctx.fillText(planet.planetName, x + 7, y - 7);
+        drawSkyLabel(ctx, planet.planetName, x, y, occupiedLabelBoxes, {
+            fontSize: Math.round(12 * labelScale),
+            fillStyle: "hsla(0, 0%, 100%, 0.92)"
+        });
     }
 }
 
