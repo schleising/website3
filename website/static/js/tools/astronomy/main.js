@@ -52,6 +52,36 @@ const planetColors = {
     Neptune: "#95bcff"
 };
 
+const satelliteTracks = [
+    {
+        name: "ISS",
+        color: "#ffb866",
+        inclination: 51.64,
+        raan: 257.4,
+        meanAnomaly0: 24,
+        periodMinutes: 92.68,
+        epochMs: Date.UTC(2026, 0, 1, 0, 0, 0)
+    },
+    {
+        name: "Tiangong",
+        color: "#7fe3ff",
+        inclination: 41.5,
+        raan: 104.8,
+        meanAnomaly0: 278,
+        periodMinutes: 91.7,
+        epochMs: Date.UTC(2026, 0, 1, 0, 0, 0)
+    },
+    {
+        name: "Hubble",
+        color: "#bfa9ff",
+        inclination: 28.47,
+        raan: 34.2,
+        meanAnomaly0: 132,
+        periodMinutes: 95.42,
+        epochMs: Date.UTC(2026, 0, 1, 0, 0, 0)
+    }
+];
+
 const constellations = [
     {
         name: "Orion",
@@ -384,6 +414,125 @@ function projectToSky(azimuthDegrees, altitudeDegrees, cx, cy, radius) {
     };
 }
 
+function getSatelliteHorizontalCoordinates(track, date, latitude, longitude) {
+    const elapsedMinutes = (date.getTime() - track.epochMs) / (60 * 1000);
+    const orbitalRate = 360 / track.periodMinutes;
+    const argumentLatitude = toRadians(normalizeDegrees(track.meanAnomaly0 + orbitalRate * elapsedMinutes));
+    const inclination = toRadians(track.inclination);
+    const raan = toRadians(normalizeDegrees(track.raan));
+
+    const x = Math.cos(raan) * Math.cos(argumentLatitude)
+        - Math.sin(raan) * Math.sin(argumentLatitude) * Math.cos(inclination);
+    const y = Math.sin(raan) * Math.cos(argumentLatitude)
+        + Math.cos(raan) * Math.sin(argumentLatitude) * Math.cos(inclination);
+    const z = Math.sin(argumentLatitude) * Math.sin(inclination);
+
+    const rightAscension = normalizeDegrees(toDegrees(Math.atan2(y, x)));
+    const declination = toDegrees(Math.atan2(z, Math.sqrt(x * x + y * y)));
+
+    return getHorizontalCoordinatesFromEquatorial(rightAscension, declination, date, latitude, longitude);
+}
+
+function buildSatellitePathSegments(skyContext) {
+    if (skyContext == null) {
+        return [];
+    }
+
+    const { date, latitude, longitude, windowStart, windowEnd } = skyContext;
+    const start = windowStart == null ? new Date(date.getTime() - 45 * 60 * 1000) : windowStart;
+    const end = windowEnd == null ? new Date(date.getTime() + 45 * 60 * 1000) : windowEnd;
+    const sampleStepMs = 6 * 60 * 1000;
+
+    return satelliteTracks.map(track => {
+        const segments = [];
+        let activeSegment = [];
+
+        for (let t = start.getTime(); t <= end.getTime(); t += sampleStepMs) {
+            const sampleDate = new Date(t);
+            const horizontal = getSatelliteHorizontalCoordinates(track, sampleDate, latitude, longitude);
+
+            if (horizontal.altitudeDegrees < 0) {
+                if (activeSegment.length > 1) {
+                    segments.push(activeSegment);
+                }
+                activeSegment = [];
+                continue;
+            }
+
+            activeSegment.push(horizontal);
+        }
+
+        if (activeSegment.length > 1) {
+            segments.push(activeSegment);
+        }
+
+        const currentHorizontal = getSatelliteHorizontalCoordinates(track, date, latitude, longitude);
+        const isCurrentlyVisible = currentHorizontal.altitudeDegrees >= 0;
+
+        return {
+            name: track.name,
+            color: track.color,
+            segments,
+            currentHorizontal: isCurrentlyVisible ? currentHorizontal : null
+        };
+    });
+}
+
+function drawSatellitePaths(ctx, cx, cy, radius, skyContext) {
+    const paths = buildSatellitePathSegments(skyContext);
+
+    for (const path of paths) {
+        ctx.strokeStyle = path.color;
+        ctx.lineWidth = 1.6;
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+
+        for (const segment of path.segments) {
+            if (segment.length < 2) {
+                continue;
+            }
+
+            ctx.beginPath();
+            segment.forEach((sample, index) => {
+                const point = projectToSky(sample.azimuthDegrees, sample.altitudeDegrees, cx, cy, radius);
+                if (index === 0) {
+                    ctx.moveTo(point.x, point.y);
+                } else {
+                    ctx.lineTo(point.x, point.y);
+                }
+            });
+            ctx.stroke();
+
+            const labelIndex = Math.floor(segment.length / 2);
+            const labelSample = segment[labelIndex];
+            const labelPoint = projectToSky(labelSample.azimuthDegrees, labelSample.altitudeDegrees, cx, cy, radius);
+            ctx.fillStyle = path.color;
+            ctx.font = "11px Outfit, sans-serif";
+            ctx.textAlign = "left";
+            ctx.fillText(`${path.name} path`, labelPoint.x + 6, labelPoint.y - 4);
+            break;
+        }
+
+        if (path.currentHorizontal == null) {
+            continue;
+        }
+
+        const nowPoint = projectToSky(path.currentHorizontal.azimuthDegrees, path.currentHorizontal.altitudeDegrees, cx, cy, radius);
+        ctx.beginPath();
+        ctx.arc(nowPoint.x, nowPoint.y, 3.8, 0, Math.PI * 2);
+        ctx.fillStyle = path.color;
+        ctx.fill();
+        ctx.strokeStyle = "hsla(218, 34%, 14%, 0.9)";
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        ctx.fillStyle = path.color;
+        ctx.font = "11px Outfit, sans-serif";
+        ctx.textAlign = "left";
+        ctx.fillText(`${path.name} now`, nowPoint.x + 6, nowPoint.y + 2);
+    }
+}
+
 function drawConstellationOverlay(ctx, cx, cy, radius, skyContext) {
     if (skyContext == null) {
         return;
@@ -543,6 +692,7 @@ function drawSkyDiagram(targetCanvas, visiblePlanets, skyContext = null) {
 
     drawConstellationOverlay(ctx, cx, cy, radius, skyContext);
     drawPolarisOverlay(ctx, cx, cy, radius, skyContext);
+    drawSatellitePaths(ctx, cx, cy, radius, skyContext);
 
     if (visiblePlanets.length === 0) {
         ctx.fillStyle = "hsla(210, 26%, 88%, 0.86)";
@@ -610,7 +760,13 @@ function renderVisiblePlanets(civilTwilightEndIso, latitude, longitude) {
     planetListElement.innerHTML = "";
 
     latestVisiblePlanets = visiblePlanets;
-    latestSkyContext = { date: skySampleDate, latitude, longitude };
+    latestSkyContext = {
+        date: skySampleDate,
+        latitude,
+        longitude,
+        windowStart: start,
+        windowEnd: end
+    };
 
     if (visiblePlanets.length === 0) {
         const item = document.createElement("li");
