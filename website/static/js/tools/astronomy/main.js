@@ -113,6 +113,12 @@ const fullscreenSkyViewState = {
     pinchStartScale: 1
 };
 
+const skyHistoryStateKey = "astronomySkyView";
+const skyHistoryViewMain = "main";
+const skyHistoryViewFullscreen = "fullscreen";
+const skyHistoryViewAr = "ar";
+let isApplyingSkyHistoryNavigation = false;
+
 const planetColors = {
     Mercury: "#f7d7a6",
     Venus: "#fff4c4",
@@ -504,6 +510,79 @@ function scheduleRerenderSkyForCurrentInputs() {
     pendingSkyRerenderFrameId = window.requestAnimationFrame(() => {
         pendingSkyRerenderFrameId = null;
         rerenderSkyForCurrentInputs();
+    });
+}
+
+function getSkyHistoryView(state = history.state) {
+    if (state == null || typeof state !== "object") {
+        return skyHistoryViewMain;
+    }
+
+    const view = state[skyHistoryStateKey];
+    if (view === skyHistoryViewFullscreen || view === skyHistoryViewAr) {
+        return view;
+    }
+
+    return skyHistoryViewMain;
+}
+
+function setSkyHistoryView(view, { replace = false } = {}) {
+    if (typeof history === "undefined") {
+        return;
+    }
+
+    const currentState = history.state != null && typeof history.state === "object" ? history.state : {};
+    const nextState = {
+        ...currentState,
+        [skyHistoryStateKey]: view
+    };
+
+    if (replace) {
+        history.replaceState(nextState, "");
+        return;
+    }
+
+    history.pushState(nextState, "");
+}
+
+async function syncSkyUiToHistoryView(view) {
+    isApplyingSkyHistoryNavigation = true;
+
+    try {
+        if (view === skyHistoryViewAr) {
+            openSkyFullscreen({ suppressHistory: true });
+            await setSkyArModeEnabled(true);
+
+            if (!skyArViewState.isEnabled) {
+                setSkyHistoryView(skyHistoryViewFullscreen, { replace: true });
+            }
+
+            drawActiveFullscreenSky();
+            return;
+        }
+
+        if (view === skyHistoryViewFullscreen) {
+            openSkyFullscreen({ suppressHistory: true });
+            await setSkyArModeEnabled(false);
+            drawActiveFullscreenSky();
+            return;
+        }
+
+        await setSkyArModeEnabled(false);
+        closeSkyFullscreen({ suppressHistory: true });
+    } finally {
+        isApplyingSkyHistoryNavigation = false;
+    }
+}
+
+function initializeSkyHistoryNavigation() {
+    if (typeof history === "undefined" || typeof history.pushState !== "function") {
+        return;
+    }
+
+    setSkyHistoryView(skyHistoryViewMain, { replace: true });
+    window.addEventListener("popstate", event => {
+        void syncSkyUiToHistoryView(getSkyHistoryView(event.state));
     });
 }
 
@@ -2185,20 +2264,51 @@ function requestSkyFullscreen() {
     });
 }
 
-function openSkyFullscreen() {
+function openSkyFullscreen(options = {}) {
+    const { suppressHistory = false } = options;
+
     if (skyFullscreenElement == null || skyFullscreenCanvas == null) {
         return;
     }
 
+    const wasHidden = skyFullscreenElement.hidden;
     skyFullscreenElement.hidden = false;
     updateSkyArUiState();
     drawActiveFullscreenSky();
     resetFullscreenSkyTransform();
     requestSkyFullscreen();
+
+    if (!suppressHistory && wasHidden && !isApplyingSkyHistoryNavigation) {
+        const currentView = getSkyHistoryView();
+        if (currentView === skyHistoryViewMain) {
+            setSkyHistoryView(skyHistoryViewFullscreen);
+        } else if (currentView === skyHistoryViewAr) {
+            setSkyHistoryView(skyHistoryViewFullscreen, { replace: true });
+        }
+    }
 }
 
-function closeSkyFullscreen() {
+function closeSkyFullscreen(options = {}) {
+    const { suppressHistory = false } = options;
+
     if (skyFullscreenElement == null) {
+        return;
+    }
+
+    if (!suppressHistory && !isApplyingSkyHistoryNavigation) {
+        const currentView = getSkyHistoryView();
+        if (currentView === skyHistoryViewAr) {
+            history.go(-2);
+            return;
+        }
+
+        if (currentView === skyHistoryViewFullscreen) {
+            history.back();
+            return;
+        }
+    }
+
+    if (skyFullscreenElement.hidden) {
         return;
     }
 
@@ -2234,7 +2344,23 @@ function initializeFullscreenSkyInteractions() {
 
     if (skyArToggleButton != null) {
         skyArToggleButton.addEventListener("click", async () => {
-            await setSkyArModeEnabled(!skyArViewState.isEnabled);
+            if (skyArViewState.isEnabled) {
+                if (!isApplyingSkyHistoryNavigation && getSkyHistoryView() === skyHistoryViewAr) {
+                    history.back();
+                    return;
+                }
+
+                await setSkyArModeEnabled(false);
+                drawActiveFullscreenSky();
+                return;
+            }
+
+            await setSkyArModeEnabled(true);
+
+            if (skyArViewState.isEnabled && !isApplyingSkyHistoryNavigation && getSkyHistoryView() !== skyHistoryViewAr) {
+                setSkyHistoryView(skyHistoryViewAr);
+            }
+
             drawActiveFullscreenSky();
         });
     }
@@ -2886,6 +3012,8 @@ async function initializePage() {
         skyFullscreenElement.hidden = true;
     }
 
+    initializeSkyHistoryNavigation();
+
     refreshButton.addEventListener("click", refreshFromInputs);
     initializeProgressiveWebApp();
     initializeCityPicker();
@@ -2899,6 +3027,9 @@ async function initializePage() {
         updateSkyArUiState();
         if (skyArViewState.isEnabled && !isMobileArEligible()) {
             void setSkyArModeEnabled(false);
+            if (getSkyHistoryView() === skyHistoryViewAr) {
+                setSkyHistoryView(skyHistoryViewFullscreen, { replace: true });
+            }
         }
         scheduleRerenderSkyForCurrentInputs();
     });
