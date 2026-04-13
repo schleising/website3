@@ -2,6 +2,11 @@
     box-sizing: border-box;
 }
 
+html,
+body {
+    height: 100%;
+}
+
 :root {
     --page-bg: radial-gradient(circle at 15% 10%, #eef4ff 0%, #f7f9fc 52%, #edf3f9 100%);
     --surface: #ffffff;
@@ -21,10 +26,14 @@ body {
     font-family: "Plus Jakarta Sans", "Segoe UI", sans-serif;
     color: var(--text);
     background: var(--page-bg);
+    display: flex;
+    flex-direction: column;
+    min-height: 100%;
 }
 
 #outer {
-    min-height: 100vh;
+    flex: 1 1 auto;
+    min-height: 0;
     padding: var(--shell-pad);
     display: flex;
     flex-direction: column;
@@ -56,6 +65,10 @@ body {
     display: none;
     align-items: center;
     min-width: 2.3rem;
+}
+
+body.collapsed-sidebars .header-mobile-action {
+    display: flex;
 }
 
 .left-mobile-action {
@@ -126,18 +139,49 @@ h3.header-text {
     border: 1px solid var(--line);
     background: linear-gradient(180deg, #fbfdff 0%, #f0f6fd 100%);
     box-shadow: var(--shadow);
-}
-
-.left-sidebar {
-    width: clamp(10.4rem, 13vw, 14rem);
-}
-
-.right-sidebar {
-    width: clamp(11rem, 14vw, 15rem);
+    width: max-content;
 }
 
 .right-sidebar.hidden-sidebar {
     display: none;
+}
+
+body.collapsed-sidebars #main > .sidebar:not(.mobile-open) {
+    display: none;
+}
+
+body.collapsed-sidebars .left-sidebar,
+body.collapsed-sidebars .right-sidebar {
+    position: fixed;
+    top: 3.3rem;
+    bottom: auto;
+    max-height: none;
+    z-index: 12;
+    overflow-y: visible;
+    border-radius: 0.78rem;
+    background: linear-gradient(180deg, #fbfdff 0%, #edf5ff 100%);
+    border: 1px solid var(--line);
+    box-shadow: 0 16px 30px rgba(22, 39, 63, 0.22);
+}
+
+body.collapsed-sidebars .left-sidebar {
+    left: 0.45rem;
+    transform-origin: top left;
+}
+
+body.collapsed-sidebars .right-sidebar {
+    right: 0.45rem;
+    transform-origin: top right;
+}
+
+body.collapsed-sidebars .left-sidebar.mobile-open,
+body.collapsed-sidebars .right-sidebar.mobile-open {
+    display: flex;
+    animation: menu-in 120ms ease-out;
+}
+
+body.collapsed-sidebars.nav-drawer-open {
+    overflow: hidden;
 }
 
 #content {
@@ -206,16 +250,6 @@ video {
     text-align: center;
 }
 
-@media screen and (max-width: 72rem) {
-    .left-sidebar {
-        width: clamp(9.5rem, 12vw, 11.5rem);
-    }
-
-    .right-sidebar {
-        width: clamp(9.5rem, 13vw, 12.75rem);
-    }
-}
-
 @media screen and (max-width: 42rem) {
     #outer {
         padding: 0.35rem;
@@ -252,7 +286,7 @@ video {
         position: fixed;
         top: 3.3rem;
         bottom: auto;
-        width: min(13.5rem, 72vw);
+        width: max-content;
         max-height: none;
         z-index: 12;
         display: none;
