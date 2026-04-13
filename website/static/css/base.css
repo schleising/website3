@@ -2,28 +2,100 @@
     box-sizing: border-box;
 }
 
+:root {
+    --page-bg: radial-gradient(circle at 15% 10%, #eef4ff 0%, #f7f9fc 52%, #edf3f9 100%);
+    --surface: #ffffff;
+    --surface-soft: #f4f8fc;
+    --surface-strong: #dce8f7;
+    --line: #c7d8ee;
+    --text: #182338;
+    --text-soft: #4f5f78;
+    --brand: #2a5b90;
+    --brand-strong: #1f4570;
+    --shadow: 0 10px 28px rgba(26, 46, 75, 0.09);
+    --shell-pad: clamp(0.45rem, 0.9vw, 0.9rem);
+}
+
 body {
     margin: 0rem;
+    font-family: "Plus Jakarta Sans", "Segoe UI", sans-serif;
+    color: var(--text);
+    background: var(--page-bg);
 }
 
 #outer {
-    padding: 0.3rem;
+    min-height: 100vh;
+    padding: var(--shell-pad);
     display: flex;
     flex-direction: column;
+    gap: clamp(0.4rem, 0.8vw, 0.85rem);
 }
 
 #header {
-    background-color: cornflowerblue;
-    color: white;
-    padding: 0.75rem 0.5rem;
+    background: linear-gradient(132deg, #2a5b90 0%, #4d7bb1 100%);
+    color: #f8fbff;
+    padding: clamp(0.75rem, 1.2vw, 1rem) clamp(0.8rem, 1.5vw, 1.2rem);
     display: flex;
     flex-direction: row;
     align-items: center;
     justify-content: space-between;
+    border-radius: 0.95rem;
+    border: 1px solid rgba(224, 236, 251, 0.45);
+    box-shadow: var(--shadow);
+}
+
+.header-title-wrap {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+    justify-content: center;
+    flex: 1 1 auto;
+}
+
+.header-mobile-action {
+    display: none;
+    align-items: center;
+    min-width: 2.3rem;
+}
+
+.left-mobile-action {
+    justify-content: flex-start;
+}
+
+.right-mobile-action {
+    justify-content: flex-end;
+}
+
+.mobile-nav-button {
+    border: 1px solid rgba(244, 250, 255, 0.55);
+    background: rgba(255, 255, 255, 0.2);
+    color: #f8fbff;
+    width: 2.15rem;
+    height: 2.15rem;
+    border-radius: 0.62rem;
+    font-size: 1.05rem;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.mobile-nav-button:focus-visible,
+.mobile-nav-button:hover {
+    background: rgba(255, 255, 255, 0.3);
+    border-color: rgba(255, 255, 255, 0.7);
+}
+
+.mobile-nav-button.hidden-button {
+    display: none;
 }
 
 h3.header-text {
-    margin: 0.25rem;
+    margin: 0rem;
+    font-family: "Space Grotesk", "Plus Jakarta Sans", sans-serif;
+    letter-spacing: 0.02em;
+    font-weight: 600;
 }
 
 .no-margin {
@@ -34,36 +106,74 @@ h3.header-text {
     display: flex;
     flex-direction: row;
     flex: 1 1 auto;
-    overflow-y: auto;
+    overflow: hidden;
+    min-height: 0;
+    gap: clamp(0.45rem, 1vw, 0.85rem);
 }
 
 .sidebar {
-    color: white;
+    color: var(--text);
     display: flex;
     flex-direction: column;
     overflow-y: auto;
     flex: 0 0 auto;
+    min-width: 0;
+}
+
+.left-sidebar,
+.right-sidebar {
+    border-radius: 0.9rem;
+    border: 1px solid var(--line);
+    background: linear-gradient(180deg, #fbfdff 0%, #f0f6fd 100%);
+    box-shadow: var(--shadow);
+}
+
+.left-sidebar {
+    width: clamp(10.4rem, 13vw, 14rem);
+}
+
+.right-sidebar {
+    width: clamp(11rem, 14vw, 15rem);
+}
+
+.right-sidebar.hidden-sidebar {
+    display: none;
 }
 
 #content {
-    padding: 0.75rem;
-    margin: 0.25rem;
+    padding: clamp(0.9rem, 1.45vw, 1.35rem);
     display: flex;
     flex: 1 1 auto;
     flex-direction: column;
     overflow-y: auto;
+    min-width: 0;
+    border-radius: 0.9rem;
+    border: 1px solid var(--line);
+    background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+    box-shadow: var(--shadow);
 }
 
 #footer {
-    background-color: cornflowerblue;
-    padding: 0.5rem;
-    color: white;
+    background: linear-gradient(132deg, #2a5b90 0%, #4d7bb1 100%);
+    padding: 0.65rem 0.95rem;
+    color: #f8fbff;
     display: flex;
     flex-direction: row;
+    align-items: center;
+    border-radius: 0.85rem;
+    border: 1px solid rgba(224, 236, 251, 0.45);
+    box-shadow: var(--shadow);
 }
 
 .btn-primary {
-    background-color: cornflowerblue;
+    background-color: var(--brand);
+    border-color: var(--brand);
+}
+
+.btn-primary:hover,
+.btn-primary:focus {
+    background-color: var(--brand-strong);
+    border-color: var(--brand-strong);
 }
 
 .btn-primary:disabled {
@@ -94,4 +204,99 @@ video {
 .centre-align {
     align-self: center;
     text-align: center;
+}
+
+@media screen and (max-width: 72rem) {
+    .left-sidebar {
+        width: clamp(9.5rem, 12vw, 11.5rem);
+    }
+
+    .right-sidebar {
+        width: clamp(9.5rem, 13vw, 12.75rem);
+    }
+}
+
+@media screen and (max-width: 42rem) {
+    #outer {
+        padding: 0.35rem;
+        gap: 0.35rem;
+    }
+
+    #header {
+        border-radius: 0.72rem;
+        padding: 0.7rem 0.75rem;
+    }
+
+    .header-mobile-action {
+        display: flex;
+    }
+
+    h3.header-text {
+        font-size: 1.1rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    #main {
+        gap: 0.25rem;
+    }
+
+    #content {
+        padding: 0.58rem;
+        border-radius: 0.72rem;
+    }
+
+    .left-sidebar,
+    .right-sidebar {
+        position: fixed;
+        top: 3.3rem;
+        bottom: auto;
+        width: min(13.5rem, 72vw);
+        max-height: none;
+        z-index: 12;
+        display: none;
+        overflow-y: visible;
+        border-radius: 0.78rem;
+        background: linear-gradient(180deg, #fbfdff 0%, #edf5ff 100%);
+        border: 1px solid var(--line);
+        box-shadow: 0 16px 30px rgba(22, 39, 63, 0.22);
+    }
+
+    .left-sidebar {
+        left: 0.45rem;
+        transform-origin: top left;
+    }
+
+    .right-sidebar {
+        right: 0.45rem;
+        transform-origin: top right;
+    }
+
+    .left-sidebar.mobile-open,
+    .right-sidebar.mobile-open {
+        display: flex;
+        animation: menu-in 120ms ease-out;
+    }
+
+    body.nav-drawer-open {
+        overflow: hidden;
+    }
+
+    #footer {
+        border-radius: 0.72rem;
+        padding: 0.52rem 0.7rem;
+    }
+}
+
+@keyframes menu-in {
+    from {
+        opacity: 0;
+        transform: translateY(-4px) scale(0.98);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
 }

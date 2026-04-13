@@ -3,12 +3,16 @@
     flex-direction: column;
     justify-content: space-between;
     align-items: flex-start;
+    width: 100%;
+    min-height: 100%;
 }
 
 .top-level-nav {
     display: none;
-    color: grey;
-    padding: 0.75rem;
+    color: var(--text-soft);
+    padding: 0.65rem 0.75rem;
+    font-size: 1.2rem;
+    font-weight: 600;
 }
 
 a.top-level-nav {
@@ -16,8 +20,12 @@ a.top-level-nav {
 }
 
 .sub-level-nav {
-    color: grey;
-    padding: 0.75rem;
+    color: var(--text-soft);
+    padding: 0.62rem 0.82rem;
+    margin: 0.12rem;
+    border-radius: 0.6rem;
+    line-height: 1.3;
+    transition: background-color 120ms ease, color 120ms ease, transform 120ms ease;
 }
 
 a.sub-level-nav {
@@ -25,28 +33,29 @@ a.sub-level-nav {
 }
 
 .sub-level-nav:hover {
-    color: dimgrey;
-    background-color: hsl(219, 79%, 94%);
+    color: var(--brand-strong);
+    background-color: var(--surface-strong);
+    transform: translateX(1px);
 }
 
 .sub-level-nav-container {
     display: flex;
     flex-direction: column;
     z-index: 1;
-    width: max-content;
+    width: 100%;
+    padding: 0.3rem;
 }
 
 @media screen and (max-width: 42rem) {
-    #content {
-        padding: 0.25rem;
-    }
-
     .main-nav {
-        width: 2.5rem;
+        width: 100%;
+        min-height: 100%;
+        justify-content: flex-start;
+        align-items: stretch;
     }
 
     .top-level-nav {
-        display: flex;
+        display: none;
     }
 
     .right-top-level-nav {
@@ -54,25 +63,26 @@ a.sub-level-nav {
     }
 
     .sub-level-nav-container {
-        display: none;
-    }
-
-    .main-nav:hover {
-        background-color: hsl(219, 79%, 96%);
-    }
-
-    .main-nav:hover .sub-level-nav-container {
         display: flex;
-        background-color: hsl(219, 79%, 96%);
+        position: static;
+        min-width: 0;
+        border: 0;
+        box-shadow: none;
+        background-color: var(--surface-soft);
+        padding: 0.46rem;
     }
 
     .sidebar {
-        overflow-y: visible;
+        overflow-y: auto;
         padding: 0rem;
     }
 
+    .sub-level-nav {
+        margin: 0.08rem 0;
+        border-radius: 0.56rem;
+    }
+
     .right-nav {
-        top: 0rem;
-        right: 0rem;
+        position: relative;
     }
 }
