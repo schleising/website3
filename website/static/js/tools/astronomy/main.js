@@ -1007,7 +1007,7 @@ function drawSatellitePaths(ctx, cx, cy, radius, skyContext, occupiedLabelBoxes 
         ctx.lineWidth = 1;
         ctx.stroke();
 
-        drawSkyLabel(ctx, `${path.name} now`, nowPoint.x, nowPoint.y, occupiedLabelBoxes, {
+        drawSkyLabel(ctx, path.name, nowPoint.x, nowPoint.y, occupiedLabelBoxes, {
             fontSize: Math.round(11 * labelScale),
             fillStyle: path.color,
             preferBelow: true
@@ -1074,7 +1074,7 @@ function drawMoonPath(ctx, cx, cy, radius, skyContext, occupiedLabelBoxes = []) 
     ctx.lineWidth = 1;
     ctx.stroke();
 
-    drawSkyLabel(ctx, "Moon now", moonNowPoint.x, moonNowPoint.y, occupiedLabelBoxes, {
+    drawSkyLabel(ctx, "Moon", moonNowPoint.x, moonNowPoint.y, occupiedLabelBoxes, {
         fontSize: Math.round(12 * labelScale),
         fillStyle: "#f7fbff",
         preferBelow: true
