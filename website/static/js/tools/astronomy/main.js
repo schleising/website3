@@ -433,6 +433,57 @@ function getSatelliteHorizontalCoordinates(track, date, latitude, longitude) {
     return getHorizontalCoordinatesFromEquatorial(rightAscension, declination, date, latitude, longitude);
 }
 
+function getMoonEquatorialCoordinates(date) {
+    const jd = toJulianDate(date);
+    const d = jd - 2451543.5;
+
+    const N = normalizeDegrees(125.1228 - 0.0529538083 * d);
+    const i = 5.1454;
+    const w = normalizeDegrees(318.0634 + 0.1643573223 * d);
+    const a = 60.2666;
+    const e = 0.0549;
+    const M = normalizeDegrees(115.3654 + 13.0649929509 * d);
+
+    const E = solveEccentricAnomaly(toRadians(M), e);
+    const xv = a * (Math.cos(E) - e);
+    const yv = a * (Math.sqrt(1 - e * e) * Math.sin(E));
+
+    const v = Math.atan2(yv, xv);
+    const r = Math.sqrt(xv * xv + yv * yv);
+
+    const Nrad = toRadians(N);
+    const irad = toRadians(i);
+    const wrad = toRadians(w);
+
+    const xh = r * (Math.cos(Nrad) * Math.cos(v + wrad) - Math.sin(Nrad) * Math.sin(v + wrad) * Math.cos(irad));
+    const yh = r * (Math.sin(Nrad) * Math.cos(v + wrad) + Math.cos(Nrad) * Math.sin(v + wrad) * Math.cos(irad));
+    const zh = r * (Math.sin(v + wrad) * Math.sin(irad));
+
+    const obliquity = toRadians(23.4393 - 3.563e-7 * d);
+    const xeq = xh;
+    const yeq = yh * Math.cos(obliquity) - zh * Math.sin(obliquity);
+    const zeq = yh * Math.sin(obliquity) + zh * Math.cos(obliquity);
+
+    const rightAscension = normalizeDegrees(toDegrees(Math.atan2(yeq, xeq)));
+    const declination = toDegrees(Math.atan2(zeq, Math.sqrt(xeq * xeq + yeq * yeq)));
+
+    return {
+        rightAscension,
+        declination
+    };
+}
+
+function getMoonHorizontalCoordinates(date, latitude, longitude) {
+    const equatorial = getMoonEquatorialCoordinates(date);
+    return getHorizontalCoordinatesFromEquatorial(
+        equatorial.rightAscension,
+        equatorial.declination,
+        date,
+        latitude,
+        longitude
+    );
+}
+
 function buildSatellitePathSegments(skyContext) {
     if (skyContext == null) {
         return [];
@@ -531,6 +582,69 @@ function drawSatellitePaths(ctx, cx, cy, radius, skyContext) {
         ctx.textAlign = "left";
         ctx.fillText(`${path.name} now`, nowPoint.x + 6, nowPoint.y + 2);
     }
+}
+
+function drawMoonPath(ctx, cx, cy, radius, skyContext) {
+    if (skyContext == null) {
+        return;
+    }
+
+    const { date, latitude, longitude, windowStart, windowEnd } = skyContext;
+    const start = windowStart == null ? new Date(date.getTime() - 45 * 60 * 1000) : windowStart;
+    const end = windowEnd == null ? new Date(date.getTime() + 45 * 60 * 1000) : windowEnd;
+    const sampleStepMs = 20 * 60 * 1000;
+    const samples = [];
+
+    for (let t = start.getTime(); t <= end.getTime(); t += sampleStepMs) {
+        const sampleDate = new Date(t);
+        const horizontal = getMoonHorizontalCoordinates(sampleDate, latitude, longitude);
+        if (horizontal.altitudeDegrees >= 0) {
+            samples.push(horizontal);
+        }
+    }
+
+    if (samples.length > 1) {
+        ctx.beginPath();
+        samples.forEach((sample, index) => {
+            const point = projectToSky(sample.azimuthDegrees, sample.altitudeDegrees, cx, cy, radius);
+            if (index === 0) {
+                ctx.moveTo(point.x, point.y);
+            } else {
+                ctx.lineTo(point.x, point.y);
+            }
+        });
+        ctx.strokeStyle = "#f1f6ff";
+        ctx.lineWidth = 1.8;
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+        ctx.stroke();
+
+        const labelSample = samples[Math.floor(samples.length / 2)];
+        const labelPoint = projectToSky(labelSample.azimuthDegrees, labelSample.altitudeDegrees, cx, cy, radius);
+        ctx.fillStyle = "#f1f6ff";
+        ctx.font = "11px Outfit, sans-serif";
+        ctx.textAlign = "left";
+        ctx.fillText("Moon path", labelPoint.x + 6, labelPoint.y - 6);
+    }
+
+    const moonNow = getMoonHorizontalCoordinates(date, latitude, longitude);
+    if (moonNow.altitudeDegrees < 0) {
+        return;
+    }
+
+    const moonNowPoint = projectToSky(moonNow.azimuthDegrees, moonNow.altitudeDegrees, cx, cy, radius);
+    ctx.beginPath();
+    ctx.arc(moonNowPoint.x, moonNowPoint.y, 5, 0, Math.PI * 2);
+    ctx.fillStyle = "#f7fbff";
+    ctx.fill();
+    ctx.strokeStyle = "hsla(218, 36%, 14%, 0.9)";
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    ctx.fillStyle = "#f7fbff";
+    ctx.font = "12px Outfit, sans-serif";
+    ctx.textAlign = "left";
+    ctx.fillText("Moon now", moonNowPoint.x + 7, moonNowPoint.y + 1);
 }
 
 function drawConstellationOverlay(ctx, cx, cy, radius, skyContext) {
@@ -692,6 +806,7 @@ function drawSkyDiagram(targetCanvas, visiblePlanets, skyContext = null) {
 
     drawConstellationOverlay(ctx, cx, cy, radius, skyContext);
     drawPolarisOverlay(ctx, cx, cy, radius, skyContext);
+    drawMoonPath(ctx, cx, cy, radius, skyContext);
     drawSatellitePaths(ctx, cx, cy, radius, skyContext);
 
     if (visiblePlanets.length === 0) {
