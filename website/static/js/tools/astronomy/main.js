@@ -258,17 +258,19 @@ const earthElements = {
 
 function formatLocalTime(isoString) {
     const date = new Date(isoString);
-    return date.toLocaleTimeString([], {
+    return date.toLocaleTimeString(undefined, {
         hour: "2-digit",
         minute: "2-digit",
-        second: "2-digit"
+        second: "2-digit",
+        timeZoneName: "short"
     });
 }
 
 function formatClockTime(date) {
-    return date.toLocaleTimeString([], {
+    return date.toLocaleTimeString(undefined, {
         hour: "2-digit",
-        minute: "2-digit"
+        minute: "2-digit",
+        timeZoneName: "short"
     });
 }
 
@@ -867,7 +869,7 @@ function renderVisiblePlanets(_civilTwilightEndIso, latitude, longitude) {
     const skySampleDate = new Date();
     const pathWindowStart = new Date(skySampleDate.getTime() - 90 * 60 * 1000);
     const pathWindowEnd = new Date(skySampleDate.getTime() + 90 * 60 * 1000);
-    planetWindowElement.innerText = `Snapshot: ${skySampleDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}`;
+    planetWindowElement.innerText = `Snapshot: ${formatLocalTime(skySampleDate.toISOString())}`;
 
     const visiblePlanets = [];
 
@@ -1035,7 +1037,7 @@ async function updateSunTimes(lat, lon) {
         civilBeginElement.innerText = formatLocalTime(result.civil_twilight_begin);
         civilEndElement.innerText = formatLocalTime(result.civil_twilight_end);
         renderVisiblePlanets(result.civil_twilight_end, lat, lon);
-        sunStatus.innerText = `Updated ${new Date().toLocaleTimeString()}`;
+        sunStatus.innerText = `Updated ${formatLocalTime(new Date().toISOString())}`;
     } catch (error) {
         planetWindowElement.innerText = "Window: --";
         planetListElement.innerHTML = "<li>Planet visibility unavailable.</li>";
