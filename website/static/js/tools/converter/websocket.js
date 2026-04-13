@@ -77,7 +77,7 @@ document.addEventListener('readystatechange', event => {
 });
 
 // Add an event listener to listen for page visibility changes
-document.addEventListener("visibilitychange", event => {
+document.addEventListener("visibilitychange", () => {
     // If the page is now visible and the websocket is not open, open it
     if (document.visibilityState == "visible") {
         // Set the visible variable to true
@@ -89,7 +89,7 @@ document.addEventListener("visibilitychange", event => {
         }
 
         // Check whether the websocket is open, if not open it
-        checkSocketAndSendMessage(event);
+        checkSocketAndSendMessage();
     }
     else {
         // Set the visible variable to false
@@ -103,7 +103,7 @@ document.addEventListener("visibilitychange", event => {
 });
 
 function setProgressBarVisible(isVisible) {
-    progressWrapperElement = document.querySelector(".conversion-progress");
+    const progressWrapperElement = document.querySelector(".conversion-progress");
 
     if (progressWrapperElement == null) {
         return;
@@ -120,7 +120,7 @@ function initializeConverterScaffold() {
 }
 
 function initializeCurrentConversionScaffold() {
-    progressElement = document.getElementById("progress-details");
+    const progressElement = document.getElementById("progress-details");
 
     if (progressElement == null) {
         return;
@@ -130,7 +130,7 @@ function initializeCurrentConversionScaffold() {
 }
 
 function initializeStatisticsScaffold() {
-    statisticsElement = document.getElementById("statistics");
+    const statisticsElement = document.getElementById("statistics");
 
     if (statisticsElement == null) {
         return;
@@ -142,14 +142,14 @@ function initializeStatisticsScaffold() {
 
     statisticsElement.innerHTML = "";
 
-    for (field of statisticsScaffoldFields) {
+    for (const field of statisticsScaffoldFields) {
         appendKeyValueElement(statisticsElement, field.label, "--", [], [], field.key);
     }
 }
 
 function initializeFilesScaffold() {
-    filesContainer = document.getElementById("converted-files");
-    lastDayCount = document.getElementById("last-day-count");
+    const filesContainer = document.getElementById("converted-files");
+    const lastDayCount = document.getElementById("last-day-count");
 
     if (filesContainer == null || lastDayCount == null) {
         return;
@@ -162,8 +162,8 @@ function initializeFilesScaffold() {
     filesContainer.innerHTML = "";
     lastDayCount.innerText = "--";
 
-    placeholderCount = 3;
-    for (i = 0; i < placeholderCount; i++) {
+    const placeholderCount = 3;
+    for (let i = 0; i < placeholderCount; i++) {
         if (filesViewMode === 'files_to_convert') {
             appendToConvertFileCard(filesContainer, {
                 filename: "Waiting for data...",
@@ -195,7 +195,7 @@ function formatStatisticsValue(field, statistics) {
         return "--";
     }
 
-    value = statistics[field.key];
+    const value = statistics[field.key];
 
     if (field.type === 'size') {
         return formatSizeForDisplay(value, "GB");
@@ -211,11 +211,11 @@ function formatStatisticsValue(field, statistics) {
 function updateStatisticsValues(statistics) {
     initializeStatisticsScaffold();
 
-    for (field of statisticsScaffoldFields) {
+    for (const field of statisticsScaffoldFields) {
         setValueIfChanged(field.key + "-value", String(formatStatisticsValue(field, statistics)));
     }
 
-    existingErrorsRow = document.getElementById("conversion-errors-row");
+    const existingErrorsRow = document.getElementById("conversion-errors-row");
     if (statistics != null && statistics.conversion_errors > 0) {
         if (existingErrorsRow == null) {
             appendConversionErrorsRow(document.getElementById("statistics"), statistics.conversion_errors);
@@ -276,18 +276,18 @@ function openWebSocket() {
         lastMessageTimestamp = Date.now();
 
         // Parse the message into a json object
-        message = JSON.parse(event.data);
+        const message = JSON.parse(event.data);
 
         switch (message.messageType) {
             case 'converting_files':
                 // Get the conversion status
-                conversionStatus = message.messageBody;
+                const conversionStatus = message.messageBody;
 
                 // Get the progress element
-                progressElement = document.getElementById("progress-details");
+                const progressElement = document.getElementById("progress-details");
 
                 // Get the number of files being converted
-                numFiles = conversionStatus.converting_files.length;
+                const numFiles = conversionStatus.converting_files.length;
 
                 // Check whether the conversion number is greater than the number of files being converted
                 if (conversionNumber >= numFiles) {
@@ -301,12 +301,12 @@ function openWebSocket() {
                 }
 
                 // Get a list of the new tab names from the backend names
-                newTabNames = conversionStatus.converting_files.map(file => file.backend_name);
+                const newTabNames = conversionStatus.converting_files.map(file => file.backend_name);
 
                 // If the array of new tab names is not equal to the array of current tab names, update the tabs
                 if (newTabNames.toString() != currentTabNames.toString()) {
                     // Add a clickable element with the conversion number to the conversion-header element
-                    conversionHeaderElement = document.getElementById("conversion-header");
+                    const conversionHeaderElement = document.getElementById("conversion-header");
 
                     // Remove all child elements from the conversion header element
                     while (conversionHeaderElement.firstChild) {
@@ -314,9 +314,9 @@ function openWebSocket() {
                     }
 
                     // Loop through the files being converted
-                    for (i = 0; i < numFiles; i++) {
+                    for (let i = 0; i < numFiles; i++) {
                         // Create a new element
-                        newElement = document.createElement("button");
+                        const newElement = document.createElement("button");
 
                         // Set the id of the new element
                         newElement.id = "conversion-" + (i);
@@ -327,7 +327,7 @@ function openWebSocket() {
                         // Set the onclick function of the new element
                         newElement.onclick = function() { 
                             // Set the conversion number to the number at the end of the id
-                            conversionNumber = this.id.match(/[0-9]+/g)[0];
+                            conversionNumber = Number(this.id.match(/[0-9]+/g)[0]);
 
                             // Clear the timer if it is set
                             if (timer != 0) {
@@ -335,7 +335,7 @@ function openWebSocket() {
                             }
 
                             // Check whether the websocket is open, if not open it
-                            checkSocketAndSendMessage(event);
+                            checkSocketAndSendMessage();
                         };
 
                         // CHeck whether the backend name is null
@@ -356,7 +356,7 @@ function openWebSocket() {
                 }
 
                 // Set all tabs to inactive
-                for (i = 0; i < numFiles; i++) {
+                for (let i = 0; i < numFiles; i++) {
                     document.getElementById("conversion-" + i).className = "conversion-button";
                 }
 
@@ -368,26 +368,31 @@ function openWebSocket() {
                     document.getElementById("conversion-" + conversionNumber).className = "conversion-button active";
     
                     // Parse the time remaining which is in Python timedelta string format into a Date object 
-                    time_array = conversionStatus.converting_files[conversionNumber].time_remaining.match(/[0-9]+/g);
+                    const timeArray = conversionStatus.converting_files[conversionNumber].time_remaining.match(/[0-9]+/g);
+
+                    let days = 0;
+                    let hours = 0;
+                    let minutes = 0;
+                    let seconds = 0;
 
                     // Check that the time array is not null
-                    if (time_array == null) {
+                    if (timeArray == null) {
                         days = 0;
                         hours = 0;
                         minutes = 0;
                         seconds = 0;
-                    } else if (time_array.length == 4) {
-                        days = parseInt(time_array[0]);
-                        hours = parseInt(time_array[1]);
-                        minutes = parseInt(time_array[2]);
-                        seconds = parseInt(time_array[3]);
-                    } else if (time_array.length == 3) {
+                    } else if (timeArray.length == 4) {
+                        days = parseInt(timeArray[0], 10);
+                        hours = parseInt(timeArray[1], 10);
+                        minutes = parseInt(timeArray[2], 10);
+                        seconds = parseInt(timeArray[3], 10);
+                    } else if (timeArray.length == 3) {
                         days = 0;
-                        hours = parseInt(time_array[0]);
-                        minutes = parseInt(time_array[1]);
-                        seconds = parseInt(time_array[2]);
+                        hours = parseInt(timeArray[0], 10);
+                        minutes = parseInt(timeArray[1], 10);
+                        seconds = parseInt(timeArray[2], 10);
                     } else {
-                        console.log("Unknown time array length: " + time_array.length);
+                        console.log("Unknown time array length: " + timeArray.length);
                         days = 0;
                         hours = 0;
                         minutes = 0;
@@ -395,16 +400,16 @@ function openWebSocket() {
                     }
 
                     // Create a new Date object which is the current time plus the time remaining
-                    expected_completion_time = new Date();
-                    expected_completion_time.setDate(expected_completion_time.getDate() + days);
-                    expected_completion_time.setHours(expected_completion_time.getHours() + hours);
-                    expected_completion_time.setMinutes(expected_completion_time.getMinutes() + minutes);
-                    expected_completion_time.setSeconds(expected_completion_time.getSeconds() + seconds);
+                    const expectedCompletionTime = new Date();
+                    expectedCompletionTime.setDate(expectedCompletionTime.getDate() + days);
+                    expectedCompletionTime.setHours(expectedCompletionTime.getHours() + hours);
+                    expectedCompletionTime.setMinutes(expectedCompletionTime.getMinutes() + minutes);
+                    expectedCompletionTime.setSeconds(expectedCompletionTime.getSeconds() + seconds);
 
                     // Format the expected completion time into a string with the format %A HH:MM
-                    expected_completion_time = expected_completion_time.toLocaleString('en-GB', {weekday: 'long', hour12: false, hour: '2-digit', minute: '2-digit'});
+                    const expectedCompletionTimeString = expectedCompletionTime.toLocaleString('en-GB', {weekday: 'long', hour12: false, hour: '2-digit', minute: '2-digit'});
 
-                    completeString = conversionStatus.converting_files[conversionNumber].progress.toFixed(2) + "%";
+                    let completeString = conversionStatus.converting_files[conversionNumber].progress.toFixed(2) + "%";
 
                     if (conversionStatus.converting_files[conversionNumber].copying) {
                         completeString = completeString + " (Copying)";
@@ -414,7 +419,7 @@ function openWebSocket() {
                         progressElement,
                         conversionStatus.converting_files[conversionNumber],
                         completeString,
-                        expected_completion_time
+                        expectedCompletionTimeString
                     );
 
                     // Set the value of the file-progress element to the progress
@@ -442,7 +447,7 @@ function openWebSocket() {
                 break;
             case 'converted_files':
                 // Get the files converted
-                filesConverted = message.messageBody;
+                const filesConverted = message.messageBody;
 
                 cachedConvertedFiles = filesConverted;
 
@@ -451,7 +456,7 @@ function openWebSocket() {
                 }
                 break;
             case 'files_to_convert':
-                filesToConvert = message.messageBody;
+                const filesToConvert = message.messageBody;
 
                 cachedFilesToConvert = filesToConvert;
 
@@ -461,7 +466,7 @@ function openWebSocket() {
                 break;
             case 'statistics':
                 // Get the statistics
-                statistics = message.messageBody;
+                const statistics = message.messageBody;
 
                 updateStatisticsValues(statistics);
                 break;
@@ -473,7 +478,7 @@ function openWebSocket() {
     };
 
     // Add the event listener
-    ws.addEventListener('open', (event) => {
+    ws.addEventListener('open', () => {
         reconnectAttempt = 0;
         lastMessageTimestamp = Date.now();
 
@@ -482,24 +487,24 @@ function openWebSocket() {
             view: filesViewMode
         }));
 
-        checkSocketAndSendMessage(event);
+        checkSocketAndSendMessage();
     });
 };
 
-function checkSocketAndSendMessage(event) {
+function checkSocketAndSendMessage() {
     // Send the messsage, checking that the socket is open
     if (ws != null && ws.readyState == WebSocket.OPEN) {
         // If the socket is open send the message
-        sendMessage(event);
+        sendMessage();
     } else if (ws == null || ws.readyState != WebSocket.CONNECTING) {
         // If the socket is not open or connecting, open a new socket
         scheduleReconnect("check-socket");
     }
 };
 
-function sendMessage(event) {
+function sendMessage() {
     // Create the message
-    msg = {
+    const msg = {
         messageType: 'ping'
     };
 
@@ -528,9 +533,9 @@ function scheduleReconnect(reason, immediate = false) {
         return;
     }
 
-    baseDelayMs = immediate ? 0 : Math.min(1000 * Math.pow(2, reconnectAttempt), 12000);
-    jitterMs = Math.floor(Math.random() * 400);
-    reconnectDelayMs = baseDelayMs + jitterMs;
+    const baseDelayMs = immediate ? 0 : Math.min(1000 * Math.pow(2, reconnectAttempt), 12000);
+    const jitterMs = Math.floor(Math.random() * 400);
+    const reconnectDelayMs = baseDelayMs + jitterMs;
 
     reconnectAttempt = reconnectAttempt + 1;
     console.log("Scheduling websocket reconnect:", reason, reconnectDelayMs + "ms");
@@ -579,7 +584,7 @@ function startConnectionWatchdog() {
             return;
         }
 
-        nowMs = Date.now();
+        const nowMs = Date.now();
 
         if (lastMessageTimestamp > 0 && nowMs - lastMessageTimestamp > staleConnectionMs) {
             forceReconnect("watchdog-stale");
@@ -609,7 +614,7 @@ function setupNetworkListeners() {
 }
 
 function setValueIfChanged(elementId, value) {
-    element = document.getElementById(elementId);
+    const element = document.getElementById(elementId);
 
     if (element == null) {
         return;
@@ -627,7 +632,7 @@ function renderNoFileBeingConverted(progressElement) {
 
     progressElement.innerHTML = "";
 
-    emptyStateElement = document.createElement("div");
+    const emptyStateElement = document.createElement("div");
     emptyStateElement.classList.add("current-empty-state");
     emptyStateElement.innerText = "No file being converted";
 
@@ -637,7 +642,7 @@ function renderNoFileBeingConverted(progressElement) {
 function updateCurrentConversionDetails(progressElement, fileData, completeString, expectedCompletionTime) {
     ensureCurrentConversionLayout(progressElement);
 
-    filenameElement = document.getElementById("filename-value");
+    const filenameElement = document.getElementById("filename-value");
     if (filenameElement != null) {
         updateFilenamePopupText(filenameElement, fileData.filename);
     }
@@ -657,25 +662,25 @@ function ensureCurrentConversionLayout(progressElement) {
 
     progressElement.innerHTML = "";
 
-    layoutElement = document.createElement("div");
+    const layoutElement = document.createElement("div");
     layoutElement.id = "current-conversion-layout";
     layoutElement.classList.add("current-conversion-layout");
 
-    filenameRowElement = document.createElement("div");
+    const filenameRowElement = document.createElement("div");
     filenameRowElement.classList.add("current-filename-row");
-    filenameValueElement = document.createElement("div");
+    const filenameValueElement = document.createElement("div");
     filenameValueElement.id = "filename-value";
     filenameValueElement.classList.add("filename");
     filenameRowElement.appendChild(filenameValueElement);
     layoutElement.appendChild(filenameRowElement);
 
-    completeSpeedRowElement = document.createElement("div");
+    const completeSpeedRowElement = document.createElement("div");
     completeSpeedRowElement.classList.add("current-stats-row", "current-stats-row-two");
     completeSpeedRowElement.appendChild(createCurrentMetricBlock("complete", "Complete"));
     completeSpeedRowElement.appendChild(createCurrentMetricBlock("speed", "Speed"));
     layoutElement.appendChild(completeSpeedRowElement);
 
-    timeRowElement = document.createElement("div");
+    const timeRowElement = document.createElement("div");
     timeRowElement.classList.add("current-stats-row", "current-stats-row-three");
     timeRowElement.appendChild(createCurrentMetricBlock("time_since_start", "Since Start"));
     timeRowElement.appendChild(createCurrentMetricBlock("time_remaining", "Remaining"));
@@ -687,16 +692,16 @@ function ensureCurrentConversionLayout(progressElement) {
 }
 
 function createCurrentMetricBlock(idPrefix, label) {
-    metricElement = document.createElement("div");
+    const metricElement = document.createElement("div");
     metricElement.classList.add("current-metric-card");
 
-    labelElement = document.createElement("div");
+    const labelElement = document.createElement("div");
     labelElement.id = idPrefix + "-key";
     labelElement.classList.add("current-metric-label");
     labelElement.innerText = label;
     metricElement.appendChild(labelElement);
 
-    valueElement = document.createElement("div");
+    const valueElement = document.createElement("div");
     valueElement.id = idPrefix + "-value";
     valueElement.classList.add("current-metric-value");
     valueElement.innerText = "--";
@@ -706,21 +711,21 @@ function createCurrentMetricBlock(idPrefix, label) {
 }
 
 function appendConversionErrorsRow(element, errorCount) {
-    rowElement = document.createElement("div");
+    const rowElement = document.createElement("div");
     rowElement.classList.add("conversion-errors-card");
     rowElement.id = "conversion-errors-row";
 
-    textElement = document.createElement("div");
+    const textElement = document.createElement("div");
     textElement.classList.add("conversion-errors-text");
     textElement.id = "conversion-errors-text";
     textElement.innerText = "Conversion Errors: " + errorCount;
     rowElement.appendChild(textElement);
 
-    retryButton = document.createElement("button");
+    const retryButton = document.createElement("button");
     retryButton.className = "retry-button";
     retryButton.innerText = "Retry";
     retryButton.onclick = function() {
-        msg = {
+        const msg = {
             messageType: 'retry'
         };
 
@@ -732,8 +737,8 @@ function appendConversionErrorsRow(element, errorCount) {
 }
 
 function initializeFilesViewButtons() {
-    convertedButton = document.getElementById("show-converted-files");
-    toConvertButton = document.getElementById("show-to-convert-files");
+    const convertedButton = document.getElementById("show-converted-files");
+    const toConvertButton = document.getElementById("show-to-convert-files");
 
     if (convertedButton == null || toConvertButton == null) {
         return;
@@ -758,9 +763,9 @@ function setFilesViewMode(viewMode, forceUpdate = false) {
     filesViewMode = viewMode;
     persistFilesViewMode(viewMode);
 
-    convertedButton = document.getElementById("show-converted-files");
-    toConvertButton = document.getElementById("show-to-convert-files");
-    filesViewTitle = document.getElementById("files-view-title");
+    const convertedButton = document.getElementById("show-converted-files");
+    const toConvertButton = document.getElementById("show-to-convert-files");
+    const filesViewTitle = document.getElementById("files-view-title");
     if (convertedButton != null && toConvertButton != null) {
         convertedButton.classList.toggle("active", viewMode === 'converted_files');
         toConvertButton.classList.toggle("active", viewMode === 'files_to_convert');
@@ -792,13 +797,13 @@ function setFilesViewMode(viewMode, forceUpdate = false) {
 
 function getStoredFilesViewMode() {
     try {
-        storedMode = localStorage.getItem(filesViewStorageKey);
+        const storedMode = localStorage.getItem(filesViewStorageKey);
+
+        if (storedMode === 'files_to_convert') {
+            return 'files_to_convert';
+        }
     } catch (error) {
         return 'converted_files';
-    }
-
-    if (storedMode === 'files_to_convert') {
-        return 'files_to_convert';
     }
 
     return 'converted_files';
@@ -813,8 +818,8 @@ function persistFilesViewMode(viewMode) {
 }
 
 function renderConvertedFiles(filesConverted) {
-    filesContainer = document.getElementById("converted-files");
-    lastDayCount = document.getElementById("last-day-count");
+    const filesContainer = document.getElementById("converted-files");
+    const lastDayCount = document.getElementById("last-day-count");
 
     if (filesContainer == null || lastDayCount == null) {
         return;
@@ -828,14 +833,14 @@ function renderConvertedFiles(filesConverted) {
     filesContainer.innerText = "";
     lastDayCount.innerText = filesConverted.converted_files.length;
 
-    for (i = 0; i < filesConverted.converted_files.length; i++) {
+    for (let i = 0; i < filesConverted.converted_files.length; i++) {
         appendConvertedFileCard(filesContainer, filesConverted.converted_files[i]);
     }
 }
 
 function renderFilesToConvert(filesToConvert) {
-    filesContainer = document.getElementById("converted-files");
-    lastDayCount = document.getElementById("last-day-count");
+    const filesContainer = document.getElementById("converted-files");
+    const lastDayCount = document.getElementById("last-day-count");
 
     if (filesContainer == null || lastDayCount == null) {
         return;
@@ -849,7 +854,7 @@ function renderFilesToConvert(filesToConvert) {
     filesContainer.innerText = "";
     lastDayCount.innerText = filesToConvert.files_to_convert.length;
 
-    for (i = 0; i < filesToConvert.files_to_convert.length; i++) {
+    for (let i = 0; i < filesToConvert.files_to_convert.length; i++) {
         appendToConvertFileCard(filesContainer, filesToConvert.files_to_convert[i]);
     }
 }

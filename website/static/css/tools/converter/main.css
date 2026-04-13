@@ -450,7 +450,6 @@ body::after {
     padding-top: 0.16rem;
 }
 
-#progress-details .key-value-wrapper,
 #statistics .key-value-wrapper {
     display: flex;
     flex-direction: column;
@@ -465,14 +464,12 @@ body::after {
     transition: transform 150ms ease, box-shadow 170ms ease, border-color 170ms ease;
 }
 
-#progress-details .key-value-wrapper:hover,
 #statistics .key-value-wrapper:hover {
     transform: translateY(-1px);
     border-color: hsla(203, 86%, 46%, 0.28);
     box-shadow: 0 8px 16px hsla(216, 45%, 20%, 0.12);
 }
 
-#progress-details .data-key,
 #statistics .data-key {
     padding: 0;
     font-size: 0.68rem;
@@ -481,8 +478,6 @@ body::after {
     font-weight: 600;
 }
 
-#progress-details .data-value,
-#progress-details .data-value-left,
 #statistics .data-value,
 #statistics .data-value-left {
     padding: 0;
@@ -703,7 +698,6 @@ body.dark-mode .files-view-button.active {
 }
 
 body.dark-mode .current-metric-card,
-body.dark-mode #progress-details .key-value-wrapper,
 body.dark-mode #statistics .key-value-wrapper,
 body.dark-mode .converted-file-card {
     border-color: hsla(206, 28%, 68%, 0.2);
