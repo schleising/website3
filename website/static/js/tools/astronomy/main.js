@@ -1452,10 +1452,32 @@ function drawSkyDiagram(targetCanvas, visiblePlanets, skyContext = null) {
     const radius = Math.min(width, height) * 0.39;
     const labelScale = getSkyLabelScale(targetCanvas);
     const occupiedLabelBoxes = [];
+    const isStargazingMode = document.body != null && document.body.classList.contains("stargazing-mode");
+    const skyPalette = isStargazingMode
+        ? {
+            gradientInner: "hsl(8, 58%, 14%)",
+            gradientOuter: "hsl(0, 60%, 7%)",
+            ringStroke: "hsla(20, 66%, 78%, 0.24)",
+            horizonStroke: "hsla(20, 70%, 84%, 0.48)",
+            axisStroke: "hsla(22, 54%, 76%, 0.18)",
+            cardinalFill: "hsla(24, 92%, 90%, 0.9)",
+            noVisibleFill: "hsla(22, 72%, 84%, 0.88)",
+            markerStroke: "hsla(10, 48%, 12%, 0.82)"
+        }
+        : {
+            gradientInner: "hsl(216, 58%, 20%)",
+            gradientOuter: "hsl(232, 58%, 8%)",
+            ringStroke: "hsla(210, 38%, 84%, 0.28)",
+            horizonStroke: "hsla(210, 52%, 90%, 0.55)",
+            axisStroke: "hsla(212, 32%, 88%, 0.2)",
+            cardinalFill: "hsla(0, 0%, 100%, 0.84)",
+            noVisibleFill: "hsla(210, 26%, 88%, 0.86)",
+            markerStroke: "hsla(216, 38%, 16%, 0.8)"
+        };
 
     const gradient = ctx.createRadialGradient(cx, cy * 0.75, radius * 0.15, cx, cy, radius * 1.15);
-    gradient.addColorStop(0, "hsl(216, 58%, 20%)");
-    gradient.addColorStop(1, "hsl(232, 58%, 8%)");
+    gradient.addColorStop(0, skyPalette.gradientInner);
+    gradient.addColorStop(1, skyPalette.gradientOuter);
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, width, height);
 
@@ -1463,14 +1485,14 @@ function drawSkyDiagram(targetCanvas, visiblePlanets, skyContext = null) {
         const ringRadius = (90 - alt) / 90 * radius;
         ctx.beginPath();
         ctx.arc(cx, cy, ringRadius, 0, Math.PI * 2);
-        ctx.strokeStyle = "hsla(210, 38%, 84%, 0.28)";
+        ctx.strokeStyle = skyPalette.ringStroke;
         ctx.lineWidth = 1;
         ctx.stroke();
     }
 
     ctx.beginPath();
     ctx.arc(cx, cy, radius, 0, Math.PI * 2);
-    ctx.strokeStyle = "hsla(210, 52%, 90%, 0.55)";
+    ctx.strokeStyle = skyPalette.horizonStroke;
     ctx.lineWidth = 1.4;
     ctx.stroke();
 
@@ -1479,11 +1501,11 @@ function drawSkyDiagram(targetCanvas, visiblePlanets, skyContext = null) {
     ctx.lineTo(cx, cy + radius);
     ctx.moveTo(cx - radius, cy);
     ctx.lineTo(cx + radius, cy);
-    ctx.strokeStyle = "hsla(212, 32%, 88%, 0.2)";
+    ctx.strokeStyle = skyPalette.axisStroke;
     ctx.lineWidth = 1;
     ctx.stroke();
 
-    ctx.fillStyle = "hsla(0, 0%, 100%, 0.84)";
+    ctx.fillStyle = skyPalette.cardinalFill;
     ctx.font = `${Math.round(12 * labelScale)}px Outfit, sans-serif`;
     ctx.textAlign = "center";
     ctx.fillText("N", cx, cy - radius - 7);
@@ -1498,7 +1520,7 @@ function drawSkyDiagram(targetCanvas, visiblePlanets, skyContext = null) {
     drawSunMarker(ctx, cx, cy, radius, skyContext, occupiedLabelBoxes);
     drawMoonMarker(ctx, cx, cy, radius, skyContext, occupiedLabelBoxes);
     if (visiblePlanets.length === 0) {
-        ctx.fillStyle = "hsla(210, 26%, 88%, 0.86)";
+        ctx.fillStyle = skyPalette.noVisibleFill;
         ctx.font = `${Math.round(13 * labelScale)}px Outfit, sans-serif`;
         ctx.fillText("No visible planets", cx, cy + 4);
         return;
@@ -1519,7 +1541,7 @@ function drawSkyDiagram(targetCanvas, visiblePlanets, skyContext = null) {
         ctx.arc(x, y, 4.2, 0, Math.PI * 2);
         ctx.fillStyle = planetColors[planet.planetName] || "#ffffff";
         ctx.fill();
-        ctx.strokeStyle = "hsla(216, 38%, 16%, 0.8)";
+        ctx.strokeStyle = skyPalette.markerStroke;
         ctx.lineWidth = 1;
         ctx.stroke();
 
@@ -2356,6 +2378,10 @@ async function initializePage() {
     initializeFullscreenSkyInteractions();
 
     window.addEventListener("resize", () => {
+        scheduleRerenderSkyForCurrentInputs();
+    });
+
+    window.addEventListener("astronomy-theme-change", () => {
         scheduleRerenderSkyForCurrentInputs();
     });
 
