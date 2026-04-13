@@ -509,6 +509,121 @@ function getEveningWindow(civilTwilightEndIso) {
     return { start, end };
 }
 
+function getMoonPhaseData(date) {
+    const moonAgeDays = ((date.getTime() - knownNewMoonUtcMs) / 86400000) % synodicMonthDays;
+    const normalizedAgeDays = moonAgeDays < 0 ? moonAgeDays + synodicMonthDays : moonAgeDays;
+    const phase = normalizedAgeDays / synodicMonthDays;
+    const illumination = 0.5 * (1 - Math.cos(2 * Math.PI * phase));
+
+    let name = "New Moon";
+    if (phase >= 0.03 && phase < 0.22) {
+        name = "Waxing Crescent";
+    } else if (phase >= 0.22 && phase < 0.28) {
+        name = "First Quarter";
+    } else if (phase >= 0.28 && phase < 0.47) {
+        name = "Waxing Gibbous";
+    } else if (phase >= 0.47 && phase < 0.53) {
+        name = "Full Moon";
+    } else if (phase >= 0.53 && phase < 0.72) {
+        name = "Waning Gibbous";
+    } else if (phase >= 0.72 && phase < 0.78) {
+        name = "Last Quarter";
+    } else if (phase >= 0.78 && phase < 0.97) {
+        name = "Waning Crescent";
+    }
+
+    return {
+        phase,
+        illumination,
+        age: normalizedAgeDays,
+        name
+    };
+}
+
+function drawMoonPhaseImage(targetCanvas, phase) {
+    if (targetCanvas == null) {
+        return;
+    }
+
+    const ctx = targetCanvas.getContext("2d");
+    if (ctx == null) {
+        return;
+    }
+
+    const width = targetCanvas.width;
+    const height = targetCanvas.height;
+    const cx = width / 2;
+    const cy = height / 2;
+    const radius = Math.min(width, height) * 0.4;
+    const radiusSquared = radius * radius;
+
+    ctx.clearRect(0, 0, width, height);
+
+    const background = ctx.createRadialGradient(cx, cy * 0.75, radius * 0.25, cx, cy, radius * 1.35);
+    background.addColorStop(0, "hsl(218, 42%, 18%)");
+    background.addColorStop(1, "hsl(228, 48%, 8%)");
+    ctx.fillStyle = background;
+    ctx.fillRect(0, 0, width, height);
+
+    // Render the visible lunar disk using a phase-angle lighting model.
+    const diskLeft = Math.max(0, Math.floor(cx - radius));
+    const diskTop = Math.max(0, Math.floor(cy - radius));
+    const diskWidth = Math.min(width - diskLeft, Math.ceil(radius * 2));
+    const diskHeight = Math.min(height - diskTop, Math.ceil(radius * 2));
+    const moonPixels = ctx.createImageData(diskWidth, diskHeight);
+
+    const phaseAngle = 2 * Math.PI * phase;
+    const sunX = Math.sin(phaseAngle);
+    const sunZ = -Math.cos(phaseAngle);
+
+    const litColor = { r: 252, g: 244, b: 210 };
+    const darkColor = { r: 20, g: 26, b: 50 };
+
+    for (let py = 0; py < diskHeight; py++) {
+        for (let px = 0; px < diskWidth; px++) {
+            const canvasX = diskLeft + px + 0.5;
+            const canvasY = diskTop + py + 0.5;
+            const dx = canvasX - cx;
+            const dy = canvasY - cy;
+            const distanceSquared = dx * dx + dy * dy;
+
+            if (distanceSquared > radiusSquared) {
+                continue;
+            }
+
+            const nx = dx / radius;
+            const ny = dy / radius;
+            const nz = Math.sqrt(Math.max(0, 1 - nx * nx - ny * ny));
+            const lightDot = nx * sunX + nz * sunZ;
+
+            const litMix = Math.pow(Math.max(0, lightDot), 0.82);
+            const shading = 0.86 + 0.20 * nz;
+            const limbHighlight = Math.pow(Math.max(0, lightDot), 3) * (1 - nz) * 0.22;
+
+            const r = (darkColor.r + (litColor.r - darkColor.r) * litMix) * (shading + limbHighlight);
+            const g = (darkColor.g + (litColor.g - darkColor.g) * litMix) * (shading + limbHighlight);
+            const b = (darkColor.b + (litColor.b - darkColor.b) * litMix) * (shading + limbHighlight);
+
+            const alphaEdge = Math.max(0, Math.min(1, (radius - Math.sqrt(distanceSquared)) / 1.15));
+            const alpha = Math.round((0.2 + 0.8 * alphaEdge) * 255);
+
+            const pixelIndex = (py * diskWidth + px) * 4;
+            moonPixels.data[pixelIndex] = Math.max(0, Math.min(255, Math.round(r)));
+            moonPixels.data[pixelIndex + 1] = Math.max(0, Math.min(255, Math.round(g)));
+            moonPixels.data[pixelIndex + 2] = Math.max(0, Math.min(255, Math.round(b)));
+            moonPixels.data[pixelIndex + 3] = alpha;
+        }
+    }
+
+    ctx.putImageData(moonPixels, diskLeft, diskTop);
+
+    ctx.beginPath();
+    ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+    ctx.strokeStyle = "hsla(44, 84%, 91%, 0.72)";
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+}
+
 function getHorizontalCoordinatesFromEquatorial(raDegrees, decDegrees, date, latitude, longitude, options = {}) {
     const { applyRefraction = true, precessFromJ2000 = false } = options;
     const jd = toJulianDate(date);
