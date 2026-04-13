@@ -33,6 +33,13 @@ body {
     gap: 0.8rem;
 }
 
+.hero {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+
 .hero h1 {
     margin: 0;
     font-size: clamp(1.6rem, 4vw, 2.4rem);
@@ -41,6 +48,90 @@ body {
 .hero p {
     margin: 0.2rem 0 0;
     color: var(--muted);
+}
+
+.theme-switch {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 3.3rem;
+    height: 1.86rem;
+    border: 0;
+    background: transparent;
+    border-radius: 999px;
+    cursor: pointer;
+    padding: 0;
+}
+
+.theme-switch:focus-visible {
+    outline: 2px solid hsla(191, 82%, 44%, 0.56);
+    outline-offset: 2px;
+}
+
+.theme-switch-track {
+    position: relative;
+    display: inline-flex;
+    width: 100%;
+    height: 100%;
+    border: 1px solid hsla(214, 28%, 34%, 0.2);
+    border-radius: 999px;
+    background: linear-gradient(180deg, hsla(0, 0%, 100%, 0.98), hsla(194, 66%, 92%, 0.9));
+    box-shadow: 0 10px 28px hsla(212, 34%, 16%, 0.1);
+    overflow: hidden;
+}
+
+.theme-switch-track-icon {
+    position: absolute;
+    top: 50%;
+    width: 0.72rem;
+    height: 0.72rem;
+    stroke: hsla(209, 26%, 40%, 0.72);
+    fill: none;
+    stroke-width: 1.9;
+    transform: translateY(-50%);
+    pointer-events: none;
+}
+
+.theme-switch-track-icon-sun {
+    left: 0.34rem;
+}
+
+.theme-switch-track-icon-moon {
+    right: 0.34rem;
+    fill: hsla(209, 26%, 40%, 0.72);
+    stroke: none;
+}
+
+.theme-switch-thumb {
+    position: absolute;
+    top: 0.11rem;
+    left: 0.11rem;
+    width: 1.62rem;
+    height: 1.62rem;
+    border-radius: 999px;
+    background: linear-gradient(180deg, hsl(0, 0%, 100%), hsl(191, 64%, 92%));
+    box-shadow: 0 3px 8px hsla(216, 36%, 16%, 0.22);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 240ms cubic-bezier(0.22, 1, 0.36, 1), background 190ms ease;
+}
+
+.theme-switch-thumb-icon {
+    width: 0.86rem;
+    height: 0.86rem;
+}
+
+.theme-switch-thumb-sun {
+    fill: hsl(37, 95%, 52%);
+    opacity: 1;
+    transition: opacity 160ms ease;
+}
+
+.theme-switch-thumb-moon {
+    fill: hsl(213, 62%, 76%);
+    opacity: 0;
+    transition: opacity 160ms ease;
 }
 
 .card {
@@ -195,11 +286,29 @@ body {
 .sky-fullscreen-toolbar button {
     height: 2rem;
     border-radius: 0.6rem;
-    border: 1px solid hsla(214, 32%, 78%, 0.35);
-    background: hsla(0, 0%, 100%, 0.92);
-    padding: 0 0.7rem;
+    border: 1px solid hsla(210, 34%, 78%, 0.28);
+    background: linear-gradient(180deg, hsla(205, 36%, 92%, 0.18), hsla(205, 36%, 92%, 0.08));
+    color: hsla(0, 0%, 98%, 0.94);
+    padding: 0 0.8rem;
     font: inherit;
+    font-weight: 600;
     cursor: pointer;
+    backdrop-filter: blur(4px);
+    transition: border-color 150ms ease, background 150ms ease, transform 140ms ease;
+}
+
+.sky-fullscreen-toolbar button:hover {
+    border-color: hsla(191, 70%, 72%, 0.54);
+    background: linear-gradient(180deg, hsla(191, 70%, 72%, 0.26), hsla(191, 70%, 72%, 0.14));
+}
+
+.sky-fullscreen-toolbar button:active {
+    transform: translateY(1px);
+}
+
+.sky-fullscreen-toolbar button:focus-visible {
+    outline: 2px solid hsla(191, 82%, 62%, 0.72);
+    outline-offset: 2px;
 }
 
 .sky-fullscreen-stage {
@@ -246,6 +355,72 @@ body {
     font-size: 1rem;
     font-weight: 700;
     color: var(--accent);
+}
+
+html.dark-mode {
+    background-color: hsl(214, 24%, 12%);
+}
+
+body.dark-mode {
+    --bg: hsl(214, 24%, 12%);
+    --bg-2: hsl(206, 26%, 16%);
+    --panel: hsla(214, 24%, 20%, 0.9);
+    --line: hsla(208, 32%, 70%, 0.2);
+    --text: hsl(209, 30%, 92%);
+    --muted: hsl(209, 16%, 70%);
+    --accent: hsl(193, 72%, 56%);
+}
+
+body.dark-mode .controls input,
+body.dark-mode .controls select {
+    background: hsla(214, 24%, 24%, 0.94);
+    color: var(--text);
+}
+
+body.dark-mode .controls button {
+    color: var(--text);
+    background: linear-gradient(160deg, hsla(214, 24%, 28%, 0.96), hsla(198, 32%, 22%, 0.92));
+}
+
+body.dark-mode .times div {
+    background: hsla(214, 24%, 24%, 0.9);
+}
+
+body.dark-mode .theme-switch-track {
+    border-color: hsla(206, 30%, 70%, 0.26);
+    background: linear-gradient(180deg, hsla(214, 24%, 28%, 0.96), hsla(198, 32%, 22%, 0.92));
+}
+
+body.dark-mode .theme-switch-track-icon {
+    stroke: hsla(210, 36%, 86%, 0.68);
+}
+
+body.dark-mode .theme-switch-track-icon-moon {
+    fill: hsla(210, 36%, 86%, 0.68);
+}
+
+body.dark-mode .theme-switch-thumb {
+    transform: translateX(1.45rem);
+    background: linear-gradient(180deg, hsl(208, 28%, 30%), hsl(208, 26%, 22%));
+}
+
+body.dark-mode .theme-switch-thumb-sun {
+    opacity: 0;
+}
+
+body.dark-mode .theme-switch-thumb-moon {
+    opacity: 1;
+}
+
+body.dark-mode .sky-fullscreen-toolbar button {
+    border-color: hsla(208, 34%, 74%, 0.34);
+    background: linear-gradient(180deg, hsla(207, 36%, 34%, 0.55), hsla(207, 36%, 22%, 0.5));
+    color: hsla(0, 0%, 100%, 0.95);
+}
+
+body.dark-mode .sky-fullscreen-toolbar button:hover {
+    border-color: hsla(191, 70%, 72%, 0.6);
+    background: linear-gradient(180deg, hsla(193, 62%, 44%, 0.58), hsla(193, 62%, 30%, 0.52));
 }
 
 @media (max-width: 40rem) {
