@@ -69,6 +69,7 @@ const skyFullscreenCanvas = document.getElementById("sky-canvas-fullscreen");
 let latestVisiblePlanets = [];
 let latestSkyContext = null;
 let isLocationRequestInProgress = false;
+let requestCurrentLocation = async () => false;
 
 const fullscreenSkyViewState = {
     scale: 1,
@@ -496,18 +497,6 @@ function getPlanetHorizontalCoordinates(planetName, date, latitude, longitude) {
         longitude,
         { applyRefraction: true }
     );
-}
-
-function getEveningWindow(civilTwilightEndIso) {
-    const start = new Date(civilTwilightEndIso);
-    const end = new Date(start);
-    end.setHours(24, 0, 0, 0);
-
-    if (end <= start) {
-        end.setDate(end.getDate() + 1);
-    }
-
-    return { start, end };
 }
 
 function getMoonPhaseData(date) {
@@ -1172,7 +1161,7 @@ function drawSkyDiagram(targetCanvas, visiblePlanets, skyContext = null) {
     }
 }
 
-function renderVisiblePlanets(_civilTwilightEndIso, latitude, longitude) {
+function renderVisiblePlanets(latitude, longitude) {
     const skySampleDate = new Date();
     const pathWindowStart = new Date(skySampleDate.getTime() - 90 * 60 * 1000);
     const pathWindowEnd = new Date(skySampleDate.getTime() + 90 * 60 * 1000);
@@ -1250,7 +1239,7 @@ async function updateSunTimes(lat, lon) {
         sunsetElement.innerText = formatLocalTime(result.sunset);
         civilBeginElement.innerText = formatLocalTime(result.civil_twilight_begin);
         civilEndElement.innerText = formatLocalTime(result.civil_twilight_end);
-        renderVisiblePlanets(result.civil_twilight_end, lat, lon);
+        renderVisiblePlanets(lat, lon);
         sunStatus.innerText = `Updated ${formatLocalTime(new Date().toISOString())}`;
     } catch (error) {
         planetWindowElement.innerText = "Window: --";
@@ -1542,7 +1531,10 @@ async function handleCityPickerSelection(value) {
     }
 
     if (value === "current-location") {
-        locationButton.click();
+        await requestCurrentLocation({
+            showFailureMessage: true,
+            showRequestMessage: true
+        });
         cityPickerButton?.focus();
         return;
     }
@@ -1714,16 +1706,19 @@ function initializeLocationButton() {
         });
     };
 
-    locationButton.addEventListener("click", async () => {
-        locationButton.disabled = true;
-        locationButton.innerText = "Locating...";
-        await tryCurrentLocation({ showFailureMessage: true, showRequestMessage: false });
+    requestCurrentLocation = async ({ showFailureMessage = true, showRequestMessage = false } = {}) => {
+        setLocationButtonBusyState(true);
+        const wasResolved = await tryCurrentLocation({ showFailureMessage, showRequestMessage });
         setLocationButtonBusyState(false);
+        return wasResolved;
+    };
+
+    locationButton.addEventListener("click", async () => {
+        await requestCurrentLocation({ showFailureMessage: true, showRequestMessage: false });
     });
 
     return {
-        tryCurrentLocation,
-        setLocationButtonBusyState
+        requestCurrentLocation
     };
 }
 
@@ -1760,12 +1755,10 @@ async function initializePage() {
 
     let usedCurrentLocation = false;
     if (locationController != null) {
-        locationController.setLocationButtonBusyState(true);
-        usedCurrentLocation = await locationController.tryCurrentLocation({
+        usedCurrentLocation = await locationController.requestCurrentLocation({
             showFailureMessage: false,
             showRequestMessage: true
         });
-        locationController.setLocationButtonBusyState(false);
     }
 
     if (!usedCurrentLocation) {
