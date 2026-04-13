@@ -321,6 +321,10 @@ body {
     font-size: 0.86rem;
 }
 
+#location-readout {
+    margin-bottom: 0.72rem;
+}
+
 .planet-visibility {
     margin-top: 0.7rem;
     padding-top: 0.55rem;
@@ -345,8 +349,26 @@ body {
 
 .sky-diagram-wrap {
     margin-top: 0.55rem;
+    position: relative;
     display: flex;
     justify-content: center;
+}
+
+.sky-diagram-hint {
+    position: absolute;
+    top: 0.55rem;
+    right: 0.7rem;
+    z-index: 1;
+    padding: 0.28rem 0.5rem;
+    border: 1px solid hsla(208, 38%, 84%, 0.24);
+    border-radius: 999px;
+    background: hsla(222, 36%, 12%, 0.62);
+    color: hsla(0, 0%, 100%, 0.9);
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    backdrop-filter: blur(6px);
+    pointer-events: none;
 }
 
 #sky-canvas {
@@ -518,6 +540,12 @@ body.dark-mode .times div {
     background: hsla(214, 24%, 24%, 0.9);
 }
 
+body.dark-mode .sky-diagram-hint {
+    border-color: hsla(198, 36%, 76%, 0.18);
+    background: hsla(214, 30%, 8%, 0.68);
+    color: hsla(0, 0%, 100%, 0.94);
+}
+
 body.dark-mode .theme-switch-track {
     border-color: hsla(206, 30%, 70%, 0.26);
     background: linear-gradient(180deg, hsla(214, 24%, 28%, 0.96), hsla(198, 32%, 22%, 0.92));
@@ -587,5 +615,12 @@ body.dark-mode .sky-fullscreen-toolbar button:hover {
         min-height: 2.9rem;
         font-size: 0.98rem;
         padding: 0.7rem 0.8rem;
+    }
+
+    .sky-diagram-hint {
+        top: 0.62rem;
+        right: 0.62rem;
+        padding: 0.3rem 0.54rem;
+        font-size: 0.72rem;
     }
 }
