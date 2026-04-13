@@ -688,6 +688,14 @@ body {
     cursor: grab;
 }
 
+.sky-fullscreen.sky-fullscreen-ar-active #sky-canvas-fullscreen {
+    width: 100%;
+    height: 100%;
+    border-radius: 0;
+    border: 0;
+    cursor: default;
+}
+
 .sky-fullscreen-stage.dragging #sky-canvas-fullscreen {
     cursor: grabbing;
 }

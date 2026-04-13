@@ -524,6 +524,10 @@ function setFullscreenTimeTravelControlsDisabled(isDisabled) {
 }
 
 function updateSkyArUiState() {
+    if (skyFullscreenElement != null) {
+        skyFullscreenElement.classList.toggle("sky-fullscreen-ar-active", skyArViewState.isEnabled);
+    }
+
     if (skyArToggleButton != null) {
         const canUseAr = skyArViewState.isSupported && isMobileArEligible();
         skyArToggleButton.hidden = !canUseAr;
