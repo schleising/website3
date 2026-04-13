@@ -2,6 +2,7 @@ const sunriseApi = "/sun-times/";
 const synodicMonthDays = 29.53058867;
 const knownNewMoonUtcMs = Date.UTC(2000, 0, 6, 18, 14, 0);
 const astronomicalUnitLightTimeDays = 0.0057755183;
+const earthRadiusKm = 6378.137;
 
 const latitudeInput = document.getElementById("latitude");
 const longitudeInput = document.getElementById("longitude");
@@ -97,8 +98,10 @@ const satelliteTracks = [
     {
         name: "ISS",
         color: "#ffb866",
+        orbitAltitudeKm: 420,
         inclination: 51.64,
         raan: 257.4,
+        argumentOfPerigee: 0,
         meanAnomaly0: 24,
         periodMinutes: 92.68,
         epochMs: Date.UTC(2026, 0, 1, 0, 0, 0)
@@ -106,8 +109,10 @@ const satelliteTracks = [
     {
         name: "Tiangong",
         color: "#7fe3ff",
+        orbitAltitudeKm: 390,
         inclination: 41.5,
         raan: 104.8,
+        argumentOfPerigee: 0,
         meanAnomaly0: 278,
         periodMinutes: 91.7,
         epochMs: Date.UTC(2026, 0, 1, 0, 0, 0)
@@ -115,8 +120,10 @@ const satelliteTracks = [
     {
         name: "Hubble",
         color: "#bfa9ff",
+        orbitAltitudeKm: 535,
         inclination: 28.47,
         raan: 34.2,
+        argumentOfPerigee: 0,
         meanAnomaly0: 132,
         periodMinutes: 95.42,
         epochMs: Date.UTC(2026, 0, 1, 0, 0, 0)
@@ -708,21 +715,70 @@ function drawSkyLabel(ctx, text, anchorX, anchorY, occupiedLabelBoxes, options =
 
 function getSatelliteHorizontalCoordinates(track, date, latitude, longitude) {
     const elapsedMinutes = (date.getTime() - track.epochMs) / (60 * 1000);
-    const orbitalRate = 360 / track.periodMinutes;
-    const argumentLatitude = toRadians(normalizeDegrees(track.meanAnomaly0 + orbitalRate * elapsedMinutes));
+    const meanMotionDegreesPerMinute = 360 / track.periodMinutes;
+    const trueAnomaly = toRadians(normalizeDegrees(track.meanAnomaly0 + meanMotionDegreesPerMinute * elapsedMinutes));
     const inclination = toRadians(track.inclination);
     const raan = toRadians(normalizeDegrees(track.raan));
+    const argumentOfPerigee = toRadians(normalizeDegrees(track.argumentOfPerigee || 0));
+    const orbitalRadiusKm = earthRadiusKm + track.orbitAltitudeKm;
 
-    const x = Math.cos(raan) * Math.cos(argumentLatitude)
-        - Math.sin(raan) * Math.sin(argumentLatitude) * Math.cos(inclination);
-    const y = Math.sin(raan) * Math.cos(argumentLatitude)
-        + Math.cos(raan) * Math.sin(argumentLatitude) * Math.cos(inclination);
-    const z = Math.sin(argumentLatitude) * Math.sin(inclination);
+    const xOrbital = orbitalRadiusKm * Math.cos(trueAnomaly);
+    const yOrbital = orbitalRadiusKm * Math.sin(trueAnomaly);
 
-    const rightAscension = normalizeDegrees(toDegrees(Math.atan2(y, x)));
-    const declination = toDegrees(Math.atan2(z, Math.sqrt(x * x + y * y)));
+    const cosRaan = Math.cos(raan);
+    const sinRaan = Math.sin(raan);
+    const cosInclination = Math.cos(inclination);
+    const sinInclination = Math.sin(inclination);
+    const cosArgPerigee = Math.cos(argumentOfPerigee);
+    const sinArgPerigee = Math.sin(argumentOfPerigee);
 
-    return getHorizontalCoordinatesFromEquatorial(rightAscension, declination, date, latitude, longitude);
+    const xPerifocal = xOrbital * cosArgPerigee - yOrbital * sinArgPerigee;
+    const yPerifocal = xOrbital * sinArgPerigee + yOrbital * cosArgPerigee;
+
+    const xEci = xPerifocal * cosRaan - yPerifocal * sinRaan * cosInclination;
+    const yEci = xPerifocal * sinRaan + yPerifocal * cosRaan * cosInclination;
+    const zEci = yPerifocal * sinInclination;
+
+    const jd = toJulianDate(date);
+    const gmstRadians = toRadians(getGreenwichMeanSiderealTimeDegrees(jd));
+    const cosGmst = Math.cos(gmstRadians);
+    const sinGmst = Math.sin(gmstRadians);
+
+    const xEcef = xEci * cosGmst + yEci * sinGmst;
+    const yEcef = -xEci * sinGmst + yEci * cosGmst;
+    const zEcef = zEci;
+
+    const latitudeRadians = toRadians(latitude);
+    const longitudeRadians = toRadians(longitude);
+    const cosLatitude = Math.cos(latitudeRadians);
+    const sinLatitude = Math.sin(latitudeRadians);
+    const cosLongitude = Math.cos(longitudeRadians);
+    const sinLongitude = Math.sin(longitudeRadians);
+
+    const observerX = earthRadiusKm * cosLatitude * cosLongitude;
+    const observerY = earthRadiusKm * cosLatitude * sinLongitude;
+    const observerZ = earthRadiusKm * sinLatitude;
+
+    const relativeX = xEcef - observerX;
+    const relativeY = yEcef - observerY;
+    const relativeZ = zEcef - observerZ;
+
+    const east = -sinLongitude * relativeX + cosLongitude * relativeY;
+    const north = -sinLatitude * cosLongitude * relativeX
+        - sinLatitude * sinLongitude * relativeY
+        + cosLatitude * relativeZ;
+    const up = cosLatitude * cosLongitude * relativeX
+        + cosLatitude * sinLongitude * relativeY
+        + sinLatitude * relativeZ;
+
+    const horizontalDistance = Math.sqrt(east * east + north * north);
+    const altitudeDegrees = toDegrees(Math.atan2(up, horizontalDistance));
+    const azimuthDegrees = normalizeDegrees(toDegrees(Math.atan2(east, north)));
+
+    return {
+        altitudeDegrees,
+        azimuthDegrees
+    };
 }
 
 function getMoonEquatorialCoordinates(date) {
