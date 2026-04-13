@@ -64,6 +64,7 @@ body {
 }
 
 .controls input,
+.controls select,
 .controls button {
     height: 2.2rem;
     border-radius: 0.65rem;
@@ -71,7 +72,8 @@ body {
     font: inherit;
 }
 
-.controls input {
+.controls input,
+.controls select {
     padding: 0 0.6rem;
     background: hsla(0, 0%, 100%, 0.9);
 }

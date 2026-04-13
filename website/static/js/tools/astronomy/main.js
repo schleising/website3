@@ -4,10 +4,42 @@ const knownNewMoonUtcMs = Date.UTC(2000, 0, 6, 18, 14, 0);
 
 const latitudeInput = document.getElementById("latitude");
 const longitudeInput = document.getElementById("longitude");
+const cityPicker = document.getElementById("city-picker");
 const refreshButton = document.getElementById("refresh-button");
 const locationButton = document.getElementById("location-button");
 const locationReadout = document.getElementById("location-readout");
 const sunStatus = document.getElementById("sun-status");
+
+const cityPresets = {
+    auckland: { label: "Auckland, New Zealand", lat: -36.8509, lon: 174.7645 },
+    beijing: { label: "Beijing, China", lat: 39.9042, lon: 116.4074 },
+    "buenos-aires": { label: "Buenos Aires, Argentina", lat: -34.6037, lon: -58.3816 },
+    cairo: { label: "Cairo, Egypt", lat: 30.0444, lon: 31.2357 },
+    "cape-town": { label: "Cape Town, South Africa", lat: -33.9249, lon: 18.4241 },
+    delhi: { label: "Delhi, India", lat: 28.6139, lon: 77.209 },
+    dubai: { label: "Dubai, UAE", lat: 25.2048, lon: 55.2708 },
+    honolulu: { label: "Honolulu, USA", lat: 21.3069, lon: -157.8583 },
+    istanbul: { label: "Istanbul, Turkiye", lat: 41.0082, lon: 28.9784 },
+    jakarta: { label: "Jakarta, Indonesia", lat: -6.2088, lon: 106.8456 },
+    lagos: { label: "Lagos, Nigeria", lat: 6.5244, lon: 3.3792 },
+    london: { label: "London, UK", lat: 51.5074, lon: -0.1278 },
+    "los-angeles": { label: "Los Angeles, USA", lat: 34.0522, lon: -118.2437 },
+    melbourne: { label: "Melbourne, Australia", lat: -37.8136, lon: 144.9631 },
+    "mexico-city": { label: "Mexico City, Mexico", lat: 19.4326, lon: -99.1332 },
+    moscow: { label: "Moscow, Russia", lat: 55.7558, lon: 37.6173 },
+    mumbai: { label: "Mumbai, India", lat: 19.076, lon: 72.8777 },
+    nairobi: { label: "Nairobi, Kenya", lat: -1.2921, lon: 36.8219 },
+    "new-york": { label: "New York, USA", lat: 40.7128, lon: -74.006 },
+    paris: { label: "Paris, France", lat: 48.8566, lon: 2.3522 },
+    reykjavik: { label: "Reykjavik, Iceland", lat: 64.1466, lon: -21.9426 },
+    "sao-paulo": { label: "Sao Paulo, Brazil", lat: -23.5505, lon: -46.6333 },
+    santiago: { label: "Santiago, Chile", lat: -33.4489, lon: -70.6693 },
+    seoul: { label: "Seoul, South Korea", lat: 37.5665, lon: 126.978 },
+    singapore: { label: "Singapore, Singapore", lat: 1.3521, lon: 103.8198 },
+    tokyo: { label: "Tokyo, Japan", lat: 35.6762, lon: 139.6503 },
+    toronto: { label: "Toronto, Canada", lat: 43.6532, lon: -79.3832 },
+    wellington: { label: "Wellington, New Zealand", lat: -41.2865, lon: 174.7762 }
+};
 
 const sunriseElement = document.getElementById("sunrise");
 const sunsetElement = document.getElementById("sunset");
@@ -1241,11 +1273,51 @@ function readCoordinatesFromInputs() {
 async function refreshFromInputs() {
     try {
         const { lat, lon } = readCoordinatesFromInputs();
+        if (cityPicker != null) {
+            cityPicker.value = "custom";
+        }
         locationReadout.innerText = `Manual coordinates: ${lat.toFixed(4)}, ${lon.toFixed(4)}`;
         await updateSunTimes(lat, lon);
     } catch (error) {
         sunStatus.innerText = "Enter valid latitude and longitude values.";
     }
+}
+
+async function applyCityPreset(presetKey) {
+    const preset = cityPresets[presetKey];
+    if (preset == null) {
+        return;
+    }
+
+    latitudeInput.value = preset.lat.toFixed(4);
+    longitudeInput.value = preset.lon.toFixed(4);
+    locationReadout.innerText = `Preset location: ${preset.label} (${preset.lat.toFixed(4)}, ${preset.lon.toFixed(4)})`;
+    await updateSunTimes(preset.lat, preset.lon);
+}
+
+function initializeCityPicker() {
+    if (cityPicker == null) {
+        return;
+    }
+
+    cityPicker.addEventListener("change", async () => {
+        const selected = cityPicker.value;
+        if (selected === "custom") {
+            locationReadout.innerText = "Using manual coordinates";
+            return;
+        }
+
+        await applyCityPreset(selected);
+    });
+
+    const setCustomPickerState = () => {
+        if (cityPicker.value !== "custom") {
+            cityPicker.value = "custom";
+        }
+    };
+
+    latitudeInput.addEventListener("input", setCustomPickerState);
+    longitudeInput.addEventListener("input", setCustomPickerState);
 }
 
 function initializeLocationButton() {
@@ -1265,6 +1337,9 @@ function initializeLocationButton() {
 
                 latitudeInput.value = lat.toFixed(4);
                 longitudeInput.value = lon.toFixed(4);
+                if (cityPicker != null) {
+                    cityPicker.value = "custom";
+                }
                 locationReadout.innerText = `Current location: ${lat.toFixed(4)}, ${lon.toFixed(4)}`;
 
                 await updateSunTimes(lat, lon);
@@ -1288,10 +1363,15 @@ function initializePage() {
     }
 
     refreshButton.addEventListener("click", refreshFromInputs);
+    initializeCityPicker();
     initializeLocationButton();
     initializeFullscreenSkyInteractions();
 
-    refreshFromInputs();
+    if (cityPicker != null && cityPicker.value !== "custom") {
+        applyCityPreset(cityPicker.value);
+    } else {
+        refreshFromInputs();
+    }
     updateMoonPhase();
     drawSkyDiagram(skyCanvas, []);
 }
