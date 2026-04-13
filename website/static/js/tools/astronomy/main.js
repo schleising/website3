@@ -1781,6 +1781,86 @@ function drawSkyArView(targetCanvas, skyContext = null) {
     };
 
     const { date, latitude, longitude } = skyContext;
+    ctx.save();
+    ctx.lineWidth = 1.2;
+
+    for (const constellation of constellations) {
+        const projectedStars = {};
+        let labelXSum = 0;
+        let labelYSum = 0;
+        let labelPointCount = 0;
+        let belowHorizonPointCount = 0;
+        let visibleSegmentCount = 0;
+
+        for (const [starName, coordinates] of Object.entries(constellation.stars)) {
+            const horizontal = getHorizontalCoordinatesFromEquatorial(
+                coordinates.ra,
+                coordinates.dec,
+                date,
+                latitude,
+                longitude,
+                { precessFromJ2000: true }
+            );
+
+            const point = projectArPoint(horizontal.azimuthDegrees, horizontal.altitudeDegrees);
+            if (point == null) {
+                continue;
+            }
+
+            projectedStars[starName] = {
+                x: point.x,
+                y: point.y,
+                altitudeDegrees: horizontal.altitudeDegrees
+            };
+
+            labelXSum += point.x;
+            labelYSum += point.y;
+            labelPointCount += 1;
+            if (horizontal.altitudeDegrees < 0) {
+                belowHorizonPointCount += 1;
+            }
+        }
+
+        for (const [fromStar, toStar] of constellation.lines) {
+            const from = projectedStars[fromStar];
+            const to = projectedStars[toStar];
+            if (from == null || to == null) {
+                continue;
+            }
+
+            const isBelowHorizonSegment = from.altitudeDegrees < 0 && to.altitudeDegrees < 0;
+            ctx.globalAlpha = isBelowHorizonSegment ? 0.28 : 0.56;
+            ctx.strokeStyle = "hsla(201, 78%, 84%, 0.9)";
+            ctx.beginPath();
+            ctx.moveTo(from.x, from.y);
+            ctx.lineTo(to.x, to.y);
+            ctx.stroke();
+            visibleSegmentCount += 1;
+        }
+
+        if (visibleSegmentCount > 0 && labelPointCount > 0) {
+            const labelX = labelXSum / labelPointCount;
+            const labelY = labelYSum / labelPointCount;
+            const isBelowHorizonLabel = belowHorizonPointCount === labelPointCount;
+
+            ctx.save();
+            ctx.globalAlpha = isBelowHorizonLabel ? 0.56 : 0.92;
+            ctx.fillStyle = "hsla(190, 100%, 92%, 0.98)";
+            ctx.font = "700 13px Outfit, sans-serif";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "bottom";
+            ctx.shadowColor = "hsla(210, 88%, 8%, 0.88)";
+            ctx.shadowBlur = 8;
+            ctx.strokeStyle = "hsla(214, 48%, 8%, 0.92)";
+            ctx.lineWidth = 3;
+            ctx.strokeText(constellation.name, labelX, labelY - 8);
+            ctx.fillText(constellation.name, labelX, labelY - 8);
+            ctx.restore();
+        }
+    }
+
+    ctx.restore();
+
     for (const planetName of allPlanetNames) {
         const horizontal = getPlanetHorizontalCoordinates(planetName, date, latitude, longitude);
         drawArMarker(
