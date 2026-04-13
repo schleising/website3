@@ -706,6 +706,34 @@ function getPlanetHorizontalCoordinates(planetName, date, latitude, longitude) {
     );
 }
 
+function getSunHorizontalCoordinates(date, latitude, longitude) {
+    const jd = toJulianDate(date);
+    const n = jd - 2451545.0;
+
+    const meanLongitude = normalizeDegrees(280.460 + 0.9856474 * n);
+    const meanAnomaly = normalizeDegrees(357.528 + 0.9856003 * n);
+    const eclipticLongitude = normalizeDegrees(
+        meanLongitude
+            + 1.915 * Math.sin(toRadians(meanAnomaly))
+            + 0.020 * Math.sin(toRadians(2 * meanAnomaly))
+    );
+
+    const obliquity = toRadians(23.439 - 0.0000004 * n);
+    const lambda = toRadians(eclipticLongitude);
+
+    const rightAscensionDegrees = normalizeDegrees(toDegrees(Math.atan2(Math.cos(obliquity) * Math.sin(lambda), Math.cos(lambda))));
+    const declinationDegrees = toDegrees(Math.asin(Math.sin(obliquity) * Math.sin(lambda)));
+
+    return getHorizontalCoordinatesFromEquatorial(
+        rightAscensionDegrees,
+        declinationDegrees,
+        date,
+        latitude,
+        longitude,
+        { applyRefraction: true }
+    );
+}
+
 function getMoonPhaseData(date) {
     const moonAgeDays = ((date.getTime() - knownNewMoonUtcMs) / 86400000) % synodicMonthDays;
     const normalizedAgeDays = moonAgeDays < 0 ? moonAgeDays + synodicMonthDays : moonAgeDays;
@@ -1195,6 +1223,39 @@ function drawMoonPath(ctx, cx, cy, radius, skyContext, occupiedLabelBoxes = []) 
     });
 }
 
+function drawSunMarker(ctx, cx, cy, radius, skyContext, occupiedLabelBoxes = []) {
+    if (skyContext == null) {
+        return;
+    }
+
+    const { date, latitude, longitude } = skyContext;
+    const sunHorizontal = getSunHorizontalCoordinates(date, latitude, longitude);
+    if (sunHorizontal.altitudeDegrees < 0) {
+        return;
+    }
+
+    const labelScale = getSkyLabelScale(ctx.canvas);
+    const point = projectToSky(sunHorizontal.azimuthDegrees, sunHorizontal.altitudeDegrees, cx, cy, radius);
+    reserveSkyMarkerSpace(occupiedLabelBoxes, point.x, point.y, 20);
+
+    ctx.beginPath();
+    ctx.arc(point.x, point.y, 5.8, 0, Math.PI * 2);
+    ctx.fillStyle = "hsl(45, 100%, 62%)";
+    ctx.shadowColor = "hsla(45, 100%, 62%, 0.68)";
+    ctx.shadowBlur = 12;
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = "hsla(222, 44%, 12%, 0.9)";
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    drawSkyLabel(ctx, "Sun", point.x, point.y, occupiedLabelBoxes, {
+        fontSize: Math.round(12 * labelScale),
+        fillStyle: "hsla(48, 100%, 82%, 0.96)",
+        preferBelow: true
+    });
+}
+
 function drawConstellationOverlay(ctx, cx, cy, radius, skyContext, occupiedLabelBoxes = []) {
     if (skyContext == null) {
         return;
@@ -1470,6 +1531,7 @@ function drawSkyDiagram(targetCanvas, visiblePlanets, skyContext = null) {
     drawConstellationOverlay(ctx, cx, cy, radius, skyContext, occupiedLabelBoxes);
     drawDeepSkyHighlights(ctx, cx, cy, radius, skyContext, occupiedLabelBoxes);
     drawPolarisOverlay(ctx, cx, cy, radius, skyContext, occupiedLabelBoxes);
+    drawSunMarker(ctx, cx, cy, radius, skyContext, occupiedLabelBoxes);
     drawMoonPath(ctx, cx, cy, radius, skyContext, occupiedLabelBoxes);
     if (visiblePlanets.length === 0) {
         ctx.fillStyle = "hsla(210, 26%, 88%, 0.86)";
