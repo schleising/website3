@@ -545,9 +545,9 @@ body {
 
 .sky-fullscreen-panel {
     pointer-events: auto;
-    border: 1px solid hsla(208, 34%, 76%, 0.22);
+    border: 1px solid hsla(208, 34%, 76%, 0.16);
     border-radius: 0.75rem;
-    background: hsla(218, 30%, 12%, 0.72);
+    background: hsla(218, 30%, 12%, 0.36);
     backdrop-filter: blur(8px);
     color: hsl(0, 0%, 96%);
     padding: 0.5rem;
@@ -592,6 +592,15 @@ body {
     padding: 0.18rem 0.45rem;
     border-left-width: 3px;
     border-radius: 999px;
+    background: hsla(215, 26%, 22%, 0.22);
+}
+
+.sky-fullscreen-indicators .planet-status-item.visible {
+    background: linear-gradient(90deg, hsla(206, 28%, 30%, 0.34), hsla(188, 44%, 26%, 0.3));
+}
+
+.sky-fullscreen-indicators .planet-status-item.not-visible {
+    opacity: 0.6;
 }
 
 .sky-fullscreen-indicators .planet-name {
@@ -633,14 +642,14 @@ body {
 }
 
 .sky-fullscreen-controls .time-travel-actions button {
-    border-color: hsla(198, 56%, 74%, 0.34);
-    background: linear-gradient(180deg, hsla(205, 36%, 92%, 0.18), hsla(205, 36%, 92%, 0.08));
+    border-color: hsla(198, 56%, 74%, 0.24);
+    background: linear-gradient(180deg, hsla(205, 36%, 92%, 0.08), hsla(205, 36%, 92%, 0.02));
     color: hsla(0, 0%, 98%, 0.94);
 }
 
 .sky-fullscreen-controls #sky-time-play-button-fullscreen[aria-pressed="true"] {
-    border-color: hsla(191, 70%, 72%, 0.6);
-    background: linear-gradient(180deg, hsla(191, 70%, 72%, 0.26), hsla(191, 70%, 72%, 0.14));
+    border-color: hsla(191, 70%, 72%, 0.42);
+    background: linear-gradient(180deg, hsla(191, 70%, 72%, 0.16), hsla(191, 70%, 72%, 0.08));
 }
 
 #sky-canvas-fullscreen {
@@ -809,8 +818,16 @@ body.dark-mode .sky-fullscreen-toolbar button:hover {
 }
 
 body.dark-mode .sky-fullscreen-panel {
-    border-color: hsla(208, 34%, 74%, 0.24);
-    background: hsla(214, 30%, 10%, 0.78);
+    border-color: hsla(208, 34%, 74%, 0.18);
+    background: hsla(214, 30%, 10%, 0.42);
+}
+
+body.dark-mode .sky-fullscreen-indicators .planet-status-item {
+    background: hsla(214, 24%, 22%, 0.24);
+}
+
+body.dark-mode .sky-fullscreen-indicators .planet-status-item.visible {
+    background: linear-gradient(90deg, hsla(214, 24%, 30%, 0.36), hsla(193, 42%, 30%, 0.32));
 }
 
 @media (max-width: 40rem) {
