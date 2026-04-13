@@ -68,6 +68,7 @@ const skyFullscreenCanvas = document.getElementById("sky-canvas-fullscreen");
 
 let latestVisiblePlanets = [];
 let latestSkyContext = null;
+let isLocationRequestInProgress = false;
 
 const fullscreenSkyViewState = {
     scale: 1,
@@ -1540,6 +1541,12 @@ async function handleCityPickerSelection(value) {
         return;
     }
 
+    if (value === "current-location") {
+        locationButton.click();
+        cityPickerButton?.focus();
+        return;
+    }
+
     await applyCityPreset(value);
     cityPickerButton?.focus();
 }
@@ -1653,38 +1660,71 @@ function initializeCityPicker() {
 }
 
 function initializeLocationButton() {
-    locationButton.addEventListener("click", () => {
+    const setLocationButtonBusyState = isBusy => {
+        locationButton.disabled = isBusy;
+        locationButton.innerText = isBusy ? "Locating..." : "Use My Location";
+    };
+
+    const tryCurrentLocation = async ({ showFailureMessage = true, showRequestMessage = false } = {}) => {
         if (!("geolocation" in navigator)) {
-            sunStatus.innerText = "Geolocation is not available in this browser.";
-            return;
+            if (showFailureMessage) {
+                sunStatus.innerText = "Geolocation is not available in this browser.";
+            }
+            return false;
         }
 
+        if (isLocationRequestInProgress) {
+            return false;
+        }
+
+        isLocationRequestInProgress = true;
+        if (showRequestMessage) {
+            sunStatus.innerText = "Requesting current location...";
+        }
+
+        return new Promise(resolve => {
+            navigator.geolocation.getCurrentPosition(
+                async position => {
+                    const lat = position.coords.latitude;
+                    const lon = position.coords.longitude;
+
+                    latitudeInput.value = lat.toFixed(4);
+                    longitudeInput.value = lon.toFixed(4);
+                    setCityPickerValue("current-location");
+                    locationReadout.innerText = `Current location: ${lat.toFixed(4)}, ${lon.toFixed(4)}`;
+
+                    await updateSunTimes(lat, lon);
+                    isLocationRequestInProgress = false;
+                    resolve(true);
+                },
+                error => {
+                    console.error(error);
+                    if (showFailureMessage) {
+                        sunStatus.innerText = "Could not read your location. Please allow location access.";
+                    }
+                    isLocationRequestInProgress = false;
+                    resolve(false);
+                },
+                {
+                    enableHighAccuracy: false,
+                    timeout: 12000,
+                    maximumAge: 300000
+                }
+            );
+        });
+    };
+
+    locationButton.addEventListener("click", async () => {
         locationButton.disabled = true;
         locationButton.innerText = "Locating...";
-
-        navigator.geolocation.getCurrentPosition(
-            async position => {
-                const lat = position.coords.latitude;
-                const lon = position.coords.longitude;
-
-                latitudeInput.value = lat.toFixed(4);
-                longitudeInput.value = lon.toFixed(4);
-                setCityPickerValue("custom");
-                locationReadout.innerText = `Current location: ${lat.toFixed(4)}, ${lon.toFixed(4)}`;
-
-                await updateSunTimes(lat, lon);
-
-                locationButton.disabled = false;
-                locationButton.innerText = "Use My Location";
-            },
-            error => {
-                console.error(error);
-                sunStatus.innerText = "Could not read your location. Please allow location access.";
-                locationButton.disabled = false;
-                locationButton.innerText = "Use My Location";
-            }
-        );
+        await tryCurrentLocation({ showFailureMessage: true, showRequestMessage: false });
+        setLocationButtonBusyState(false);
     });
+
+    return {
+        tryCurrentLocation,
+        setLocationButtonBusyState
+    };
 }
 
 async function updateServiceWorkerRegistration() {
@@ -1707,7 +1747,7 @@ function initializeProgressiveWebApp() {
     });
 }
 
-function initializePage() {
+async function initializePage() {
     if (skyFullscreenElement != null) {
         skyFullscreenElement.hidden = true;
     }
@@ -1715,16 +1755,29 @@ function initializePage() {
     refreshButton.addEventListener("click", refreshFromInputs);
     initializeProgressiveWebApp();
     initializeCityPicker();
-    initializeLocationButton();
+    const locationController = initializeLocationButton();
     initializeFullscreenSkyInteractions();
 
-    if (cityPickerButton != null && getCurrentCityPickerValue() !== "custom") {
-        applyCityPreset(getCurrentCityPickerValue());
-    } else {
-        refreshFromInputs();
+    let usedCurrentLocation = false;
+    if (locationController != null) {
+        locationController.setLocationButtonBusyState(true);
+        usedCurrentLocation = await locationController.tryCurrentLocation({
+            showFailureMessage: false,
+            showRequestMessage: true
+        });
+        locationController.setLocationButtonBusyState(false);
     }
+
+    if (!usedCurrentLocation) {
+        const initialPickerValue = getCurrentCityPickerValue();
+        if (cityPickerButton != null && cityPresets[initialPickerValue] != null) {
+            await applyCityPreset(initialPickerValue);
+        } else {
+            await refreshFromInputs();
+        }
+    }
+
     updateMoonPhase();
-    drawSkyDiagram(skyCanvas, []);
 }
 
 document.addEventListener("DOMContentLoaded", initializePage);
