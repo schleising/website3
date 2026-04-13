@@ -41,6 +41,9 @@ const cityPresets = {
     wellington: { label: "Wellington, New Zealand", lat: -41.2865, lon: 174.7762 }
 };
 
+const serviceWorkerPath = "/sw.js";
+const serviceWorkerScope = "/";
+
 const sunriseElement = document.getElementById("sunrise");
 const sunsetElement = document.getElementById("sunset");
 const civilBeginElement = document.getElementById("civil-begin");
@@ -1357,12 +1360,33 @@ function initializeLocationButton() {
     });
 }
 
+async function updateServiceWorkerRegistration() {
+    const existingRegistration = await navigator.serviceWorker.getRegistration(serviceWorkerScope);
+
+    if (existingRegistration != null) {
+        return existingRegistration.update();
+    }
+
+    return navigator.serviceWorker.register(serviceWorkerPath, { scope: serviceWorkerScope });
+}
+
+function initializeProgressiveWebApp() {
+    if (!("serviceWorker" in navigator)) {
+        return;
+    }
+
+    updateServiceWorkerRegistration().catch(error => {
+        console.error("Service worker registration failed", error);
+    });
+}
+
 function initializePage() {
     if (skyFullscreenElement != null) {
         skyFullscreenElement.hidden = true;
     }
 
     refreshButton.addEventListener("click", refreshFromInputs);
+    initializeProgressiveWebApp();
     initializeCityPicker();
     initializeLocationButton();
     initializeFullscreenSkyInteractions();

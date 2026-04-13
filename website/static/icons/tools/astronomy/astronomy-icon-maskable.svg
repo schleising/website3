@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Astronomy maskable icon">
+  <defs>
+    <linearGradient id="spaceM" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#132e54"/>
+      <stop offset="100%" stop-color="#081225"/>
+    </linearGradient>
+    <linearGradient id="ringM" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#33d0d8"/>
+      <stop offset="100%" stop-color="#66a8ff"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="512" height="512" fill="url(#spaceM)"/>
+
+  <circle cx="256" cy="266" r="118" fill="#f2a64d"/>
+  <circle cx="220" cy="222" r="14" fill="#d78933" opacity="0.5"/>
+  <circle cx="300" cy="288" r="11" fill="#d78933" opacity="0.45"/>
+  <circle cx="286" cy="216" r="9" fill="#d78933" opacity="0.42"/>
+
+  <ellipse cx="256" cy="266" rx="186" ry="68" fill="none" stroke="url(#ringM)" stroke-width="22"/>
+
+  <circle cx="104" cy="118" r="9" fill="#f6fbff"/>
+  <circle cx="162" cy="178" r="7" fill="#d9ebff"/>
+  <circle cx="206" cy="96" r="6" fill="#f6fbff"/>
+  <circle cx="334" cy="106" r="7" fill="#d9ebff"/>
+  <circle cx="388" cy="160" r="6" fill="#f6fbff"/>
+  <circle cx="426" cy="222" r="7" fill="#d9ebff"/>
+  <circle cx="88" cy="254" r="6" fill="#d9ebff"/>
+  <circle cx="144" cy="350" r="7" fill="#f6fbff"/>
+</svg>

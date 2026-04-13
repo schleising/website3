@@ -1,0 +1,53 @@
+{
+    "name": "Astronomy",
+    "short_name": "Astronomy",
+    "icons": [
+        {
+            "src": "/icons/tools/astronomy/android-chrome-144x144.png?v1.0.2",
+            "sizes": "144x144",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "/icons/tools/astronomy/android-chrome-192x192.png?v1.0.2",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "/icons/tools/astronomy/android-chrome-512x512.png?v1.0.2",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "/icons/tools/astronomy/android-chrome-maskable-512x512.png?v1.0.2",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "maskable"
+        },
+        {
+            "src": "/icons/tools/astronomy/astronomy-icon-any.svg?v1.0.2",
+            "sizes": "any",
+            "type": "image/svg+xml",
+            "purpose": "any"
+        },
+        {
+            "src": "/icons/tools/astronomy/astronomy-icon-maskable.svg?v1.0.2",
+            "sizes": "any",
+            "type": "image/svg+xml",
+            "purpose": "maskable"
+        }
+    ],
+    "start_url": "/",
+    "display": "standalone",
+    "display_override": [
+        "standalone"
+    ],
+    "background_color": "#0b1427",
+    "theme_color": "#0f213a",
+    "orientation": "portrait",
+    "scope": "/",
+    "id": "/",
+    "description": "Live astronomy view with sun times, moon phase, planets, constellations, and satellite tracks"
+}
