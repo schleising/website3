@@ -13,12 +13,12 @@
 
 .header-data {
     color: #f8fbff;
-    background-color: var(--brand);
+    background-color: var(--brand-soft);
 }
 
 .row-data {
     color: var(--text);
-    background-color: #f7fbff;
+    background-color: var(--surface);
 }
 
 .data {
@@ -31,7 +31,7 @@
 }
 
 .data-row {
-    border: 0.25rem solid white;
+    border: 0.25rem solid var(--surface-soft);
 }
 
 .data-row:hover > .row-data {

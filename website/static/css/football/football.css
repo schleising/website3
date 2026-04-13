@@ -11,14 +11,14 @@
     padding: 0.25rem;
     border: 0.075rem;
     border-style: solid;
-    border-color: silver;
+    border-color: var(--line);
     border-radius: 0.5rem;
-    background-color: hsl(219, 79%, 98%);
+    background-color: var(--surface);
     user-select: none;
 }
 
 .score-widget:hover {
-    background-color: hsl(219, 79%, 96%);
+    background-color: var(--surface-soft);
 }
 
 .team {
@@ -56,11 +56,11 @@
 .team-name {
     white-space: nowrap;
     text-decoration: none;
-    color: black;
+    color: var(--text);
 }
 
 .team-name:hover {
-    color: hsl(0, 0%, 40%);
+    color: var(--brand-strong);
 }
 
 .position {
@@ -80,17 +80,17 @@
 }
 
 .winning {
-    background-color: rgba(60, 179, 113, 1);
+    background-color: var(--success);
     animation-name: winning-animation;
 }
 
 .drawing {
-    background-color: rgba(128, 128, 128, 1);
+    background-color: var(--warning);
     animation-name: drawing-animation;
 }
 
 .losing {
-    background-color: rgba(255, 0, 0, 1);
+    background-color: var(--danger);
     animation-name: losing-animation;
 }
 
@@ -118,50 +118,50 @@
 }
 
 .form-win {
-    background-color: rgba(60, 179, 113, 1);
+    background-color: var(--success);
 }
 
 .form-draw {
-    background-color: rgba(128, 128, 128, 1);
+    background-color: var(--warning);
 }
 
 .form-loss {
-    background-color: rgba(255, 0, 0, 1);
+    background-color: var(--danger);
 }
 
 @keyframes winning-animation {
     0% {
-        background-color: rgba(60, 179, 113, 1);
+        background-color: var(--success);
     }
     50% {
-        background-color: rgba(60, 179, 113, 0.5);
+        background-color: rgba(47, 154, 96, 0.5);
     }
     100% {
-        background-color: rgba(60, 179, 113, 1);
+        background-color: var(--success);
     }
 }
 
 @keyframes drawing-animation {
     0% {
-        background-color: rgba(128, 128, 128, 1);
+        background-color: var(--warning);
     }
     50% {
-        background-color: rgba(128, 128, 128, 0.5);
+        background-color: rgba(139, 143, 152, 0.5);
     }
     100% {
-        background-color: rgba(128, 128, 128, 1);
+        background-color: var(--warning);
     }
 }
 
 @keyframes losing-animation {
     0% {
-        background-color: rgba(255, 0, 0, 1);
+        background-color: var(--danger);
     }
     50% {
-        background-color: rgba(255, 0, 0, 0.5);
+        background-color: rgba(203, 62, 69, 0.5);
     }
     100% {
-        background-color: rgba(255, 0, 0, 1);
+        background-color: var(--danger);
     }
 }
 

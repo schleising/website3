@@ -9,7 +9,7 @@ body {
     display: flex;
     flex-direction: column;
     height: 100%;
-    background-color: #F8F8F8;
+    background-color: var(--surface-soft);
     padding: 0.5rem;
 }
 
@@ -23,7 +23,7 @@ body {
 .title {
     font-size: 2rem;
     font-weight: bold;
-    color: #333;
+    color: var(--text);
     margin-bottom: 0.5rem;
 }
 
@@ -35,11 +35,11 @@ body {
     padding: 0.25rem;
     border: 0.075rem;
     border-style: solid;
-    border-color: silver;
+    border-color: var(--line);
     border-radius: 0.5rem;
     position: relative;
     overflow: hidden;
-    background-color: white;
+    background-color: var(--surface);
 }
 
 .bet-widget::before {
@@ -66,7 +66,7 @@ body {
 }
 
 .bet-widget:hover {
-    background-color: #F0F0F0;
+    background-color: var(--surface-soft);
 }
 
 .bet-row {
@@ -85,14 +85,14 @@ p {
 .name {
     font-weight: bold;
     font-size: 1.5rem;
-    color: #333;
+    color: var(--text);
 }
 
 .stats {
     display: grid;
     align-items: center;
     justify-items: center;
-    background-color: #E8E8E8;
+    background-color: var(--surface-strong);
     column-gap: 0.25rem;
     padding: 0.25rem 0.5rem;
     border-radius: 0.5rem;
@@ -108,25 +108,25 @@ p {
 
 .live-score-text {
     font-size: 0.75rem;
-    color: #333;
+    color: var(--text);
 }
 
 .live-text {
     font-size: 0.75rem;
     font-weight: bold;
-    color: green;
+    color: var(--success);
     animation: pulse-live-text 2s infinite;
 }
 
 @keyframes pulse-live-text {
     0% {
-        color: green;
+        color: var(--success);
     }
     50% {
-        color: #E8E8E8;
+        color: var(--surface-strong);
     }
     100% {
-        color: green;
+        color: var(--success);
     }
 }
 
@@ -136,37 +136,37 @@ p {
 
 .stats-title {
     font-size: 0.75rem;
-    color: #333;
+    color: var(--text);
 }
 
 .played,
 .points {
     font-size: 1.25rem;
     font-weight: bold;
-    color: #333;
+    color: var(--text);
 }
 
 .normal {
-    color: #888;
+    color: var(--text-soft);
 }
 
 .spacer {
     height: 1px;
-    border-bottom: 1px solid #e0e0e0;
+    border-bottom: 1px solid var(--line);
     margin: 0.15rem 0;
 }
 
 .money-positive {
-    color: green;
+    color: var(--success);
 }
 
 .money-negative {
-    color: red;
+    color: var(--danger);
 }
 
 .balance {
     font-weight: bold;
-    color: #333;
+    color: var(--text);
 }
 
 @media screen and (min-width: 624px) {
