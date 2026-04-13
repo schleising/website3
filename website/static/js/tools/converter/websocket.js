@@ -126,14 +126,7 @@ function initializeCurrentConversionScaffold() {
         return;
     }
 
-    ensureCurrentConversionLayout(progressElement);
-
-    updateFilenamePopupText(document.getElementById("filename-value"), "No file being converted");
-    setValueIfChanged("complete-value", "--");
-    setValueIfChanged("speed-value", "--");
-    setValueIfChanged("time_since_start-value", "--");
-    setValueIfChanged("time_remaining-value", "--");
-    setValueIfChanged("completion_time-value", "--");
+    renderNoFileBeingConverted(progressElement);
 }
 
 function initializeStatisticsScaffold() {
@@ -429,14 +422,7 @@ function openWebSocket() {
                 } else {
                         setProgressBarVisible(false);
 
-                    // Keep scaffold mounted to avoid layout shifts when no file is active.
-                    ensureCurrentConversionLayout(progressElement);
-                    updateFilenamePopupText(document.getElementById("filename-value"), "No file being converted");
-                    setValueIfChanged("complete-value", "--");
-                    setValueIfChanged("speed-value", "--");
-                    setValueIfChanged("time_since_start-value", "--");
-                    setValueIfChanged("time_remaining-value", "--");
-                    setValueIfChanged("completion_time-value", "--");
+                    renderNoFileBeingConverted(progressElement);
 
                     // Set the value of the file-progress element to 0
                     document.getElementById("file-progress").value = 0;
@@ -632,6 +618,20 @@ function setValueIfChanged(elementId, value) {
     if (element.innerText !== value) {
         element.innerText = value;
     }
+}
+
+function renderNoFileBeingConverted(progressElement) {
+    if (progressElement == null) {
+        return;
+    }
+
+    progressElement.innerHTML = "";
+
+    emptyStateElement = document.createElement("div");
+    emptyStateElement.classList.add("current-empty-state");
+    emptyStateElement.innerText = "No file being converted";
+
+    progressElement.appendChild(emptyStateElement);
 }
 
 function updateCurrentConversionDetails(progressElement, fileData, completeString, expectedCompletionTime) {

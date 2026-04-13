@@ -933,14 +933,33 @@ body.dark-mode .filename::after {
 
 @media screen and (max-width: 64rem) {
     .main {
-        grid-template-columns: 1fr;
+        display: flex;
+        flex-direction: column;
+        grid-template-columns: none;
+        flex: 1 1 auto;
+        min-height: 0;
         overflow-y: auto;
         overflow-x: hidden;
     }
 
-    .stats-container,
-    .data-container {
+    .stats-container {
+        flex: 0 0 auto;
         min-height: auto;
+        overflow: visible;
+    }
+
+    .files-panel {
+        display: flex;
+        flex-direction: column;
+        flex: 1 1 auto;
+        min-height: 0;
+    }
+
+    .files-panel .data-container {
+        display: flex;
+        flex-direction: column;
+        flex: 0 0 auto;
+        min-height: 0;
         overflow: visible;
     }
 
@@ -952,6 +971,15 @@ body.dark-mode .filename::after {
         flex: 0 0 auto;
         min-height: auto;
         overflow-y: visible;
+    }
+
+    .files-panel:has(.converted-files-grid:empty) .data-container {
+        flex: 1 1 auto;
+    }
+
+    .files-panel:has(.converted-files-grid:empty) .converted-files-grid {
+        flex: 1 1 auto;
+        min-height: 0;
     }
 
     .data-value-left {
