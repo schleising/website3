@@ -3,8 +3,8 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <link rel="stylesheet" href="/css/tools/astronomy/main.css?v1.0.2">
-    <script defer src="/js/tools/astronomy/main.js?v1.0.3"></script>
+    <link rel="stylesheet" href="/css/tools/astronomy/main.css?v1.0.4">
+    <script defer src="/js/tools/astronomy/main.js?v1.0.6"></script>
     <title>Astronomy</title>
   </head>
   <body>
@@ -54,5 +54,15 @@
         </article>
       </section>
     </main>
+
+    <div id="sky-fullscreen" class="sky-fullscreen" hidden>
+      <div class="sky-fullscreen-toolbar">
+        <span>Sky Map Fullscreen</span>
+        <button id="sky-close-button" type="button">Close</button>
+      </div>
+      <div id="sky-fullscreen-stage" class="sky-fullscreen-stage" aria-label="Fullscreen sky map stage">
+        <canvas id="sky-canvas-fullscreen" width="1200" height="1200" role="img" aria-label="Fullscreen sky diagram"></canvas>
+      </div>
+    </div>
   </body>
 </html>

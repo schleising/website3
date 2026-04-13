@@ -20,6 +20,27 @@ const moonDetailsElement = document.getElementById("moon-details");
 const planetWindowElement = document.getElementById("planet-window");
 const planetListElement = document.getElementById("planet-list");
 const skyCanvas = document.getElementById("sky-canvas");
+const skyFullscreenElement = document.getElementById("sky-fullscreen");
+const skyFullscreenStageElement = document.getElementById("sky-fullscreen-stage");
+const skyCloseButton = document.getElementById("sky-close-button");
+const skyFullscreenCanvas = document.getElementById("sky-canvas-fullscreen");
+
+let latestVisiblePlanets = [];
+let latestSkyContext = null;
+
+const fullscreenSkyViewState = {
+    scale: 1,
+    translateX: 0,
+    translateY: 0,
+    minScale: 1,
+    maxScale: 5,
+    isDragging: false,
+    lastX: 0,
+    lastY: 0,
+    pointers: new Map(),
+    pinchStartDistance: 0,
+    pinchStartScale: 1
+};
 
 const planetColors = {
     Mercury: "#f7d7a6",
@@ -30,6 +51,84 @@ const planetColors = {
     Uranus: "#9fe7e9",
     Neptune: "#95bcff"
 };
+
+const constellations = [
+    {
+        name: "Orion",
+        stars: {
+            Betelgeuse: { ra: 88.79, dec: 7.4 },
+            Bellatrix: { ra: 81.28, dec: 6.35 },
+            Alnitak: { ra: 85.19, dec: -1.94 },
+            Alnilam: { ra: 84.05, dec: -1.2 },
+            Mintaka: { ra: 83.0, dec: -0.3 },
+            Rigel: { ra: 78.63, dec: -8.2 },
+            Saiph: { ra: 86.94, dec: -9.67 }
+        },
+        lines: [
+            ["Betelgeuse", "Bellatrix"],
+            ["Bellatrix", "Mintaka"],
+            ["Mintaka", "Alnilam"],
+            ["Alnilam", "Alnitak"],
+            ["Alnitak", "Saiph"],
+            ["Saiph", "Rigel"],
+            ["Rigel", "Mintaka"],
+            ["Betelgeuse", "Alnitak"]
+        ]
+    },
+    {
+        name: "Cassiopeia",
+        stars: {
+            Caph: { ra: 2.29, dec: 59.15 },
+            Schedar: { ra: 10.13, dec: 56.54 },
+            Gamma: { ra: 14.17, dec: 60.72 },
+            Ruchbah: { ra: 21.45, dec: 60.24 },
+            Segin: { ra: 28.6, dec: 63.67 }
+        },
+        lines: [
+            ["Caph", "Schedar"],
+            ["Schedar", "Gamma"],
+            ["Gamma", "Ruchbah"],
+            ["Ruchbah", "Segin"]
+        ]
+    },
+    {
+        name: "Ursa Major",
+        stars: {
+            Dubhe: { ra: 165.93, dec: 61.75 },
+            Merak: { ra: 165.46, dec: 56.38 },
+            Phecda: { ra: 178.46, dec: 53.69 },
+            Megrez: { ra: 183.86, dec: 57.03 },
+            Alioth: { ra: 193.51, dec: 55.96 },
+            Mizar: { ra: 200.98, dec: 54.93 },
+            Alkaid: { ra: 206.89, dec: 49.31 }
+        },
+        lines: [
+            ["Dubhe", "Merak"],
+            ["Merak", "Phecda"],
+            ["Phecda", "Megrez"],
+            ["Megrez", "Dubhe"],
+            ["Megrez", "Alioth"],
+            ["Alioth", "Mizar"],
+            ["Mizar", "Alkaid"]
+        ]
+    },
+    {
+        name: "Cygnus",
+        stars: {
+            Deneb: { ra: 310.36, dec: 45.28 },
+            Sadr: { ra: 305.56, dec: 40.26 },
+            Albireo: { ra: 292.68, dec: 27.96 },
+            Gienah: { ra: 292.68, dec: 33.97 },
+            Delta: { ra: 296.24, dec: 45.13 }
+        },
+        lines: [
+            ["Deneb", "Sadr"],
+            ["Sadr", "Albireo"],
+            ["Sadr", "Gienah"],
+            ["Sadr", "Delta"]
+        ]
+    }
+];
 
 const planetaryElements = {
     Mercury: { N0: 48.3313, N1: 3.24587e-5, i0: 7.0047, i1: 5e-8, w0: 29.1241, w1: 1.01444e-5, a0: 0.387098, a1: 0, e0: 0.205635, e1: 5.59e-10, M0: 168.6562, M1: 4.0923344368 },
@@ -179,18 +278,109 @@ function getEveningWindow(civilTwilightEndIso) {
     return { start, end };
 }
 
-function drawSkyDiagram(visiblePlanets) {
-    if (skyCanvas == null) {
+function getHorizontalCoordinatesFromEquatorial(raDegrees, decDegrees, date, latitude, longitude) {
+    const jd = toJulianDate(date);
+    const gmst = normalizeDegrees(280.46061837 + 360.98564736629 * (jd - 2451545));
+    const lst = normalizeDegrees(gmst + longitude);
+    const hourAngle = toRadians(normalizeDegrees(lst - raDegrees));
+
+    const latitudeRadians = toRadians(latitude);
+    const declination = toRadians(decDegrees);
+
+    const altitude = Math.asin(
+        Math.sin(declination) * Math.sin(latitudeRadians)
+            + Math.cos(declination) * Math.cos(latitudeRadians) * Math.cos(hourAngle)
+    );
+
+    const azimuth = Math.atan2(
+        Math.sin(hourAngle),
+        Math.cos(hourAngle) * Math.sin(latitudeRadians) - Math.tan(declination) * Math.cos(latitudeRadians)
+    );
+
+    return {
+        altitudeDegrees: toDegrees(altitude),
+        azimuthDegrees: normalizeDegrees(toDegrees(azimuth) + 180)
+    };
+}
+
+function projectToSky(azimuthDegrees, altitudeDegrees, cx, cy, radius) {
+    const radialDistance = (90 - altitudeDegrees) / 90 * radius;
+    const azimuthRadians = toRadians(azimuthDegrees);
+
+    return {
+        x: cx + radialDistance * Math.sin(azimuthRadians),
+        y: cy - radialDistance * Math.cos(azimuthRadians)
+    };
+}
+
+function drawConstellationOverlay(ctx, cx, cy, radius, skyContext) {
+    if (skyContext == null) {
         return;
     }
 
-    const ctx = skyCanvas.getContext("2d");
+    const { date, latitude, longitude } = skyContext;
+    ctx.strokeStyle = "hsla(204, 65%, 80%, 0.34)";
+    ctx.fillStyle = "hsla(204, 65%, 82%, 0.82)";
+    ctx.lineWidth = 1;
+
+    for (const constellation of constellations) {
+        const projectedStars = {};
+
+        for (const [starName, coordinates] of Object.entries(constellation.stars)) {
+            const horizontal = getHorizontalCoordinatesFromEquatorial(
+                coordinates.ra,
+                coordinates.dec,
+                date,
+                latitude,
+                longitude
+            );
+
+            if (horizontal.altitudeDegrees < 0) {
+                continue;
+            }
+
+            projectedStars[starName] = projectToSky(
+                horizontal.azimuthDegrees,
+                horizontal.altitudeDegrees,
+                cx,
+                cy,
+                radius
+            );
+        }
+
+        for (const [fromStar, toStar] of constellation.lines) {
+            const from = projectedStars[fromStar];
+            const to = projectedStars[toStar];
+            if (from == null || to == null) {
+                continue;
+            }
+
+            ctx.beginPath();
+            ctx.moveTo(from.x, from.y);
+            ctx.lineTo(to.x, to.y);
+            ctx.stroke();
+        }
+
+        const labelAnchor = projectedStars[Object.keys(projectedStars)[0]];
+        if (labelAnchor != null) {
+            ctx.font = "11px Outfit, sans-serif";
+            ctx.fillText(constellation.name, labelAnchor.x + 5, labelAnchor.y + 12);
+        }
+    }
+}
+
+function drawSkyDiagram(targetCanvas, visiblePlanets, skyContext = null) {
+    if (targetCanvas == null) {
+        return;
+    }
+
+    const ctx = targetCanvas.getContext("2d");
     if (ctx == null) {
         return;
     }
 
-    const width = skyCanvas.width;
-    const height = skyCanvas.height;
+    const width = targetCanvas.width;
+    const height = targetCanvas.height;
     const cx = width / 2;
     const cy = height / 2;
     const radius = Math.min(width, height) * 0.39;
@@ -235,6 +425,8 @@ function drawSkyDiagram(visiblePlanets) {
     ctx.fillText("E", cx + radius + 10, cy + 4);
     ctx.fillText("W", cx - radius - 10, cy + 4);
 
+    drawConstellationOverlay(ctx, cx, cy, radius, skyContext);
+
     if (visiblePlanets.length === 0) {
         ctx.fillStyle = "hsla(210, 26%, 88%, 0.86)";
         ctx.font = "13px Outfit, sans-serif";
@@ -244,10 +436,9 @@ function drawSkyDiagram(visiblePlanets) {
 
     ctx.textAlign = "left";
     for (const planet of visiblePlanets) {
-        const radialDistance = (90 - planet.maxAltitude) / 90 * radius;
-        const azimuthRadians = toRadians(planet.bestAzimuth);
-        const x = cx + radialDistance * Math.sin(azimuthRadians);
-        const y = cy - radialDistance * Math.cos(azimuthRadians);
+        const planetPoint = projectToSky(planet.bestAzimuth, planet.maxAltitude, cx, cy, radius);
+        const x = planetPoint.x;
+        const y = planetPoint.y;
 
         ctx.beginPath();
         ctx.arc(x, y, 4.2, 0, Math.PI * 2);
@@ -265,6 +456,7 @@ function drawSkyDiagram(visiblePlanets) {
 
 function renderVisiblePlanets(civilTwilightEndIso, latitude, longitude) {
     const { start, end } = getEveningWindow(civilTwilightEndIso);
+    const skySampleDate = new Date((start.getTime() + end.getTime()) / 2);
     planetWindowElement.innerText = `Window: ${formatClockTime(start)} to ${formatClockTime(end)}`;
 
     const sampleStepMs = 20 * 60 * 1000;
@@ -300,11 +492,19 @@ function renderVisiblePlanets(civilTwilightEndIso, latitude, longitude) {
 
     planetListElement.innerHTML = "";
 
+    latestVisiblePlanets = visiblePlanets;
+    latestSkyContext = { date: skySampleDate, latitude, longitude };
+
     if (visiblePlanets.length === 0) {
         const item = document.createElement("li");
         item.innerText = "No major planets rise above 10 degrees in this window.";
         planetListElement.appendChild(item);
-        drawSkyDiagram([]);
+        drawSkyDiagram(skyCanvas, [], latestSkyContext);
+
+        if (skyFullscreenElement != null && !skyFullscreenElement.hidden) {
+            drawSkyDiagram(skyFullscreenCanvas, [], latestSkyContext);
+        }
+
         return;
     }
 
@@ -316,7 +516,11 @@ function renderVisiblePlanets(civilTwilightEndIso, latitude, longitude) {
         planetListElement.appendChild(item);
     }
 
-    drawSkyDiagram(visiblePlanets);
+    drawSkyDiagram(skyCanvas, visiblePlanets, latestSkyContext);
+
+    if (skyFullscreenElement != null && !skyFullscreenElement.hidden) {
+        drawSkyDiagram(skyFullscreenCanvas, visiblePlanets, latestSkyContext);
+    }
 }
 
 function normalizePhase(phaseFraction) {
@@ -436,7 +640,14 @@ async function updateSunTimes(lat, lon) {
     } catch (error) {
         planetWindowElement.innerText = "Window: --";
         planetListElement.innerHTML = "<li>Planet visibility unavailable.</li>";
-        drawSkyDiagram([]);
+        latestVisiblePlanets = [];
+        latestSkyContext = null;
+        drawSkyDiagram(skyCanvas, []);
+
+        if (skyFullscreenElement != null && !skyFullscreenElement.hidden) {
+            drawSkyDiagram(skyFullscreenCanvas, []);
+        }
+
         sunStatus.innerText = "Could not fetch sun times. Please try again.";
         console.error(error);
     }
@@ -448,6 +659,171 @@ function updateMoonPhase() {
 
     moonNameElement.innerText = phaseData.name;
     moonDetailsElement.innerText = `Illumination: ${(phaseData.illumination * 100).toFixed(1)}% | Age: ${phaseData.age.toFixed(1)} days`;
+}
+
+function applyFullscreenSkyTransform() {
+    if (skyFullscreenCanvas == null) {
+        return;
+    }
+
+    skyFullscreenCanvas.style.transform = `translate(${fullscreenSkyViewState.translateX}px, ${fullscreenSkyViewState.translateY}px) scale(${fullscreenSkyViewState.scale})`;
+}
+
+function resetFullscreenSkyTransform() {
+    fullscreenSkyViewState.scale = 1;
+    fullscreenSkyViewState.translateX = 0;
+    fullscreenSkyViewState.translateY = 0;
+    fullscreenSkyViewState.pointers.clear();
+    fullscreenSkyViewState.isDragging = false;
+    fullscreenSkyViewState.pinchStartDistance = 0;
+    applyFullscreenSkyTransform();
+
+    if (skyFullscreenStageElement != null) {
+        skyFullscreenStageElement.classList.remove("dragging");
+    }
+}
+
+function requestSkyFullscreen() {
+    if (skyFullscreenElement == null || typeof skyFullscreenElement.requestFullscreen !== "function") {
+        return;
+    }
+
+    skyFullscreenElement.requestFullscreen().catch(() => {
+        // Overlay still works if Fullscreen API is unavailable.
+    });
+}
+
+function openSkyFullscreen() {
+    if (skyFullscreenElement == null || skyFullscreenCanvas == null) {
+        return;
+    }
+
+    skyFullscreenElement.hidden = false;
+    drawSkyDiagram(skyFullscreenCanvas, latestVisiblePlanets, latestSkyContext);
+    resetFullscreenSkyTransform();
+    requestSkyFullscreen();
+}
+
+function closeSkyFullscreen() {
+    if (skyFullscreenElement == null) {
+        return;
+    }
+
+    skyFullscreenElement.hidden = true;
+    resetFullscreenSkyTransform();
+
+    if (document.fullscreenElement != null) {
+        document.exitFullscreen().catch(() => {
+            // Ignore fullscreen exit failures.
+        });
+    }
+}
+
+function getPointerDistance(pointerA, pointerB) {
+    const dx = pointerA.x - pointerB.x;
+    const dy = pointerA.y - pointerB.y;
+    return Math.sqrt(dx * dx + dy * dy);
+}
+
+function clampScale(scale) {
+    return Math.min(fullscreenSkyViewState.maxScale, Math.max(fullscreenSkyViewState.minScale, scale));
+}
+
+function initializeFullscreenSkyInteractions() {
+    if (skyCanvas != null) {
+        skyCanvas.addEventListener("click", openSkyFullscreen);
+    }
+
+    if (skyCloseButton != null) {
+        skyCloseButton.addEventListener("click", closeSkyFullscreen);
+    }
+
+    if (skyFullscreenElement != null) {
+        skyFullscreenElement.addEventListener("click", event => {
+            if (event.target === skyFullscreenElement) {
+                closeSkyFullscreen();
+            }
+        });
+    }
+
+    if (skyFullscreenStageElement == null) {
+        return;
+    }
+
+    skyFullscreenStageElement.addEventListener("wheel", event => {
+        event.preventDefault();
+        const zoomFactor = event.deltaY < 0 ? 1.12 : 0.9;
+        fullscreenSkyViewState.scale = clampScale(fullscreenSkyViewState.scale * zoomFactor);
+        applyFullscreenSkyTransform();
+    }, { passive: false });
+
+    skyFullscreenStageElement.addEventListener("pointerdown", event => {
+        skyFullscreenStageElement.setPointerCapture(event.pointerId);
+        fullscreenSkyViewState.pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+
+        if (fullscreenSkyViewState.pointers.size === 1) {
+            fullscreenSkyViewState.isDragging = true;
+            fullscreenSkyViewState.lastX = event.clientX;
+            fullscreenSkyViewState.lastY = event.clientY;
+            skyFullscreenStageElement.classList.add("dragging");
+        } else if (fullscreenSkyViewState.pointers.size === 2) {
+            const pointerValues = Array.from(fullscreenSkyViewState.pointers.values());
+            fullscreenSkyViewState.pinchStartDistance = getPointerDistance(pointerValues[0], pointerValues[1]);
+            fullscreenSkyViewState.pinchStartScale = fullscreenSkyViewState.scale;
+            fullscreenSkyViewState.isDragging = false;
+            skyFullscreenStageElement.classList.remove("dragging");
+        }
+    });
+
+    skyFullscreenStageElement.addEventListener("pointermove", event => {
+        if (!fullscreenSkyViewState.pointers.has(event.pointerId)) {
+            return;
+        }
+
+        fullscreenSkyViewState.pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+
+        if (fullscreenSkyViewState.pointers.size === 2) {
+            const pointerValues = Array.from(fullscreenSkyViewState.pointers.values());
+            const distance = getPointerDistance(pointerValues[0], pointerValues[1]);
+
+            if (fullscreenSkyViewState.pinchStartDistance > 0) {
+                const nextScale = fullscreenSkyViewState.pinchStartScale * (distance / fullscreenSkyViewState.pinchStartDistance);
+                fullscreenSkyViewState.scale = clampScale(nextScale);
+                applyFullscreenSkyTransform();
+            }
+            return;
+        }
+
+        if (!fullscreenSkyViewState.isDragging) {
+            return;
+        }
+
+        const dx = event.clientX - fullscreenSkyViewState.lastX;
+        const dy = event.clientY - fullscreenSkyViewState.lastY;
+        fullscreenSkyViewState.lastX = event.clientX;
+        fullscreenSkyViewState.lastY = event.clientY;
+
+        fullscreenSkyViewState.translateX += dx;
+        fullscreenSkyViewState.translateY += dy;
+        applyFullscreenSkyTransform();
+    });
+
+    const releasePointer = event => {
+        fullscreenSkyViewState.pointers.delete(event.pointerId);
+
+        if (fullscreenSkyViewState.pointers.size <= 1) {
+            fullscreenSkyViewState.pinchStartDistance = 0;
+            fullscreenSkyViewState.pinchStartScale = fullscreenSkyViewState.scale;
+        }
+
+        if (fullscreenSkyViewState.pointers.size === 0) {
+            fullscreenSkyViewState.isDragging = false;
+            skyFullscreenStageElement.classList.remove("dragging");
+        }
+    };
+
+    skyFullscreenStageElement.addEventListener("pointerup", releasePointer);
+    skyFullscreenStageElement.addEventListener("pointercancel", releasePointer);
 }
 
 function readCoordinatesFromInputs() {
@@ -506,12 +882,17 @@ function initializeLocationButton() {
 }
 
 function initializePage() {
+    if (skyFullscreenElement != null) {
+        skyFullscreenElement.hidden = true;
+    }
+
     refreshButton.addEventListener("click", refreshFromInputs);
     initializeLocationButton();
+    initializeFullscreenSkyInteractions();
 
     refreshFromInputs();
     updateMoonPhase();
-    drawSkyDiagram([]);
+    drawSkyDiagram(skyCanvas, []);
 }
 
 document.addEventListener("DOMContentLoaded", initializePage);

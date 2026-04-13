@@ -158,6 +158,65 @@ body {
     border-radius: 0.9rem;
     border: 1px solid var(--line);
     background: linear-gradient(180deg, hsl(220, 42%, 14%), hsl(231, 52%, 8%));
+    cursor: zoom-in;
+}
+
+.sky-fullscreen {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    background: hsla(225, 45%, 6%, 0.94);
+}
+
+.sky-fullscreen[hidden] {
+    display: none;
+}
+
+.sky-fullscreen-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding: 0.7rem 0.9rem;
+    color: hsl(0, 0%, 96%);
+    border-bottom: 1px solid hsla(214, 32%, 78%, 0.22);
+}
+
+.sky-fullscreen-toolbar button {
+    height: 2rem;
+    border-radius: 0.6rem;
+    border: 1px solid hsla(214, 32%, 78%, 0.35);
+    background: hsla(0, 0%, 100%, 0.92);
+    padding: 0 0.7rem;
+    font: inherit;
+    cursor: pointer;
+}
+
+.sky-fullscreen-stage {
+    position: relative;
+    flex: 1 1 auto;
+    overflow: hidden;
+    touch-action: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#sky-canvas-fullscreen {
+    width: min(92vmin, 1200px);
+    height: min(92vmin, 1200px);
+    border-radius: 0.95rem;
+    border: 1px solid hsla(212, 35%, 72%, 0.22);
+    background: linear-gradient(180deg, hsl(220, 42%, 14%), hsl(231, 52%, 8%));
+    transform-origin: center center;
+    will-change: transform;
+    cursor: grab;
+}
+
+.sky-fullscreen-stage.dragging #sky-canvas-fullscreen {
+    cursor: grabbing;
 }
 
 .moon-card {
