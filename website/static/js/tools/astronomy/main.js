@@ -65,11 +65,18 @@ const skyFullscreenElement = document.getElementById("sky-fullscreen");
 const skyFullscreenStageElement = document.getElementById("sky-fullscreen-stage");
 const skyCloseButton = document.getElementById("sky-close-button");
 const skyFullscreenCanvas = document.getElementById("sky-canvas-fullscreen");
+const skyTimeSlider = document.getElementById("sky-time-slider");
+const skyTimeLabel = document.getElementById("sky-time-label");
+const skyTimeNowButton = document.getElementById("sky-time-now-button");
+const skyTimePlayButton = document.getElementById("sky-time-play-button");
+const shareSkyButton = document.getElementById("share-sky-button");
 
 let latestVisiblePlanets = [];
 let latestSkyContext = null;
 let isLocationRequestInProgress = false;
 let requestCurrentLocation = async () => false;
+let skyTimeOffsetMinutes = 0;
+let skyTimePlayIntervalId = null;
 
 const fullscreenSkyViewState = {
     scale: 1,
@@ -94,6 +101,36 @@ const planetColors = {
     Uranus: "#9fe7e9",
     Neptune: "#95bcff"
 };
+
+const brightStars = [
+    { name: "Sirius", ra: 101.287, dec: -16.716, mag: -1.46 },
+    { name: "Canopus", ra: 95.9879, dec: -52.6957, mag: -0.74 },
+    { name: "Arcturus", ra: 213.915, dec: 19.182, mag: -0.05 },
+    { name: "Vega", ra: 279.234, dec: 38.783, mag: 0.03 },
+    { name: "Capella", ra: 79.172, dec: 45.998, mag: 0.08 },
+    { name: "Rigel", ra: 78.634, dec: -8.201, mag: 0.13 },
+    { name: "Procyon", ra: 114.825, dec: 5.225, mag: 0.34 },
+    { name: "Betelgeuse", ra: 88.7929, dec: 7.4071, mag: 0.42 },
+    { name: "Achernar", ra: 24.4286, dec: -57.2368, mag: 0.46 },
+    { name: "Hadar", ra: 210.9558, dec: -60.373, mag: 0.61 },
+    { name: "Altair", ra: 297.6958, dec: 8.8683, mag: 0.77 },
+    { name: "Aldebaran", ra: 68.98, dec: 16.509, mag: 0.85 },
+    { name: "Spica", ra: 201.2983, dec: -11.1614, mag: 0.98 },
+    { name: "Antares", ra: 247.3519, dec: -26.432, mag: 1.06 },
+    { name: "Pollux", ra: 113.649, dec: 28.026, mag: 1.14 },
+    { name: "Fomalhaut", ra: 344.4128, dec: -29.6222, mag: 1.16 },
+    { name: "Deneb", ra: 310.3579, dec: 45.2803, mag: 1.25 },
+    { name: "Regulus", ra: 152.0929, dec: 11.9672, mag: 1.35 },
+    { name: "Adhara", ra: 104.6564, dec: -28.9721, mag: 1.5 },
+    { name: "Castor", ra: 113.6494, dec: 31.8883, mag: 1.58 }
+];
+
+const deepSkyObjects = [
+    { name: "M31 Andromeda Galaxy", ra: 10.6847, dec: 41.269, type: "galaxy" },
+    { name: "M42 Orion Nebula", ra: 83.8221, dec: -5.3911, type: "nebula" },
+    { name: "M45 Pleiades", ra: 56.75, dec: 24.1167, type: "cluster" },
+    { name: "Omega Centauri", ra: 201.697, dec: -47.479, type: "cluster" }
+];
 
 const constellations = [
     {
@@ -285,6 +322,48 @@ function formatClockTime(date) {
         minute: "2-digit",
         timeZoneName: "short"
     });
+}
+
+function getSkyRenderDate() {
+    return new Date(Date.now() + skyTimeOffsetMinutes * 60 * 1000);
+}
+
+function formatSkyOffsetLabel(offsetMinutes) {
+    if (offsetMinutes === 0) {
+        return `Live now (${formatClockTime(getSkyRenderDate())})`;
+    }
+
+    const sign = offsetMinutes > 0 ? "+" : "-";
+    const absoluteMinutes = Math.abs(offsetMinutes);
+    const hours = Math.floor(absoluteMinutes / 60);
+    const minutes = absoluteMinutes % 60;
+    const minutePart = minutes > 0 ? ` ${minutes}m` : "";
+    return `${sign}${hours}h${minutePart} (${formatClockTime(getSkyRenderDate())})`;
+}
+
+function updateSkyTimeLabel() {
+    if (skyTimeLabel == null) {
+        return;
+    }
+
+    skyTimeLabel.innerText = formatSkyOffsetLabel(skyTimeOffsetMinutes);
+}
+
+function getCoordinatesFromInputsOrNull() {
+    try {
+        return readCoordinatesFromInputs();
+    } catch {
+        return null;
+    }
+}
+
+function rerenderSkyForCurrentInputs() {
+    const coordinates = getCoordinatesFromInputsOrNull();
+    if (coordinates == null) {
+        return;
+    }
+
+    renderVisiblePlanets(coordinates.lat, coordinates.lon);
 }
 
 function toRadians(degrees) {
@@ -1067,6 +1146,94 @@ function drawPolarisOverlay(ctx, cx, cy, radius, skyContext, occupiedLabelBoxes 
     }
 }
 
+function drawStarfieldOverlay(ctx, cx, cy, radius, skyContext, occupiedLabelBoxes = []) {
+    if (skyContext == null) {
+        return;
+    }
+
+    const { date, latitude, longitude } = skyContext;
+    const labelScale = getSkyLabelScale(ctx.canvas);
+
+    for (const star of brightStars) {
+        const horizontal = getHorizontalCoordinatesFromEquatorial(
+            star.ra,
+            star.dec,
+            date,
+            latitude,
+            longitude,
+            { precessFromJ2000: true }
+        );
+
+        if (horizontal.altitudeDegrees < 0) {
+            continue;
+        }
+
+        const point = projectToSky(horizontal.azimuthDegrees, horizontal.altitudeDegrees, cx, cy, radius);
+        const brightness = Math.max(0, Math.min(1, (2.2 - star.mag) / 3.8));
+        const dotRadius = 1 + brightness * 2.6;
+
+        ctx.beginPath();
+        ctx.arc(point.x, point.y, dotRadius, 0, Math.PI * 2);
+        ctx.fillStyle = `hsla(44, 100%, 94%, ${0.52 + brightness * 0.45})`;
+        ctx.shadowColor = "hsla(210, 100%, 88%, 0.38)";
+        ctx.shadowBlur = 2 + dotRadius * 2;
+        ctx.fill();
+        ctx.shadowBlur = 0;
+
+        if (star.mag <= 0.2) {
+            reserveSkyMarkerSpace(occupiedLabelBoxes, point.x, point.y, 14);
+            drawSkyLabel(ctx, star.name, point.x, point.y, occupiedLabelBoxes, {
+                fontSize: Math.round(10 * labelScale),
+                fillStyle: "hsla(44, 84%, 92%, 0.86)",
+                preferBelow: true
+            });
+        }
+    }
+}
+
+function drawDeepSkyHighlights(ctx, cx, cy, radius, skyContext, occupiedLabelBoxes = []) {
+    if (skyContext == null) {
+        return;
+    }
+
+    const { date, latitude, longitude } = skyContext;
+    const labelScale = getSkyLabelScale(ctx.canvas);
+
+    for (const target of deepSkyObjects) {
+        const horizontal = getHorizontalCoordinatesFromEquatorial(
+            target.ra,
+            target.dec,
+            date,
+            latitude,
+            longitude,
+            { precessFromJ2000: true }
+        );
+
+        if (horizontal.altitudeDegrees < 8) {
+            continue;
+        }
+
+        const point = projectToSky(horizontal.azimuthDegrees, horizontal.altitudeDegrees, cx, cy, radius);
+        reserveSkyMarkerSpace(occupiedLabelBoxes, point.x, point.y, 18);
+
+        ctx.save();
+        ctx.translate(point.x, point.y);
+        ctx.rotate(Math.PI / 4);
+        ctx.fillStyle = "hsla(186, 88%, 72%, 0.92)";
+        ctx.strokeStyle = "hsla(220, 45%, 10%, 0.88)";
+        ctx.lineWidth = 1;
+        ctx.fillRect(-3.5, -3.5, 7, 7);
+        ctx.strokeRect(-3.5, -3.5, 7, 7);
+        ctx.restore();
+
+        drawSkyLabel(ctx, target.name, point.x, point.y, occupiedLabelBoxes, {
+            fontSize: Math.round(10 * labelScale),
+            fillStyle: "hsla(186, 88%, 84%, 0.92)",
+            preferBelow: true
+        });
+    }
+}
+
 function drawSkyDiagram(targetCanvas, visiblePlanets, skyContext = null) {
     if (targetCanvas == null) {
         return;
@@ -1125,7 +1292,9 @@ function drawSkyDiagram(targetCanvas, visiblePlanets, skyContext = null) {
     ctx.fillText("E", cx + radius + 10, cy + 4);
     ctx.fillText("W", cx - radius - 10, cy + 4);
 
+    drawStarfieldOverlay(ctx, cx, cy, radius, skyContext, occupiedLabelBoxes);
     drawConstellationOverlay(ctx, cx, cy, radius, skyContext, occupiedLabelBoxes);
+    drawDeepSkyHighlights(ctx, cx, cy, radius, skyContext, occupiedLabelBoxes);
     drawPolarisOverlay(ctx, cx, cy, radius, skyContext, occupiedLabelBoxes);
     drawMoonPath(ctx, cx, cy, radius, skyContext, occupiedLabelBoxes);
     if (visiblePlanets.length === 0) {
@@ -1162,7 +1331,7 @@ function drawSkyDiagram(targetCanvas, visiblePlanets, skyContext = null) {
 }
 
 function renderVisiblePlanets(latitude, longitude) {
-    const skySampleDate = new Date();
+    const skySampleDate = getSkyRenderDate();
     const pathWindowStart = new Date(skySampleDate.getTime() - 90 * 60 * 1000);
     const pathWindowEnd = new Date(skySampleDate.getTime() + 90 * 60 * 1000);
     planetWindowElement.innerText = `Snapshot: ${formatLocalTime(skySampleDate.toISOString())}`;
@@ -1218,6 +1387,8 @@ function renderVisiblePlanets(latitude, longitude) {
     if (skyFullscreenElement != null && !skyFullscreenElement.hidden) {
         drawSkyDiagram(skyFullscreenCanvas, visiblePlanets, latestSkyContext);
     }
+
+    updateMoonPhase(skySampleDate);
 }
 
 async function updateSunTimes(lat, lon) {
@@ -1257,8 +1428,8 @@ async function updateSunTimes(lat, lon) {
     }
 }
 
-function updateMoonPhase() {
-    const phaseData = getMoonPhaseData(new Date());
+function updateMoonPhase(date = new Date()) {
+    const phaseData = getMoonPhaseData(date);
     drawMoonPhaseImage(moonCanvas, phaseData.phase);
 
     moonNameElement.innerText = phaseData.name;
@@ -1450,6 +1621,184 @@ async function refreshFromInputs() {
     } catch (error) {
         sunStatus.innerText = "Enter valid latitude and longitude values.";
     }
+}
+
+function stopSkyTimePlayback() {
+    if (skyTimePlayIntervalId != null) {
+        clearInterval(skyTimePlayIntervalId);
+        skyTimePlayIntervalId = null;
+    }
+
+    if (skyTimePlayButton != null) {
+        skyTimePlayButton.setAttribute("aria-pressed", "false");
+        skyTimePlayButton.innerText = "Animate Night";
+    }
+}
+
+function setSkyTimeOffset(nextOffsetMinutes, { syncSlider = true } = {}) {
+    const clamped = Math.max(-720, Math.min(720, Math.round(nextOffsetMinutes / 5) * 5));
+    skyTimeOffsetMinutes = clamped;
+
+    if (syncSlider && skyTimeSlider != null) {
+        skyTimeSlider.value = String(clamped);
+    }
+
+    updateSkyTimeLabel();
+}
+
+function initializeTimeTravelControls() {
+    setSkyTimeOffset(0);
+
+    if (skyTimeSlider != null) {
+        skyTimeSlider.addEventListener("input", event => {
+            const target = Number.parseInt(event.target.value, 10);
+            if (!Number.isFinite(target)) {
+                return;
+            }
+
+            stopSkyTimePlayback();
+            setSkyTimeOffset(target, { syncSlider: false });
+            rerenderSkyForCurrentInputs();
+        });
+    }
+
+    if (skyTimeNowButton != null) {
+        skyTimeNowButton.addEventListener("click", () => {
+            stopSkyTimePlayback();
+            setSkyTimeOffset(0);
+            rerenderSkyForCurrentInputs();
+        });
+    }
+
+    if (skyTimePlayButton != null) {
+        skyTimePlayButton.addEventListener("click", () => {
+            if (skyTimePlayIntervalId != null) {
+                stopSkyTimePlayback();
+                return;
+            }
+
+            skyTimePlayButton.setAttribute("aria-pressed", "true");
+            skyTimePlayButton.innerText = "Stop Animation";
+
+            skyTimePlayIntervalId = window.setInterval(() => {
+                const nextOffset = skyTimeOffsetMinutes >= 720 ? -720 : skyTimeOffsetMinutes + 10;
+                setSkyTimeOffset(nextOffset);
+                rerenderSkyForCurrentInputs();
+            }, 350);
+        });
+    }
+}
+
+function buildSkyShareCardBlob() {
+    return new Promise(resolve => {
+        const cardCanvas = document.createElement("canvas");
+        cardCanvas.width = 1200;
+        cardCanvas.height = 630;
+        const context = cardCanvas.getContext("2d");
+        if (context == null) {
+            resolve(null);
+            return;
+        }
+
+        const gradient = context.createLinearGradient(0, 0, cardCanvas.width, cardCanvas.height);
+        gradient.addColorStop(0, "#0a1730");
+        gradient.addColorStop(1, "#12284a");
+        context.fillStyle = gradient;
+        context.fillRect(0, 0, cardCanvas.width, cardCanvas.height);
+
+        context.fillStyle = "rgba(255, 255, 255, 0.12)";
+        context.fillRect(32, 32, cardCanvas.width - 64, cardCanvas.height - 64);
+
+        context.fillStyle = "#eaf4ff";
+        context.font = "700 52px Outfit, sans-serif";
+        context.fillText("Tonight's Sky", 70, 110);
+
+        context.font = "500 26px Outfit, sans-serif";
+        context.fillStyle = "#8fd9ff";
+        context.fillText(locationReadout.innerText, 70, 152);
+
+        context.font = "500 24px Outfit, sans-serif";
+        context.fillStyle = "#d7ecff";
+        context.fillText(`Sky time: ${formatClockTime(getSkyRenderDate())}`, 70, 188);
+
+        if (skyCanvas != null) {
+            context.drawImage(skyCanvas, 70, 220, 360, 360);
+        }
+
+        if (moonCanvas != null) {
+            context.drawImage(moonCanvas, 460, 250, 170, 170);
+        }
+
+        context.font = "600 26px Outfit, sans-serif";
+        context.fillStyle = "#f2f8ff";
+        context.fillText("Visible Planets", 670, 260);
+
+        context.font = "500 23px Outfit, sans-serif";
+        const listStartY = 296;
+        if (latestVisiblePlanets.length === 0) {
+            context.fillStyle = "#b7d6ec";
+            context.fillText("No major planets currently above horizon", 670, listStartY);
+        } else {
+            latestVisiblePlanets.slice(0, 7).forEach((planet, index) => {
+                context.fillStyle = "#d4e8fb";
+                context.fillText(
+                    `${planet.planetName} (${planet.displayAltitude.toFixed(0)} deg alt)`,
+                    670,
+                    listStartY + index * 34
+                );
+            });
+        }
+
+        context.font = "500 20px Outfit, sans-serif";
+        context.fillStyle = "#9ec9e6";
+        context.fillText("Shared from Astronomy Tool", 670, 552);
+
+        cardCanvas.toBlob(blob => resolve(blob), "image/png");
+    });
+}
+
+function initializeShareSkyCard() {
+    if (shareSkyButton == null) {
+        return;
+    }
+
+    shareSkyButton.addEventListener("click", async () => {
+        shareSkyButton.disabled = true;
+        shareSkyButton.innerText = "Preparing...";
+
+        try {
+            const blob = await buildSkyShareCardBlob();
+            if (blob == null) {
+                throw new Error("Could not create sky card image");
+            }
+
+            const file = new File([blob], "tonights-sky.png", { type: "image/png" });
+            const canUseWebShare = navigator.share != null && navigator.canShare != null && navigator.canShare({ files: [file] });
+
+            if (canUseWebShare) {
+                await navigator.share({
+                    title: "Tonight's Sky",
+                    text: "Sky snapshot from Astronomy Tool",
+                    files: [file]
+                });
+            } else {
+                const downloadUrl = URL.createObjectURL(blob);
+                const link = document.createElement("a");
+                link.href = downloadUrl;
+                link.download = "tonights-sky.png";
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+                URL.revokeObjectURL(downloadUrl);
+            }
+        } catch (error) {
+            console.error(error);
+            sunStatus.innerText = "Could not create sky card right now.";
+        } finally {
+            shareSkyButton.disabled = false;
+            shareSkyButton.innerText = "Share Sky Card";
+        }
+    });
 }
 
 function findCityPickerOption(value) {
@@ -1750,6 +2099,8 @@ async function initializePage() {
     refreshButton.addEventListener("click", refreshFromInputs);
     initializeProgressiveWebApp();
     initializeCityPicker();
+    initializeTimeTravelControls();
+    initializeShareSkyCard();
     const locationController = initializeLocationButton();
     initializeFullscreenSkyInteractions();
 
@@ -1770,7 +2121,7 @@ async function initializePage() {
         }
     }
 
-    updateMoonPhase();
+    updateMoonPhase(getSkyRenderDate());
 }
 
 document.addEventListener("DOMContentLoaded", initializePage);

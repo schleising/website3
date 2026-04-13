@@ -354,6 +354,63 @@ body {
     justify-content: center;
 }
 
+.time-travel-controls {
+    margin-top: 0.65rem;
+    padding: 0.55rem;
+    border: 1px solid var(--line);
+    border-radius: 0.75rem;
+    background: hsla(0, 0%, 100%, 0.7);
+}
+
+.time-travel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-bottom: 0.35rem;
+}
+
+.time-travel-header label {
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--text);
+}
+
+.time-travel-label {
+    font-size: 0.8rem;
+    color: var(--muted);
+    font-weight: 600;
+}
+
+#sky-time-slider {
+    width: 100%;
+    accent-color: var(--accent);
+}
+
+.time-travel-actions {
+    margin-top: 0.42rem;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.4rem;
+}
+
+.time-travel-actions button {
+    min-height: 2rem;
+    border-radius: 0.58rem;
+    border: 1px solid hsla(196, 62%, 44%, 0.24);
+    background: linear-gradient(160deg, hsl(0, 0%, 100%), hsl(192, 72%, 95%));
+    color: var(--text);
+    font: inherit;
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+#sky-time-play-button[aria-pressed="true"] {
+    border-color: hsla(193, 76%, 45%, 0.62);
+    background: linear-gradient(180deg, hsla(193, 76%, 45%, 0.24), hsla(193, 76%, 45%, 0.12));
+}
+
 .sky-diagram-hint {
     position: absolute;
     top: 0.55rem;
@@ -546,6 +603,21 @@ body.dark-mode .sky-diagram-hint {
     color: hsla(0, 0%, 100%, 0.94);
 }
 
+body.dark-mode .time-travel-controls {
+    background: hsla(214, 24%, 24%, 0.88);
+}
+
+body.dark-mode .time-travel-actions button {
+    color: var(--text);
+    border-color: hsla(193, 72%, 56%, 0.34);
+    background: linear-gradient(160deg, hsla(214, 24%, 28%, 0.96), hsla(198, 32%, 22%, 0.92));
+}
+
+body.dark-mode #sky-time-play-button[aria-pressed="true"] {
+    border-color: hsla(193, 72%, 56%, 0.72);
+    background: linear-gradient(180deg, hsla(193, 62%, 44%, 0.58), hsla(193, 62%, 30%, 0.52));
+}
+
 body.dark-mode .theme-switch-track {
     border-color: hsla(206, 30%, 70%, 0.26);
     background: linear-gradient(180deg, hsla(214, 24%, 28%, 0.96), hsla(198, 32%, 22%, 0.92));
@@ -622,5 +694,9 @@ body.dark-mode .sky-fullscreen-toolbar button:hover {
         right: 0.62rem;
         padding: 0.3rem 0.54rem;
         font-size: 0.72rem;
+    }
+
+    .time-travel-actions {
+        grid-template-columns: 1fr;
     }
 }

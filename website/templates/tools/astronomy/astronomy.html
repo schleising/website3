@@ -10,9 +10,9 @@
     <link rel="icon" type="image/svg+xml" sizes="any" href="/icons/tools/astronomy/astronomy-icon-any.svg?v1.0.2">
     <link rel="apple-touch-icon" href="/icons/tools/astronomy/android-chrome-192x192.png?v1.0.2">
     <link rel="manifest" href="/manifests/tools/astronomy/astronomy.webmanifest?v1.0.3" crossorigin="use-credentials">
-    <link rel="stylesheet" href="/css/tools/astronomy/main.css?v1.0.11">
+    <link rel="stylesheet" href="/css/tools/astronomy/main.css?v1.0.12">
     <script defer src="/js/tools/astronomy/theme-toggle.js?v1.0.0"></script>
-    <script defer src="/js/tools/astronomy/main.js?v1.0.32"></script>
+    <script defer src="/js/tools/astronomy/main.js?v1.1.0"></script>
     <title>Astronomy</title>
   </head>
   <body>
@@ -117,6 +117,18 @@
             <div class="sky-diagram-wrap">
               <span class="sky-diagram-hint" aria-hidden="true">Tap to enlarge</span>
               <canvas id="sky-canvas" width="280" height="280" role="img" aria-label="Sky diagram for current astronomical objects"></canvas>
+            </div>
+            <div class="time-travel-controls">
+              <div class="time-travel-header">
+                <label for="sky-time-slider">Time Travel</label>
+                <span id="sky-time-label" class="time-travel-label">Live now</span>
+              </div>
+              <input id="sky-time-slider" type="range" min="-720" max="720" step="5" value="0" aria-label="Sky time offset slider">
+              <div class="time-travel-actions">
+                <button id="sky-time-now-button" type="button">Now</button>
+                <button id="sky-time-play-button" type="button" aria-pressed="false">Animate Night</button>
+                <button id="share-sky-button" type="button">Share Sky Card</button>
+              </div>
             </div>
             <p class="meta">Approximate current positions for planets, the Moon, and highlighted constellations.</p>
           </div>
