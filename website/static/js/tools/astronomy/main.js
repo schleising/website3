@@ -125,6 +125,65 @@ const brightStars = [
     { name: "Castor", ra: 113.6494, dec: 31.8883, mag: 1.58 }
 ];
 
+const extendedNakedEyeStars = [
+    { name: "Rigil Kent", ra: 219.9, dec: -60.83, mag: -0.27 },
+    { name: "Acrux", ra: 186.65, dec: -63.1, mag: 0.77 },
+    { name: "Mimosa", ra: 191.93, dec: -59.69, mag: 1.25 },
+    { name: "Gacrux", ra: 187.79, dec: -57.11, mag: 1.63 },
+    { name: "Bellatrix", ra: 81.28, dec: 6.35, mag: 1.64 },
+    { name: "Elnath", ra: 81.57, dec: 28.61, mag: 1.65 },
+    { name: "Miaplacidus", ra: 138.3, dec: -69.72, mag: 1.68 },
+    { name: "Alnilam", ra: 84.05, dec: -1.2, mag: 1.69 },
+    { name: "Alnair", ra: 332.06, dec: -46.96, mag: 1.74 },
+    { name: "Alioth", ra: 193.51, dec: 55.96, mag: 1.76 },
+    { name: "Alnitak", ra: 85.19, dec: -1.94, mag: 1.77 },
+    { name: "Dubhe", ra: 165.93, dec: 61.75, mag: 1.79 },
+    { name: "Kaus Australis", ra: 283.82, dec: -34.38, mag: 1.79 },
+    { name: "Mirfak", ra: 51.08, dec: 49.86, mag: 1.79 },
+    { name: "Wezen", ra: 104.66, dec: -26.39, mag: 1.83 },
+    { name: "Alkaid", ra: 206.89, dec: 49.31, mag: 1.86 },
+    { name: "Sargas", ra: 263.4, dec: -42.99, mag: 1.86 },
+    { name: "Atria", ra: 252.17, dec: -69.03, mag: 1.91 },
+    { name: "Alhena", ra: 99.43, dec: 16.4, mag: 1.93 },
+    { name: "Peacock", ra: 306.41, dec: -56.74, mag: 1.94 },
+    { name: "Mirzam", ra: 95.67, dec: -17.96, mag: 1.98 },
+    { name: "Alphard", ra: 141.9, dec: -8.66, mag: 1.98 },
+    { name: "Hamal", ra: 31.79, dec: 23.46, mag: 2.0 },
+    { name: "Diphda", ra: 10.9, dec: -17.99, mag: 2.04 },
+    { name: "Nunki", ra: 283.82, dec: -26.3, mag: 2.05 },
+    { name: "Menkent", ra: 211.67, dec: -36.37, mag: 2.06 },
+    { name: "Saiph", ra: 86.94, dec: -9.67, mag: 2.07 },
+    { name: "Rasalhague", ra: 263.73, dec: 12.56, mag: 2.07 },
+    { name: "Alpheratz", ra: 2.1, dec: 29.09, mag: 2.07 },
+    { name: "Kochab", ra: 222.68, dec: 74.16, mag: 2.08 },
+    { name: "Mirach", ra: 17.43, dec: 35.62, mag: 2.06 },
+    { name: "Algol", ra: 47.04, dec: 40.96, mag: 2.12 },
+    { name: "Denebola", ra: 177.26, dec: 14.57, mag: 2.14 },
+    { name: "Sadr", ra: 305.56, dec: 40.26, mag: 2.23 },
+    { name: "Mintaka", ra: 83.0, dec: -0.3, mag: 2.23 },
+    { name: "Mizar", ra: 200.98, dec: 54.93, mag: 2.23 },
+    { name: "Schedar", ra: 10.13, dec: 56.54, mag: 2.24 },
+    { name: "Caph", ra: 2.29, dec: 59.15, mag: 2.28 },
+    { name: "Dschubba", ra: 240.08, dec: -22.62, mag: 2.29 },
+    { name: "Merak", ra: 165.46, dec: 56.38, mag: 2.37 },
+    { name: "Enif", ra: 333.37, dec: 9.96, mag: 2.39 },
+    { name: "Phecda", ra: 178.46, dec: 53.69, mag: 2.43 },
+    { name: "Scheat", ra: 345.94, dec: 28.08, mag: 2.44 },
+    { name: "Gienah", ra: 292.68, dec: 33.97, mag: 2.48 },
+    { name: "Markab", ra: 346.19, dec: 15.2, mag: 2.49 },
+    { name: "Menkar", ra: 45.57, dec: 4.09, mag: 2.54 },
+    { name: "Acrab", ra: 241.36, dec: -19.81, mag: 2.62 },
+    { name: "Ruchbah", ra: 21.45, dec: 60.24, mag: 2.68 },
+    { name: "Lesath", ra: 262.69, dec: -37.3, mag: 2.7 },
+    { name: "Algenib", ra: 3.31, dec: 15.18, mag: 2.83 },
+    { name: "Delta Cygni", ra: 296.24, dec: 45.13, mag: 2.87 },
+    { name: "Albireo", ra: 292.68, dec: 27.96, mag: 3.05 },
+    { name: "Megrez", ra: 183.86, dec: 57.03, mag: 3.32 },
+    { name: "Segin", ra: 28.6, dec: 63.67, mag: 3.35 }
+];
+
+const nakedEyeStars = [...brightStars, ...extendedNakedEyeStars];
+
 const deepSkyObjects = [
     { name: "M31 Andromeda Galaxy", ra: 10.6847, dec: 41.269, type: "galaxy" },
     { name: "M42 Orion Nebula", ra: 83.8221, dec: -5.3911, type: "nebula" },
@@ -1188,8 +1247,14 @@ function drawStarfieldOverlay(ctx, cx, cy, radius, skyContext, occupiedLabelBoxe
 
     const { date, latitude, longitude } = skyContext;
     const labelScale = getSkyLabelScale(ctx.canvas);
+    const logicalWidth = ctx.canvas.getBoundingClientRect().width || ctx.canvas.clientWidth || ctx.canvas.width;
+    const magnitudeLimit = logicalWidth >= 980 ? 5.1 : logicalWidth >= 720 ? 4.7 : 4.3;
 
-    for (const star of brightStars) {
+    for (const star of nakedEyeStars) {
+        if (star.mag > magnitudeLimit) {
+            continue;
+        }
+
         const horizontal = getHorizontalCoordinatesFromEquatorial(
             star.ra,
             star.dec,
@@ -1204,8 +1269,8 @@ function drawStarfieldOverlay(ctx, cx, cy, radius, skyContext, occupiedLabelBoxe
         }
 
         const point = projectToSky(horizontal.azimuthDegrees, horizontal.altitudeDegrees, cx, cy, radius);
-        const brightness = Math.max(0, Math.min(1, (2.2 - star.mag) / 3.8));
-        const dotRadius = 1 + brightness * 2.6;
+        const brightness = Math.max(0.08, Math.min(1, (magnitudeLimit - star.mag) / (magnitudeLimit + 1.2)));
+        const dotRadius = 0.85 + brightness * 2.4;
 
         ctx.beginPath();
         ctx.arc(point.x, point.y, dotRadius, 0, Math.PI * 2);
@@ -1215,7 +1280,7 @@ function drawStarfieldOverlay(ctx, cx, cy, radius, skyContext, occupiedLabelBoxe
         ctx.fill();
         ctx.shadowBlur = 0;
 
-        if (star.mag <= 0.2) {
+        if (star.mag <= 1.2) {
             reserveSkyMarkerSpace(occupiedLabelBoxes, point.x, point.y, 14);
             drawSkyLabel(ctx, star.name, point.x, point.y, occupiedLabelBoxes, {
                 fontSize: Math.round(10 * labelScale),
