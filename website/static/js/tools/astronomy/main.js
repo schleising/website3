@@ -1,9 +1,7 @@
 const sunriseApi = "/sun-times/";
-const satelliteTracksApi = "/satellite-tracks/";
 const synodicMonthDays = 29.53058867;
 const knownNewMoonUtcMs = Date.UTC(2000, 0, 6, 18, 14, 0);
 const astronomicalUnitLightTimeDays = 0.0057755183;
-const earthRadiusKm = 6378.137;
 
 const latitudeInput = document.getElementById("latitude");
 const longitudeInput = document.getElementById("longitude");
@@ -69,7 +67,6 @@ const skyCloseButton = document.getElementById("sky-close-button");
 const skyFullscreenCanvas = document.getElementById("sky-canvas-fullscreen");
 
 let latestVisiblePlanets = [];
-let latestSatellitePaths = [];
 let latestSkyContext = null;
 
 const fullscreenSkyViewState = {
@@ -95,42 +92,6 @@ const planetColors = {
     Uranus: "#9fe7e9",
     Neptune: "#95bcff"
 };
-
-const satelliteTracks = [
-    {
-        name: "ISS",
-        color: "#ffb866",
-        orbitAltitudeKm: 420,
-        inclination: 51.64,
-        raan: 257.4,
-        argumentOfPerigee: 0,
-        meanAnomaly0: 24,
-        periodMinutes: 92.68,
-        epochMs: Date.UTC(2026, 0, 1, 0, 0, 0)
-    },
-    {
-        name: "Tiangong",
-        color: "#7fe3ff",
-        orbitAltitudeKm: 390,
-        inclination: 41.5,
-        raan: 104.8,
-        argumentOfPerigee: 0,
-        meanAnomaly0: 278,
-        periodMinutes: 91.7,
-        epochMs: Date.UTC(2026, 0, 1, 0, 0, 0)
-    },
-    {
-        name: "Hubble",
-        color: "#bfa9ff",
-        orbitAltitudeKm: 535,
-        inclination: 28.47,
-        raan: 34.2,
-        argumentOfPerigee: 0,
-        meanAnomaly0: 132,
-        periodMinutes: 95.42,
-        epochMs: Date.UTC(2026, 0, 1, 0, 0, 0)
-    }
-];
 
 const constellations = [
     {
@@ -715,74 +676,6 @@ function drawSkyLabel(ctx, text, anchorX, anchorY, occupiedLabelBoxes, options =
     ctx.restore();
 }
 
-function getSatelliteHorizontalCoordinates(track, date, latitude, longitude) {
-    const elapsedMinutes = (date.getTime() - track.epochMs) / (60 * 1000);
-    const meanMotionDegreesPerMinute = 360 / track.periodMinutes;
-    const trueAnomaly = toRadians(normalizeDegrees(track.meanAnomaly0 + meanMotionDegreesPerMinute * elapsedMinutes));
-    const inclination = toRadians(track.inclination);
-    const raan = toRadians(normalizeDegrees(track.raan));
-    const argumentOfPerigee = toRadians(normalizeDegrees(track.argumentOfPerigee || 0));
-    const orbitalRadiusKm = earthRadiusKm + track.orbitAltitudeKm;
-
-    const xOrbital = orbitalRadiusKm * Math.cos(trueAnomaly);
-    const yOrbital = orbitalRadiusKm * Math.sin(trueAnomaly);
-
-    const cosRaan = Math.cos(raan);
-    const sinRaan = Math.sin(raan);
-    const cosInclination = Math.cos(inclination);
-    const sinInclination = Math.sin(inclination);
-    const cosArgPerigee = Math.cos(argumentOfPerigee);
-    const sinArgPerigee = Math.sin(argumentOfPerigee);
-
-    const xPerifocal = xOrbital * cosArgPerigee - yOrbital * sinArgPerigee;
-    const yPerifocal = xOrbital * sinArgPerigee + yOrbital * cosArgPerigee;
-
-    const xEci = xPerifocal * cosRaan - yPerifocal * sinRaan * cosInclination;
-    const yEci = xPerifocal * sinRaan + yPerifocal * cosRaan * cosInclination;
-    const zEci = yPerifocal * sinInclination;
-
-    const jd = toJulianDate(date);
-    const gmstRadians = toRadians(getGreenwichMeanSiderealTimeDegrees(jd));
-    const cosGmst = Math.cos(gmstRadians);
-    const sinGmst = Math.sin(gmstRadians);
-
-    const xEcef = xEci * cosGmst + yEci * sinGmst;
-    const yEcef = -xEci * sinGmst + yEci * cosGmst;
-    const zEcef = zEci;
-
-    const latitudeRadians = toRadians(latitude);
-    const longitudeRadians = toRadians(longitude);
-    const cosLatitude = Math.cos(latitudeRadians);
-    const sinLatitude = Math.sin(latitudeRadians);
-    const cosLongitude = Math.cos(longitudeRadians);
-    const sinLongitude = Math.sin(longitudeRadians);
-
-    const observerX = earthRadiusKm * cosLatitude * cosLongitude;
-    const observerY = earthRadiusKm * cosLatitude * sinLongitude;
-    const observerZ = earthRadiusKm * sinLatitude;
-
-    const relativeX = xEcef - observerX;
-    const relativeY = yEcef - observerY;
-    const relativeZ = zEcef - observerZ;
-
-    const east = -sinLongitude * relativeX + cosLongitude * relativeY;
-    const north = -sinLatitude * cosLongitude * relativeX
-        - sinLatitude * sinLongitude * relativeY
-        + cosLatitude * relativeZ;
-    const up = cosLatitude * cosLongitude * relativeX
-        + cosLatitude * sinLongitude * relativeY
-        + sinLatitude * relativeZ;
-
-    const horizontalDistance = Math.sqrt(east * east + north * north);
-    const altitudeDegrees = toDegrees(Math.atan2(up, horizontalDistance));
-    const azimuthDegrees = normalizeDegrees(toDegrees(Math.atan2(east, north)));
-
-    return {
-        altitudeDegrees,
-        azimuthDegrees
-    };
-}
-
 function getMoonEquatorialCoordinates(date) {
     const jd = toJulianDate(date);
     const d = jd - 2451543.5;
@@ -890,83 +783,6 @@ function getMoonHorizontalCoordinates(date, latitude, longitude) {
     };
 }
 
-function drawSatellitePaths(ctx, cx, cy, radius, skyContext, occupiedLabelBoxes = []) {
-    const paths = latestSatellitePaths;
-    const labelScale = getSkyLabelScale(ctx.canvas);
-
-    for (const path of paths) {
-        ctx.strokeStyle = path.color;
-        ctx.lineWidth = 1.6;
-        ctx.lineCap = "round";
-        ctx.lineJoin = "round";
-
-        for (const segment of path.segments) {
-            if (segment.length < 2) {
-                continue;
-            }
-
-            ctx.beginPath();
-            segment.forEach((sample, index) => {
-                const point = projectToSky(sample.azimuthDegrees, sample.altitudeDegrees, cx, cy, radius);
-                if (index === 0) {
-                    ctx.moveTo(point.x, point.y);
-                } else {
-                    ctx.lineTo(point.x, point.y);
-                }
-            });
-            ctx.stroke();
-
-            const labelIndex = Math.floor(segment.length / 2);
-            const labelSample = segment[labelIndex];
-            const labelPoint = projectToSky(labelSample.azimuthDegrees, labelSample.altitudeDegrees, cx, cy, radius);
-            drawSkyLabel(ctx, `${path.name} path`, labelPoint.x, labelPoint.y, occupiedLabelBoxes, {
-                fontSize: Math.round(11 * labelScale),
-                fillStyle: path.color,
-                preferBelow: true
-            });
-            break;
-        }
-
-        if (path.currentHorizontal == null) {
-            continue;
-        }
-
-        const nowPoint = projectToSky(path.currentHorizontal.azimuthDegrees, path.currentHorizontal.altitudeDegrees, cx, cy, radius);
-        reserveSkyMarkerSpace(occupiedLabelBoxes, nowPoint.x, nowPoint.y);
-        ctx.beginPath();
-        ctx.arc(nowPoint.x, nowPoint.y, 3.8, 0, Math.PI * 2);
-        ctx.fillStyle = path.color;
-        ctx.fill();
-        ctx.strokeStyle = "hsla(218, 34%, 14%, 0.9)";
-        ctx.lineWidth = 1;
-        ctx.stroke();
-
-        drawSkyLabel(ctx, path.name, nowPoint.x, nowPoint.y, occupiedLabelBoxes, {
-            fontSize: Math.round(11 * labelScale),
-            fillStyle: path.color,
-            preferBelow: true
-        });
-    }
-}
-
-async function updateSatelliteTracks(lat, lon) {
-    const requestUrl = `${satelliteTracksApi}?lat=${lat}&lon=${lon}`;
-
-    try {
-        const response = await fetch(requestUrl);
-        const payload = await response.json();
-
-        if (payload.status !== "OK") {
-            throw new Error("Satellite API did not return OK status");
-        }
-
-        latestSatellitePaths = Array.isArray(payload.satellites) ? payload.satellites : [];
-    } catch (error) {
-        latestSatellitePaths = [];
-        console.error(error);
-    }
-}
-
 function drawMoonPath(ctx, cx, cy, radius, skyContext, occupiedLabelBoxes = []) {
     if (skyContext == null) {
         return;
@@ -1040,9 +856,11 @@ function drawConstellationOverlay(ctx, cx, cy, radius, skyContext, occupiedLabel
 
     const { date, latitude, longitude } = skyContext;
     const labelScale = getSkyLabelScale(ctx.canvas);
-    ctx.strokeStyle = "hsla(204, 65%, 80%, 0.34)";
-    ctx.fillStyle = "hsla(204, 65%, 82%, 0.82)";
-    ctx.lineWidth = 1;
+    ctx.strokeStyle = "hsla(201, 78%, 84%, 0.52)";
+    ctx.fillStyle = "hsla(204, 88%, 90%, 0.94)";
+    ctx.lineWidth = labelScale > 1 ? 1.6 : 1.25;
+    ctx.shadowColor = "hsla(210, 88%, 78%, 0.16)";
+    ctx.shadowBlur = labelScale > 1 ? 8 : 4;
 
     for (const constellation of constellations) {
         const projectedStars = {};
@@ -1087,11 +905,13 @@ function drawConstellationOverlay(ctx, cx, cy, radius, skyContext, occupiedLabel
         if (labelAnchor != null) {
             drawSkyLabel(ctx, constellation.name, labelAnchor.x, labelAnchor.y, occupiedLabelBoxes, {
                 fontSize: Math.round(11 * labelScale),
-                fillStyle: "hsla(204, 65%, 82%, 0.82)",
+                fillStyle: "hsla(204, 88%, 90%, 0.94)",
                 preferBelow: true
             });
         }
     }
+
+    ctx.shadowBlur = 0;
 }
 
 function drawPolarisOverlay(ctx, cx, cy, radius, skyContext, occupiedLabelBoxes = []) {
@@ -1203,8 +1023,6 @@ function drawSkyDiagram(targetCanvas, visiblePlanets, skyContext = null) {
     drawConstellationOverlay(ctx, cx, cy, radius, skyContext, occupiedLabelBoxes);
     drawPolarisOverlay(ctx, cx, cy, radius, skyContext, occupiedLabelBoxes);
     drawMoonPath(ctx, cx, cy, radius, skyContext, occupiedLabelBoxes);
-    drawSatellitePaths(ctx, cx, cy, radius, skyContext, occupiedLabelBoxes);
-
     if (visiblePlanets.length === 0) {
         ctx.fillStyle = "hsla(210, 26%, 88%, 0.86)";
         ctx.font = `${Math.round(13 * labelScale)}px Outfit, sans-serif`;
@@ -1316,14 +1134,12 @@ async function updateSunTimes(lat, lon) {
         sunsetElement.innerText = formatLocalTime(result.sunset);
         civilBeginElement.innerText = formatLocalTime(result.civil_twilight_begin);
         civilEndElement.innerText = formatLocalTime(result.civil_twilight_end);
-        await updateSatelliteTracks(lat, lon);
         renderVisiblePlanets(result.civil_twilight_end, lat, lon);
         sunStatus.innerText = `Updated ${formatLocalTime(new Date().toISOString())}`;
     } catch (error) {
         planetWindowElement.innerText = "Window: --";
         planetListElement.innerHTML = "<li>Planet visibility unavailable.</li>";
         latestVisiblePlanets = [];
-        latestSatellitePaths = [];
         latestSkyContext = null;
         drawSkyDiagram(skyCanvas, []);
 
