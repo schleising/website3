@@ -1844,8 +1844,10 @@ function drawSkyArView(targetCanvas, skyContext = null) {
             const isBelowHorizonLabel = belowHorizonPointCount === labelPointCount;
 
             ctx.save();
-            ctx.globalAlpha = isBelowHorizonLabel ? 0.56 : 0.92;
-            ctx.fillStyle = "hsla(190, 100%, 92%, 0.98)";
+            ctx.globalAlpha = isBelowHorizonLabel ? 0.52 : 0.94;
+            ctx.fillStyle = isBelowHorizonLabel
+                ? "hsla(166, 74%, 62%, 0.9)"
+                : "hsla(166, 100%, 72%, 0.98)";
             ctx.font = "700 13px Outfit, sans-serif";
             ctx.textAlign = "center";
             ctx.textBaseline = "bottom";
