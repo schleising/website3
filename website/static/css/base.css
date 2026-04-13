@@ -57,8 +57,17 @@ body {
     display: flex;
     align-items: center;
     min-width: 0;
-    justify-content: center;
+    justify-content: flex-start;
     flex: 1 1 auto;
+    gap: 0.55rem;
+}
+
+.header-title-wrap > :first-child {
+    margin-right: auto;
+}
+
+.header-title-wrap > :not(:first-child) {
+    flex: 0 0 auto;
 }
 
 .header-mobile-action {
@@ -69,6 +78,14 @@ body {
 
 body.collapsed-sidebars .header-mobile-action {
     display: flex;
+}
+
+.header-mobile-action + .header-title-wrap {
+    margin-left: 0.45rem;
+}
+
+.header-title-wrap + .header-mobile-action {
+    margin-left: 0.45rem;
 }
 
 .left-mobile-action {

@@ -12,13 +12,13 @@
 }
 
 .header-data {
-    color: white;
-    background-color: hsl(219, 79%, 75%);
+    color: #f8fbff;
+    background-color: var(--brand);
 }
 
 .row-data {
-    color: black;
-    background-color: hsl(219, 79%, 98%);
+    color: var(--text);
+    background-color: #f7fbff;
 }
 
 .data {
@@ -35,7 +35,7 @@
 }
 
 .data-row:hover > .row-data {
-    background-color: hsl(219, 79%, 96%);
+    background-color: var(--surface-soft);
 }
 
 @media screen and (max-width: 75rem) {
