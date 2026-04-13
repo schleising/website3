@@ -696,10 +696,12 @@ function buildMilkyWayBandSamples(halfWidthDegrees = 11, sampleStepDegrees = 2) 
     for (let longitudeDegrees = 0; longitudeDegrees <= 360; longitudeDegrees += sampleStepDegrees) {
         const top = galacticToEquatorialCoordinates(longitudeDegrees, halfWidthDegrees);
         const bottom = galacticToEquatorialCoordinates(longitudeDegrees, -halfWidthDegrees);
+        const center = galacticToEquatorialCoordinates(longitudeDegrees, 0);
 
         samples.push({
             top,
-            bottom
+            bottom,
+            center
         });
     }
 
@@ -2192,7 +2194,48 @@ function drawSkyArView(targetCanvas, skyContext = null) {
         };
     };
 
-    const drawArMarker = (name, azimuthDegrees, altitudeDegrees, color, radius = 3.4) => {
+    const occupiedArLabelBoxes = [];
+    const reserveArLabelBox = (text, drawX, drawY, options = {}) => {
+        const {
+            fontSize = 11,
+            textAlign = "left",
+            padding = 2
+        } = options;
+
+        ctx.save();
+        ctx.font = `${fontSize}px Outfit, sans-serif`;
+        const textWidth = ctx.measureText(text).width;
+        ctx.restore();
+
+        const textHeight = fontSize * 1.2;
+        const boxX = textAlign === "center" ? drawX - textWidth / 2 - padding : drawX - padding;
+        const boxY = drawY - textHeight / 2 - padding;
+        const labelBox = {
+            x: boxX,
+            y: boxY,
+            width: textWidth + padding * 2,
+            height: textHeight + padding * 2
+        };
+
+        if (intersectsLabelBox(labelBox, occupiedArLabelBoxes)) {
+            return false;
+        }
+
+        occupiedArLabelBoxes.push(labelBox);
+        return true;
+    };
+
+    const drawArMarker = (name, azimuthDegrees, altitudeDegrees, color, radius = 3.4, options = {}) => {
+        const {
+            showLabel = true,
+            avoidLabelCollisions = false,
+            labelFontSize = 11,
+            labelColor = skyPalette.labelFill,
+            labelXOffset = 7,
+            labelYOffset = -1,
+            labelTextAlign = "left"
+        } = options;
+
         const point = projectArPoint(azimuthDegrees, altitudeDegrees);
         if (point == null) {
             return;
@@ -2210,11 +2253,27 @@ function drawSkyArView(targetCanvas, skyContext = null) {
         ctx.lineWidth = 1;
         ctx.stroke();
 
-        ctx.fillStyle = skyPalette.labelFill;
-        ctx.font = "11px Outfit, sans-serif";
-        ctx.textAlign = "left";
-        ctx.textBaseline = "middle";
-        ctx.fillText(name, point.x + 7, point.y - 1);
+        if (showLabel && typeof name === "string" && name.trim().length > 0) {
+            const labelX = point.x + labelXOffset;
+            const labelY = point.y + labelYOffset;
+            if (avoidLabelCollisions) {
+                reserveSkyMarkerSpace(occupiedArLabelBoxes, point.x, point.y, Math.max(8, radius + 5));
+            }
+
+            const canDrawLabel = !avoidLabelCollisions || reserveArLabelBox(name, labelX, labelY, {
+                fontSize: labelFontSize,
+                textAlign: labelTextAlign
+            });
+
+            if (canDrawLabel) {
+                ctx.fillStyle = labelColor;
+                ctx.font = `${labelFontSize}px Outfit, sans-serif`;
+                ctx.textAlign = labelTextAlign;
+                ctx.textBaseline = "middle";
+                ctx.fillText(name, labelX, labelY);
+            }
+        }
+
         ctx.restore();
     };
 
@@ -2333,32 +2392,64 @@ function drawSkyArView(targetCanvas, skyContext = null) {
                 longitude,
                 { precessFromJ2000: true }
             );
+            const centerSource = sample.center || sample.top;
+            const centerHorizontal = getHorizontalCoordinatesFromEquatorial(
+                centerSource.ra,
+                centerSource.dec,
+                date,
+                latitude,
+                longitude,
+                { precessFromJ2000: true }
+            );
 
             return {
                 top: projectArPoint(topHorizontal.azimuthDegrees, topHorizontal.altitudeDegrees),
                 bottom: projectArPoint(bottomHorizontal.azimuthDegrees, bottomHorizontal.altitudeDegrees),
-                averageAltitude: (topHorizontal.altitudeDegrees + bottomHorizontal.altitudeDegrees) / 2
+                center: projectArPoint(centerHorizontal.azimuthDegrees, centerHorizontal.altitudeDegrees),
+                centerAltitude: centerHorizontal.altitudeDegrees
             };
         });
 
         ctx.save();
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
         for (let sampleIndex = 0; sampleIndex < projectedBandSamples.length - 1; sampleIndex += 1) {
             const current = projectedBandSamples[sampleIndex];
             const next = projectedBandSamples[sampleIndex + 1];
-            if (current.top == null || current.bottom == null || next.top == null || next.bottom == null) {
+            if (current.center == null || next.center == null) {
                 continue;
             }
 
-            const segmentAverageAltitude = (current.averageAltitude + next.averageAltitude) / 2;
-            ctx.globalAlpha = segmentAverageAltitude < 0 ? 0.08 : 0.18;
-            ctx.fillStyle = "hsla(197, 64%, 84%, 0.92)";
+            const centerDistance = Math.hypot(next.center.x - current.center.x, next.center.y - current.center.y);
+            if (centerDistance > Math.min(width, height) * 0.34) {
+                continue;
+            }
+
+            const currentThickness = current.top != null && current.bottom != null
+                ? Math.hypot(current.top.x - current.bottom.x, current.top.y - current.bottom.y)
+                : height * 0.18;
+            const nextThickness = next.top != null && next.bottom != null
+                ? Math.hypot(next.top.x - next.bottom.x, next.top.y - next.bottom.y)
+                : height * 0.18;
+            const bandWidth = Math.max(16, Math.min(height * 0.4, (currentThickness + nextThickness) * 0.5));
+            const averageAltitude = (current.centerAltitude + next.centerAltitude) / 2;
+            const baseAlpha = averageAltitude < 0 ? 0.06 : 0.14;
+
+            ctx.globalAlpha = baseAlpha;
+            ctx.strokeStyle = "hsla(197, 64%, 84%, 0.92)";
+            ctx.lineWidth = bandWidth;
             ctx.beginPath();
-            ctx.moveTo(current.top.x, current.top.y);
-            ctx.lineTo(next.top.x, next.top.y);
-            ctx.lineTo(next.bottom.x, next.bottom.y);
-            ctx.lineTo(current.bottom.x, current.bottom.y);
-            ctx.closePath();
-            ctx.fill();
+            ctx.moveTo(current.center.x, current.center.y);
+            ctx.lineTo(next.center.x, next.center.y);
+            ctx.stroke();
+
+            ctx.globalAlpha = baseAlpha * 0.72;
+            ctx.strokeStyle = "hsla(208, 92%, 92%, 0.92)";
+            ctx.lineWidth = bandWidth * 0.34;
+            ctx.beginPath();
+            ctx.moveTo(current.center.x, current.center.y);
+            ctx.lineTo(next.center.x, next.center.y);
+            ctx.stroke();
         }
         ctx.restore();
     }
@@ -2421,6 +2512,13 @@ function drawSkyArView(targetCanvas, skyContext = null) {
             const labelX = labelXSum / labelPointCount;
             const labelY = labelYSum / labelPointCount;
             const isBelowHorizonLabel = belowHorizonPointCount === labelPointCount;
+            if (!reserveArLabelBox(constellation.name, labelX, labelY - 8, {
+                fontSize: 13,
+                textAlign: "center",
+                padding: 3
+            })) {
+                continue;
+            }
 
             ctx.save();
             ctx.globalAlpha = isBelowHorizonLabel ? 0.52 : 0.94;
@@ -2465,15 +2563,31 @@ function drawSkyArView(targetCanvas, skyContext = null) {
             planetName,
             horizontal.azimuthDegrees,
             horizontal.altitudeDegrees,
-            planetColors[planetName] || "#ffffff"
+            planetColors[planetName] || "#ffffff",
+            3.4,
+            { avoidLabelCollisions: true }
         );
     }
 
     const sunHorizontal = getSunHorizontalCoordinates(date, latitude, longitude);
-    drawArMarker("Sun", sunHorizontal.azimuthDegrees, sunHorizontal.altitudeDegrees, "hsl(45, 100%, 62%)", 4.1);
+    drawArMarker(
+        "Sun",
+        sunHorizontal.azimuthDegrees,
+        sunHorizontal.altitudeDegrees,
+        "hsl(45, 100%, 62%)",
+        4.1,
+        { avoidLabelCollisions: true }
+    );
 
     const moonHorizontal = getMoonHorizontalCoordinates(date, latitude, longitude);
-    drawArMarker("Moon", moonHorizontal.azimuthDegrees, moonHorizontal.altitudeDegrees, "#f7fbff", 4.1);
+    drawArMarker(
+        "Moon",
+        moonHorizontal.azimuthDegrees,
+        moonHorizontal.altitudeDegrees,
+        "#f7fbff",
+        4.1,
+        { avoidLabelCollisions: true }
+    );
 
     for (const star of activeStars) {
         const horizontal = getHorizontalCoordinatesFromEquatorial(
@@ -2487,12 +2601,18 @@ function drawSkyArView(targetCanvas, skyContext = null) {
 
         const starMagnitude = Number.isFinite(star.mag) ? star.mag : arCatalogConfig.maxStarMagnitude;
         const starRadius = Math.max(1.08, Math.min(3.2, 3.45 - Math.max(-1, Math.min(6, starMagnitude)) * 0.34));
+        const showStarLabel = starMagnitude <= 2.4;
         drawArMarker(
             typeof star.name === "string" && star.name.trim().length > 0 ? star.name : "Catalog Star",
             horizontal.azimuthDegrees,
             horizontal.altitudeDegrees,
             "hsla(44, 100%, 92%, 0.95)",
-            starRadius
+            starRadius,
+            {
+                showLabel: showStarLabel,
+                avoidLabelCollisions: true,
+                labelFontSize: 10
+            }
         );
     }
 
@@ -2507,12 +2627,20 @@ function drawSkyArView(targetCanvas, skyContext = null) {
         );
 
         const markerStyle = getDeepSkyMarkerStyle(target);
+        const targetName = typeof target.name === "string" ? target.name.trim() : "";
+        const targetMagnitude = Number.isFinite(target.mag) ? target.mag : Number.POSITIVE_INFINITY;
+        const showDeepSkyLabel = /^m\s*\d+/i.test(targetName) || targetMagnitude <= 6.4;
         drawArMarker(
-            typeof target.name === "string" && target.name.trim().length > 0 ? target.name : "Deep Sky Object",
+            targetName.length > 0 ? targetName : "Deep Sky Object",
             horizontal.azimuthDegrees,
             horizontal.altitudeDegrees,
             markerStyle.color,
-            markerStyle.radius
+            markerStyle.radius,
+            {
+                showLabel: showDeepSkyLabel,
+                avoidLabelCollisions: true,
+                labelFontSize: 10
+            }
         );
     }
 
