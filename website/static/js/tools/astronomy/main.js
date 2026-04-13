@@ -291,6 +291,8 @@ const planetaryElements = {
     Neptune: { N0: 131.7806, N1: 3.0173e-5, i0: 1.77, i1: -2.55e-7, w0: 272.8461, w1: -6.027e-6, a0: 30.05826, a1: 3.313e-8, e0: 0.008606, e1: 2.15e-9, M0: 260.2471, M1: 0.005995147 }
 };
 
+const allPlanetNames = Object.keys(planetaryElements);
+
 const earthElements = {
     N0: 0,
     N1: 0,
@@ -744,12 +746,45 @@ function projectToSky(azimuthDegrees, altitudeDegrees, cx, cy, radius) {
     };
 }
 
+function resizeCanvasToDisplaySize(targetCanvas, maxPixelSize = 2800) {
+    if (targetCanvas == null) {
+        return;
+    }
+
+    const rect = targetCanvas.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) {
+        return;
+    }
+
+    const devicePixelRatio = window.devicePixelRatio || 1;
+    const desiredWidth = Math.min(maxPixelSize, Math.round(rect.width * devicePixelRatio));
+    const desiredHeight = Math.min(maxPixelSize, Math.round(rect.height * devicePixelRatio));
+
+    if (targetCanvas.width !== desiredWidth || targetCanvas.height !== desiredHeight) {
+        targetCanvas.width = Math.max(1, desiredWidth);
+        targetCanvas.height = Math.max(1, desiredHeight);
+    }
+}
+
 function getSkyLabelScale(targetCanvas) {
     if (targetCanvas == null) {
         return 1;
     }
 
-    return targetCanvas.width >= 1000 ? 2.15 : 1;
+    const logicalWidth = targetCanvas.getBoundingClientRect().width || targetCanvas.clientWidth || targetCanvas.width;
+    if (logicalWidth >= 980) {
+        return 1.9;
+    }
+
+    if (logicalWidth >= 720) {
+        return 1.55;
+    }
+
+    if (logicalWidth >= 500) {
+        return 1.3;
+    }
+
+    return 1.18;
 }
 
 function intersectsLabelBox(labelBox, occupiedLabelBoxes) {
@@ -1239,20 +1274,27 @@ function drawSkyDiagram(targetCanvas, visiblePlanets, skyContext = null) {
         return;
     }
 
+    resizeCanvasToDisplaySize(targetCanvas);
+
     const ctx = targetCanvas.getContext("2d");
     if (ctx == null) {
         return;
     }
 
-    const width = targetCanvas.width;
-    const height = targetCanvas.height;
+    const canvasRect = targetCanvas.getBoundingClientRect();
+    const width = canvasRect.width || targetCanvas.clientWidth || targetCanvas.width;
+    const height = canvasRect.height || targetCanvas.clientHeight || targetCanvas.height;
+    const dpr = width > 0 ? targetCanvas.width / width : 1;
+
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, targetCanvas.width, targetCanvas.height);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
     const cx = width / 2;
     const cy = height / 2;
     const radius = Math.min(width, height) * 0.39;
     const labelScale = getSkyLabelScale(targetCanvas);
     const occupiedLabelBoxes = [];
-
-    ctx.clearRect(0, 0, width, height);
 
     const gradient = ctx.createRadialGradient(cx, cy * 0.75, radius * 0.15, cx, cy, radius * 1.15);
     gradient.addColorStop(0, "hsl(216, 58%, 20%)");
@@ -1337,11 +1379,19 @@ function renderVisiblePlanets(latitude, longitude) {
     planetWindowElement.innerText = `Snapshot: ${formatLocalTime(skySampleDate.toISOString())}`;
 
     const visiblePlanets = [];
+    const planetStatuses = [];
 
-    for (const planetName of Object.keys(planetaryElements)) {
+    for (const planetName of allPlanetNames) {
         const displayCoordinates = getPlanetHorizontalCoordinates(planetName, skySampleDate, latitude, longitude);
+        const isVisible = displayCoordinates.altitudeDegrees >= 0;
 
-        if (displayCoordinates.altitudeDegrees >= 0) {
+        planetStatuses.push({
+            planetName,
+            displayAltitude: displayCoordinates.altitudeDegrees,
+            isVisible
+        });
+
+        if (isVisible) {
             visiblePlanets.push({
                 planetName,
                 displayAltitude: displayCoordinates.altitudeDegrees,
@@ -1351,6 +1401,28 @@ function renderVisiblePlanets(latitude, longitude) {
     }
 
     planetListElement.innerHTML = "";
+
+    for (const status of planetStatuses) {
+        const item = document.createElement("li");
+        item.className = `planet-status-item ${status.isVisible ? "visible" : "not-visible"}`;
+        item.style.setProperty("--planet-color", planetColors[status.planetName] || "#dce9ff");
+
+        const nameSpan = document.createElement("span");
+        nameSpan.className = "planet-name";
+        nameSpan.innerText = status.planetName;
+
+        const stateSpan = document.createElement("span");
+        stateSpan.className = "planet-status";
+        if (status.isVisible) {
+            stateSpan.innerText = `Visible ${status.displayAltitude.toFixed(0)} deg`;
+        } else {
+            stateSpan.innerText = `Below horizon ${Math.abs(status.displayAltitude).toFixed(0)} deg`;
+        }
+
+        item.appendChild(nameSpan);
+        item.appendChild(stateSpan);
+        planetListElement.appendChild(item);
+    }
 
     latestVisiblePlanets = visiblePlanets;
     latestSkyContext = {
@@ -1362,9 +1434,6 @@ function renderVisiblePlanets(latitude, longitude) {
     };
 
     if (visiblePlanets.length === 0) {
-        const item = document.createElement("li");
-        item.innerText = "No major planets are currently above the horizon.";
-        planetListElement.appendChild(item);
         drawSkyDiagram(skyCanvas, [], latestSkyContext);
 
         if (skyFullscreenElement != null && !skyFullscreenElement.hidden) {
@@ -1375,12 +1444,6 @@ function renderVisiblePlanets(latitude, longitude) {
     }
 
     visiblePlanets.sort((a, b) => b.displayAltitude - a.displayAltitude);
-
-    for (const planet of visiblePlanets) {
-        const item = document.createElement("li");
-        item.innerText = `${planet.planetName}: ${planet.displayAltitude.toFixed(0)} degrees above horizon now`;
-        planetListElement.appendChild(item);
-    }
 
     drawSkyDiagram(skyCanvas, visiblePlanets, latestSkyContext);
 
@@ -2103,6 +2166,10 @@ async function initializePage() {
     initializeShareSkyCard();
     const locationController = initializeLocationButton();
     initializeFullscreenSkyInteractions();
+
+    window.addEventListener("resize", () => {
+        rerenderSkyForCurrentInputs();
+    });
 
     let usedCurrentLocation = false;
     if (locationController != null) {

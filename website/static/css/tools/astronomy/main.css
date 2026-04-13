@@ -342,13 +342,44 @@ body {
 
 .planet-list {
     margin: 0.45rem 0 0;
-    padding-left: 1.1rem;
+    padding: 0;
+    list-style: none;
     display: grid;
     gap: 0.22rem;
 }
 
-.planet-list li {
-    font-size: 0.9rem;
+.planet-status-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.55rem;
+    padding: 0.34rem 0.5rem;
+    border: 1px solid var(--line);
+    border-left: 4px solid var(--planet-color, hsla(210, 28%, 55%, 0.7));
+    border-radius: 0.52rem;
+    background: hsla(0, 0%, 100%, 0.56);
+    min-height: 1.95rem;
+}
+
+.planet-status-item.visible {
+    background: linear-gradient(90deg, hsla(0, 0%, 100%, 0.78), hsla(194, 50%, 92%, 0.42));
+}
+
+.planet-status-item.not-visible {
+    opacity: 0.58;
+    filter: saturate(0.38);
+}
+
+.planet-name {
+    font-size: 0.86rem;
+    font-weight: 700;
+    color: var(--planet-color, var(--text));
+}
+
+.planet-status {
+    font-size: 0.76rem;
+    font-weight: 700;
+    color: var(--muted);
 }
 
 .sky-diagram-wrap {
@@ -602,6 +633,14 @@ body.dark-mode .controls button {
 
 body.dark-mode .times div {
     background: hsla(214, 24%, 24%, 0.9);
+}
+
+body.dark-mode .planet-status-item {
+    background: hsla(214, 24%, 24%, 0.72);
+}
+
+body.dark-mode .planet-status-item.visible {
+    background: linear-gradient(90deg, hsla(214, 24%, 28%, 0.9), hsla(193, 44%, 28%, 0.56));
 }
 
 body.dark-mode .sky-diagram-hint {
