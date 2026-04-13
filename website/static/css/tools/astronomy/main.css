@@ -512,7 +512,7 @@ body {
 
 @media (max-width: 56rem) and (pointer: coarse) {
     .mobile-ar-only {
-        display: inline-flex;
+        display: inline-block;
     }
 }
 
