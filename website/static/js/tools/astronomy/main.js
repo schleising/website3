@@ -6,6 +6,11 @@ const astronomicalUnitLightTimeDays = 0.0057755183;
 const latitudeInput = document.getElementById("latitude");
 const longitudeInput = document.getElementById("longitude");
 const cityPicker = document.getElementById("city-picker");
+const cityPickerButton = document.getElementById("city-picker-button");
+const cityPickerButtonLabel = document.getElementById("city-picker-button-label");
+const cityPickerPopover = document.getElementById("city-picker-popover");
+const cityPickerListbox = document.getElementById("city-picker-listbox");
+const cityPickerOptions = Array.from(document.querySelectorAll(".city-picker-option[data-city-value]"));
 const refreshButton = document.getElementById("refresh-button");
 const locationButton = document.getElementById("location-button");
 const locationReadout = document.getElementById("location-readout");
@@ -1468,14 +1473,94 @@ function readCoordinatesFromInputs() {
 async function refreshFromInputs() {
     try {
         const { lat, lon } = readCoordinatesFromInputs();
-        if (cityPicker != null) {
-            cityPicker.value = "custom";
-        }
+        setCityPickerValue("custom");
         locationReadout.innerText = `Manual coordinates: ${lat.toFixed(4)}, ${lon.toFixed(4)}`;
         await updateSunTimes(lat, lon);
     } catch (error) {
         sunStatus.innerText = "Enter valid latitude and longitude values.";
     }
+}
+
+function findCityPickerOption(value) {
+    return cityPickerOptions.find(option => option.dataset.cityValue === value) || null;
+}
+
+function getCurrentCityPickerValue() {
+    return cityPickerButton?.dataset.value || "custom";
+}
+
+function setCityPickerValue(value) {
+    if (cityPickerButton == null || cityPickerButtonLabel == null) {
+        return;
+    }
+
+    const targetOption = findCityPickerOption(value) || findCityPickerOption("custom");
+    if (targetOption == null) {
+        return;
+    }
+
+    cityPickerButton.dataset.value = targetOption.dataset.cityValue || "custom";
+    cityPickerButtonLabel.innerText = targetOption.innerText;
+
+    for (const option of cityPickerOptions) {
+        option.setAttribute("aria-selected", option === targetOption ? "true" : "false");
+        option.tabIndex = option === targetOption ? 0 : -1;
+    }
+}
+
+function closeCityPicker({ restoreFocus = false } = {}) {
+    if (cityPickerPopover == null || cityPickerButton == null) {
+        return;
+    }
+
+    cityPickerPopover.hidden = true;
+    cityPickerButton.setAttribute("aria-expanded", "false");
+
+    if (restoreFocus) {
+        cityPickerButton.focus();
+    }
+}
+
+function openCityPicker({ focusSelected = false } = {}) {
+    if (cityPickerPopover == null || cityPickerButton == null) {
+        return;
+    }
+
+    cityPickerPopover.hidden = false;
+    cityPickerButton.setAttribute("aria-expanded", "true");
+
+    if (focusSelected) {
+        const selectedOption = findCityPickerOption(getCurrentCityPickerValue()) || cityPickerOptions[0];
+        selectedOption?.focus();
+    }
+}
+
+function moveCityPickerFocus(direction) {
+    if (cityPickerOptions.length === 0) {
+        return;
+    }
+
+    const activeElement = document.activeElement;
+    const currentIndex = cityPickerOptions.indexOf(activeElement);
+    const selectedIndex = cityPickerOptions.findIndex(option => option.dataset.cityValue === getCurrentCityPickerValue());
+    const baseIndex = currentIndex >= 0 ? currentIndex : Math.max(selectedIndex, 0);
+    const nextIndex = (baseIndex + direction + cityPickerOptions.length) % cityPickerOptions.length;
+
+    cityPickerOptions[nextIndex].focus();
+}
+
+async function handleCityPickerSelection(value) {
+    setCityPickerValue(value);
+    closeCityPicker();
+
+    if (value === "custom") {
+        locationReadout.innerText = "Using manual coordinates";
+        cityPickerButton?.focus();
+        return;
+    }
+
+    await applyCityPreset(value);
+    cityPickerButton?.focus();
 }
 
 async function applyCityPreset(presetKey) {
@@ -1484,6 +1569,7 @@ async function applyCityPreset(presetKey) {
         return;
     }
 
+    setCityPickerValue(presetKey);
     latitudeInput.value = preset.lat.toFixed(4);
     longitudeInput.value = preset.lon.toFixed(4);
     locationReadout.innerText = `Preset location: ${preset.label} (${preset.lat.toFixed(4)}, ${preset.lon.toFixed(4)})`;
@@ -1491,23 +1577,93 @@ async function applyCityPreset(presetKey) {
 }
 
 function initializeCityPicker() {
-    if (cityPicker == null) {
+    if (cityPicker == null || cityPickerButton == null || cityPickerPopover == null || cityPickerListbox == null) {
         return;
     }
 
-    cityPicker.addEventListener("change", async () => {
-        const selected = cityPicker.value;
-        if (selected === "custom") {
-            locationReadout.innerText = "Using manual coordinates";
+    setCityPickerValue(getCurrentCityPickerValue());
+
+    cityPickerButton.addEventListener("click", () => {
+        const isOpen = cityPickerButton.getAttribute("aria-expanded") === "true";
+        if (isOpen) {
+            closeCityPicker();
+        } else {
+            openCityPicker();
+        }
+    });
+
+    cityPickerButton.addEventListener("keydown", event => {
+        if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+            event.preventDefault();
+            openCityPicker({ focusSelected: true });
+            if (event.key === "ArrowUp") {
+                moveCityPickerFocus(-1);
+            }
+        }
+    });
+
+    cityPickerListbox.addEventListener("keydown", async event => {
+        if (event.key === "ArrowDown") {
+            event.preventDefault();
+            moveCityPickerFocus(1);
             return;
         }
 
-        await applyCityPreset(selected);
+        if (event.key === "ArrowUp") {
+            event.preventDefault();
+            moveCityPickerFocus(-1);
+            return;
+        }
+
+        if (event.key === "Home") {
+            event.preventDefault();
+            cityPickerOptions[0]?.focus();
+            return;
+        }
+
+        if (event.key === "End") {
+            event.preventDefault();
+            cityPickerOptions[cityPickerOptions.length - 1]?.focus();
+            return;
+        }
+
+        if (event.key === "Escape") {
+            event.preventDefault();
+            closeCityPicker({ restoreFocus: true });
+            return;
+        }
+
+        if ((event.key === "Enter" || event.key === " ") && event.target instanceof HTMLElement) {
+            event.preventDefault();
+            const selectedValue = event.target.dataset.cityValue;
+            if (selectedValue != null) {
+                await handleCityPickerSelection(selectedValue);
+            }
+        }
+    });
+
+    for (const option of cityPickerOptions) {
+        option.addEventListener("click", async () => {
+            const value = option.dataset.cityValue;
+            if (value != null) {
+                await handleCityPickerSelection(value);
+            }
+        });
+    }
+
+    document.addEventListener("click", event => {
+        if (!(event.target instanceof Node)) {
+            return;
+        }
+
+        if (!cityPicker.contains(event.target)) {
+            closeCityPicker();
+        }
     });
 
     const setCustomPickerState = () => {
-        if (cityPicker.value !== "custom") {
-            cityPicker.value = "custom";
+        if (getCurrentCityPickerValue() !== "custom") {
+            setCityPickerValue("custom");
         }
     };
 
@@ -1532,9 +1688,7 @@ function initializeLocationButton() {
 
                 latitudeInput.value = lat.toFixed(4);
                 longitudeInput.value = lon.toFixed(4);
-                if (cityPicker != null) {
-                    cityPicker.value = "custom";
-                }
+                setCityPickerValue("custom");
                 locationReadout.innerText = `Current location: ${lat.toFixed(4)}, ${lon.toFixed(4)}`;
 
                 await updateSunTimes(lat, lon);
@@ -1583,8 +1737,8 @@ function initializePage() {
     initializeLocationButton();
     initializeFullscreenSkyInteractions();
 
-    if (cityPicker != null && cityPicker.value !== "custom") {
-        applyCityPreset(cityPicker.value);
+    if (cityPickerButton != null && getCurrentCityPickerValue() !== "custom") {
+        applyCityPreset(getCurrentCityPickerValue());
     } else {
         refreshFromInputs();
     }
