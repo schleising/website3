@@ -169,7 +169,7 @@ p {
     color: var(--text);
 }
 
-@media screen and (min-width: 624px) {
+@media screen and (min-width: 39rem) {
     .bet-container {
         flex: 0 1 auto;
     }

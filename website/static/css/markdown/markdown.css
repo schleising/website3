@@ -65,7 +65,7 @@ textarea.markdown {
     height: 100%;
 }
 
-@media screen and (max-width: 40em) {
+@media screen and (max-width: 40rem) {
     #markdown-header {
         flex-direction: column;
         row-gap: 0.25rem;
