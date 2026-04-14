@@ -12,8 +12,9 @@
 
 {% block content %}
 {% set has_valid_pair = selected_team_a and selected_team_b and selected_team_a.id != selected_team_b.id %}
+{% set has_results = matches|length > 0 %}
 <div class="h2h-layout">
-  <section class="h2h-input-card site-card" id="h2h-input-card" data-auto-collapse="{% if has_valid_pair %}true{% else %}false{% endif %}">
+  <section class="h2h-input-card site-card" id="h2h-input-card" data-auto-collapse="{% if has_valid_pair and has_results %}true{% else %}false{% endif %}">
     <div
       class="h2h-input-header"
       id="h2h-input-toggle"
@@ -68,9 +69,16 @@
         </div>
         <button type="submit" class="btn btn-primary">Show Matches</button>
       </form>
+
+      {% if validation_message %}
+      <p class="h2h-message">{{ validation_message }}</p>
+      {% elif selected_team_a and selected_team_b and matches|length > 0 %}
+      <p class="h2h-message">Showing {{ matches|length }} matches between {{ selected_team_a.short_name }} and {{ selected_team_b.short_name }}.</p>
+      {% endif %}
     </div>
   </section>
 
+  {% if has_results %}
   <section class="h2h-results-card site-card">
     <h4>Results</h4>
     <div class="h2h-results-scroll">
@@ -108,16 +116,6 @@
         </div>
       </section>
       {% endif %}
-
-      {% if validation_message %}
-      <p class="h2h-message">{{ validation_message }}</p>
-      {% elif selected_team_a and selected_team_b %}
-      <p class="h2h-message">Showing {{ matches|length }} matches between {{ selected_team_a.short_name }} and {{ selected_team_b.short_name }}.</p>
-      {% else %}
-      <p class="h2h-message">Choose two teams above to view their head-to-head matches.</p>
-      {% endif %}
-
-      {% if matches|length > 0 %}
       <div class="football-grid h2h-grid">
         {% for match in matches %}
         {% set match_date = match.local_date if match.local_date else match.utc_date %}
@@ -161,8 +159,8 @@
         </article>
         {% endfor %}
       </div>
-      {% endif %}
     </div>
   </section>
+  {% endif %}
 </div>
 {% endblock %}
