@@ -1,13 +1,14 @@
 #aircraft_db_container {
-    margin: 0.25rem;
+    margin: 0;
     display: flex;
     flex-direction: column;
     flex: 1 1 auto;
+    gap: 0.5rem;
     overflow-y: auto;
 }
 
 #aircraft_controls {
-    margin: 0.25rem;
+    margin: 0;
     display: flex;
     flex-direction: row;
     flex: 0 0 auto;
@@ -60,7 +61,7 @@
 }
 
 #aircraft_output {
-    margin: 0.25rem;
+    margin: 0;
     flex: 1 1 auto;
     overflow: hidden;
     display: none;
@@ -80,7 +81,7 @@
 
 #aircraft_intro {
     position: relative;
-    margin: 0.25rem;
+    margin: 0;
     padding: 1rem;
 }
 
