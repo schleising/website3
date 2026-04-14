@@ -10,8 +10,9 @@ function initialiseInputCardToggle() {
     const inputCard = document.getElementById("h2h-input-card");
     const toggleButton = document.getElementById("h2h-input-toggle");
     const toggleIcon = document.getElementById("h2h-input-toggle-icon");
+    const contentElement = document.getElementById("h2h-input-content");
 
-    if (!inputCard || !toggleButton) {
+    if (!inputCard || !toggleButton || !contentElement) {
         return;
     }
 
@@ -20,6 +21,12 @@ function initialiseInputCardToggle() {
         toggleButton.setAttribute("aria-expanded", String(!isCollapsed));
         if (toggleIcon) {
             toggleIcon.textContent = isCollapsed ? "▼" : "▲";
+        }
+
+        if (isCollapsed) {
+            contentElement.style.maxHeight = "0px";
+        } else {
+            contentElement.style.maxHeight = contentElement.scrollHeight + "px";
         }
     };
 
@@ -43,6 +50,12 @@ function initialiseInputCardToggle() {
             });
         });
     }
+
+    window.addEventListener("resize", () => {
+        if (!inputCard.classList.contains("collapsed")) {
+            contentElement.style.maxHeight = contentElement.scrollHeight + "px";
+        }
+    });
 }
 
 function bindCrestPreview(selectId, crestId) {

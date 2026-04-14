@@ -1,7 +1,7 @@
 {% extends "football/football-base.html" %}
 
 {% block football_head %}
-<script defer src="/js/football/head_to_head.js?v1.0.4"></script>
+<script defer src="/js/football/head_to_head.js?v1.0.5"></script>
 {% endblock %}
 
 {% block title %}<title>Football - Head to Head</title>{% endblock %}
@@ -80,7 +80,7 @@
 
   {% if has_results %}
   <section class="h2h-results-card site-card">
-    <h4>Results</h4>
+    <h4 class="h2h-results-title">{{ selected_team_a.short_name }} vs {{ selected_team_b.short_name }}</h4>
     <div class="h2h-results-scroll">
       {% if summary and selected_team_a and selected_team_b and not validation_message %}
       <section class="h2h-summary-card site-card" aria-label="Head to head summary">

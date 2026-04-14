@@ -64,7 +64,6 @@
 .h2h-input-content {
     overflow: hidden;
     transition: max-height 180ms ease, opacity 140ms ease, margin-top 140ms ease;
-    max-height: 18rem;
     opacity: 1;
     margin-top: 0.35rem;
 }
@@ -87,6 +86,16 @@
 .h2h-results-card h4 {
     margin: 0;
     color: var(--brand-strong);
+}
+
+.h2h-results-title {
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: clamp(0.85rem, 2.2vw, 1.1rem);
+    line-height: 1.35rem;
+    min-height: 1.35rem;
 }
 
 .h2h-input-card p,
@@ -424,10 +433,6 @@
 
     .h2h-team-grid {
         grid-template-columns: 1fr;
-    }
-
-    .h2h-input-content {
-        max-height: 24rem;
     }
 
     .football-container {
