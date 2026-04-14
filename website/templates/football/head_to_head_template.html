@@ -41,7 +41,7 @@
                 alt="Team A crest preview"
               >
               <select id="team-a-select" name="team_a" required>
-                <option value="">Select Team A</option>
+                <option value="" disabled hidden {% if not selected_team_a %}selected{% endif %}>Select Team A</option>
                 {% for team in teams %}
                 <option value="{{ team.id }}" data-crest="{{ team.local_crest }}" {% if selected_team_a and selected_team_a.id == team.id %}selected{% endif %}>{{ team.short_name }}</option>
                 {% endfor %}
@@ -59,7 +59,7 @@
                 alt="Team B crest preview"
               >
               <select id="team-b-select" name="team_b" required>
-                <option value="">Select Team B</option>
+                <option value="" disabled hidden {% if not selected_team_b %}selected{% endif %}>Select Team B</option>
                 {% for team in teams %}
                 <option value="{{ team.id }}" data-crest="{{ team.local_crest }}" {% if selected_team_b and selected_team_b.id == team.id %}selected{% endif %}>{{ team.short_name }}</option>
                 {% endfor %}

@@ -151,6 +151,14 @@
     padding: 0.35rem 0.55rem;
 }
 
+.h2h-select-row select:invalid {
+    color: rgba(79, 95, 120, 0.65);
+}
+
+.h2h-select-row select option {
+    color: var(--text);
+}
+
 .h2h-select-row select:focus {
     outline: none;
     border-color: var(--brand-soft);
