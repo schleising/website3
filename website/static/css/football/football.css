@@ -110,6 +110,25 @@
     margin-top: 0.35rem;
 }
 
+.h2h-match-meta {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.12rem;
+}
+
+.h2h-season-pill {
+    border: 0.0625rem solid rgba(158, 184, 215, 0.9);
+    border-radius: 999rem;
+    background: rgba(255, 255, 255, 0.72);
+    color: var(--brand-strong);
+    font-size: 0.66rem;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: 0.01rem;
+    padding: 0.16rem 0.42rem;
+}
+
 .h2h-results-scroll {
     display: flex;
     flex-direction: column;

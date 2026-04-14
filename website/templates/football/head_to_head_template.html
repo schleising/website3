@@ -106,10 +106,21 @@
       {% if matches|length > 0 %}
       <div class="football-grid h2h-grid">
         {% for match in matches %}
+        {% set match_date = match.local_date if match.local_date else match.utc_date %}
+        {% if match_date.month >= 8 %}
+        {% set season_start_year = match_date.year %}
+        {% set season_end_year = match_date.year + 1 %}
+        {% else %}
+        {% set season_start_year = match_date.year - 1 %}
+        {% set season_end_year = match_date.year %}
+        {% endif %}
         <article class="score-widget site-card" id="{{ match.id }}">
           <div class="date-and-time">
-            <div class="match-start">{{ match.local_date.strftime('%a %d %b %Y %H:%M %Z') }}</div>
-            <div class="match-status">{{ match.status }}</div>
+            <div class="match-start">{{ match_date.strftime('%a %d %b %Y %H:%M %Z') }}</div>
+            <div class="h2h-match-meta">
+              <div class="h2h-season-pill">{{ season_start_year }}/{{ season_end_year }}</div>
+              <div class="match-status">{{ match.status }}</div>
+            </div>
           </div>
           <div class="team">
             <div class="team-and-badge">
