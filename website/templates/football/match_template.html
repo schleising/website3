@@ -62,9 +62,17 @@
 </div>
 {% else %}
 {% if live_matches %}
-<h3>No Live Matches Today</h3>
+<section class="football-empty-state" aria-live="polite">
+  <h3>No Matches Today</h3>
+  <p>There are no Premier League fixtures today.</p>
+  <div class="football-empty-state__meta">Use the side menu to view fixtures from other months.</div>
+</section>
 {% else %}
-<h3>No Matches for {{ title }}</h3>  
+<section class="football-empty-state" aria-live="polite">
+  <h3>No Matches for {{ title }}</h3>
+  <p>There are no scheduled fixtures for this period.</p>
+  <div class="football-empty-state__meta">Try another month from the side menu to view upcoming or past matches.</div>
+</section>
 {% endif %}
 {% endif %}
 {% endblock %}
