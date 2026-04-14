@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 
 {% block head %}
-<link rel="stylesheet" href="/css/index.css?v1.0.2">
+<link rel="stylesheet" href="/css/index.css?v1.0.3">
 {% endblock %}
 
 {% block header %}
@@ -13,7 +13,7 @@
 	<h3 class="home-cards-title">Quick Links</h3>
 	<div class="home-cards-grid">
 		<a class="home-card-link" href="/football/">
-			<article class="home-card">
+			<article class="home-card site-card">
 				<img class="home-card-image" src="/images/home/football.svg" alt="Football pitch illustration">
 				<h4>Football</h4>
 				<p>View live scores, tables, and match details.</p>
@@ -21,7 +21,7 @@
 		</a>
 
 		<a class="home-card-link" href="/aircraft/">
-			<article class="home-card">
+			<article class="home-card site-card">
 				<img class="home-card-image" src="/images/home/aircraft.svg" alt="Aircraft in sky illustration">
 				<h4>OpenSky Database</h4>
 				<p>Search and browse aircraft database records.</p>
@@ -29,7 +29,7 @@
 		</a>
 
 		<a class="home-card-link" href="/blog/">
-			<article class="home-card">
+			<article class="home-card site-card">
 				<img class="home-card-image" src="/images/home/blog.svg" alt="Blog document illustration">
 				<h4>Blog</h4>
 				<p>Read posts and updates.</p>
@@ -38,7 +38,7 @@
 
 		{% if request.state.user != None %}
 		<a class="home-card-link" href="/markdown/">
-			<article class="home-card">
+			<article class="home-card site-card">
 				<img class="home-card-image" src="/images/home/markdown.svg" alt="Markdown editor illustration">
 				<h4>Markdown Editor</h4>
 				<p>Create and edit markdown content.</p>
@@ -46,7 +46,7 @@
 		</a>
 		{% else %}
 		<a class="home-card-link" href="/account/login/">
-			<article class="home-card">
+			<article class="home-card site-card">
 				<img class="home-card-image" src="/images/home/login.svg" alt="Login form illustration">
 				<h4>Login</h4>
 				<p>Sign in to access member-only pages.</p>

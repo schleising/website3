@@ -14,7 +14,7 @@
 {% if matches|length > 0 %}
 <div class="football-grid">
 {% for match in matches %}
-  <div class="score-widget" id="{{ match.id }}">
+  <div class="score-widget site-card" id="{{ match.id }}">
     <div class="date-and-time">
       {% if  live_matches %}
       <div class="match-start">{{ match.local_date.strftime('%H:%M %Z') }}</div>
@@ -62,13 +62,13 @@
 </div>
 {% else %}
 {% if live_matches %}
-<section class="football-empty-state" aria-live="polite">
+<section class="football-empty-state site-card" aria-live="polite">
   <h3>No Matches Today</h3>
   <p>There are no Premier League fixtures today.</p>
   <div class="football-empty-state__meta">Use the side menu to view fixtures from other months.</div>
 </section>
 {% else %}
-<section class="football-empty-state" aria-live="polite">
+<section class="football-empty-state site-card" aria-live="polite">
   <h3>No Matches for {{ title }}</h3>
   <p>There are no scheduled fixtures for this period.</p>
   <div class="football-empty-state__meta">Try another month from the side menu to view upcoming or past matches.</div>

@@ -1,12 +1,12 @@
 {% extends "base.html" %}
 
 {% block head %}
-<link rel="stylesheet" href="/css/aircraft_db/aircraft_db.css?v1.2.5">
+<link rel="stylesheet" href="/css/aircraft_db/aircraft_db.css?v1.2.6">
 {% block title %}<title>Aircraft DB</title>{% endblock %}
 {% endblock %}
 
 {% block scripts %}
-<script defer src="/js/aircraft_db/aircraft_db.js?v1.2.0"></script>
+<script defer src="/js/aircraft_db/aircraft_db.js?v1.2.1"></script>
 {% endblock %}
 
 {% block header %}
@@ -15,7 +15,7 @@
 
 {% block content %}
 <div id="aircraft_db_container">
-  <div id="aircraft_controls">
+  <div id="aircraft_controls" class="site-card">
     <label for="input_tail_number" class="form_label">Enter Tail Number</label>
     <div class="search-controls">
       <input class="form_control" id="input_tail_number" list="tail-number-datalist">
@@ -24,7 +24,7 @@
       <button type="submit" class="btn btn-primary" id="search-button">Search</button>
     </div>
   </div>
-  <section id="aircraft_intro" aria-label="Aircraft search help">
+  <section id="aircraft_intro" class="site-card" aria-label="Aircraft search help">
     <h4>Find Aircraft Details</h4>
     <p>Search by tail number to see a full record from OpenSky, including operator, model, registration, engine data, and transponder capabilities.</p>
     <p class="aircraft_intro_tip">Try formats like <strong>G-ANAF</strong>, <strong>N123AB</strong>, or <strong>D-ABCD</strong>.</p>

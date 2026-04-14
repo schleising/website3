@@ -138,7 +138,7 @@ function parseAircraftData(jsn) {
 
 function createAircraftCard(dataset, fields) {
     const cardElement = document.createElement("article");
-    cardElement.className = "aircraft-result-card";
+    cardElement.className = "aircraft-result-card site-card";
 
     const headingElement = document.createElement("h4");
     headingElement.className = "aircraft-result-title";

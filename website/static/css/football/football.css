@@ -6,33 +6,25 @@
 }
 
 .score-widget {
+    --site-card-shadow: 0 0.45rem 0.95rem rgba(26, 46, 75, 0.1);
     display: flex;
     flex-direction: column;
     padding: 0.25rem;
-    border: 0.0625rem solid var(--line);
-    border-top: 0.2rem solid rgba(77, 123, 177, 0.72);
-    border-radius: 0.75rem;
-    background: linear-gradient(145deg, #fbfdff 0%, #edf5ff 62%, #e4efff 100%);
-    box-shadow: 0 0.45rem 0.95rem rgba(26, 46, 75, 0.1);
     user-select: none;
 }
 
 .score-widget:hover {
-    background: linear-gradient(145deg, #fcfdff 0%, #f1f7ff 62%, #e8f1ff 100%);
+    --site-card-bg: linear-gradient(145deg, #fcfdff 0%, #f1f7ff 62%, #e8f1ff 100%);
 }
 
 .football-empty-state {
+    --site-card-shadow: 0 0.55rem 1.1rem rgba(26, 46, 75, 0.1);
     margin: 0.25rem auto;
     width: min(42rem, 100%);
     display: flex;
     flex-direction: column;
     gap: 0.65rem;
     padding: 1.05rem 1.15rem;
-    border: 0.0625rem solid var(--line);
-    border-top: 0.2rem solid rgba(77, 123, 177, 0.72);
-    border-radius: 0.75rem;
-    background: linear-gradient(145deg, #fbfdff 0%, #edf5ff 62%, #e4efff 100%);
-    box-shadow: 0 0.55rem 1.1rem rgba(26, 46, 75, 0.1);
 }
 
 .football-empty-state h3 {
