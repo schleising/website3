@@ -18,12 +18,12 @@
     --filename-popup-bg: hsla(216, 26%, 15%, 0.96);
     --filename-popup-border: hsla(214, 28%, 34%, 0.22);
     --filename-popup-text: hsl(0, 0%, 100%);
-    --filename-popup-shadow: 0 10px 22px hsla(216, 45%, 16%, 0.35);
+    --filename-popup-shadow: 0 0.625rem 1.375rem hsla(216, 45%, 16%, 0.35);
     --stats-value-font-size: 0.92rem;
     --stats-value-font-weight: 700;
     --stats-value-line-height: 1.2;
-    --shadow-soft: 0 8px 24px hsla(208, 35%, 18%, 0.08);
-    --shadow-panel: 0 14px 42px hsla(208, 32%, 18%, 0.11);
+    --shadow-soft: 0 0.5rem 1.5rem hsla(208, 35%, 18%, 0.08);
+    --shadow-panel: 0 0.875rem 2.625rem hsla(208, 32%, 18%, 0.11);
 }
 
 html,
@@ -95,7 +95,7 @@ body::after {
     margin: 0;
     font-family: "Space Grotesk", "Outfit", sans-serif;
     font-size: clamp(1.45rem, 3.1vw, 2rem);
-    letter-spacing: -0.02em;
+    letter-spacing: -0.02rem;
     line-height: 1.1;
 }
 
@@ -108,7 +108,7 @@ body::after {
 #subscribe-button,
 .header-actions #theme-toggle-button,
 .retry-button {
-    border: 1px solid var(--line);
+    border: 0.0625rem solid var(--line);
     border-radius: 0.85rem;
     background: linear-gradient(180deg, var(--panel-strong), var(--panel));
     color: var(--text-main);
@@ -120,8 +120,8 @@ body::after {
 
 #subscribe-button:hover,
 .retry-button:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 12px 24px hsla(212, 50%, 24%, 0.14);
+    transform: translateY(-0.0625rem);
+    box-shadow: 0 0.75rem 1.5rem hsla(212, 50%, 24%, 0.14);
     border-color: hsla(203, 86%, 46%, 0.38);
 }
 
@@ -151,13 +151,13 @@ body::after {
     justify-content: center;
     width: 3.85rem;
     height: 2.18rem;
-    border-radius: 999px;
+    border-radius: 62.4375rem;
     cursor: pointer;
 }
 
 .theme-switch:focus-visible {
-    outline: 2px solid hsla(203, 86%, 46%, 0.58);
-    outline-offset: 2px;
+    outline: 0.125rem solid hsla(203, 86%, 46%, 0.58);
+    outline-offset: 0.125rem;
 }
 
 .theme-switch-track {
@@ -165,8 +165,8 @@ body::after {
     display: inline-flex;
     width: 100%;
     height: 100%;
-    border: 1px solid hsla(214, 28%, 34%, 0.2);
-    border-radius: 999px;
+    border: 0.0625rem solid hsla(214, 28%, 34%, 0.2);
+    border-radius: 62.4375rem;
     background: linear-gradient(180deg, hsla(0, 0%, 100%, 0.98), hsla(194, 66%, 92%, 0.9));
     box-shadow: var(--shadow-soft);
     overflow: hidden;
@@ -201,9 +201,9 @@ body::after {
     left: 0.12rem;
     width: 1.94rem;
     height: 1.94rem;
-    border-radius: 999px;
+    border-radius: 62.4375rem;
     background: linear-gradient(180deg, hsl(0, 0%, 100%), hsl(191, 64%, 92%));
-    box-shadow: 0 3px 8px hsla(216, 36%, 16%, 0.22);
+    box-shadow: 0 0.1875rem 0.5rem hsla(216, 36%, 16%, 0.22);
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -234,10 +234,10 @@ body::after {
 }
 
 .container-border {
-    border: 1px solid var(--line);
+    border: 0.0625rem solid var(--line);
     border-radius: 0.85rem;
     box-shadow: var(--shadow-panel);
-    backdrop-filter: blur(5px);
+    backdrop-filter: blur(0.3125rem);
 }
 
 .progress-area,
@@ -264,7 +264,7 @@ body::after {
 }
 
 .conversion-button {
-    border: 1px solid transparent;
+    border: 0.0625rem solid transparent;
     border-radius: 0.58rem;
     padding: 0.24rem 0.5rem;
     white-space: nowrap;
@@ -300,13 +300,13 @@ body::after {
     margin: 0;
     font-size: 1.28rem;
     line-height: 1.1;
-    letter-spacing: -0.01em;
+    letter-spacing: -0.01rem;
 }
 
 .data-header-right {
     justify-self: end;
     padding: 0.12rem 0.5rem;
-    border-radius: 999px;
+    border-radius: 62.4375rem;
     background: var(--accent-soft);
     color: var(--accent-strong);
     font-weight: 700;
@@ -317,7 +317,7 @@ body::after {
     align-items: flex-end;
     gap: 0.3rem;
     width: 100%;
-    margin: 0 0 -1px;
+    margin: 0 0 -0.0625rem;
     padding: 0.16rem 0.66rem 0;
     border-bottom: 0;
     background: transparent;
@@ -325,7 +325,7 @@ body::after {
 
 .files-view-button {
     flex: 0 0 auto;
-    border: 1px solid hsla(214, 28%, 34%, 0.22);
+    border: 0.0625rem solid hsla(214, 28%, 34%, 0.22);
     border-bottom: 0;
     border-top-left-radius: 0.72rem;
     border-top-right-radius: 0.72rem;
@@ -336,7 +336,7 @@ body::after {
     font-weight: 600;
     color: var(--text-subtle);
     background: hsla(0, 0%, 100%, 0.68);
-    transform: translateY(1px);
+    transform: translateY(0.0625rem);
 }
 
 .files-view-button.active {
@@ -376,7 +376,7 @@ body::after {
 .current-filename-row {
     width: 100%;
     min-width: 0;
-    border: 1px solid hsla(214, 28%, 34%, 0.14);
+    border: 0.0625rem solid hsla(214, 28%, 34%, 0.14);
     border-radius: 0.58rem;
     padding: 0.42rem 0.5rem;
     background: linear-gradient(168deg, hsla(0, 0%, 100%, 0.88), hsla(205, 85%, 97%, 0.85));
@@ -403,7 +403,7 @@ body::after {
 
 .current-metric-card {
     min-width: 0;
-    border: 1px solid hsla(214, 28%, 34%, 0.14);
+    border: 0.0625rem solid hsla(214, 28%, 34%, 0.14);
     border-radius: 0.58rem;
     padding: 0.34rem 0.42rem;
     background: linear-gradient(168deg, hsla(0, 0%, 100%, 0.9), hsla(194, 72%, 96%, 0.84));
@@ -411,9 +411,9 @@ body::after {
 }
 
 .current-metric-card:hover {
-    transform: translateY(-1px);
+    transform: translateY(-0.0625rem);
     border-color: hsla(203, 86%, 46%, 0.28);
-    box-shadow: 0 8px 16px hsla(216, 45%, 20%, 0.12);
+    box-shadow: 0 0.5rem 1rem hsla(216, 45%, 20%, 0.12);
 }
 
 .current-metric-label {
@@ -434,7 +434,7 @@ body::after {
 }
 
 .current-empty-state {
-    border: 1px dashed var(--current-empty-border);
+    border: 0.0625rem dashed var(--current-empty-border);
     border-radius: 0.58rem;
     padding: 0.5rem 0.6rem;
     font-size: 0.88rem;
@@ -457,7 +457,7 @@ body::after {
     align-items: flex-start;
     gap: 0.16rem;
     min-width: 0;
-    border: 1px solid hsla(214, 28%, 34%, 0.14);
+    border: 0.0625rem solid hsla(214, 28%, 34%, 0.14);
     border-radius: 0.58rem;
     padding: 0.34rem 0.42rem;
     background: linear-gradient(168deg, hsla(0, 0%, 100%, 0.9), hsla(194, 72%, 96%, 0.84));
@@ -465,9 +465,9 @@ body::after {
 }
 
 #statistics .key-value-wrapper:hover {
-    transform: translateY(-1px);
+    transform: translateY(-0.0625rem);
     border-color: hsla(203, 86%, 46%, 0.28);
-    box-shadow: 0 8px 16px hsla(216, 45%, 20%, 0.12);
+    box-shadow: 0 0.5rem 1rem hsla(216, 45%, 20%, 0.12);
 }
 
 #statistics .data-key {
@@ -503,7 +503,7 @@ body::after {
     gap: 0.5rem;
     width: 100%;
     min-width: 0;
-    border: 1px solid hsla(7, 72%, 45%, 0.24);
+    border: 0.0625rem solid hsla(7, 72%, 45%, 0.24);
     border-radius: 0.58rem;
     padding: 0.36rem 0.46rem;
     background: linear-gradient(168deg, hsla(7, 84%, 97%, 0.94), hsla(33, 100%, 97%, 0.9));
@@ -601,7 +601,7 @@ body::after {
 }
 
 .converted-file-card {
-    border: 1px solid var(--line);
+    border: 0.0625rem solid var(--line);
     border-radius: 0.72rem;
     padding: 0.45rem;
     background: linear-gradient(168deg, hsl(0, 0%, 100%), hsla(193, 66%, 95%, 0.9));
@@ -611,8 +611,8 @@ body::after {
 }
 
 .converted-file-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 16px 28px hsla(214, 47%, 18%, 0.14);
+    transform: translateY(-0.125rem);
+    box-shadow: 0 1rem 1.75rem hsla(214, 47%, 18%, 0.14);
     border-color: hsla(203, 86%, 46%, 0.35);
 }
 
@@ -632,11 +632,11 @@ body::after {
 
 .prediction-confidence-badge {
     padding: 0.1rem 0.38rem;
-    border-radius: 999px;
+    border-radius: 62.4375rem;
     font-size: 0.66rem;
     font-weight: 700;
-    letter-spacing: 0.01em;
-    border: 1px solid transparent;
+    letter-spacing: 0.01rem;
+    border: 0.0625rem solid transparent;
 }
 
 .prediction-confidence-high {
@@ -675,9 +675,9 @@ body.dark-mode {
     --filename-popup-bg: hsla(214, 30%, 12%, 0.98);
     --filename-popup-border: hsla(206, 32%, 74%, 0.24);
     --filename-popup-text: hsl(210, 20%, 96%);
-    --filename-popup-shadow: 0 10px 22px hsla(214, 44%, 5%, 0.45);
-    --shadow-soft: 0 8px 24px hsla(214, 36%, 6%, 0.3);
-    --shadow-panel: 0 14px 42px hsla(214, 36%, 5%, 0.38);
+    --filename-popup-shadow: 0 0.625rem 1.375rem hsla(214, 44%, 5%, 0.45);
+    --shadow-soft: 0 0.5rem 1.5rem hsla(214, 36%, 6%, 0.3);
+    --shadow-panel: 0 0.875rem 2.625rem hsla(214, 36%, 5%, 0.38);
 }
 
 html.dark-mode {
@@ -772,7 +772,7 @@ body.dark-mode .theme-switch-thumb-moon {
     min-width: 0;
     font-size: 0.84rem;
     line-height: 1.2;
-    letter-spacing: -0.01em;
+    letter-spacing: -0.01rem;
     color: var(--text-main);
     display: -webkit-box;
     line-clamp: 2;
@@ -785,7 +785,7 @@ body.dark-mode .theme-switch-thumb-moon {
 .converted-file-badge {
     flex-shrink: 0;
     padding: 0.1rem 0.4rem;
-    border-radius: 999px;
+    border-radius: 62.4375rem;
     background: var(--ok-soft);
     color: var(--ok-strong);
     font-size: 0.72rem;
@@ -799,7 +799,7 @@ body.dark-mode .theme-switch-thumb-moon {
     margin-top: 0.28rem;
     padding-top: 0.26rem;
     padding-left: 0.08rem;
-    border-top: 1px dashed hsla(214, 28%, 34%, 0.2);
+    border-top: 0.0625rem dashed hsla(214, 28%, 34%, 0.2);
 }
 
 .to-convert-file-details {
@@ -814,7 +814,7 @@ body.dark-mode .theme-switch-thumb-moon {
     gap: 0.08rem;
     min-width: 0;
     border-radius: 0.4rem;
-    border: 1px solid hsla(214, 28%, 34%, 0.12);
+    border: 0.0625rem solid hsla(214, 28%, 34%, 0.12);
     padding: 0.34rem 0.24rem 0.34rem 0.34rem;
     min-height: 2.62rem;
     background: linear-gradient(180deg, hsla(0, 0%, 100%, 0.78), hsla(193, 56%, 96%, 0.6));
@@ -824,7 +824,7 @@ body.dark-mode .theme-switch-thumb-moon {
     color: var(--text-subtle);
     font-size: 0.7rem;
     font-weight: 600;
-    letter-spacing: 0.01em;
+    letter-spacing: 0.01rem;
     line-height: 1.1;
 }
 
@@ -849,23 +849,23 @@ body.dark-mode .theme-switch-thumb-moon {
     width: 100%;
     height: 0.62rem;
     border: 0;
-    border-radius: 999px;
+    border-radius: 62.4375rem;
     overflow: hidden;
 }
 
 #file-progress::-webkit-progress-bar {
     background-color: hsl(198, 24%, 88%);
-    border-radius: 999px;
+    border-radius: 62.4375rem;
 }
 
 #file-progress::-webkit-progress-value {
     background: linear-gradient(90deg, hsl(197, 84%, 53%), hsl(191, 78%, 41%));
-    border-radius: 999px;
+    border-radius: 62.4375rem;
 }
 
 #file-progress::-moz-progress-bar {
     background: linear-gradient(90deg, hsl(197, 84%, 53%), hsl(191, 78%, 41%));
-    border-radius: 999px;
+    border-radius: 62.4375rem;
 }
 
 .filename {
@@ -899,7 +899,7 @@ body.dark-mode .theme-switch-thumb-moon {
     width: max-content;
     padding: 0.36rem 0.5rem;
     border-radius: 0.45rem;
-    border: 1px solid var(--filename-popup-border);
+    border: 0.0625rem solid var(--filename-popup-border);
     background: var(--filename-popup-bg);
     color: var(--filename-popup-text);
     font-size: 0.78rem;

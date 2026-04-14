@@ -58,14 +58,14 @@ body {
     height: 1.86rem;
     border: 0;
     background: transparent;
-    border-radius: 999px;
+    border-radius: 62.4375rem;
     cursor: pointer;
     padding: 0;
 }
 
 .theme-switch:focus-visible {
-    outline: 2px solid hsla(18, 86%, 62%, 0.56);
-    outline-offset: 2px;
+    outline: 0.125rem solid hsla(18, 86%, 62%, 0.56);
+    outline-offset: 0.125rem;
 }
 
 .theme-switch-track {
@@ -73,10 +73,10 @@ body {
     display: inline-flex;
     width: 100%;
     height: 100%;
-    border: 1px solid hsla(14, 44%, 62%, 0.28);
-    border-radius: 999px;
+    border: 0.0625rem solid hsla(14, 44%, 62%, 0.28);
+    border-radius: 62.4375rem;
     background: linear-gradient(180deg, hsla(4, 38%, 20%, 0.98), hsla(3, 36%, 15%, 0.92));
-    box-shadow: 0 10px 28px hsla(3, 44%, 6%, 0.36);
+    box-shadow: 0 0.625rem 1.75rem hsla(3, 44%, 6%, 0.36);
     overflow: hidden;
 }
 
@@ -108,9 +108,9 @@ body {
     left: 0.11rem;
     width: 1.62rem;
     height: 1.62rem;
-    border-radius: 999px;
+    border-radius: 62.4375rem;
     background: linear-gradient(180deg, hsl(20, 72%, 64%), hsl(14, 68%, 44%));
-    box-shadow: 0 3px 8px hsla(3, 58%, 6%, 0.42);
+    box-shadow: 0 0.1875rem 0.5rem hsla(3, 58%, 6%, 0.42);
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -136,10 +136,10 @@ body {
 
 .card {
     background: var(--panel);
-    border: 1px solid var(--line);
+    border: 0.0625rem solid var(--line);
     border-radius: 0.9rem;
     padding: 0.8rem;
-    box-shadow: 0 12px 28px hsla(2, 48%, 5%, 0.3);
+    box-shadow: 0 0.75rem 1.75rem hsla(2, 48%, 5%, 0.3);
 }
 
 .controls {
@@ -164,7 +164,7 @@ body {
 .controls button {
     height: 2.2rem;
     border-radius: 0.65rem;
-    border: 1px solid var(--line);
+    border: 0.0625rem solid var(--line);
     font: inherit;
 }
 
@@ -199,14 +199,14 @@ body {
     padding: 0 0.72rem;
     border-color: hsla(18, 86%, 62%, 0.32);
     background: linear-gradient(180deg, hsla(8, 38%, 22%, 0.98), hsla(5, 36%, 16%, 0.94));
-    box-shadow: 0 6px 16px hsla(2, 54%, 6%, 0.32);
+    box-shadow: 0 0.375rem 1rem hsla(2, 54%, 6%, 0.32);
     color: var(--text);
     font-weight: 600;
 }
 
 .city-picker-button:focus-visible {
-    outline: 2px solid hsla(18, 86%, 62%, 0.62);
-    outline-offset: 2px;
+    outline: 0.125rem solid hsla(18, 86%, 62%, 0.62);
+    outline-offset: 0.125rem;
 }
 
 .city-picker-chevron {
@@ -235,16 +235,16 @@ body {
     max-height: 18rem;
     overflow-y: auto;
     padding: 0.38rem;
-    border: 1px solid hsla(18, 86%, 62%, 0.24);
+    border: 0.0625rem solid hsla(18, 86%, 62%, 0.24);
     border-radius: 0.82rem;
     background: hsla(6, 34%, 14%, 0.97);
-    box-shadow: 0 18px 36px hsla(2, 54%, 5%, 0.42);
-    backdrop-filter: blur(10px);
+    box-shadow: 0 1.125rem 2.25rem hsla(2, 54%, 5%, 0.42);
+    backdrop-filter: blur(0.625rem);
 }
 
 .city-picker-listbox:focus-visible {
-    outline: 2px solid hsla(18, 86%, 62%, 0.62);
-    outline-offset: 2px;
+    outline: 0.125rem solid hsla(18, 86%, 62%, 0.62);
+    outline-offset: 0.125rem;
 }
 
 .city-picker-option {
@@ -276,7 +276,7 @@ body {
 }
 
 .city-picker-option-custom {
-    border-top: 1px dashed hsla(18, 46%, 68%, 0.24);
+    border-top: 0.0625rem dashed hsla(18, 46%, 68%, 0.24);
     margin-top: 0.12rem;
     padding-top: 0.72rem;
 }
@@ -306,7 +306,7 @@ body {
     display: flex;
     justify-content: space-between;
     gap: 1rem;
-    border: 1px solid var(--line);
+    border: 0.0625rem solid var(--line);
     border-radius: 0.65rem;
     padding: 0.4rem 0.55rem;
     background: hsla(6, 30%, 18%, 0.82);
@@ -334,7 +334,7 @@ body {
 .planet-visibility {
     margin-top: 0.7rem;
     padding-top: 0.55rem;
-    border-top: 1px dashed var(--line);
+    border-top: 0.0625rem dashed var(--line);
 }
 
 .planet-visibility h3 {
@@ -356,8 +356,8 @@ body {
     justify-content: space-between;
     gap: 0.55rem;
     padding: 0.34rem 0.5rem;
-    border: 1px solid var(--line);
-    border-left: 4px solid var(--planet-color, hsla(210, 28%, 55%, 0.7));
+    border: 0.0625rem solid var(--line);
+    border-left: 0.25rem solid var(--planet-color, hsla(210, 28%, 55%, 0.7));
     border-radius: 0.52rem;
     background: hsla(6, 30%, 18%, 0.7);
     min-height: 1.95rem;
@@ -395,7 +395,7 @@ body {
 .time-travel-controls {
     margin-top: 0.65rem;
     padding: 0.55rem;
-    border: 1px solid var(--line);
+    border: 0.0625rem solid var(--line);
     border-radius: 0.75rem;
     background: hsla(6, 30%, 18%, 0.82);
 }
@@ -435,7 +435,7 @@ body {
 .time-travel-actions button {
     min-height: 2rem;
     border-radius: 0.58rem;
-    border: 1px solid hsla(18, 86%, 62%, 0.28);
+    border: 0.0625rem solid hsla(18, 86%, 62%, 0.28);
     background: linear-gradient(160deg, hsla(8, 40%, 24%, 0.98), hsla(5, 44%, 18%, 0.94));
     color: var(--text);
     font: inherit;
@@ -455,14 +455,14 @@ body {
     right: 0.7rem;
     z-index: 1;
     padding: 0.28rem 0.5rem;
-    border: 1px solid hsla(208, 38%, 84%, 0.24);
-    border-radius: 999px;
+    border: 0.0625rem solid hsla(208, 38%, 84%, 0.24);
+    border-radius: 62.4375rem;
     background: hsla(222, 36%, 12%, 0.62);
     color: hsla(0, 0%, 100%, 0.9);
     font-size: 0.7rem;
     font-weight: 700;
-    letter-spacing: 0.02em;
-    backdrop-filter: blur(6px);
+    letter-spacing: 0.02rem;
+    backdrop-filter: blur(0.375rem);
     pointer-events: none;
 }
 
@@ -472,7 +472,7 @@ body {
     height: auto;
     aspect-ratio: 1 / 1;
     border-radius: 0.9rem;
-    border: 1px solid var(--line);
+    border: 0.0625rem solid var(--line);
     background: linear-gradient(180deg, hsl(220, 42%, 14%), hsl(231, 52%, 8%));
     cursor: zoom-in;
 }
@@ -497,7 +497,7 @@ body {
     gap: 0.5rem;
     padding: 0.7rem 0.9rem;
     color: hsl(0, 0%, 96%);
-    border-bottom: 1px solid hsla(214, 32%, 78%, 0.22);
+    border-bottom: 0.0625rem solid hsla(214, 32%, 78%, 0.22);
 }
 
 .sky-fullscreen-toolbar-actions {
@@ -526,14 +526,14 @@ body {
 .sky-fullscreen-toolbar button {
     height: 2rem;
     border-radius: 0.6rem;
-    border: 1px solid hsla(210, 34%, 78%, 0.28);
+    border: 0.0625rem solid hsla(210, 34%, 78%, 0.28);
     background: linear-gradient(180deg, hsla(205, 36%, 92%, 0.18), hsla(205, 36%, 92%, 0.08));
     color: hsla(0, 0%, 98%, 0.94);
     padding: 0 0.8rem;
     font: inherit;
     font-weight: 600;
     cursor: pointer;
-    backdrop-filter: blur(4px);
+    backdrop-filter: blur(0.25rem);
     transition: border-color 150ms ease, background 150ms ease, transform 140ms ease;
 }
 
@@ -543,12 +543,12 @@ body {
 }
 
 .sky-fullscreen-toolbar button:active {
-    transform: translateY(1px);
+    transform: translateY(0.0625rem);
 }
 
 .sky-fullscreen-toolbar button:focus-visible {
-    outline: 2px solid hsla(191, 82%, 62%, 0.72);
-    outline-offset: 2px;
+    outline: 0.125rem solid hsla(191, 82%, 62%, 0.72);
+    outline-offset: 0.125rem;
 }
 
 .sky-fullscreen-stage {
@@ -570,10 +570,10 @@ body {
 
 .sky-fullscreen-panel {
     pointer-events: auto;
-    border: 1px solid hsla(208, 34%, 76%, 0.16);
+    border: 0.0625rem solid hsla(208, 34%, 76%, 0.16);
     border-radius: 0.75rem;
     background: hsla(218, 30%, 12%, 0.36);
-    backdrop-filter: blur(8px);
+    backdrop-filter: blur(0.5rem);
     color: hsl(0, 0%, 96%);
     padding: 0.5rem;
 }
@@ -615,8 +615,8 @@ body {
 .sky-fullscreen-indicators .planet-status-item {
     min-height: auto;
     padding: 0.18rem 0.45rem;
-    border-left-width: 3px;
-    border-radius: 999px;
+    border-left-width: 0.1875rem;
+    border-radius: 62.4375rem;
     background: hsla(215, 26%, 22%, 0.22);
 }
 
@@ -678,10 +678,10 @@ body {
 }
 
 #sky-canvas-fullscreen {
-    width: min(92vmin, 1200px);
-    height: min(92vmin, 1200px);
+    width: min(92vmin, 75rem);
+    height: min(92vmin, 75rem);
     border-radius: 0.95rem;
-    border: 1px solid hsla(212, 35%, 72%, 0.22);
+    border: 0.0625rem solid hsla(212, 35%, 72%, 0.22);
     background: linear-gradient(180deg, hsl(220, 42%, 14%), hsl(231, 52%, 8%));
     transform-origin: center center;
     will-change: transform;
@@ -709,9 +709,9 @@ body {
 #moon-canvas {
     width: min(13rem, 70vw);
     height: min(13rem, 70vw);
-    border-radius: 999px;
+    border-radius: 62.4375rem;
     background: radial-gradient(circle at 35% 30%, hsl(225, 30%, 14%), hsl(231, 36%, 8%));
-    border: 1px solid hsla(212, 35%, 72%, 0.22);
+    border: 0.0625rem solid hsla(212, 35%, 72%, 0.22);
 }
 
 .moon-name {
@@ -725,7 +725,7 @@ body {
     margin-top: 0.62rem;
     width: min(20rem, 100%);
     padding: 0.55rem;
-    border: 1px solid var(--line);
+    border: 0.0625rem solid var(--line);
     border-radius: 0.75rem;
     background: hsla(6, 30%, 18%, 0.82);
 }
@@ -775,7 +775,7 @@ body.dark-mode .controls input {
 body.dark-mode .city-picker-button {
     border-color: hsla(193, 72%, 56%, 0.44);
     background: linear-gradient(180deg, hsla(214, 24%, 30%, 0.96), hsla(198, 32%, 22%, 0.92));
-    box-shadow: 0 8px 18px hsla(214, 42%, 6%, 0.3);
+    box-shadow: 0 0.5rem 1.125rem hsla(214, 42%, 6%, 0.3);
 }
 
 body.dark-mode .city-picker-chevron {
@@ -785,7 +785,7 @@ body.dark-mode .city-picker-chevron {
 body.dark-mode .city-picker-listbox {
     border-color: hsla(193, 72%, 56%, 0.28);
     background: hsla(214, 26%, 16%, 0.96);
-    box-shadow: 0 18px 36px hsla(214, 42%, 5%, 0.38);
+    box-shadow: 0 1.125rem 2.25rem hsla(214, 42%, 5%, 0.38);
 }
 
 body.dark-mode .city-picker-option {
@@ -987,7 +987,7 @@ body.dark-mode .sky-ar-status {
         height: 2.75rem;
         border-radius: 0.82rem;
         font-size: 0.98rem;
-        box-shadow: 0 10px 20px hsla(208, 36%, 18%, 0.14);
+        box-shadow: 0 0.625rem 1.25rem hsla(208, 36%, 18%, 0.14);
     }
 
     .city-picker-chevron {

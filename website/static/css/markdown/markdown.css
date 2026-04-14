@@ -75,7 +75,7 @@ textarea.markdown {
 pre, .rst-content tt {
     max-width: 100%;
     background: #f8f8f8;
-    border: solid 1px #e1e4e5;
+    border: solid 0.0625rem #e1e4e5;
     color: #333;
     overflow-x: auto;
 }
@@ -85,9 +85,9 @@ code.code-large, .rst-content tt.code-large {
 }
 
 code {
-    padding: 2px 5px;
+    padding: 0.125rem 0.3125rem;
     background: #fff;
-    border: solid 1px #e1e4e5;
+    border: solid 0.0625rem #e1e4e5;
     color: #333;
     white-space: pre-wrap;
     word-wrap: break-word;
@@ -100,7 +100,7 @@ pre code {
     white-space: pre;
     word-wrap: normal;
     font-family: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-    font-size: 12px;
+    font-size: 0.75rem;
 }
 
 a code {
@@ -112,10 +112,10 @@ a:hover code, a:focus code {
 }
 
 .admonition, details {
-    padding: 15px;
-    margin-bottom: 20px;
-    border: 1px solid transparent;
-    border-radius: 4px;
+    padding: 0.9375rem;
+    margin-bottom: 1.25rem;
+    border: 0.0625rem solid transparent;
+    border-radius: 0.25rem;
     text-align: left;
 }
 

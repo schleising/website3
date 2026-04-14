@@ -32,8 +32,8 @@
 }
 
 .log-area {
-    padding: 0rem 0.5rem 0.25rem;
-    margin-bottom: 0rem;
+    padding: 0 0.5rem 0.25rem;
+    margin-bottom: 0;
     flex: 1 1 auto;
     overflow-y: scroll;
 }
@@ -61,10 +61,10 @@
 }
 
 .grid-header {
-    padding: 0.25rem 0rem;
+    padding: 0.25rem 0;
     background-color: hsl(219, 79%, 90%);
     position: sticky;
-    top: 0rem;
+    top: 0;
 }
 
 button {

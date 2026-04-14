@@ -16,7 +16,7 @@ body {
 .bet-container {
     flex: 1;
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(18.75rem, 1fr));
     gap: 0.5rem;
 }
 
@@ -31,7 +31,7 @@ body {
     display: flex;
     flex-direction: column;
     justify-content: space-evenly;
-    margin: 0rem;
+    margin: 0;
     padding: 0.25rem;
     border: 0.075rem;
     border-style: solid;
@@ -151,8 +151,8 @@ p {
 }
 
 .spacer {
-    height: 1px;
-    border-bottom: 1px solid var(--line);
+    height: 0.0625rem;
+    border-bottom: 0.0625rem solid var(--line);
     margin: 0.15rem 0;
 }
 

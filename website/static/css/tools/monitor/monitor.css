@@ -16,7 +16,7 @@
     --warn-text: hsl(8, 66%, 32%);
     --chart-grid: hsla(211, 26%, 26%, 0.2);
     --chart-text: hsla(214, 20%, 36%, 0.95);
-    --shadow-soft: 0 10px 28px hsla(212, 34%, 16%, 0.1);
+    --shadow-soft: 0 0.625rem 1.75rem hsla(212, 34%, 16%, 0.1);
 }
 
 html,
@@ -68,7 +68,7 @@ body {
     font-family: "Space Grotesk", "Outfit", sans-serif;
     font-size: clamp(1.5rem, 2.6vw, 2.2rem);
     line-height: 1.08;
-    letter-spacing: -0.02em;
+    letter-spacing: -0.02rem;
 }
 
 .subtitle {
@@ -85,14 +85,14 @@ body {
     height: 1.86rem;
     border: 0;
     background: transparent;
-    border-radius: 999px;
+    border-radius: 62.4375rem;
     cursor: pointer;
     padding: 0;
 }
 
 .theme-switch:focus-visible {
-    outline: 2px solid hsla(191, 82%, 44%, 0.56);
-    outline-offset: 2px;
+    outline: 0.125rem solid hsla(191, 82%, 44%, 0.56);
+    outline-offset: 0.125rem;
 }
 
 .theme-switch-track {
@@ -100,8 +100,8 @@ body {
     display: inline-flex;
     width: 100%;
     height: 100%;
-    border: 1px solid hsla(214, 28%, 34%, 0.2);
-    border-radius: 999px;
+    border: 0.0625rem solid hsla(214, 28%, 34%, 0.2);
+    border-radius: 62.4375rem;
     background: linear-gradient(180deg, hsla(0, 0%, 100%, 0.98), hsla(194, 66%, 92%, 0.9));
     box-shadow: var(--shadow-soft);
     overflow: hidden;
@@ -135,9 +135,9 @@ body {
     left: 0.11rem;
     width: 1.62rem;
     height: 1.62rem;
-    border-radius: 999px;
+    border-radius: 62.4375rem;
     background: linear-gradient(180deg, hsl(0, 0%, 100%), hsl(191, 64%, 92%));
-    box-shadow: 0 3px 8px hsla(216, 36%, 16%, 0.22);
+    box-shadow: 0 0.1875rem 0.5rem hsla(216, 36%, 16%, 0.22);
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -170,7 +170,7 @@ body {
 .data-container {
     display: flex;
     width: 100%;
-    border: 1px solid var(--line);
+    border: 0.0625rem solid var(--line);
     border-radius: 0.92rem;
     background: linear-gradient(165deg, var(--panel-strong), var(--panel));
     box-shadow: var(--shadow-soft);
@@ -179,8 +179,8 @@ body {
 }
 
 .data-container:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 16px 30px hsla(213, 46%, 16%, 0.13);
+    transform: translateY(-0.125rem);
+    box-shadow: 0 1rem 1.875rem hsla(213, 46%, 16%, 0.13);
     border-color: hsla(191, 74%, 40%, 0.34);
 }
 
@@ -204,7 +204,7 @@ p.monitor-title {
     color: var(--text-subtle);
     font-size: 0.72rem;
     font-weight: 700;
-    letter-spacing: 0.02em;
+    letter-spacing: 0.02rem;
     text-transform: uppercase;
 }
 
@@ -226,16 +226,16 @@ p.monitor-data.status-online {
 
 p.monitor-data.status-online {
     background: var(--ok-soft);
-    border: 1px solid hsla(147, 42%, 34%, 0.24);
-    border-radius: 999px;
+    border: 0.0625rem solid hsla(147, 42%, 34%, 0.24);
+    border-radius: 62.4375rem;
     padding: 0.06rem 0.5rem;
 }
 
 p.monitor-data.status-offline {
     color: var(--warn-text);
     background: var(--warn-soft);
-    border: 1px solid hsla(8, 56%, 40%, 0.24);
-    border-radius: 999px;
+    border: 0.0625rem solid hsla(8, 56%, 40%, 0.24);
+    border-radius: 62.4375rem;
     padding: 0.06rem 0.5rem;
 }
 
@@ -248,7 +248,7 @@ p.monitor-data.status-offline {
     grid-column: 1 / -1;
     margin-top: 0.2rem;
     padding-top: 0.4rem;
-    border-top: 1px dashed hsla(211, 26%, 28%, 0.2);
+    border-top: 0.0625rem dashed hsla(211, 26%, 28%, 0.2);
 }
 
 .chart-svg {
@@ -298,7 +298,7 @@ p.monitor-data.status-offline {
         --warn-text: hsl(8, 84%, 84%);
         --chart-grid: hsla(211, 34%, 82%, 0.23);
         --chart-text: hsla(209, 30%, 86%, 0.95);
-        --shadow-soft: 0 10px 28px hsla(214, 40%, 5%, 0.32);
+        --shadow-soft: 0 0.625rem 1.75rem hsla(214, 40%, 5%, 0.32);
     }
 
     .chart-svg {
@@ -322,7 +322,7 @@ body.light-mode {
     --warn-text: hsl(8, 66%, 32%);
     --chart-grid: hsla(211, 26%, 26%, 0.2);
     --chart-text: hsla(214, 20%, 36%, 0.95);
-    --shadow-soft: 0 10px 28px hsla(212, 34%, 16%, 0.1);
+    --shadow-soft: 0 0.625rem 1.75rem hsla(212, 34%, 16%, 0.1);
 }
 
 html.dark-mode {
@@ -345,7 +345,7 @@ body.dark-mode {
     --warn-text: hsl(8, 84%, 84%);
     --chart-grid: hsla(211, 34%, 82%, 0.23);
     --chart-text: hsla(209, 30%, 86%, 0.95);
-    --shadow-soft: 0 10px 28px hsla(214, 40%, 5%, 0.32);
+    --shadow-soft: 0 0.625rem 1.75rem hsla(214, 40%, 5%, 0.32);
 }
 
 body.dark-mode .chart-svg {

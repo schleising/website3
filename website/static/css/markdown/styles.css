@@ -1,11 +1,11 @@
 pre { line-height: 125%; }
-td.linenos .normal { color: inherit; background-color: transparent; padding-left: 5px; padding-right: 5px; }
-span.linenos { color: inherit; background-color: transparent; padding-left: 5px; padding-right: 5px; }
-td.linenos .special { color: #000000; background-color: #ffffc0; padding-left: 5px; padding-right: 5px; }
-span.linenos.special { color: #000000; background-color: #ffffc0; padding-left: 5px; padding-right: 5px; }
+td.linenos .normal { color: inherit; background-color: transparent; padding-left: 0.3125rem; padding-right: 0.3125rem; }
+span.linenos { color: inherit; background-color: transparent; padding-left: 0.3125rem; padding-right: 0.3125rem; }
+td.linenos .special { color: #000000; background-color: #ffffc0; padding-left: 0.3125rem; padding-right: 0.3125rem; }
+span.linenos.special { color: #000000; background-color: #ffffc0; padding-left: 0.3125rem; padding-right: 0.3125rem; }
 .hll { background-color: #ffffcc }
 .c { color: #3D7B7B; font-style: italic } /* Comment */
-.err { border: 1px solid #FF0000 } /* Error */
+.err { border: 0.0625rem solid #FF0000 } /* Error */
 .k { color: #008000; font-weight: bold } /* Keyword */
 .o { color: #666666 } /* Operator */
 .ch { color: #3D7B7B; font-style: italic } /* Comment.Hashbang */

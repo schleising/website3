@@ -25,11 +25,11 @@
     flex-direction: column;
     gap: 0.65rem;
     height: 100%;
-    border: 1px solid var(--line);
+    border: 0.0625rem solid var(--line);
     border-radius: 0.7rem;
     padding: 1rem;
     background: linear-gradient(180deg, var(--surface) 0%, var(--surface-soft) 100%);
-    box-shadow: 0 6px 16px rgba(26, 46, 75, 0.1);
+    box-shadow: 0 0.375rem 1rem rgba(26, 46, 75, 0.1);
     transition: transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease;
 }
 
@@ -38,14 +38,14 @@
     aspect-ratio: 16 / 9;
     border-radius: 0.52rem;
     object-fit: cover;
-    border: 1px solid var(--line);
+    border: 0.0625rem solid var(--line);
     background: var(--surface-soft);
 }
 
 .home-card-link:hover .home-card,
 .home-card-link:focus-visible .home-card {
-    transform: translateY(-2px);
-    box-shadow: 0 10px 24px rgba(26, 46, 75, 0.18);
+    transform: translateY(-0.125rem);
+    box-shadow: 0 0.625rem 1.5rem rgba(26, 46, 75, 0.18);
     border-color: var(--brand);
 }
 
