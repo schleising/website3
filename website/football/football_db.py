@@ -1,13 +1,43 @@
 from datetime import UTC, datetime
 import logging
+import re
 
 from pymongo import ASCENDING, DESCENDING
 from pymongo.errors import DuplicateKeyError
+from motor.motor_asyncio import AsyncIOMotorCollection
 
 from ..database.database import get_data_by_date
 
-from . import pl_matches, pl_table, football_push
+from . import pl_matches, pl_table, football_push, mongodb
 from .models import Match, LiveTableItem, Team
+
+
+SEASON_MATCH_COLLECTION_PATTERN = re.compile(r"^pl_matches_\d{4}_\d{4}$")
+
+
+async def _get_match_collections(include_all_seasons: bool = False) -> list[AsyncIOMotorCollection]:
+    if not include_all_seasons:
+        return [pl_matches] if pl_matches is not None else []
+
+    collections: list[AsyncIOMotorCollection] = []
+
+    if mongodb.current_db is None:
+        return [pl_matches] if pl_matches is not None else []
+
+    collection_names = await mongodb.current_db.list_collection_names()
+
+    for collection_name in sorted(collection_names):
+        if SEASON_MATCH_COLLECTION_PATTERN.match(collection_name) is None:
+            continue
+
+        collection = mongodb.get_collection(collection_name)
+        if collection is not None:
+            collections.append(collection)
+
+    if len(collections) == 0 and pl_matches is not None:
+        collections.append(pl_matches)
+
+    return collections
 
 
 async def retreive_matches(date_from: datetime, date_to: datetime) -> list[Match]:
@@ -85,25 +115,31 @@ async def retreive_head_to_head_matches_by_id(
 ) -> list[Match]:
     matches: list[Match] = []
 
-    if pl_matches is not None:
-        from_db_cursor = pl_matches.find(
-            {
-                "$or": [
-                    {
-                        "home_team.id": team_a_id,
-                        "away_team.id": team_b_id,
-                    },
-                    {
-                        "home_team.id": team_b_id,
-                        "away_team.id": team_a_id,
-                    },
-                ]
-            }
-        ).sort("utc_date", DESCENDING)
+    match_collections = await _get_match_collections(include_all_seasons=True)
 
-        matches = [Match.model_validate(item) async for item in from_db_cursor]
-    else:
+    if len(match_collections) == 0:
         logging.error("No DB connection")
+        return matches
+
+    query = {
+        "$or": [
+            {
+                "home_team.id": team_a_id,
+                "away_team.id": team_b_id,
+            },
+            {
+                "home_team.id": team_b_id,
+                "away_team.id": team_a_id,
+            },
+        ]
+    }
+
+    for collection in match_collections:
+        from_db_cursor = collection.find(query).sort("utc_date", DESCENDING)
+        collection_matches = [Match.model_validate(item) async for item in from_db_cursor]
+        matches.extend(collection_matches)
+
+    matches.sort(key=lambda match: match.utc_date, reverse=True)
 
     return matches
 
@@ -111,8 +147,14 @@ async def retreive_head_to_head_matches_by_id(
 async def retreive_all_teams() -> list[Team]:
     teams_by_id: dict[int, Team] = {}
 
-    if pl_matches is not None:
-        from_db_cursor = pl_matches.find({}, {"home_team": 1, "away_team": 1, "_id": 0})
+    match_collections = await _get_match_collections(include_all_seasons=True)
+
+    if len(match_collections) == 0:
+        logging.error("No DB connection")
+        return []
+
+    for collection in match_collections:
+        from_db_cursor = collection.find({}, {"home_team": 1, "away_team": 1, "_id": 0})
 
         async for item in from_db_cursor:
             for field_name in ["home_team", "away_team"]:
@@ -121,8 +163,6 @@ async def retreive_all_teams() -> list[Team]:
                 if isinstance(team_dict, dict):
                     team = Team.model_validate(team_dict)
                     teams_by_id[team.id] = team
-    else:
-        logging.error("No DB connection")
 
     return sorted(teams_by_id.values(), key=lambda team: str(team.short_name).lower())
 
