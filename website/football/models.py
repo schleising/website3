@@ -136,7 +136,7 @@ class Competition(BaseModel):
 class Team(BaseModel):
     id: int
     name: str
-    short_name: ShortName = Field(..., alias="shortName")
+    short_name: str = Field(..., alias="shortName")
     tla: str
     crest: str
 
