@@ -133,6 +133,9 @@ body.collapsed-sidebars .header-mobile-action {
     border: 0.0625rem solid rgba(244, 250, 255, 0.55);
     background: rgba(255, 255, 255, 0.2);
     color: #f8fbff;
+    padding: 0.25rem 0.65rem;
+    font-size: 0.95rem;
+    line-height: 1.2;
 }
 
 .header-title-wrap button:hover,
