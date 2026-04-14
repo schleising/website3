@@ -4,6 +4,72 @@ var ws;
 // Variable which will contain the websocket url
 var url;
 
+const FIELD_ORDER = [
+    "registration",
+    "icao24",
+    "manufacturerIcao",
+    "manufacturerName",
+    "country",
+    "model",
+    "typecode",
+    "serialNumber",
+    "lineNumber",
+    "icaoAircraftClass",
+    "operator",
+    "operatorCallsign",
+    "operatorIcao",
+    "operatorIata",
+    "owner",
+    "registered",
+    "regUntil",
+    "status",
+    "built",
+    "firstFlightDate",
+    "firstSeen",
+    "engines",
+    "modes",
+    "adsb",
+    "acars",
+    "categoryDescription",
+    "prevReg",
+    "nextReg",
+    "selCal",
+    "vdl"
+];
+
+const FIELD_LABELS = {
+    registration: "Tail Number",
+    icao24: "Mode S",
+    manufacturerIcao: "Manufacturer ICAO",
+    manufacturerName: "Manufacturer Name",
+    country: "Country",
+    model: "Model",
+    typecode: "Type Code",
+    serialNumber: "Serial Number",
+    lineNumber: "Line Number",
+    icaoAircraftClass: "ICAO Aircraft Class",
+    operator: "Operator",
+    operatorCallsign: "Operator Call Sign",
+    operatorIcao: "Operator ICAO",
+    operatorIata: "Operator IATA",
+    owner: "Owner",
+    registered: "Registered On",
+    regUntil: "Registered Until",
+    status: "Status",
+    built: "Built On",
+    firstFlightDate: "First Flight Date",
+    firstSeen: "First Seen",
+    engines: "Engines",
+    modes: "Modes",
+    adsb: "ADSB",
+    acars: "ACARS",
+    categoryDescription: "Category Description",
+    prevReg: "Previous Registration",
+    nextReg: "Next Registration",
+    selCal: "SELCAL",
+    vdl: "VDL"
+};
+
 // Add a callback for state changes
 document.addEventListener('readystatechange', event => {
     if (event.target.readyState === "complete") {
@@ -37,14 +103,78 @@ document.getElementById("input_tail_number").addEventListener("keyup", function(
 
 function parseAircraftData(jsn) {
     const dataset = JSON.parse(jsn);
-    for (var key in dataset) {
-        var element = document.getElementById(key)
+    const outputContainer = document.getElementById("aircraft_output");
+    const outputMessage = document.getElementById("aircraft_output_message");
+    const cardContainer = document.getElementById("aircraft_card");
 
-        if (element) {
-            element.innerHTML = dataset[key]
-        }
+    cardContainer.replaceChildren();
+    outputContainer.classList.remove("has-result");
+    outputContainer.classList.remove("has-message");
+
+    if (dataset === null) {
+        outputMessage.textContent = "No aircraft found for that tail number.";
+        outputContainer.classList.add("has-message");
+        return;
     }
+
+    const renderedFields = FIELD_ORDER
+        .filter(key => !isEmptyValue(dataset[key]))
+        .map(key => createAircraftField(FIELD_LABELS[key] || key, dataset[key]));
+
+    if (renderedFields.length === 0) {
+        outputMessage.textContent = "No aircraft details available for that result.";
+        outputContainer.classList.add("has-message");
+        return;
+    }
+
+    outputMessage.textContent = "";
+    cardContainer.append(createAircraftCard(renderedFields));
+    outputContainer.classList.add("has-result");
 };
+
+function createAircraftCard(fields) {
+    const cardElement = document.createElement("article");
+    cardElement.className = "aircraft-result-card";
+
+    const headingElement = document.createElement("h4");
+    headingElement.className = "aircraft-result-title";
+    headingElement.textContent = "Aircraft Details";
+
+    const fieldGridElement = document.createElement("div");
+    fieldGridElement.className = "aircraft-field-grid";
+    fieldGridElement.append(...fields);
+
+    cardElement.append(headingElement, fieldGridElement);
+    return cardElement;
+}
+
+function createAircraftField(label, value) {
+    const fieldElement = document.createElement("article");
+    fieldElement.className = "aircraft-field";
+
+    const labelElement = document.createElement("h4");
+    labelElement.className = "aircraft-field-label";
+    labelElement.textContent = label;
+
+    const valueElement = document.createElement("p");
+    valueElement.className = "aircraft-field-value";
+    valueElement.textContent = String(value).trim();
+
+    fieldElement.append(labelElement, valueElement);
+    return fieldElement;
+}
+
+function isEmptyValue(value) {
+    if (value === null || value === undefined) {
+        return true;
+    }
+
+    if (typeof value === "string") {
+        return value.trim().length === 0;
+    }
+
+    return false;
+}
 
 // Function to open a web socket
 function openWebSocket() {

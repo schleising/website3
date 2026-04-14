@@ -1,10 +1,9 @@
 {% extends "base.html" %}
 
 {% block head %}
-<link rel="stylesheet" href="/css/aircraft_db/aircraft_db.css?v1.0.1">
-<link rel="stylesheet" href="/css/table.css?v1.0.7">
+<link rel="stylesheet" href="/css/aircraft_db/aircraft_db.css?v1.1.2">
 {% block scripts %}
-<script defer src="/js/aircraft_db/aircraft_db.js?v1.0.0"></script>
+<script defer src="/js/aircraft_db/aircraft_db.js?v1.1.1"></script>
 {% endblock %}
 {% block title %}<title>Aircraft DB</title>{% endblock %}
 {% endblock %}
@@ -25,128 +24,8 @@
     </div>
   </div>
   <div id="aircraft_output">
-    <table>
-      <thead class="sticky-header">
-        <tr class="header-row">
-          <th class="header-data data">Property</th>
-          <th class="header-data data">Value</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr class="data-row">
-          <th class="row-data data">Tail Number</th>
-          <td class="row-data data" id="registration"></td>
-        </tr>
-        <tr class="data-row">
-          <th class="row-data data">Mode S</th>
-          <td class="row-data data" id="icao24"></td>
-        </tr>
-        <tr class="data-row">
-          <th class="row-data data">Manufacturer ICAO</th>
-          <td class="row-data data" id="manufacturerIcao"></td>
-        </tr>
-        <tr class="data-row">
-          <th class="row-data data">Manufacturer Name</th>
-          <td class="row-data data" id="manufacturerName"></td>
-        </tr>
-        <tr class="data-row">
-          <th class="row-data data">Country</th>
-          <td class="row-data data" id="country"></td>
-        </tr>
-        <tr class="data-row">
-          <th class="row-data data">Model</th>
-          <td class="row-data data" id="model"></td>
-        </tr>
-        <tr class="data-row">
-          <th class="row-data data">Type Code</th>
-          <td class="row-data data" id="typecode"></td>
-        </tr>
-        <tr class="data-row">
-          <th class="row-data data">Serial Number</th>
-          <td class="row-data data" id="serialNumber"></td>
-        </tr>
-        <tr class="data-row">
-          <th class="row-data data">Line Number</th>
-          <td class="row-data data" id="lineNumber"></td>
-        </tr>
-        <tr class="data-row">
-          <th class="row-data data">ICAO Aircraft Class</th>
-          <td class="row-data data" id="icaoAircraftClass"></td>
-        </tr>
-        <tr class="data-row">
-          <th class="row-data data">Operator</th>
-          <td class="row-data data" id="operator"></td>
-        </tr>
-        <tr class="data-row">
-          <th class="row-data data">Operator Call Sign</th>
-          <td class="row-data data" id="operatorCallsign"></td>
-        </tr>
-        <tr class="data-row">
-          <th class="row-data data">Operator ICAO</th>
-          <td class="row-data data" id="operatorIcao"></td>
-        </tr>
-        <tr class="data-row">
-          <th class="row-data data">Operator IATA</th>
-          <td class="row-data data" id="operatorIata"></td>
-        </tr>
-        <tr class="data-row">
-          <th class="row-data data">Manufacturer ICAO</th>
-          <td class="row-data data" id="manufacturerIcao"></td>
-        </tr>
-        <tr class="data-row">
-          <th class="row-data data">Manufacturer Name</th>
-          <td class="row-data data" id="manufacturerName"></td>
-        </tr>
-        <tr class="data-row">
-          <th class="row-data data">Owner</th>
-          <td class="row-data data" id="owner"></td>
-        </tr>
-        <tr class="data-row">
-          <th class="row-data data">Registered On</th>
-          <td class="row-data data" id="registered"></td>
-        </tr>
-        <tr class="data-row">
-          <th class="row-data data">Registered Until</th>
-          <td class="row-data data" id="regUntil"></td>
-        </tr>
-        <tr class="data-row">
-          <th class="row-data data">Status</th>
-          <td class="row-data data" id="status"></td>
-        </tr>
-        <tr class="data-row">
-          <th class="row-data data">Built On</th>
-          <td class="row-data data" id="built"></td>
-        </tr>
-        <tr class="data-row">
-          <th class="row-data data">First Flight Date</th>
-          <td class="row-data data" id="firstFlightDate"></td>
-        </tr>
-        <tr class="data-row">
-          <th class="row-data data">First Seen</th>
-          <td class="row-data data" id="firstSeen"></td>
-        </tr>
-        <tr class="data-row">
-          <th class="row-data data">Engines</th>
-          <td class="row-data data" id="engines"></td>
-        </tr>
-        <tr class="data-row">
-          <th class="row-data data">Modes</th>
-          <td class="row-data data" id="modes"></td>
-        </tr>
-        <tr class="data-row">
-          <th class="row-data data">ADSB</th>
-          <td class="row-data data" id="adsb"></td>
-        </tr>
-        <tr class="data-row">
-          <th class="row-data data">ACARS</th>
-          <td class="row-data data" id="acars"></td>
-        </tr>
-        <tr class="data-row">
-          <th class="row-data data">Category Description</th>
-          <td class="row-data data" id="categoryDescription"></td>
-        </tr>
-      </tbody>
-    </table>
+    <p id="aircraft_output_message" aria-live="polite"></p>
+    <section id="aircraft_card" aria-label="Aircraft details"></section>
   </div>
 </div>
 {% endblock %}
