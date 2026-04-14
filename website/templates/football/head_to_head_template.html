@@ -1,7 +1,7 @@
 {% extends "football/football-base.html" %}
 
 {% block football_head %}
-<script defer src="/js/football/head_to_head.js?v1.0.0"></script>
+<script defer src="/js/football/head_to_head.js?v1.0.4"></script>
 {% endblock %}
 
 {% block title %}<title>Football - Head to Head</title>{% endblock %}
@@ -11,50 +11,64 @@
 {% endblock %}
 
 {% block content %}
+{% set has_valid_pair = selected_team_a and selected_team_b and selected_team_a.id != selected_team_b.id %}
 <div class="h2h-layout">
-  <section class="h2h-input-card site-card">
-    <h4>Choose Two Teams</h4>
-    <p>Select two teams to view all previous Premier League meetings.</p>
-    <form class="h2h-form" method="get" action="/football/head-to-head/">
-      <div class="h2h-team-grid">
-        <label class="h2h-team-select" for="team-a-select">
-          <span class="h2h-label">Team A</span>
-          <div class="h2h-select-row">
-            <img
-              id="team-a-crest"
-              class="h2h-crest"
-              {% if selected_team_a %}src="{{ selected_team_a.local_crest }}"{% endif %}
-              alt="Team A crest preview"
-            >
-            <select id="team-a-select" name="team_a" required>
-              <option value="">Select Team A</option>
-              {% for team in teams %}
-              <option value="{{ team.id }}" data-crest="{{ team.local_crest }}" {% if selected_team_a and selected_team_a.id == team.id %}selected{% endif %}>{{ team.short_name }}</option>
-              {% endfor %}
-            </select>
-          </div>
-        </label>
+  <section class="h2h-input-card site-card" id="h2h-input-card" data-auto-collapse="{% if has_valid_pair %}true{% else %}false{% endif %}">
+    <div
+      class="h2h-input-header"
+      id="h2h-input-toggle"
+      role="button"
+      tabindex="0"
+      aria-controls="h2h-input-content"
+      aria-expanded="true"
+      aria-label="Toggle team selection panel"
+    >
+      <h4 class="h2h-toggle-title">Choose Two Teams</h4>
+      <span class="h2h-toggle-icon" id="h2h-input-toggle-icon" aria-hidden="true">▲</span>
+    </div>
+    <div class="h2h-input-content" id="h2h-input-content">
+      <p>Select two teams to view all previous Premier League meetings.</p>
+      <form class="h2h-form" method="get" action="/football/head-to-head/">
+        <div class="h2h-team-grid">
+          <label class="h2h-team-select" for="team-a-select">
+            <span class="h2h-label">Team A</span>
+            <div class="h2h-select-row">
+              <img
+                id="team-a-crest"
+                class="h2h-crest"
+                {% if selected_team_a %}src="{{ selected_team_a.local_crest }}"{% endif %}
+                alt="Team A crest preview"
+              >
+              <select id="team-a-select" name="team_a" required>
+                <option value="">Select Team A</option>
+                {% for team in teams %}
+                <option value="{{ team.id }}" data-crest="{{ team.local_crest }}" {% if selected_team_a and selected_team_a.id == team.id %}selected{% endif %}>{{ team.short_name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </label>
 
-        <label class="h2h-team-select" for="team-b-select">
-          <span class="h2h-label">Team B</span>
-          <div class="h2h-select-row">
-            <img
-              id="team-b-crest"
-              class="h2h-crest"
-              {% if selected_team_b %}src="{{ selected_team_b.local_crest }}"{% endif %}
-              alt="Team B crest preview"
-            >
-            <select id="team-b-select" name="team_b" required>
-              <option value="">Select Team B</option>
-              {% for team in teams %}
-              <option value="{{ team.id }}" data-crest="{{ team.local_crest }}" {% if selected_team_b and selected_team_b.id == team.id %}selected{% endif %}>{{ team.short_name }}</option>
-              {% endfor %}
-            </select>
-          </div>
-        </label>
-      </div>
-      <button type="submit" class="btn btn-primary">Show Matches</button>
-    </form>
+          <label class="h2h-team-select" for="team-b-select">
+            <span class="h2h-label">Team B</span>
+            <div class="h2h-select-row">
+              <img
+                id="team-b-crest"
+                class="h2h-crest"
+                {% if selected_team_b %}src="{{ selected_team_b.local_crest }}"{% endif %}
+                alt="Team B crest preview"
+              >
+              <select id="team-b-select" name="team_b" required>
+                <option value="">Select Team B</option>
+                {% for team in teams %}
+                <option value="{{ team.id }}" data-crest="{{ team.local_crest }}" {% if selected_team_b and selected_team_b.id == team.id %}selected{% endif %}>{{ team.short_name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </label>
+        </div>
+        <button type="submit" class="btn btn-primary">Show Matches</button>
+      </form>
+    </div>
   </section>
 
   <section class="h2h-results-card site-card">

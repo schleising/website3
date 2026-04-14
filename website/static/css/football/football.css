@@ -24,6 +24,57 @@
     flex: 0 0 auto;
 }
 
+.h2h-input-header {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.6rem;
+    width: 100%;
+    min-height: 2.25rem;
+    border: 0.0625rem solid rgba(163, 188, 221, 0.95);
+    border-radius: 0.5rem;
+    background: rgba(255, 255, 255, 0.8);
+    color: var(--brand-strong);
+    padding: 0.38rem 0.55rem;
+    cursor: pointer;
+    user-select: none;
+}
+
+.h2h-input-header:hover,
+.h2h-input-header:focus-visible {
+    background: rgba(255, 255, 255, 0.95);
+    border-color: var(--brand-soft);
+    outline: none;
+}
+
+.h2h-toggle-title {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--brand-strong);
+    text-align: left;
+}
+
+.h2h-toggle-icon {
+    font-size: 0.95rem;
+    line-height: 1;
+}
+
+.h2h-input-content {
+    overflow: hidden;
+    transition: max-height 180ms ease, opacity 140ms ease, margin-top 140ms ease;
+    max-height: 18rem;
+    opacity: 1;
+    margin-top: 0.35rem;
+}
+
+.h2h-input-card.collapsed .h2h-input-content {
+    max-height: 0;
+    opacity: 0;
+    margin-top: 0;
+}
+
 .h2h-results-card {
     display: flex;
     flex-direction: column;
@@ -365,6 +416,10 @@
 
     .h2h-team-grid {
         grid-template-columns: 1fr;
+    }
+
+    .h2h-input-content {
+        max-height: 24rem;
     }
 
     .football-container {
