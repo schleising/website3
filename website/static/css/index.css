@@ -32,7 +32,7 @@
 .home-card-image {
     width: 100%;
     aspect-ratio: 16 / 9;
-    border-radius: 0.52rem;
+    border-radius: 6.25% / 11.111%;
     object-fit: cover;
     border: 0.0625rem solid var(--line);
     background: var(--surface-soft);
