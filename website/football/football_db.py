@@ -9,12 +9,17 @@ from motor.motor_asyncio import AsyncIOMotorCollection
 from ..database.database import get_data_by_date
 
 from . import pl_matches, pl_table, football_push, mongodb
-from .models import Match, LiveTableItem, Team
+from .models import FormItem, Match, LiveTableItem, Team
 
 
 SEASON_KEY_PATTERN = re.compile(r"^\d{4}_\d{4}$")
 SEASON_MATCH_COLLECTION_PATTERN = re.compile(r"^pl_matches_(\d{4}_\d{4})$")
 SEASON_TABLE_COLLECTION_PATTERN = re.compile(r"^pl_table_(\d{4}_\d{4})$")
+FORM_RESULT_CLASS = {
+    "W": "form-win",
+    "D": "form-draw",
+    "L": "form-loss",
+}
 
 
 def _season_matches_collection_name(season_key: str) -> str:
@@ -32,6 +37,32 @@ def _season_sort_value(season_key: str) -> int:
 def get_season_label(season_key: str) -> str:
     season_start, season_end = season_key.split("_", maxsplit=1)
     return f"{season_start}/{season_end}"
+
+
+def get_season_short_label(season_key: str) -> str:
+    season_start, season_end = season_key.split("_", maxsplit=1)
+    return f"{season_start[-2:]}-{season_end[-2:]}"
+
+
+def _build_form_list(form_value: str | None) -> list[FormItem]:
+    if form_value is None:
+        return []
+
+    compact_form = str(form_value).upper().replace(",", "").replace(" ", "")
+    parsed_results = [result for result in compact_form if result in FORM_RESULT_CLASS]
+
+    return [
+        FormItem(character=result, css_class=FORM_RESULT_CLASS[result])
+        for result in parsed_results
+    ]
+
+
+def _normalise_table_form_items(table_list: list[LiveTableItem]) -> None:
+    for table_item in table_list:
+        if len(table_item.form_list) > 0:
+            continue
+
+        table_item.form_list = _build_form_list(table_item.form)
 
 
 def infer_current_season_key(available_season_keys: list[str]) -> str:
@@ -280,6 +311,8 @@ async def get_table_db() -> list[LiveTableItem]:
             LiveTableItem.model_validate(table_item) async for table_item in table_cursor
         ]
 
+    _normalise_table_form_items(table_list)
+
     return table_list
 
 
@@ -306,6 +339,8 @@ async def get_table_db_for_season(season_key: str | None = None) -> list[LiveTab
             table_list = [
                 LiveTableItem.model_validate(table_item) async for table_item in table_cursor
             ]
+
+    _normalise_table_form_items(table_list)
 
     return table_list
 

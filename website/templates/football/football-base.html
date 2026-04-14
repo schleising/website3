@@ -10,39 +10,63 @@
 {% if matches|length > 0 %}
 <script defer src="/js/football/scroll-scores.js"></script>
 {% endif %}
+{% if show_season_selector|default(false) %}
+<script defer src="/js/football/season_picker.js?v1.0.1"></script>
+{% endif %}
 {% endblock %}
 
 {% block head %}
 <link rel="stylesheet" href="/css/right-nav.css?v1.0.0">
-<link rel="stylesheet" href="/css/football/football.css?v1.3.0">
+<link rel="stylesheet" href="/css/football/football.css?v1.4.0">
 {% block football_head %}
 {% endblock %}
 {% endblock %}
 
 {% block sidebar %}
 {% if show_season_selector|default(false) and available_seasons is defined %}
-<section class="football-season-card site-card" aria-label="Season selection">
-	<div class="football-season-title">Season</div>
-	<form class="football-season-form" method="get" action="{{ season_switch_path }}">
-		<label class="football-season-label" for="football-season-select">Select season</label>
-		<div class="football-season-controls">
-			<select id="football-season-select" name="season" class="football-season-select">
-				{% for season in available_seasons %}
-				<option value="{{ season.key }}" {% if season.selected %}selected{% endif %}>{{ season.label }}{% if season.is_current %} (Current){% endif %}</option>
-				{% endfor %}
-			</select>
-			<button type="submit" class="btn btn-primary football-season-go">Go</button>
+<button
+	type="button"
+	id="football-season-open"
+	class="sub-level-nav football-season-open"
+	aria-controls="football-season-popup"
+	aria-expanded="false"
+>
+	Season {{ selected_season_short_label }}{% if is_current_season %} (Current){% else %} (Archive){% endif %}
+</button>
+
+<div id="football-season-backdrop" class="football-season-backdrop hidden" aria-hidden="true"></div>
+<section
+	id="football-season-popup"
+	class="football-season-popup site-card hidden"
+	role="dialog"
+	aria-modal="true"
+	aria-labelledby="football-season-popup-title"
+>
+	<div class="football-season-popup-header">
+		<h4 id="football-season-popup-title">Select Season</h4>
+		<button type="button" id="football-season-close" class="football-season-close" aria-label="Close season selector">x</button>
+	</div>
+	<form class="football-season-popup-form" method="get" action="{{ season_switch_path }}">
+		<label class="football-season-label" for="football-season-select">Season</label>
+		<select id="football-season-select" name="season" class="football-season-select">
+			{% for season in available_seasons %}
+			<option value="{{ season.key }}" {% if season.selected %}selected{% endif %}>{{ season.label }}{% if season.is_current %} (Current){% endif %}</option>
+			{% endfor %}
+		</select>
+		<div class="football-season-popup-actions">
+			<button type="submit" class="btn btn-primary football-season-go">Apply</button>
+			{% if not is_current_season %}
+			<a href="{{ current_season_url }}" class="btn btn-primary football-season-current-btn">Current Season {{ current_season_short_label }}</a>
+			{% endif %}
 		</div>
 	</form>
-	{% if not is_current_season %}
-	<div class="football-season-note">Viewing archive season {{ selected_season_label }}</div>
-	<a href="{{ current_season_url }}" class="sub-level-nav football-current-season-link">Back to Current Season</a>
-	{% endif %}
 </section>
 {% endif %}
 
+{% if is_current_season|default(true) %}
 <a href="{{ live_scores_url|default('/football/') }}" class="sub-level-nav">Live Scores</a>
-<a href="{{ table_url|default('/football/table/') }}" class="sub-level-nav">Live PL Table</a>
+{% endif %}
+<a href="{{ table_url|default('/football/table/') }}" class="sub-level-nav">{% if is_current_season|default(true) %}Live League Table{% else %}League Table{% endif %}</a>
 <a href="/football/head-to-head/{% if selected_season_key is defined %}?season={{ selected_season_key }}{% endif %}" class="sub-level-nav">Head to Head</a>
 {% if month_nav_links is defined %}
 	{% for month_link in month_nav_links %}

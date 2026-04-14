@@ -9,7 +9,12 @@
 {% endblock %}
 
 {% block header %}
-<h3 class="header-text">{{ title }}</h3>
+<h3 class="header-text">
+  {{ title }}
+  {% if not is_current_season %}
+  <span class="football-season-marker">{{ selected_season_short_label }}</span>
+  {% endif %}
+</h3>
 {% endblock %}
 
 {% block content %}
@@ -57,9 +62,15 @@
         <td class="row-data data right-align">{{ table_item.points }}</td>
         <td class="row-data data medium-table right-align">
           <div class="form-container">
-            {% for form_item in table_item.form_list %}
+            {% if table_item.form_list|length > 0 %}
+              {% for form_item in table_item.form_list|reverse %}
               <div class="form-character {{ form_item.css_class }}">{{ form_item.character }}</div>
             {% endfor %}
+            {% elif table_item.form %}
+            <span>{{ table_item.form }}</span>
+            {% else %}
+            <span>-</span>
+            {% endif %}
           </div>
         </td>
       </tr>

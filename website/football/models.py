@@ -189,7 +189,7 @@ class LiveTableItem(TableItem):
     has_finished: bool = False
     score_string: str | None = None
     css_class: str | None = None
-    form_list: list[FormItem] = []
+    form_list: list[FormItem] = Field(default_factory=list)
 
 
 class Standing(BaseModel):

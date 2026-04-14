@@ -20,6 +20,7 @@ from fastapi.templating import Jinja2Templates
 from .football_db import (
     get_available_season_keys,
     get_season_label,
+    get_season_short_label,
     infer_current_season_key,
     retreive_matches,
     retreive_team_matches,
@@ -99,8 +100,10 @@ async def _build_football_season_context(
         ],
         "selected_season_key": selected_season_key,
         "selected_season_label": get_season_label(selected_season_key),
+        "selected_season_short_label": get_season_short_label(selected_season_key),
         "current_season_key": current_season_key,
         "current_season_label": get_season_label(current_season_key),
+        "current_season_short_label": get_season_short_label(current_season_key),
         "is_current_season": selected_season_key == current_season_key,
         "season_switch_path": request.url.path,
         "current_season_url": f"{request.url.path}?season={current_season_key}",
@@ -325,18 +328,12 @@ async def get_table(
 
     table_list: list[LiveTableItem] = await get_table_db_for_season(selected_season_key)
 
-    title = (
-        "Premier League Table"
-        if season_context["is_current_season"]
-        else f"Premier League Table {season_context['selected_season_label']}"
-    )
-
     return TEMPLATES.TemplateResponse(
         request,
         "football/table_template.html",
         {
             "request": request,
-            "title": title,
+            "title": "Premier League Table",
             "table_list": table_list,
             **season_context,
         },

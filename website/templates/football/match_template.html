@@ -3,7 +3,12 @@
 {% block title %}<title>Football - {{ title }}</title>{% endblock %}
 
 {% block header %}
-<h3 class="header-text">{{ title }}'s Matches</h3>
+<h3 class="header-text">
+  {{ title }}'s Matches
+  {% if not is_current_season %}
+  <span class="football-season-marker">{{ selected_season_short_label }}</span>
+  {% endif %}
+</h3>
 {% if live_matches %}
 <button class="btn btn-primary" id="subscribe-button" disabled="true" hidden="true">Subscribe</button>
 {% else %}

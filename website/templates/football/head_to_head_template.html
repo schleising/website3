@@ -7,7 +7,12 @@
 {% block title %}<title>Football - Head to Head</title>{% endblock %}
 
 {% block header %}
-<h3 class="header-text">Head to Head Matches</h3>
+<h3 class="header-text">
+  Head to Head Matches
+  {% if not is_current_season %}
+  <span class="football-season-marker">{{ selected_season_short_label }}</span>
+  {% endif %}
+</h3>
 {% endblock %}
 
 {% block content %}
@@ -140,7 +145,7 @@
           <div class="team">
             <div class="team-and-badge">
               <img class="team-badge" src="{{ match.home_team.local_crest }}">
-              <a class="team-name" href="/football/matches/team/{{ match.home_team.id }}/">{{ match.home_team.short_name }}</a>
+              <a class="team-name" href="/football/matches/team/{{ match.home_team.id }}/?season={{ selected_season_key|default(current_season_key)|default('') }}">{{ match.home_team.short_name }}</a>
             </div>
             {% if match.score.full_time.home == None %}
             <div class="home-team-score">-</div>
@@ -151,7 +156,7 @@
           <div class="team">
             <div class="team-and-badge">
               <img class="team-badge" src="{{ match.away_team.local_crest }}">
-              <a class="team-name" href="/football/matches/team/{{ match.away_team.id }}/">{{ match.away_team.short_name }}</a>
+              <a class="team-name" href="/football/matches/team/{{ match.away_team.id }}/?season={{ selected_season_key|default(current_season_key)|default('') }}">{{ match.away_team.short_name }}</a>
             </div>
             {% if match.score.full_time.away == None %}
             <div class="away-team-score">-</div>
