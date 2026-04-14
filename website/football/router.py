@@ -6,6 +6,7 @@ from zoneinfo import ZoneInfo
 
 from fastapi import (
     APIRouter,
+    Query,
     Request,
     WebSocket,
     WebSocketDisconnect,
@@ -19,6 +20,8 @@ from fastapi.templating import Jinja2Templates
 from .football_db import (
     retreive_matches,
     retreive_team_matches,
+    retreive_all_teams,
+    retreive_head_to_head_matches_by_id,
     get_table_db,
     add_push_subscription,
     delete_push_subscription,
@@ -102,6 +105,104 @@ async def get_teams_matches(request: Request, team_id: int):
             "matches": matches,
             "title": team_name,
             "live_matches": False,
+        },
+    )
+
+
+@football_router.get("/head-to-head", response_class=HTMLResponse)
+@football_router.get("/head-to-head/", response_class=HTMLResponse)
+async def get_head_to_head_matches(
+    request: Request,
+    team_a: int | None = Query(default=None),
+    team_b: int | None = Query(default=None),
+):
+    teams = await retreive_all_teams()
+    teams_by_id = {team.id: team for team in teams}
+
+    selected_team_a = teams_by_id.get(team_a) if team_a is not None else None
+    selected_team_b = teams_by_id.get(team_b) if team_b is not None else None
+
+    matches = []
+    summary = None
+    validation_message: str | None = None
+
+    if team_a is not None or team_b is not None:
+        if selected_team_a is None or selected_team_b is None:
+            validation_message = "Please select two valid teams."
+        elif selected_team_a.id == selected_team_b.id:
+            validation_message = "Please choose two different teams."
+        else:
+            matches = await retreive_head_to_head_matches_by_id(
+                selected_team_a.id, selected_team_b.id
+            )
+            matches = update_match_timezone(matches)
+
+            played_matches = [
+                match
+                for match in matches
+                if match.score.full_time.home is not None
+                and match.score.full_time.away is not None
+            ]
+
+            team_a_wins = 0
+            team_b_wins = 0
+            draws = 0
+            team_a_goals = 0
+            team_b_goals = 0
+
+            for match in played_matches:
+                home_score = match.score.full_time.home
+                away_score = match.score.full_time.away
+
+                if home_score is None or away_score is None:
+                    continue
+
+                if match.home_team.id == selected_team_a.id:
+                    team_a_goals += home_score
+                    team_b_goals += away_score
+                else:
+                    team_a_goals += away_score
+                    team_b_goals += home_score
+
+                if home_score == away_score:
+                    draws += 1
+                elif home_score > away_score:
+                    if match.home_team.id == selected_team_a.id:
+                        team_a_wins += 1
+                    else:
+                        team_b_wins += 1
+                else:
+                    if match.away_team.id == selected_team_a.id:
+                        team_a_wins += 1
+                    else:
+                        team_b_wins += 1
+
+            summary = {
+                "meetings": len(matches),
+                "played": len(played_matches),
+                "team_a_wins": team_a_wins,
+                "team_b_wins": team_b_wins,
+                "draws": draws,
+                "team_a_goals": team_a_goals,
+                "team_b_goals": team_b_goals,
+            }
+
+            if len(matches) == 0:
+                validation_message = "No matches found between the selected teams."
+
+    return TEMPLATES.TemplateResponse(
+        request,
+        "football/head_to_head_template.html",
+        {
+            "request": request,
+            "title": "Head to Head",
+            "live_matches": False,
+            "matches": matches,
+            "teams": teams,
+            "selected_team_a": selected_team_a,
+            "selected_team_b": selected_team_b,
+            "summary": summary,
+            "validation_message": validation_message,
         },
     )
 

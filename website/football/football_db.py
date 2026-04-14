@@ -7,7 +7,7 @@ from pymongo.errors import DuplicateKeyError
 from ..database.database import get_data_by_date
 
 from . import pl_matches, pl_table, football_push
-from .models import Match, LiveTableItem
+from .models import Match, LiveTableItem, Team
 
 
 async def retreive_matches(date_from: datetime, date_to: datetime) -> list[Match]:
@@ -78,6 +78,53 @@ async def retreive_head_to_head_matches(
         logging.error("No DB connection")
 
     return matches
+
+
+async def retreive_head_to_head_matches_by_id(
+    team_a_id: int, team_b_id: int
+) -> list[Match]:
+    matches: list[Match] = []
+
+    if pl_matches is not None:
+        from_db_cursor = pl_matches.find(
+            {
+                "$or": [
+                    {
+                        "home_team.id": team_a_id,
+                        "away_team.id": team_b_id,
+                    },
+                    {
+                        "home_team.id": team_b_id,
+                        "away_team.id": team_a_id,
+                    },
+                ]
+            }
+        ).sort("utc_date", DESCENDING)
+
+        matches = [Match.model_validate(item) async for item in from_db_cursor]
+    else:
+        logging.error("No DB connection")
+
+    return matches
+
+
+async def retreive_all_teams() -> list[Team]:
+    teams_by_id: dict[int, Team] = {}
+
+    if pl_matches is not None:
+        from_db_cursor = pl_matches.find({}, {"home_team": 1, "away_team": 1, "_id": 0})
+
+        async for item in from_db_cursor:
+            for field_name in ["home_team", "away_team"]:
+                team_dict = item.get(field_name)
+
+                if isinstance(team_dict, dict):
+                    team = Team.model_validate(team_dict)
+                    teams_by_id[team.id] = team
+    else:
+        logging.error("No DB connection")
+
+    return sorted(teams_by_id.values(), key=lambda team: str(team.short_name).lower())
 
 
 async def retreive_latest_team_match(team: str) -> Match | None:

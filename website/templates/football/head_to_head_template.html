@@ -1,0 +1,143 @@
+{% extends "football/football-base.html" %}
+
+{% block football_head %}
+<script defer src="/js/football/head_to_head.js?v1.0.0"></script>
+{% endblock %}
+
+{% block title %}<title>Football - Head to Head</title>{% endblock %}
+
+{% block header %}
+<h3 class="header-text">Head to Head Matches</h3>
+{% endblock %}
+
+{% block content %}
+<div class="h2h-layout">
+  <section class="h2h-input-card site-card">
+    <h4>Choose Two Teams</h4>
+    <p>Select two teams to view all previous Premier League meetings.</p>
+    <form class="h2h-form" method="get" action="/football/head-to-head/">
+      <div class="h2h-team-grid">
+        <label class="h2h-team-select" for="team-a-select">
+          <span class="h2h-label">Team A</span>
+          <div class="h2h-select-row">
+            <img
+              id="team-a-crest"
+              class="h2h-crest"
+              {% if selected_team_a %}src="{{ selected_team_a.local_crest }}"{% endif %}
+              alt="Team A crest preview"
+            >
+            <select id="team-a-select" name="team_a" required>
+              <option value="">Select Team A</option>
+              {% for team in teams %}
+              <option value="{{ team.id }}" data-crest="{{ team.local_crest }}" {% if selected_team_a and selected_team_a.id == team.id %}selected{% endif %}>{{ team.short_name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </label>
+
+        <label class="h2h-team-select" for="team-b-select">
+          <span class="h2h-label">Team B</span>
+          <div class="h2h-select-row">
+            <img
+              id="team-b-crest"
+              class="h2h-crest"
+              {% if selected_team_b %}src="{{ selected_team_b.local_crest }}"{% endif %}
+              alt="Team B crest preview"
+            >
+            <select id="team-b-select" name="team_b" required>
+              <option value="">Select Team B</option>
+              {% for team in teams %}
+              <option value="{{ team.id }}" data-crest="{{ team.local_crest }}" {% if selected_team_b and selected_team_b.id == team.id %}selected{% endif %}>{{ team.short_name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </label>
+      </div>
+      <button type="submit" class="btn btn-primary">Show Matches</button>
+    </form>
+  </section>
+
+  <section class="h2h-results-card site-card">
+    <h4>Results</h4>
+    <div class="h2h-results-scroll">
+      {% if summary and selected_team_a and selected_team_b and not validation_message %}
+      <section class="h2h-summary-card site-card" aria-label="Head to head summary">
+        <div class="h2h-summary-grid">
+          <div class="h2h-summary-item">
+            <div class="h2h-summary-label">Meetings</div>
+            <div class="h2h-summary-value">{{ summary.meetings }}</div>
+          </div>
+          <div class="h2h-summary-item">
+            <div class="h2h-summary-label">Played</div>
+            <div class="h2h-summary-value">{{ summary.played }}</div>
+          </div>
+          <div class="h2h-summary-item">
+            <div class="h2h-summary-label">{{ selected_team_a.short_name }} Wins</div>
+            <div class="h2h-summary-value">{{ summary.team_a_wins }}</div>
+          </div>
+          <div class="h2h-summary-item">
+            <div class="h2h-summary-label">{{ selected_team_b.short_name }} Wins</div>
+            <div class="h2h-summary-value">{{ summary.team_b_wins }}</div>
+          </div>
+          <div class="h2h-summary-item">
+            <div class="h2h-summary-label">Draws</div>
+            <div class="h2h-summary-value">{{ summary.draws }}</div>
+          </div>
+          <div class="h2h-summary-item">
+            <div class="h2h-summary-label">{{ selected_team_a.short_name }} Goals</div>
+            <div class="h2h-summary-value">{{ summary.team_a_goals }}</div>
+          </div>
+          <div class="h2h-summary-item">
+            <div class="h2h-summary-label">{{ selected_team_b.short_name }} Goals</div>
+            <div class="h2h-summary-value">{{ summary.team_b_goals }}</div>
+          </div>
+        </div>
+      </section>
+      {% endif %}
+
+      {% if validation_message %}
+      <p class="h2h-message">{{ validation_message }}</p>
+      {% elif selected_team_a and selected_team_b %}
+      <p class="h2h-message">Showing {{ matches|length }} matches between {{ selected_team_a.short_name }} and {{ selected_team_b.short_name }}.</p>
+      {% else %}
+      <p class="h2h-message">Choose two teams above to view their head-to-head matches.</p>
+      {% endif %}
+
+      {% if matches|length > 0 %}
+      <div class="football-grid h2h-grid">
+        {% for match in matches %}
+        <article class="score-widget site-card" id="{{ match.id }}">
+          <div class="date-and-time">
+            <div class="match-start">{{ match.local_date.strftime('%a %d %b %Y %H:%M %Z') }}</div>
+            <div class="match-status">{{ match.status }}</div>
+          </div>
+          <div class="team">
+            <div class="team-and-badge">
+              <img class="team-badge" src="{{ match.home_team.local_crest }}">
+              <a class="team-name" href="/football/matches/team/{{ match.home_team.id }}/">{{ match.home_team.short_name }}</a>
+            </div>
+            {% if match.score.full_time.home == None %}
+            <div class="home-team-score">-</div>
+            {% else %}
+            <div class="home-team-score">{{ match.score.full_time.home }}</div>
+            {% endif %}
+          </div>
+          <div class="team">
+            <div class="team-and-badge">
+              <img class="team-badge" src="{{ match.away_team.local_crest }}">
+              <a class="team-name" href="/football/matches/team/{{ match.away_team.id }}/">{{ match.away_team.short_name }}</a>
+            </div>
+            {% if match.score.full_time.away == None %}
+            <div class="away-team-score">-</div>
+            {% else %}
+            <div class="away-team-score">{{ match.score.full_time.away }}</div>
+            {% endif %}
+          </div>
+        </article>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+  </section>
+</div>
+{% endblock %}
