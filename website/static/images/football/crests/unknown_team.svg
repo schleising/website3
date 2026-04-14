@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Unknown team crest">
+  <defs>
+    <linearGradient id="shieldGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#f7f7f7"/>
+      <stop offset="100%" stop-color="#d9d9d9"/>
+    </linearGradient>
+  </defs>
+  <path d="M64 8c21 0 36 6 48 13v35c0 28-20 48-48 64C36 104 16 84 16 56V21c12-7 27-13 48-13z" fill="url(#shieldGrad)" stroke="#7a7a7a" stroke-width="4"/>
+  <circle cx="64" cy="52" r="22" fill="#f1f1f1" stroke="#8a8a8a" stroke-width="3"/>
+  <path d="M64 67c12 0 20 6 20 15v6H44v-6c0-9 8-15 20-15z" fill="#8a8a8a"/>
+  <circle cx="64" cy="50" r="7" fill="#8a8a8a"/>
+</svg>
