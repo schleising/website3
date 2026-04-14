@@ -1,10 +1,21 @@
 document.addEventListener("readystatechange", event => {
     if (event.target.readyState === "complete") {
         initialiseInputCardToggle();
+        resetResultsScrollPosition();
         bindCrestPreview("team-a-select", "team-a-crest");
         bindCrestPreview("team-b-select", "team-b-crest");
     }
 });
+
+function resetResultsScrollPosition() {
+    const resultsScroller = document.querySelector(".h2h-results-scroll");
+
+    if (!resultsScroller) {
+        return;
+    }
+
+    resultsScroller.scrollTop = 0;
+}
 
 function initialiseInputCardToggle() {
     const inputCard = document.getElementById("h2h-input-card");
@@ -47,6 +58,10 @@ function initialiseInputCardToggle() {
         window.requestAnimationFrame(() => {
             window.requestAnimationFrame(() => {
                 applyToggleState(true);
+
+                window.setTimeout(() => {
+                    resetResultsScrollPosition();
+                }, 190);
             });
         });
     }
