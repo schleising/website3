@@ -18,11 +18,15 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
 from .football_db import (
+    get_available_season_keys,
+    get_season_label,
+    infer_current_season_key,
     retreive_matches,
     retreive_team_matches,
     retreive_all_teams,
     retreive_head_to_head_matches_by_id,
     get_table_db,
+    get_table_db_for_season,
     add_push_subscription,
     delete_push_subscription,
 )
@@ -42,41 +46,129 @@ TEMPLATES = Jinja2Templates("/app/templates")
 
 football_router = APIRouter(prefix="/football")
 
+SEASON_MONTH_ORDER = [8, 9, 10, 11, 12, 1, 2, 3, 4, 5]
+
+
+def _season_year_bounds(season_key: str) -> tuple[int, int]:
+    season_start, season_end = season_key.split("_", maxsplit=1)
+    return int(season_start), int(season_end)
+
+
+def _year_for_season_month(month: int, season_key: str) -> int:
+    season_start, season_end = _season_year_bounds(season_key)
+    return season_start if month >= 8 else season_end
+
+
+def _build_month_nav_links(selected_season_key: str) -> list[dict[str, str]]:
+    return [
+        {
+            "label": month_name[month],
+            "url": f"/football/matches/{month}/?season={selected_season_key}",
+        }
+        for month in SEASON_MONTH_ORDER
+    ]
+
+
+async def _build_football_season_context(
+    request: Request,
+    requested_season_key: str | None,
+    show_selector: bool = True,
+) -> dict:
+    available_season_keys = await get_available_season_keys()
+    current_season_key = infer_current_season_key(available_season_keys)
+
+    if len(available_season_keys) == 0:
+        available_season_keys = [current_season_key]
+
+    selected_season_key = (
+        requested_season_key
+        if requested_season_key in available_season_keys
+        else current_season_key
+    )
+
+    return {
+        "show_season_selector": show_selector,
+        "available_seasons": [
+            {
+                "key": season_key,
+                "label": get_season_label(season_key),
+                "selected": season_key == selected_season_key,
+                "is_current": season_key == current_season_key,
+            }
+            for season_key in available_season_keys
+        ],
+        "selected_season_key": selected_season_key,
+        "selected_season_label": get_season_label(selected_season_key),
+        "current_season_key": current_season_key,
+        "current_season_label": get_season_label(current_season_key),
+        "is_current_season": selected_season_key == current_season_key,
+        "season_switch_path": request.url.path,
+        "current_season_url": f"{request.url.path}?season={current_season_key}",
+        "live_scores_url": f"/football/?season={selected_season_key}",
+        "table_url": f"/football/table/?season={selected_season_key}",
+        "month_nav_links": _build_month_nav_links(selected_season_key),
+    }
+
 
 @football_router.get("/", response_class=HTMLResponse)
-async def get_live_matches(request: Request):
+async def get_live_matches(
+    request: Request,
+    season: str | None = Query(default=None),
+):
     logging.debug(f"/football/: {request}")
-    matches = await retreive_matches(
-        datetime.today().replace(hour=0, minute=0, second=0, microsecond=0),
-        datetime.today().replace(hour=23, minute=59, second=59, microsecond=0),
-    )
+
+    season_context = await _build_football_season_context(request, season)
+    selected_season_key = season_context["selected_season_key"]
+
+    if season_context["is_current_season"]:
+        start_date = datetime.today().replace(hour=0, minute=0, second=0, microsecond=0)
+        end_date = datetime.today().replace(hour=23, minute=59, second=59, microsecond=0)
+        page_title = "Today"
+        live_matches = True
+    else:
+        viewing_month = datetime.today().month
+        viewing_year = _year_for_season_month(viewing_month, selected_season_key)
+        _, last_day_of_month = monthrange(viewing_year, viewing_month)
+
+        start_date = datetime(viewing_year, viewing_month, 1, 0, 0, 0)
+        end_date = datetime(viewing_year, viewing_month, last_day_of_month, 23, 59, 59)
+        page_title = month_name[viewing_month]
+        live_matches = False
+
+    matches = await retreive_matches(start_date, end_date, selected_season_key)
     matches = update_match_timezone(matches)
+
     return TEMPLATES.TemplateResponse(
         request,
         "football/match_template.html",
         {
             "request": request,
             "matches": matches,
-            "title": "Today",
-            "live_matches": True,
+            "title": page_title,
+            "live_matches": live_matches,
+            **season_context,
         },
     )
 
 
 @football_router.get("/matches/{month}", response_class=HTMLResponse)
 @football_router.get("/matches/{month}/", response_class=HTMLResponse)
-async def get_months_matches(request: Request, month: int = Path(ge=1, le=12)):
-    if month > 5:
-        year = 2025
-    else:
-        year = 2026
+async def get_months_matches(
+    request: Request,
+    month: int = Path(ge=1, le=12),
+    season: str | None = Query(default=None),
+):
+    season_context = await _build_football_season_context(request, season)
+    selected_season_key = season_context["selected_season_key"]
+
+    year = _year_for_season_month(month, selected_season_key)
 
     _, last_day_of_month = monthrange(year, month)
 
     start_date = datetime(year, month, 1, 0, 0, 0)
     end_date = datetime(year, month, last_day_of_month, 23, 59, 59)
 
-    matches = await retreive_matches(start_date, end_date)
+    matches = await retreive_matches(start_date, end_date, selected_season_key)
     matches = update_match_timezone(matches)
 
     return TEMPLATES.TemplateResponse(
@@ -87,14 +179,22 @@ async def get_months_matches(request: Request, month: int = Path(ge=1, le=12)):
             "matches": matches,
             "title": month_name[month],
             "live_matches": False,
+            **season_context,
         },
     )
 
 
 @football_router.get("/matches/team/{team_id}", response_class=HTMLResponse)
 @football_router.get("/matches/team/{team_id}/", response_class=HTMLResponse)
-async def get_teams_matches(request: Request, team_id: int):
-    team_name, matches = await retreive_team_matches(team_id)
+async def get_teams_matches(
+    request: Request,
+    team_id: int,
+    season: str | None = Query(default=None),
+):
+    season_context = await _build_football_season_context(request, season)
+    selected_season_key = season_context["selected_season_key"]
+
+    team_name, matches = await retreive_team_matches(team_id, selected_season_key)
     matches = update_match_timezone(matches)
 
     return TEMPLATES.TemplateResponse(
@@ -105,6 +205,7 @@ async def get_teams_matches(request: Request, team_id: int):
             "matches": matches,
             "title": team_name,
             "live_matches": False,
+            **season_context,
         },
     )
 
@@ -115,7 +216,12 @@ async def get_head_to_head_matches(
     request: Request,
     team_a: int | None = Query(default=None),
     team_b: int | None = Query(default=None),
+    season: str | None = Query(default=None),
 ):
+    season_context = await _build_football_season_context(
+        request, season, show_selector=False
+    )
+
     teams = await retreive_all_teams()
     teams_by_id = {team.id: team for team in teams}
 
@@ -203,19 +309,37 @@ async def get_head_to_head_matches(
             "selected_team_b": selected_team_b,
             "summary": summary,
             "validation_message": validation_message,
+            **season_context,
         },
     )
 
 
 @football_router.get("/table", response_class=HTMLResponse)
 @football_router.get("/table/", response_class=HTMLResponse)
-async def get_table(request: Request):
-    table_list: list[LiveTableItem] = await get_table_db()
+async def get_table(
+    request: Request,
+    season: str | None = Query(default=None),
+):
+    season_context = await _build_football_season_context(request, season)
+    selected_season_key = season_context["selected_season_key"]
+
+    table_list: list[LiveTableItem] = await get_table_db_for_season(selected_season_key)
+
+    title = (
+        "Premier League Table"
+        if season_context["is_current_season"]
+        else f"Premier League Table {season_context['selected_season_label']}"
+    )
 
     return TEMPLATES.TemplateResponse(
         request,
         "football/table_template.html",
-        {"request": request, "title": "Premier League Table", "table_list": table_list},
+        {
+            "request": request,
+            "title": title,
+            "table_list": table_list,
+            **season_context,
+        },
     )
 
 

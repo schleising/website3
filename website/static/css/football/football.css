@@ -5,6 +5,62 @@
     gap: 0.75rem;
 }
 
+.football-season-card {
+    margin: 0.1rem 0.1rem 0.45rem 0.1rem;
+    padding: 0.55rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+}
+
+.football-season-title {
+    margin: 0;
+    color: var(--brand-strong);
+    font-size: 0.9rem;
+    font-weight: 700;
+}
+
+.football-season-form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.football-season-label {
+    color: var(--text-soft);
+    font-size: 0.75rem;
+}
+
+.football-season-controls {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 0.35rem;
+}
+
+.football-season-select {
+    min-height: 2rem;
+    border: 0.0625rem solid rgba(163, 188, 221, 0.95);
+    border-radius: 0.45rem;
+    background: rgba(255, 255, 255, 0.95);
+    color: var(--text);
+    padding: 0.25rem 0.45rem;
+    font-size: 0.85rem;
+}
+
+.football-season-go {
+    min-width: 2.8rem;
+    padding: 0.25rem 0.5rem;
+}
+
+.football-season-note {
+    color: var(--text-soft);
+    font-size: 0.76rem;
+}
+
+.football-current-season-link {
+    margin: 0;
+}
+
 .h2h-layout {
     display: flex;
     flex-direction: column;

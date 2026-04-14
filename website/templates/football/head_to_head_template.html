@@ -30,6 +30,9 @@
     <div class="h2h-input-content" id="h2h-input-content">
       <p>Select two teams to view all previous Premier League meetings.</p>
       <form class="h2h-form" method="get" action="/football/head-to-head/">
+        {% if selected_season_key is defined %}
+        <input type="hidden" name="season" value="{{ selected_season_key }}">
+        {% endif %}
         <div class="h2h-team-grid">
           <label class="h2h-team-select" for="team-a-select">
             <span class="h2h-label">Team A</span>
