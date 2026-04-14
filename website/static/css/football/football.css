@@ -10,6 +10,13 @@
     flex-direction: column;
     padding: 0.25rem;
     user-select: none;
+    transition: transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease;
+}
+
+.score-widget:hover {
+    transform: translateY(-0.125rem);
+    box-shadow: 0 0.625rem 1.5rem rgba(26, 46, 75, 0.18);
+    border-color: var(--brand);
 }
 
 .football-empty-state {
