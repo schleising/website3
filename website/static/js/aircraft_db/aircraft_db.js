@@ -158,7 +158,7 @@ function createAircraftField(label, value) {
 
     const valueElement = document.createElement("p");
     valueElement.className = "aircraft-field-value";
-    valueElement.textContent = String(value).trim();
+    valueElement.textContent = decodeFieldValue(value);
 
     fieldElement.append(labelElement, valueElement);
     return fieldElement;
@@ -170,10 +170,43 @@ function isEmptyValue(value) {
     }
 
     if (typeof value === "string") {
-        return value.trim().length === 0;
+        const decodedValue = decodeFieldValue(value);
+        return decodedValue.trim().length === 0;
     }
 
     return false;
+}
+
+function decodeFieldValue(value) {
+    if (value === null || value === undefined) {
+        return "";
+    }
+
+    if (typeof value !== "string") {
+        return String(value);
+    }
+
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(value, "text/html");
+    return extractTextWithBreaks(doc.body).replace(/\u00A0/g, " ").trim();
+}
+
+function extractTextWithBreaks(node) {
+    let result = "";
+
+    for (const child of node.childNodes) {
+        if (child.nodeType === Node.TEXT_NODE) {
+            result += child.textContent;
+        } else if (child.nodeType === Node.ELEMENT_NODE) {
+            if (child.tagName === "BR") {
+                result += "\n";
+            } else {
+                result += extractTextWithBreaks(child);
+            }
+        }
+    }
+
+    return result;
 }
 
 // Function to open a web socket
