@@ -16,6 +16,7 @@ class ConvertingFileData(BaseModel):
     backend_name: str
     speed: float | None = None
     copying: bool | None = None
+    estimated_percentage_saved: int | None = None
 
 class ConvertingFilesMessage(BaseModel):
     converting_files: list[ConvertingFileData]

@@ -428,6 +428,73 @@ class DatabaseTools:
 
         return max(0.0, min(ratio, 0.95)), confidence, basis
 
+    async def get_prediction_context(
+        self,
+    ) -> tuple[
+        list[float],
+        list[float],
+        dict[int, float],
+        dict[str, float],
+        dict[int, float],
+        float,
+    ]:
+        return await self._get_prediction_models()
+
+    async def get_estimated_percentage_saved_for_file(
+        self,
+        file_data: FileData,
+        prediction_context: tuple[
+            list[float],
+            list[float],
+            dict[int, float],
+            dict[str, float],
+            dict[int, float],
+            float,
+        ] | None = None,
+    ) -> int:
+        if prediction_context is None:
+            prediction_context = await self._get_prediction_models()
+
+        (
+            bitrates,
+            saved_ratios_by_bitrate,
+            bitrate_band_ratios,
+            codec_ratios,
+            size_bucket_ratios,
+            global_ratio,
+        ) = prediction_context
+
+        base_size_value = file_data.pre_conversion_size or file_data.current_size
+        try:
+            base_size = float(base_size_value)
+        except (TypeError, ValueError):
+            return 0
+
+        if base_size <= 0:
+            return 0
+
+        bit_rate = file_data.video_information.format.bit_rate
+
+        video_codec = "Unknown"
+        for stream in file_data.video_information.streams:
+            if stream.codec_type == "video" and stream.codec_name is not None:
+                video_codec = str(stream.codec_name).upper()
+                break
+
+        saved_ratio, _, _ = self._get_prediction_saved_ratio(
+            base_size,
+            bit_rate,
+            video_codec,
+            bitrates,
+            saved_ratios_by_bitrate,
+            bitrate_band_ratios,
+            codec_ratios,
+            size_bucket_ratios,
+            global_ratio,
+        )
+
+        return round(saved_ratio * 100)
+
     def _create_file_to_convert_data(
         self,
         count: int,

@@ -625,6 +625,53 @@ function setValueIfChanged(elementId, value) {
     }
 }
 
+function formatSpeedMultiplier(speedValue) {
+    if (speedValue == null || speedValue === "") {
+        return "--";
+    }
+
+    if (typeof speedValue === "number" && Number.isFinite(speedValue)) {
+        return `${speedValue.toFixed(2)}x`;
+    }
+
+    const speedText = String(speedValue).trim();
+    if (speedText.length === 0 || speedText === "--") {
+        return "--";
+    }
+
+    const parsedSpeed = Number.parseFloat(speedText.replace(/x$/i, ""));
+    if (!Number.isFinite(parsedSpeed)) {
+        return speedText;
+    }
+
+    return `${parsedSpeed.toFixed(2)}x`;
+}
+
+function formatPredictedRatio(estimatedPercentageSaved) {
+    if (estimatedPercentageSaved == null || estimatedPercentageSaved === "") {
+        return "--";
+    }
+
+    const parsedRatio = Number.parseFloat(String(estimatedPercentageSaved));
+    if (!Number.isFinite(parsedRatio)) {
+        return "--";
+    }
+
+    return `${Math.round(parsedRatio).toFixed(0)}%`;
+}
+
+function getLivePredictedRatioValue(fileData) {
+    if (fileData == null || typeof fileData !== "object") {
+        return null;
+    }
+
+    if (fileData.estimated_percentage_saved != null) {
+        return fileData.estimated_percentage_saved;
+    }
+
+    return null;
+}
+
 function renderNoFileBeingConverted(progressElement) {
     if (progressElement == null) {
         return;
@@ -648,7 +695,8 @@ function updateCurrentConversionDetails(progressElement, fileData, completeStrin
     }
 
     setValueIfChanged("complete-value", completeString);
-    setValueIfChanged("speed-value", fileData.speed != null ? fileData.speed : "--");
+    setValueIfChanged("speed-value", formatSpeedMultiplier(fileData.speed));
+    setValueIfChanged("predicted_ratio-value", formatPredictedRatio(getLivePredictedRatioValue(fileData)));
     setValueIfChanged("time_since_start-value", fileData.time_since_start);
     setValueIfChanged("time_remaining-value", fileData.time_remaining);
     setValueIfChanged("completion_time-value", expectedCompletionTime);
@@ -675,9 +723,10 @@ function ensureCurrentConversionLayout(progressElement) {
     layoutElement.appendChild(filenameRowElement);
 
     const completeSpeedRowElement = document.createElement("div");
-    completeSpeedRowElement.classList.add("current-stats-row", "current-stats-row-two");
+    completeSpeedRowElement.classList.add("current-stats-row", "current-stats-row-three");
     completeSpeedRowElement.appendChild(createCurrentMetricBlock("complete", "Complete"));
     completeSpeedRowElement.appendChild(createCurrentMetricBlock("speed", "Speed"));
+    completeSpeedRowElement.appendChild(createCurrentMetricBlock("predicted_ratio", "Predicted Ratio"));
     layoutElement.appendChild(completeSpeedRowElement);
 
     const timeRowElement = document.createElement("div");

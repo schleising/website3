@@ -85,6 +85,7 @@ async def converter_websocket(websocket: WebSocket):
                     if current_conversion_status_db_list is not None:
                         # Create a ConvertingFilesMessage list
                         current_conversion_status_list: list[ConvertingFileData] = []
+                        prediction_context = await database_tools.get_prediction_context()
 
                         for (
                             current_conversion_status_db
@@ -111,6 +112,13 @@ async def converter_websocket(websocket: WebSocket):
                             )
 
                             # Create a ConvertingFileMessage from the database object
+                            estimated_percentage_saved = (
+                                await database_tools.get_estimated_percentage_saved_for_file(
+                                    current_conversion_status_db,
+                                    prediction_context,
+                                )
+                            )
+
                             current_conversion_status = ConvertingFileData(
                                 filename=Path(
                                     current_conversion_status_db.filename
@@ -121,6 +129,7 @@ async def converter_websocket(websocket: WebSocket):
                                 backend_name=current_conversion_status_db.backend_name,
                                 speed=current_conversion_status_db.speed,
                                 copying=current_conversion_status_db.copying,
+                                estimated_percentage_saved=estimated_percentage_saved,
                             )
 
                             # Add the ConvertingFileMessage to the list
