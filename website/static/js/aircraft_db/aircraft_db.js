@@ -106,10 +106,14 @@ function parseAircraftData(jsn) {
     const outputContainer = document.getElementById("aircraft_output");
     const outputMessage = document.getElementById("aircraft_output_message");
     const cardContainer = document.getElementById("aircraft_card");
+    const introContainer = document.getElementById("aircraft_intro");
 
     cardContainer.replaceChildren();
     outputContainer.classList.remove("has-result");
     outputContainer.classList.remove("has-message");
+    if (introContainer) {
+        introContainer.classList.add("hidden");
+    }
 
     if (dataset === null) {
         outputMessage.textContent = "No aircraft found for that tail number.";
@@ -128,17 +132,20 @@ function parseAircraftData(jsn) {
     }
 
     outputMessage.textContent = "";
-    cardContainer.append(createAircraftCard(renderedFields));
+    cardContainer.append(createAircraftCard(dataset, renderedFields));
     outputContainer.classList.add("has-result");
 };
 
-function createAircraftCard(fields) {
+function createAircraftCard(dataset, fields) {
     const cardElement = document.createElement("article");
     cardElement.className = "aircraft-result-card";
 
     const headingElement = document.createElement("h4");
     headingElement.className = "aircraft-result-title";
-    headingElement.textContent = "Aircraft Details";
+    const displayRegistration = decodeFieldValue(dataset.registration);
+    headingElement.textContent = displayRegistration.length > 0
+        ? "Aircraft Details - " + displayRegistration
+        : "Aircraft Details";
 
     const fieldGridElement = document.createElement("div");
     fieldGridElement.className = "aircraft-field-grid";
