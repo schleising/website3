@@ -306,7 +306,7 @@ video {
     --site-card-border-color: var(--line);
     --site-card-top-accent: rgba(77, 123, 177, 0.72);
     --site-card-radius: 0.75rem;
-    --site-card-bg: linear-gradient(145deg, #fbfdff 0%, #edf5ff 62%, #e4efff 100%);
+    --site-card-bg: linear-gradient(180deg, #fbfdff 0%, #f4f8fd 100%);
     --site-card-shadow: 0 0.5rem 1rem rgba(26, 46, 75, 0.1);
     border: 0.0625rem solid var(--site-card-border-color);
     border-top: 0.2rem solid var(--site-card-top-accent);

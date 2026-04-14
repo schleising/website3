@@ -6,19 +6,13 @@
 }
 
 .score-widget {
-    --site-card-shadow: 0 0.45rem 0.95rem rgba(26, 46, 75, 0.1);
     display: flex;
     flex-direction: column;
     padding: 0.25rem;
     user-select: none;
 }
 
-.score-widget:hover {
-    --site-card-bg: linear-gradient(145deg, #fcfdff 0%, #f1f7ff 62%, #e8f1ff 100%);
-}
-
 .football-empty-state {
-    --site-card-shadow: 0 0.55rem 1.1rem rgba(26, 46, 75, 0.1);
     margin: 0.25rem auto;
     width: min(42rem, 100%);
     display: flex;
