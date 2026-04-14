@@ -26,7 +26,7 @@
 }
 
 .data-row {
-    border: 0.25rem solid var(--surface-soft);
+    border: 0.2rem solid var(--surface-soft);
 }
 
 .data-row:hover > .row-data {
