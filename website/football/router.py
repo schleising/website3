@@ -1,5 +1,5 @@
 from calendar import monthrange, month_name
-from datetime import datetime
+from datetime import date, datetime, timedelta
 import json
 import logging
 from zoneinfo import ZoneInfo
@@ -73,6 +73,54 @@ def _build_month_nav_links(selected_season_key: str) -> list[dict[str, str]]:
     ]
 
 
+def _ordinal_day(day_of_month: int) -> str:
+    if 10 <= day_of_month % 100 <= 20:
+        suffix = "th"
+    else:
+        suffix = {1: "st", 2: "nd", 3: "rd"}.get(day_of_month % 10, "th")
+
+    return f"{day_of_month}{suffix}"
+
+
+def _format_live_day_label(day_value: datetime, today_value: datetime) -> str:
+    if day_value.date() == today_value.date():
+        return "Today"
+
+    return f"{day_value.strftime('%a')}, {_ordinal_day(day_value.day)} {day_value.strftime('%b')}"
+
+
+def _build_live_day_groups(matches: list, today_value: datetime) -> list[dict]:
+    grouped_matches: dict[date, list] = {}
+
+    for match in matches:
+        match_datetime = match.local_date if match.local_date is not None else match.utc_date
+        match_day = match_datetime.date()
+        grouped_matches.setdefault(match_day, []).append(match)
+
+    live_day_groups: list[dict] = []
+
+    for day_offset in range(7):
+        day_datetime = today_value + timedelta(days=day_offset)
+        day_key = day_datetime.date()
+        live_day_groups.append(
+            {
+                "label": _format_live_day_label(day_datetime, today_value),
+                "matches": grouped_matches.get(day_key, []),
+            }
+        )
+
+    return live_day_groups
+
+
+def _live_scores_window() -> tuple[datetime, datetime]:
+    window_start = datetime.today().replace(hour=0, minute=0, second=0, microsecond=0)
+    window_end = (window_start + timedelta(days=6)).replace(
+        hour=23, minute=59, second=59, microsecond=0
+    )
+
+    return window_start, window_end
+
+
 async def _build_football_season_context(
     request: Request,
     requested_season_key: str | None,
@@ -127,8 +175,7 @@ async def get_live_matches(
     selected_season_key = season_context["selected_season_key"]
 
     if season_context["is_current_season"]:
-        start_date = datetime.today().replace(hour=0, minute=0, second=0, microsecond=0)
-        end_date = datetime.today().replace(hour=23, minute=59, second=59, microsecond=0)
+        start_date, end_date = _live_scores_window()
         page_title = "Today"
         live_matches = True
     else:
@@ -143,6 +190,9 @@ async def get_live_matches(
 
     matches = await retreive_matches(start_date, end_date, selected_season_key)
     matches = update_match_timezone(matches)
+    live_day_groups = (
+        _build_live_day_groups(matches, start_date) if live_matches else None
+    )
 
     return TEMPLATES.TemplateResponse(
         request,
@@ -150,6 +200,7 @@ async def get_live_matches(
         {
             "request": request,
             "matches": matches,
+            "live_day_groups": live_day_groups,
             "title": page_title,
             "live_matches": live_matches,
             **season_context,
@@ -377,11 +428,9 @@ async def get_bet_data(request: Request):
 @football_router.get("/api", response_model=SimplifiedFootballData)
 @football_router.get("/api/", response_model=SimplifiedFootballData)
 async def get_simplified_matches(request: Request) -> SimplifiedFootballData:
-    # Get todays matches from the database
-    matches = await retreive_matches(
-        datetime.today().replace(hour=0, minute=0, second=0, microsecond=0),
-        datetime.today().replace(hour=23, minute=59, second=59, microsecond=0),
-    )
+    # Get live-window matches from the database.
+    start_date, end_date = _live_scores_window()
+    matches = await retreive_matches(start_date, end_date)
 
     # Create a list of simplified matches
     simplified_football_data: SimplifiedFootballData = SimplifiedFootballData(
@@ -441,12 +490,8 @@ async def websocket_endpoint(websocket: WebSocket):
 
             if msg["messageType"] == "get_scores":
                 logging.debug("Football Websocket")
-                matches = await retreive_matches(
-                    datetime.today().replace(hour=0, minute=0, second=0, microsecond=0),
-                    datetime.today().replace(
-                        hour=23, minute=59, second=59, microsecond=0
-                    ),
-                )
+                start_date, end_date = _live_scores_window()
+                matches = await retreive_matches(start_date, end_date)
                 logging.debug("Got matches")
 
                 match_list = MatchList(matches=matches)

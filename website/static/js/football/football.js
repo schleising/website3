@@ -11,18 +11,14 @@ var intervalId = null;
 document.addEventListener('readystatechange', event => {
     if (event.target.readyState === "complete") {
         console.log("Load Event")
-        // Get the page URL
-        url = document.URL;
+        const pageUrl = new URL(window.location.href);
+        const wsProtocol = pageUrl.protocol === "https:" ? "wss:" : "ws:";
+        const pathname = pageUrl.pathname.endsWith("/")
+            ? pageUrl.pathname
+            : pageUrl.pathname + "/";
 
-        // Replace the http or https with ws or wss respectively
-        if (url.startsWith("https")) {
-            url = url.replace("https", "wss");
-        } else if (url.startsWith("http")) {
-            url = url.replace("http", "ws");
-        }
-
-        // Append the ws to the URL
-        url = url + "ws/";
+        // Keep query params (season etc.) while targeting the websocket endpoint.
+        url = `${wsProtocol}//${pageUrl.host}${pathname}ws/${pageUrl.search}`;
 
         // Check whether the websocket is open, if not open it
         openWebSocket();
@@ -93,6 +89,10 @@ function openWebSocket() {
             }
 
             scoreWidget = document.getElementById(match.id);
+            if (!scoreWidget) {
+                return;
+            }
+
             scoreWidget.getElementsByClassName("match-status")[0].innerHTML = status;
             scoreWidget.getElementsByClassName("home-team-score")[0].innerHTML = home;
             scoreWidget.getElementsByClassName("away-team-score")[0].innerHTML = away;

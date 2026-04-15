@@ -4,7 +4,7 @@
 
 {% block header %}
 <h3 class="header-text football-header-text">
-  <span class="football-header-title">{% if team_matches_view|default(false) %}{{ title }}{% else %}{{ title }}'s Matches{% endif %}</span>
+  <span class="football-header-title">{% if team_matches_view|default(false) %}{{ title }}{% elif live_matches %}Upcoming Matches{% else %}{{ title }}'s Matches{% endif %}</span>
   <button
     type="button"
     id="football-season-open"
@@ -23,7 +23,43 @@
 {% endblock %}
 
 {% block content %}
-{% if matches|length > 0 %}
+{% if live_matches and live_day_groups is defined and live_day_groups %}
+<div class="football-day-list">
+  {% for day_group in live_day_groups %}
+  <section class="football-day-card site-card" aria-label="{{ day_group.label }} fixtures">
+    <h4 class="football-day-title">{{ day_group.label }}</h4>
+    {% if day_group.matches|length > 0 %}
+    <div class="football-grid">
+    {% for match in day_group.matches %}
+      <div class="score-widget site-card" id="{{ match.id }}">
+        <div class="date-and-time">
+          <div class="match-start">{{ match.local_date.strftime('%H:%M %Z') }}</div>
+          <div class="match-status"></div>
+        </div>
+        <div class="team">
+          <div class="team-and-badge">
+            <img class="team-badge" src="{{ match.home_team.local_crest }}"></img>
+            <a class="team-name" href="/football/matches/team/{{ match.home_team.id }}/?season={{ selected_season_key|default(current_season_key)|default('') }}">{{ match.home_team.short_name }}</a>
+          </div>
+          <div class="home-team-score"></div>
+        </div>
+        <div class="team">
+          <div class="team-and-badge">
+            <img class="team-badge" src="{{ match.away_team.local_crest }}"></img>
+            <a class="team-name" href="/football/matches/team/{{ match.away_team.id }}/?season={{ selected_season_key|default(current_season_key)|default('') }}">{{ match.away_team.short_name }}</a>
+          </div>
+          <div class="away-team-score"></div>
+        </div>
+      </div>
+    {% endfor %}
+    </div>
+    {% else %}
+    <p class="football-day-empty">No fixtures</p>
+    {% endif %}
+  </section>
+  {% endfor %}
+</div>
+{% elif matches|length > 0 %}
 <div class="football-grid">
 {% for match in matches %}
   <div class="score-widget site-card" id="{{ match.id }}">
