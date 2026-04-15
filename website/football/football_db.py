@@ -36,12 +36,14 @@ def _season_sort_value(season_key: str) -> int:
 
 def get_season_label(season_key: str) -> str:
     season_start, season_end = season_key.split("_", maxsplit=1)
-    return f"{season_start}/{season_end}"
+    if season_start[:2] != season_end[:2]:
+        return f"{season_start}-{season_end}"
+
+    return f"{season_start}-{season_end[-2:]}"
 
 
 def get_season_short_label(season_key: str) -> str:
-    season_start, season_end = season_key.split("_", maxsplit=1)
-    return f"{season_start[-2:]}-{season_end[-2:]}"
+    return get_season_label(season_key)
 
 
 def _build_form_list(form_value: str | None) -> list[FormItem]:

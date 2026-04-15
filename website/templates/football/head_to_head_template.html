@@ -151,11 +151,16 @@
         {% set season_end_year = match_date.year %}
         {% endif %}
         {% set match_season_key = season_start_year ~ '_' ~ season_end_year %}
+        {% if (season_start_year // 100) != (season_end_year // 100) %}
+        {% set match_season_label = season_start_year ~ '-' ~ season_end_year %}
+        {% else %}
+        {% set match_season_label = season_start_year ~ '-' ~ '%02d'|format(season_end_year % 100) %}
+        {% endif %}
         <article class="score-widget site-card" id="{{ match.id }}">
           <div class="date-and-time">
             <div class="match-start">{{ match_date.strftime('%a %d %b %Y %H:%M %Z') }}</div>
             <div class="h2h-match-meta">
-              <div class="h2h-season-pill">{{ season_start_year }}/{{ season_end_year }}</div>
+              <div class="h2h-season-pill">{{ match_season_label }}</div>
               <div class="match-status">{{ match.status }}</div>
             </div>
           </div>
