@@ -25,9 +25,9 @@
 {% endblock %}
 
 {% block football_content %}
-{% if live_matches and live_day_groups is defined and live_day_groups %}
+{% if day_groups is defined and day_groups %}
 <div class="football-day-list">
-  {% for day_group in live_day_groups %}
+  {% for day_group in day_groups %}
   <section class="football-day-group{% if day_group.is_today %} is-today{% endif %}" {% if day_group.is_today %}id="live-day-today"{% endif %} aria-label="{{ day_group.label }} fixtures">
     <div class="football-day-heading">
       <h4 class="football-day-title">{{ day_group.label }}</h4>
@@ -37,22 +37,46 @@
     {% for match in day_group.matches %}
       <div class="score-widget site-card" id="{{ match.id }}">
         <div class="date-and-time">
+          {% if live_matches %}
           <div class="match-start">{{ match.local_date.strftime('%H:%M %Z') }}</div>
+          {% else %}
+          <div class="match-start">{{ match.local_date.strftime('%a %d %b %H:%M %Z') }}</div>
+          {% endif %}
+          {% if live_matches %}
           <div class="match-status"></div>
+          {% else %}
+          <div class="match-status">{{ match.status }}</div>
+          {% endif %}
         </div>
         <div class="team">
           <div class="team-and-badge">
             <img class="team-badge" src="{{ match.home_team.local_crest }}"></img>
             <a class="team-name" href="/football/matches/team/{{ match.home_team.id }}/?season={{ selected_season_key|default(current_season_key)|default('') }}">{{ match.home_team.short_name }}</a>
           </div>
+          {% if live_matches %}
           <div class="home-team-score"></div>
+          {% else %}
+            {% if match.score.full_time.home == None %}
+            <div class="home-team-score">-</div>
+            {% else %}
+            <div class="home-team-score">{{ match.score.full_time.home }}</div>
+            {% endif %}
+          {% endif %}
         </div>
         <div class="team">
           <div class="team-and-badge">
             <img class="team-badge" src="{{ match.away_team.local_crest }}"></img>
             <a class="team-name" href="/football/matches/team/{{ match.away_team.id }}/?season={{ selected_season_key|default(current_season_key)|default('') }}">{{ match.away_team.short_name }}</a>
           </div>
+          {% if live_matches %}
           <div class="away-team-score"></div>
+          {% else %}
+            {% if match.score.full_time.away == None %}
+            <div class="away-team-score">-</div>
+            {% else %}
+            <div class="away-team-score">{{ match.score.full_time.away }}</div>
+            {% endif %}
+          {% endif %}
         </div>
       </div>
     {% endfor %}

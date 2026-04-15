@@ -115,6 +115,29 @@ def _build_live_day_groups(matches: list, today_value: datetime) -> list[dict]:
     return live_day_groups
 
 
+def _build_match_day_groups(matches: list, today_value: datetime) -> list[dict]:
+    grouped_matches: dict[date, list] = {}
+
+    for match in matches:
+        match_datetime = match.local_date if match.local_date is not None else match.utc_date
+        match_day = match_datetime.date()
+        grouped_matches.setdefault(match_day, []).append(match)
+
+    day_groups: list[dict] = []
+
+    for day_key in sorted(grouped_matches):
+        day_datetime = datetime.combine(day_key, datetime.min.time())
+        day_groups.append(
+            {
+                "label": _format_live_day_label(day_datetime, today_value),
+                "matches": grouped_matches[day_key],
+                "is_today": day_key == today_value.date(),
+            }
+        )
+
+    return day_groups
+
+
 def _live_scores_window() -> tuple[datetime, datetime]:
     today_start = datetime.today().replace(hour=0, minute=0, second=0, microsecond=0)
     window_start = today_start - timedelta(days=LIVE_DAYS_BEFORE_TODAY)
@@ -195,8 +218,11 @@ async def get_live_matches(
     matches = await retreive_matches(start_date, end_date, selected_season_key)
     matches = update_match_timezone(matches)
     live_today_anchor = start_date + timedelta(days=LIVE_DAYS_BEFORE_TODAY)
-    live_day_groups = (
-        _build_live_day_groups(matches, live_today_anchor) if live_matches else None
+    today_anchor = datetime.today().replace(hour=0, minute=0, second=0, microsecond=0)
+    day_groups = (
+        _build_live_day_groups(matches, live_today_anchor)
+        if live_matches
+        else _build_match_day_groups(matches, today_anchor)
     )
 
     return TEMPLATES.TemplateResponse(
@@ -205,7 +231,7 @@ async def get_live_matches(
         {
             "request": request,
             "matches": matches,
-            "live_day_groups": live_day_groups,
+            "day_groups": day_groups,
             "title": page_title,
             "live_matches": live_matches,
             **season_context,
@@ -232,6 +258,8 @@ async def get_months_matches(
 
     matches = await retreive_matches(start_date, end_date, selected_season_key)
     matches = update_match_timezone(matches)
+    today_anchor = datetime.today().replace(hour=0, minute=0, second=0, microsecond=0)
+    day_groups = _build_match_day_groups(matches, today_anchor)
 
     return TEMPLATES.TemplateResponse(
         request,
@@ -239,6 +267,7 @@ async def get_months_matches(
         {
             "request": request,
             "matches": matches,
+            "day_groups": day_groups,
             "title": month_name[month],
             "live_matches": False,
             **season_context,
@@ -258,6 +287,8 @@ async def get_teams_matches(
 
     team_name, matches = await retreive_team_matches(team_id, selected_season_key)
     matches = update_match_timezone(matches)
+    today_anchor = datetime.today().replace(hour=0, minute=0, second=0, microsecond=0)
+    day_groups = _build_match_day_groups(matches, today_anchor)
 
     return TEMPLATES.TemplateResponse(
         request,
@@ -265,6 +296,7 @@ async def get_teams_matches(
         {
             "request": request,
             "matches": matches,
+            "day_groups": day_groups,
             "title": team_name,
             "live_matches": False,
             "team_matches_view": True,
