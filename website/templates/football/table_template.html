@@ -1,11 +1,11 @@
 {% extends "football/football-base.html" %}
 
 {% block football_head %}
-<link rel="stylesheet" href="/css/table.css?v1.0.9">
+<link rel="stylesheet" href="/css/table.css?v1.0.11">
 {% block football_scripts %}
 <script defer src="/js/football/visibility_refresh.js?v1.0.0"></script>
 {% if is_current_season|default(false) %}
-<script defer src="/js/football/table_live.js?v1.0.1"></script>
+<script defer src="/js/football/table_live.js?v1.0.2"></script>
 {% endif %}
 {% endblock %}
 {% block title %}<title>Football - {{ title }}</title>{% endblock %}
@@ -28,7 +28,7 @@
 {% endblock %}
 
 {% block football_content %}
-<div class="table-container">
+<div class="table-container" data-team-count="{{ table_list|length }}">
   <table>
     <thead class="sticky-header">
       <tr class="header-row">

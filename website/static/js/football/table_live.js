@@ -124,6 +124,11 @@ function patchLiveTable(tableList) {
         return;
     }
 
+    const tableContainer = tbody.closest(".table-container");
+    if (tableContainer) {
+        tableContainer.dataset.teamCount = String(tableList.length);
+    }
+
     const seasonKey = tbody.dataset.seasonKey || "";
 
     tableList.forEach(tableItem => {

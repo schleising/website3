@@ -2,8 +2,35 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 0 0.25rem;
+    padding: 0;
     user-select: none;
+    --table-cell-py: 0.12rem;
+    --table-cell-px: 0.85rem;
+    --table-row-border: 0.12rem;
+    --table-team-gap: 0.55rem;
+    --table-badge-size: 1.05rem;
+    --table-live-pill-font: 0.54rem;
+    --table-live-pill-py: 0.03rem;
+    --table-live-pill-px: 0.16rem;
+    --table-live-pill-ml: 0.35rem;
+    --table-form-font: 0.54rem;
+    --table-form-margin: 0.06rem;
+    --table-form-size: 0.88rem;
+}
+
+.table-container[data-team-count="20"] {
+    --table-cell-py: 0.16rem;
+    --table-cell-px: 0.92rem;
+    --table-row-border: 0.14rem;
+    --table-team-gap: 0.62rem;
+    --table-badge-size: 1.12rem;
+    --table-live-pill-font: 0.58rem;
+    --table-live-pill-py: 0.04rem;
+    --table-live-pill-px: 0.18rem;
+    --table-live-pill-ml: 0.42rem;
+    --table-form-font: 0.58rem;
+    --table-form-margin: 0.08rem;
+    --table-form-size: 0.94rem;
 }
 
 .table-container table,
@@ -23,7 +50,7 @@
 }
 
 .data {
-    padding: 0.2rem 1rem;
+    padding: var(--table-cell-py) var(--table-cell-px);
 }
 
 .sticky-header {
@@ -32,16 +59,44 @@
 }
 
 .data-row {
-    border: 0.2rem solid var(--surface-soft);
+    border: var(--table-row-border) solid var(--surface-soft);
 }
 
 .data-row:hover > .row-data {
     background-color: var(--surface-soft);
 }
 
+.table-container .team-and-badge {
+    column-gap: var(--table-team-gap);
+}
+
+.table-container .team-badge {
+    width: var(--table-badge-size);
+    height: var(--table-badge-size);
+}
+
+.table-container .live-position {
+    font-size: var(--table-live-pill-font);
+    padding: var(--table-live-pill-py) var(--table-live-pill-px);
+    margin-left: var(--table-live-pill-ml);
+}
+
+.table-container .form-character {
+    font-size: var(--table-form-font);
+    margin: var(--table-form-margin);
+    width: var(--table-form-size);
+    height: var(--table-form-size);
+}
+
 @media screen and (max-width: 75rem) {
-    .data {
-        padding: 0.2rem 0.75rem;
+    .table-container {
+        --table-cell-py: 0.1rem;
+        --table-cell-px: 0.68rem;
+    }
+
+    .table-container[data-team-count="20"] {
+        --table-cell-py: 0.14rem;
+        --table-cell-px: 0.78rem;
     }
 
     .large-table {
@@ -50,8 +105,20 @@
 }
 
 @media screen and (max-width: 63rem) {
-    .data {
-        padding: 0.05rem 0.5rem;
+    .table-container {
+        --table-cell-py: 0.04rem;
+        --table-cell-px: 0.46rem;
+        --table-badge-size: 0.95rem;
+        --table-form-margin: 0.04rem;
+        --table-form-size: 0.78rem;
+    }
+
+    .table-container[data-team-count="20"] {
+        --table-cell-py: 0.08rem;
+        --table-cell-px: 0.56rem;
+        --table-badge-size: 1rem;
+        --table-form-margin: 0.05rem;
+        --table-form-size: 0.84rem;
     }
 
     .medium-table {
