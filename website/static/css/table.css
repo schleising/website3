@@ -20,16 +20,16 @@
     --table-border: #d9e4f1;
     --zone-ucl: rgba(46, 101, 184, 0.11);
     --zone-ucl-hover: rgba(46, 101, 184, 0.17);
-    --zone-ucl-marker: rgba(33, 80, 156, 0.74);
+    --zone-ucl-marker: #225da8;
     --zone-uel: rgba(205, 144, 52, 0.12);
     --zone-uel-hover: rgba(205, 144, 52, 0.18);
-    --zone-uel-marker: rgba(173, 115, 32, 0.74);
+    --zone-uel-marker: #b0741e;
     --zone-uecl: rgba(36, 154, 130, 0.11);
     --zone-uecl-hover: rgba(36, 154, 130, 0.17);
-    --zone-uecl-marker: rgba(21, 122, 103, 0.74);
+    --zone-uecl-marker: #188e78;
     --zone-rel: rgba(184, 65, 91, 0.11);
     --zone-rel-hover: rgba(184, 65, 91, 0.18);
-    --zone-rel-marker: rgba(154, 39, 62, 0.76);
+    --zone-rel-marker: #a23a50;
     --range-focus-bg: rgba(49, 78, 114, 0.21);
     --range-focus-fg: #152d4b;
     --range-high-bg: rgba(56, 138, 96, 0.23);
@@ -89,52 +89,20 @@
     background-color: var(--table-row-hover);
 }
 
-.data-row.table-zone-ucl > .row-data {
-    background-color: var(--zone-ucl);
-}
-
 .data-row.table-zone-ucl > .position {
-    box-shadow: inset 0.17rem 0 0 var(--zone-ucl-marker);
-}
-
-.data-row.table-zone-ucl:hover > .row-data {
-    background-color: var(--zone-ucl-hover);
-}
-
-.data-row.table-zone-uel > .row-data {
-    background-color: var(--zone-uel);
+    box-shadow: inset 0.21rem 0 0 var(--zone-ucl-marker);
 }
 
 .data-row.table-zone-uel > .position {
-    box-shadow: inset 0.17rem 0 0 var(--zone-uel-marker);
-}
-
-.data-row.table-zone-uel:hover > .row-data {
-    background-color: var(--zone-uel-hover);
-}
-
-.data-row.table-zone-uecl > .row-data {
-    background-color: var(--zone-uecl);
+    box-shadow: inset 0.21rem 0 0 var(--zone-uel-marker);
 }
 
 .data-row.table-zone-uecl > .position {
-    box-shadow: inset 0.17rem 0 0 var(--zone-uecl-marker);
-}
-
-.data-row.table-zone-uecl:hover > .row-data {
-    background-color: var(--zone-uecl-hover);
-}
-
-.data-row.table-zone-relegation > .row-data {
-    background-color: var(--zone-rel);
+    box-shadow: inset 0.21rem 0 0 var(--zone-uecl-marker);
 }
 
 .data-row.table-zone-relegation > .position {
-    box-shadow: inset 0.17rem 0 0 var(--zone-rel-marker);
-}
-
-.data-row.table-zone-relegation:hover > .row-data {
-    background-color: var(--zone-rel-hover);
+    box-shadow: inset 0.21rem 0 0 var(--zone-rel-marker);
 }
 
 .data-row.table-range-focus > .position {
