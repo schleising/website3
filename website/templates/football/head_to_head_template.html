@@ -30,7 +30,7 @@
       <span class="h2h-toggle-icon" id="h2h-input-toggle-icon" aria-hidden="true">▲</span>
     </div>
     <div class="h2h-input-content" id="h2h-input-content">
-      <p>Select two teams to view all previous Premier League meetings.</p>
+      <p>Select two teams to view all previous {{ selected_competition_name|default('Premier League') }} meetings.</p>
       <form class="h2h-form" method="get" action="/football/head-to-head/">
         {% if selected_season_key is defined %}
         <input type="hidden" name="season" value="{{ selected_season_key }}">
@@ -153,11 +153,16 @@
         {% else %}
         {% set match_season_label = season_start_year ~ '-' ~ '%02d'|format(season_end_year % 100) %}
         {% endif %}
+        {% if season_start_year < 1992 %}
+        {% set match_competition_label = 'Division 1' %}
+        {% else %}
+        {% set match_competition_label = 'Premier League' %}
+        {% endif %}
         <article class="score-widget site-card" id="{{ match.id }}">
           <div class="date-and-time">
             <div class="match-start">{{ match_date.strftime('%a %d %b %Y %H:%M %Z') }}</div>
             <div class="h2h-match-meta">
-              <div class="h2h-season-pill">{{ match_season_label }}</div>
+              <div class="h2h-season-pill">{{ match_competition_label }} {{ match_season_label }}</div>
               <div class="match-status">{{ match.status }}</div>
             </div>
           </div>

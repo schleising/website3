@@ -140,7 +140,7 @@
 {% if live_matches %}
 <section class="football-empty-state site-card" aria-live="polite">
   <h3>No Matches Today</h3>
-  <p>There are no Premier League fixtures today.</p>
+  <p>There are no {{ selected_competition_name|default('Premier League') }} fixtures today.</p>
   <div class="football-empty-state__meta">Use the side menu to view fixtures from other months.</div>
 </section>
 {% else %}

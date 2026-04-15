@@ -19,6 +19,7 @@ from fastapi.templating import Jinja2Templates
 
 from .football_db import (
     get_available_season_keys,
+    get_competition_name_for_season,
     get_season_label,
     get_season_short_label,
     infer_current_season_key,
@@ -220,9 +221,11 @@ async def _build_football_season_context(
         "selected_season_key": selected_season_key,
         "selected_season_label": get_season_label(selected_season_key),
         "selected_season_short_label": get_season_short_label(selected_season_key),
+        "selected_competition_name": get_competition_name_for_season(selected_season_key),
         "current_season_key": current_season_key,
         "current_season_label": get_season_label(current_season_key),
         "current_season_short_label": get_season_short_label(current_season_key),
+        "current_competition_name": get_competition_name_for_season(current_season_key),
         "is_current_season": selected_season_key == current_season_key,
         "season_switch_path": "/football/table/",
         "current_season_url": f"/football/table/?season={current_season_key}",
@@ -480,7 +483,7 @@ async def get_table(
         "football/table_template.html",
         {
             "request": request,
-            "title": "Premier League Table",
+            "title": "League Table",
             "table_list": table_list,
             **season_context,
         },

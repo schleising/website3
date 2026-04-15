@@ -20,6 +20,7 @@ FORM_RESULT_CLASS = {
     "D": "form-draw",
     "L": "form-loss",
 }
+FIRST_PREMIER_LEAGUE_SEASON_START_YEAR = 1992
 
 
 def _season_matches_collection_name(season_key: str) -> str:
@@ -34,7 +35,7 @@ def _season_sort_value(season_key: str) -> int:
     return int(season_key.split("_")[0])
 
 
-def get_season_label(season_key: str) -> str:
+def _season_year_label(season_key: str) -> str:
     season_start, season_end = season_key.split("_", maxsplit=1)
     if season_start[:2] != season_end[:2]:
         return f"{season_start}-{season_end}"
@@ -42,8 +43,21 @@ def get_season_label(season_key: str) -> str:
     return f"{season_start}-{season_end[-2:]}"
 
 
+def get_competition_name_for_season(season_key: str) -> str:
+    season_start, _ = season_key.split("_", maxsplit=1)
+    season_start_year = int(season_start)
+    if season_start_year < FIRST_PREMIER_LEAGUE_SEASON_START_YEAR:
+        return "Division 1"
+
+    return "Premier League"
+
+
+def get_season_label(season_key: str) -> str:
+    return f"{get_competition_name_for_season(season_key)} {_season_year_label(season_key)}"
+
+
 def get_season_short_label(season_key: str) -> str:
-    return get_season_label(season_key)
+    return _season_year_label(season_key)
 
 
 def _build_form_list(form_value: str | None) -> list[FormItem]:
