@@ -115,23 +115,31 @@
 }
 
 .data-row.table-range-focus > .position {
-    background-color: rgba(66, 86, 112, 0.09);
+    background-color: rgba(48, 74, 106, 0.22);
+    color: #132741;
+    box-shadow: inset 0 0 0 0.07rem rgba(33, 58, 89, 0.4);
 }
 
 .data-row.table-range-high > .position {
-    background-color: rgba(84, 126, 103, 0.12);
+    background-color: rgba(58, 141, 99, 0.24);
+    color: #103725;
+    font-weight: 700;
 }
 
 .data-row.table-range-high-boundary > .position {
-    background-color: rgba(84, 126, 103, 0.2);
+    background-color: rgba(58, 141, 99, 0.38);
+    box-shadow: inset 0 0 0 0.07rem rgba(35, 107, 71, 0.6);
 }
 
 .data-row.table-range-low > .position {
-    background-color: rgba(146, 98, 107, 0.12);
+    background-color: rgba(171, 88, 107, 0.24);
+    color: #4e1823;
+    font-weight: 700;
 }
 
 .data-row.table-range-low-boundary > .position {
-    background-color: rgba(146, 98, 107, 0.2);
+    background-color: rgba(171, 88, 107, 0.38);
+    box-shadow: inset 0 0 0 0.07rem rgba(133, 50, 69, 0.6);
 }
 
 .table-container .team-and-badge {
