@@ -12,7 +12,7 @@
 </h3>
 {% endblock %}
 
-{% block content %}
+{% block football_content %}
 {% set has_valid_pair = selected_team_a and selected_team_b and selected_team_a.id != selected_team_b.id %}
 {% set has_results = matches|length > 0 %}
 <div class="h2h-layout">

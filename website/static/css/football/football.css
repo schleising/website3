@@ -1,3 +1,15 @@
+.football-content-pad {
+    padding: clamp(0.9rem, 1.45vw, 1.35rem);
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-height: 0;
+}
+
+#content:has(> .football-content-pad) {
+    padding: 0;
+}
+
 .football-grid {
     display: grid;
     flex: 0 0 auto;
@@ -741,6 +753,10 @@ body.football-season-popup-open {
 }
 
 @media screen and (max-width: 50rem) {
+    .football-content-pad {
+        padding: 0.58rem;
+    }
+
     .football-grid {
         grid-template-columns: 1fr;
     }

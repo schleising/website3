@@ -18,7 +18,7 @@
 
 {% block head %}
 <link rel="stylesheet" href="/css/right-nav.css?v1.0.0">
-<link rel="stylesheet" href="/css/football/football.css?v1.4.10">
+<link rel="stylesheet" href="/css/football/football.css?v1.4.11">
 {% block football_head %}
 {% endblock %}
 {% endblock %}
@@ -78,4 +78,11 @@
 {% endblock %}
 {% block footer %}
 <footer>Data sourced from <a href="https://www.football-data.org/" class="link-light" target="_blank">football-data.org</a></footer>
+{% endblock %}
+
+{% block content %}
+<div class="football-content-pad">
+{% block football_content %}
+{% endblock %}
+</div>
 {% endblock %}
