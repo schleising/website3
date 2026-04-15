@@ -150,6 +150,7 @@
         {% set season_start_year = match_date.year - 1 %}
         {% set season_end_year = match_date.year %}
         {% endif %}
+        {% set match_season_key = season_start_year ~ '_' ~ season_end_year %}
         <article class="score-widget site-card" id="{{ match.id }}">
           <div class="date-and-time">
             <div class="match-start">{{ match_date.strftime('%a %d %b %Y %H:%M %Z') }}</div>
@@ -161,7 +162,7 @@
           <div class="team">
             <div class="team-and-badge">
               <img class="team-badge" src="{{ match.home_team.local_crest }}">
-              <a class="team-name" href="/football/matches/team/{{ match.home_team.id }}/?season={{ selected_season_key|default(current_season_key)|default('') }}">{{ match.home_team.short_name }}</a>
+              <a class="team-name" href="/football/matches/team/{{ match.home_team.id }}/?season={{ match_season_key }}">{{ match.home_team.short_name }}</a>
             </div>
             {% if match.score.full_time.home == None %}
             <div class="home-team-score">-</div>
@@ -172,7 +173,7 @@
           <div class="team">
             <div class="team-and-badge">
               <img class="team-badge" src="{{ match.away_team.local_crest }}">
-              <a class="team-name" href="/football/matches/team/{{ match.away_team.id }}/?season={{ selected_season_key|default(current_season_key)|default('') }}">{{ match.away_team.short_name }}</a>
+              <a class="team-name" href="/football/matches/team/{{ match.away_team.id }}/?season={{ match_season_key }}">{{ match.away_team.short_name }}</a>
             </div>
             {% if match.score.full_time.away == None %}
             <div class="away-team-score">-</div>
