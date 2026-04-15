@@ -1,11 +1,11 @@
 {% extends "football/football-base.html" %}
 
 {% block football_head %}
-<link rel="stylesheet" href="/css/table.css?v1.4.0">
+<link rel="stylesheet" href="/css/table.css?v1.5.1">
 {% block football_scripts %}
 <script defer src="/js/football/visibility_refresh.js?v1.1.0"></script>
 {% if is_current_season|default(false) %}
-<script defer src="/js/football/table_live.js?v1.4.0"></script>
+<script defer src="/js/football/table_live.js?v1.5.1"></script>
 {% endif %}
 {% endblock %}
 {% block title %}<title>Football - {{ title }}</title>{% endblock %}
@@ -46,9 +46,10 @@
       </tr>
     </thead>
     <tbody id="football-live-table-body" data-season-key="{{ selected_season_key|default(current_season_key)|default('') }}">
+      {% set relegation_cutoff = table_list|length - 2 %}
       {% for table_item in table_list %}
       <tr
-        class="data-row"
+        class="data-row{% if is_current_season|default(false) %}{% if table_item.position <= 5 %} table-zone-ucl{% elif table_item.position == 6 %} table-zone-uel{% elif table_item.position == 7 %} table-zone-uecl{% elif table_item.position >= relegation_cutoff %} table-zone-relegation{% endif %}{% endif %}"
         data-team-id="{{ table_item.team.id }}"
         data-position="{{ table_item.position }}"
         data-played="{{ table_item.played_games }}"

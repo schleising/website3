@@ -11,6 +11,12 @@ const RANGE_CLASSES = [
     "table-range-low",
     "table-range-low-boundary"
 ];
+const SEASON_ZONE_CLASSES = [
+    "table-zone-ucl",
+    "table-zone-uel",
+    "table-zone-uecl",
+    "table-zone-relegation"
+];
 
 function escapeHtml(value) {
     if (value === null || value === undefined) {
@@ -111,10 +117,36 @@ function updateTeamLink(row, teamId, seasonKey) {
     }
 }
 
-function updateTableRow(row, tableItem, seasonKey) {
+function updateSeasonZoneClasses(row, position, teamCount) {
+    SEASON_ZONE_CLASSES.forEach(className => row.classList.remove(className));
+
+    if (position <= 5) {
+        row.classList.add("table-zone-ucl");
+        return;
+    }
+
+    if (position === 6) {
+        row.classList.add("table-zone-uel");
+        return;
+    }
+
+    if (position === 7) {
+        row.classList.add("table-zone-uecl");
+        return;
+    }
+
+    const relegationCutoff = Math.max(teamCount - 2, 1);
+    if (position >= relegationCutoff) {
+        row.classList.add("table-zone-relegation");
+    }
+}
+
+function updateTableRow(row, tableItem, seasonKey, teamCount) {
     row.dataset.position = String(tableItem.position);
     row.dataset.played = String(tableItem.played_games);
     row.dataset.points = String(tableItem.points);
+
+    updateSeasonZoneClasses(row, Number(tableItem.position), teamCount);
 
     updateTextIfChanged(row.querySelector(".table-position-value"), tableItem.position);
     updatePositionDelta(row, tableItem);
@@ -304,7 +336,7 @@ function patchLiveTable(tableList) {
             return;
         }
 
-        updateTableRow(row, tableItem, seasonKey);
+        updateTableRow(row, tableItem, seasonKey, tableList.length);
         tbody.appendChild(row);
     });
 

@@ -66,8 +66,55 @@
     background-color: var(--surface-soft);
 }
 
+.data-row.table-zone-ucl > .row-data {
+    background-color: rgba(58, 102, 156, 0.08);
+}
+
+.data-row.table-zone-ucl > .position {
+    box-shadow: inset 0.17rem 0 0 rgba(58, 102, 156, 0.52);
+}
+
+.data-row.table-zone-ucl:hover > .row-data {
+    background-color: rgba(58, 102, 156, 0.12);
+}
+
+.data-row.table-zone-uel > .row-data {
+    background-color: rgba(178, 131, 72, 0.09);
+}
+
+.data-row.table-zone-uel > .position {
+    box-shadow: inset 0.17rem 0 0 rgba(178, 131, 72, 0.54);
+}
+
+.data-row.table-zone-uel:hover > .row-data {
+    background-color: rgba(178, 131, 72, 0.13);
+}
+
+.data-row.table-zone-uecl > .row-data {
+    background-color: rgba(76, 131, 108, 0.09);
+}
+
+.data-row.table-zone-uecl > .position {
+    box-shadow: inset 0.17rem 0 0 rgba(76, 131, 108, 0.55);
+}
+
+.data-row.table-zone-uecl:hover > .row-data {
+    background-color: rgba(76, 131, 108, 0.13);
+}
+
+.data-row.table-zone-relegation > .row-data {
+    background-color: rgba(154, 93, 104, 0.09);
+}
+
+.data-row.table-zone-relegation > .position {
+    box-shadow: inset 0.17rem 0 0 rgba(154, 93, 104, 0.54);
+}
+
+.data-row.table-zone-relegation:hover > .row-data {
+    background-color: rgba(154, 93, 104, 0.13);
+}
+
 .data-row.table-range-focus > .position {
-    box-shadow: none;
     background-color: rgba(66, 86, 112, 0.09);
 }
 
