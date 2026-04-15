@@ -26,6 +26,7 @@ from .football_db import (
     retreive_team_matches,
     retreive_all_teams,
     retreive_head_to_head_matches_by_id,
+    retreive_team_primary_colours,
     get_table_db,
     get_table_db_for_season,
     add_push_subscription,
@@ -234,6 +235,12 @@ async def get_head_to_head_matches(
     matches = []
     summary = None
     validation_message: str | None = None
+    team_primary_colours: dict[int, str] = {}
+
+    if selected_team_a is not None and selected_team_b is not None:
+        team_primary_colours = await retreive_team_primary_colours(
+            [selected_team_a.id, selected_team_b.id]
+        )
 
     if team_a is not None or team_b is not None:
         if selected_team_a is None or selected_team_b is None:
@@ -310,6 +317,16 @@ async def get_head_to_head_matches(
             "teams": teams,
             "selected_team_a": selected_team_a,
             "selected_team_b": selected_team_b,
+            "team_a_primary_colour": (
+                team_primary_colours.get(selected_team_a.id)
+                if selected_team_a is not None
+                else None
+            ),
+            "team_b_primary_colour": (
+                team_primary_colours.get(selected_team_b.id)
+                if selected_team_b is not None
+                else None
+            ),
             "summary": summary,
             "validation_message": validation_message,
             **season_context,

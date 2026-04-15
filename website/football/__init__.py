@@ -14,3 +14,6 @@ pl_table = mongodb.get_collection('live_pl_table')
 
 # Set the collection for push subscriptions
 football_push = mongodb.get_collection('football_push_subscriptions')
+
+# Set the collection for team primary colours
+team_primary_colours = mongodb.get_collection('pl_team_primary_colours')

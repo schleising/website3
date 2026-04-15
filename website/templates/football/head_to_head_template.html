@@ -1,7 +1,7 @@
 {% extends "football/football-base.html" %}
 
 {% block football_head %}
-<script defer src="/js/football/head_to_head.js?v1.0.6"></script>
+<script defer src="/js/football/head_to_head.js?v1.0.8"></script>
 {% endblock %}
 
 {% block title %}<title>Football - Head to Head</title>{% endblock %}
@@ -91,35 +91,51 @@
     <h4 class="h2h-results-title">{{ selected_team_a.short_name }} vs {{ selected_team_b.short_name }}</h4>
     <div class="h2h-results-scroll">
       {% if summary and selected_team_a and selected_team_b and not validation_message %}
-      <section class="h2h-summary-card site-card" aria-label="Head to head summary">
-        <div class="h2h-summary-grid">
-          <div class="h2h-summary-item">
-            <div class="h2h-summary-label">Meetings</div>
-            <div class="h2h-summary-value">{{ summary.meetings }}</div>
+      {% set played_total = summary.played %}
+      {% if played_total > 0 %}
+      {% set team_a_width = (summary.team_a_wins * 100 / played_total) %}
+      {% set draw_width = (summary.draws * 100 / played_total) %}
+      {% set team_b_width = (summary.team_b_wins * 100 / played_total) %}
+      {% else %}
+      {% set team_a_width = 33.3333 %}
+      {% set draw_width = 33.3334 %}
+      {% set team_b_width = 33.3333 %}
+      {% endif %}
+      <section
+        class="h2h-outcome-sticky"
+        aria-label="Head to head results split"
+        data-team-a-crest="{{ selected_team_a.local_crest }}"
+        data-team-b-crest="{{ selected_team_b.local_crest }}"
+        data-team-a-colour="{{ team_a_primary_colour if team_a_primary_colour else '' }}"
+        data-team-b-colour="{{ team_b_primary_colour if team_b_primary_colour else '' }}"
+      >
+        <div class="h2h-outcome-topline">
+          <span class="h2h-outcome-team-name">{{ selected_team_a.short_name }}</span>
+          <span class="h2h-outcome-meta">Played {{ summary.played }} of {{ summary.meetings }}</span>
+          <span class="h2h-outcome-team-name h2h-outcome-team-name-right">{{ selected_team_b.short_name }}</span>
+        </div>
+        <div
+          class="h2h-outcome-track"
+          role="img"
+          aria-label="{{ selected_team_a.short_name }} wins {{ summary.team_a_wins }}, draws {{ summary.draws }}, {{ selected_team_b.short_name }} wins {{ summary.team_b_wins }}"
+        >
+          <div
+            class="h2h-outcome-segment h2h-outcome-segment-a{% if summary.team_a_wins == 0 %} is-zero{% endif %}"
+            style="width: {{ '%.4f'|format(team_a_width) }}%;"
+          >
+            <span class="h2h-outcome-count">{{ summary.team_a_wins }}</span>
           </div>
-          <div class="h2h-summary-item">
-            <div class="h2h-summary-label">Played</div>
-            <div class="h2h-summary-value">{{ summary.played }}</div>
+          <div
+            class="h2h-outcome-segment h2h-outcome-segment-draw{% if summary.draws == 0 %} is-zero{% endif %}"
+            style="width: {{ '%.4f'|format(draw_width) }}%;"
+          >
+            <span class="h2h-outcome-count">{{ summary.draws }}</span>
           </div>
-          <div class="h2h-summary-item">
-            <div class="h2h-summary-label">{{ selected_team_a.short_name }} Wins</div>
-            <div class="h2h-summary-value">{{ summary.team_a_wins }}</div>
-          </div>
-          <div class="h2h-summary-item">
-            <div class="h2h-summary-label">{{ selected_team_b.short_name }} Wins</div>
-            <div class="h2h-summary-value">{{ summary.team_b_wins }}</div>
-          </div>
-          <div class="h2h-summary-item">
-            <div class="h2h-summary-label">Draws</div>
-            <div class="h2h-summary-value">{{ summary.draws }}</div>
-          </div>
-          <div class="h2h-summary-item">
-            <div class="h2h-summary-label">{{ selected_team_a.short_name }} Goals</div>
-            <div class="h2h-summary-value">{{ summary.team_a_goals }}</div>
-          </div>
-          <div class="h2h-summary-item">
-            <div class="h2h-summary-label">{{ selected_team_b.short_name }} Goals</div>
-            <div class="h2h-summary-value">{{ summary.team_b_goals }}</div>
+          <div
+            class="h2h-outcome-segment h2h-outcome-segment-b{% if summary.team_b_wins == 0 %} is-zero{% endif %}"
+            style="width: {{ '%.4f'|format(team_b_width) }}%;"
+          >
+            <span class="h2h-outcome-count">{{ summary.team_b_wins }}</span>
           </div>
         </div>
       </section>

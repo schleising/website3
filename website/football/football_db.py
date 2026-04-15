@@ -8,7 +8,7 @@ from motor.motor_asyncio import AsyncIOMotorCollection
 
 from ..database.database import get_data_by_date
 
-from . import pl_matches, pl_table, football_push, mongodb
+from . import pl_matches, pl_table, football_push, team_primary_colours, mongodb
 from .models import FormItem, Match, LiveTableItem, Team
 
 
@@ -274,6 +274,39 @@ async def retreive_all_teams() -> list[Team]:
                     teams_by_id[team.id] = team
 
     return sorted(teams_by_id.values(), key=lambda team: str(team.short_name).lower())
+
+
+async def retreive_team_primary_colours(team_ids: list[int]) -> dict[int, str]:
+    colours_by_team_id: dict[int, str] = {}
+
+    if len(team_ids) == 0:
+        return colours_by_team_id
+
+    if team_primary_colours is None:
+        logging.error("No DB connection")
+        return colours_by_team_id
+
+    cursor = team_primary_colours.find(
+        {
+            "team_id": {"$in": team_ids},
+            "primary_colour": {"$type": "string"},
+        },
+        {"_id": 0, "team_id": 1, "primary_colour": 1},
+    )
+
+    async for item in cursor:
+        team_id_raw = item.get("team_id")
+        colour_raw = str(item.get("primary_colour", "")).strip()
+
+        if team_id_raw is None:
+            continue
+
+        if re.fullmatch(r"#[0-9A-Fa-f]{6}", colour_raw) is None:
+            continue
+
+        colours_by_team_id[int(team_id_raw)] = colour_raw.upper()
+
+    return colours_by_team_id
 
 
 async def retreive_latest_team_match(team: str) -> Match | None:
