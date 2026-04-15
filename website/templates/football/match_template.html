@@ -28,7 +28,7 @@
 {% if day_groups is defined and day_groups %}
 <div class="football-day-list">
   {% for day_group in day_groups %}
-  <section class="football-day-group{% if day_group.is_today %} is-today{% endif %}" {% if day_group.is_today %}id="live-day-today"{% endif %} aria-label="{{ day_group.label }} fixtures">
+  <section class="football-day-group{% if day_group.is_current_period %} is-today{% endif %}" {% if day_group.is_current_period %}id="live-day-today"{% endif %} aria-label="{{ day_group.label }} fixtures">
     <div class="football-day-heading">
       <h4 class="football-day-title">{{ day_group.label }}</h4>
     </div>

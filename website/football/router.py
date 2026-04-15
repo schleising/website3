@@ -110,7 +110,7 @@ def _build_live_day_groups(matches: list, today_value: datetime) -> list[dict]:
             {
                 "label": _format_live_day_label(day_datetime, today_value),
                 "matches": grouped_matches.get(day_key, []),
-                "is_today": day_offset == 0,
+                "is_current_period": day_offset == 0,
             }
         )
 
@@ -133,7 +133,7 @@ def _build_match_day_groups(matches: list, today_value: datetime) -> list[dict]:
             {
                 "label": _format_live_day_label(day_datetime, today_value),
                 "matches": grouped_matches[day_key],
-                "is_today": day_key == today_value.date(),
+                "is_current_period": day_key == today_value.date(),
             }
         )
 
@@ -142,6 +142,8 @@ def _build_match_day_groups(matches: list, today_value: datetime) -> list[dict]:
 
 def _build_team_month_groups(matches: list) -> list[dict]:
     grouped_matches: dict[tuple[int, int], list] = {}
+    today_value = datetime.now(tz=LONDON_TZ)
+    current_month_key = (today_value.year, today_value.month)
 
     for match in matches:
         match_datetime = match.local_date if match.local_date is not None else match.utc_date
@@ -152,11 +154,12 @@ def _build_team_month_groups(matches: list) -> list[dict]:
 
     for year_value, month_value in sorted(grouped_matches):
         month_label = datetime(year_value, month_value, 1).strftime("%B %Y")
+        month_key = (year_value, month_value)
         month_groups.append(
             {
                 "label": month_label,
                 "matches": grouped_matches[(year_value, month_value)],
-                "is_today": False,
+                "is_current_period": month_key == current_month_key,
             }
         )
 
