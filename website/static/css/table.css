@@ -16,6 +16,28 @@
     --table-form-font: 0.54rem;
     --table-form-margin: 0.06rem;
     --table-form-size: 0.88rem;
+    --table-row-hover: #eef3fa;
+    --table-border: #d9e4f1;
+    --zone-ucl: rgba(46, 101, 184, 0.11);
+    --zone-ucl-hover: rgba(46, 101, 184, 0.17);
+    --zone-ucl-marker: rgba(33, 80, 156, 0.74);
+    --zone-uel: rgba(205, 144, 52, 0.12);
+    --zone-uel-hover: rgba(205, 144, 52, 0.18);
+    --zone-uel-marker: rgba(173, 115, 32, 0.74);
+    --zone-uecl: rgba(36, 154, 130, 0.11);
+    --zone-uecl-hover: rgba(36, 154, 130, 0.17);
+    --zone-uecl-marker: rgba(21, 122, 103, 0.74);
+    --zone-rel: rgba(184, 65, 91, 0.11);
+    --zone-rel-hover: rgba(184, 65, 91, 0.18);
+    --zone-rel-marker: rgba(154, 39, 62, 0.76);
+    --range-focus-bg: rgba(49, 78, 114, 0.21);
+    --range-focus-fg: #152d4b;
+    --range-high-bg: rgba(56, 138, 96, 0.23);
+    --range-high-boundary-bg: rgba(56, 138, 96, 0.34);
+    --range-high-fg: #133d2a;
+    --range-low-bg: rgba(168, 87, 106, 0.22);
+    --range-low-boundary-bg: rgba(168, 87, 106, 0.34);
+    --range-low-fg: #5a1c2a;
 }
 
 .table-container[data-team-count="20"] {
@@ -59,86 +81,87 @@
 }
 
 .data-row {
-    border: var(--table-row-border) solid var(--surface-soft);
+    border: var(--table-row-border) solid var(--table-border);
+    transition: background-color 120ms ease, box-shadow 120ms ease;
 }
 
 .data-row:hover > .row-data {
-    background-color: var(--surface-soft);
+    background-color: var(--table-row-hover);
 }
 
 .data-row.table-zone-ucl > .row-data {
-    background-color: rgba(44, 96, 178, 0.11);
+    background-color: var(--zone-ucl);
 }
 
 .data-row.table-zone-ucl > .position {
-    box-shadow: inset 0.17rem 0 0 rgba(35, 83, 160, 0.72);
+    box-shadow: inset 0.17rem 0 0 var(--zone-ucl-marker);
 }
 
 .data-row.table-zone-ucl:hover > .row-data {
-    background-color: rgba(44, 96, 178, 0.17);
+    background-color: var(--zone-ucl-hover);
 }
 
 .data-row.table-zone-uel > .row-data {
-    background-color: rgba(201, 137, 42, 0.12);
+    background-color: var(--zone-uel);
 }
 
 .data-row.table-zone-uel > .position {
-    box-shadow: inset 0.17rem 0 0 rgba(172, 112, 26, 0.72);
+    box-shadow: inset 0.17rem 0 0 var(--zone-uel-marker);
 }
 
 .data-row.table-zone-uel:hover > .row-data {
-    background-color: rgba(201, 137, 42, 0.19);
+    background-color: var(--zone-uel-hover);
 }
 
 .data-row.table-zone-uecl > .row-data {
-    background-color: rgba(38, 150, 129, 0.11);
+    background-color: var(--zone-uecl);
 }
 
 .data-row.table-zone-uecl > .position {
-    box-shadow: inset 0.17rem 0 0 rgba(24, 119, 101, 0.72);
+    box-shadow: inset 0.17rem 0 0 var(--zone-uecl-marker);
 }
 
 .data-row.table-zone-uecl:hover > .row-data {
-    background-color: rgba(38, 150, 129, 0.18);
+    background-color: var(--zone-uecl-hover);
 }
 
 .data-row.table-zone-relegation > .row-data {
-    background-color: rgba(186, 63, 87, 0.12);
+    background-color: var(--zone-rel);
 }
 
 .data-row.table-zone-relegation > .position {
-    box-shadow: inset 0.17rem 0 0 rgba(155, 38, 60, 0.74);
+    box-shadow: inset 0.17rem 0 0 var(--zone-rel-marker);
 }
 
 .data-row.table-zone-relegation:hover > .row-data {
-    background-color: rgba(186, 63, 87, 0.2);
+    background-color: var(--zone-rel-hover);
 }
 
 .data-row.table-range-focus > .position {
-    background-color: rgba(48, 74, 106, 0.22);
-    color: #132741;
+    background-color: var(--range-focus-bg);
+    color: var(--range-focus-fg);
     box-shadow: inset 0 0 0 0.07rem rgba(33, 58, 89, 0.4);
 }
 
 .data-row.table-range-high > .position {
-    background-color: rgba(58, 141, 99, 0.24);
-    color: #103725;
+    background-color: var(--range-high-bg);
+    color: var(--range-high-fg);
     font-weight: 700;
 }
 
 .data-row.table-range-high-boundary > .position {
-    background-color: rgba(58, 141, 99, 0.38);
+    background-color: var(--range-high-boundary-bg);
     box-shadow: inset 0 0 0 0.07rem rgba(35, 107, 71, 0.6);
 }
 
 .data-row.table-range-low > .position {
-    background-color: rgba(171, 88, 107, 0.24);
-    color: #4e1823;
+    background-color: var(--range-low-bg);
+    color: var(--range-low-fg);
     font-weight: 700;
 }
 
 .data-row.table-range-low-boundary > .position {
-    background-color: rgba(171, 88, 107, 0.38);
+    background-color: var(--range-low-boundary-bg);
     box-shadow: inset 0 0 0 0.07rem rgba(133, 50, 69, 0.6);
 }
 
