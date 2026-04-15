@@ -28,8 +28,10 @@
 {% if live_matches and live_day_groups is defined and live_day_groups %}
 <div class="football-day-list">
   {% for day_group in live_day_groups %}
-  <section class="football-day-card site-card{% if day_group.is_today %} is-today{% endif %}" {% if day_group.is_today %}id="live-day-today"{% endif %} aria-label="{{ day_group.label }} fixtures">
-    <h4 class="football-day-title">{{ day_group.label }}</h4>
+  <section class="football-day-group{% if day_group.is_today %} is-today{% endif %}" {% if day_group.is_today %}id="live-day-today"{% endif %} aria-label="{{ day_group.label }} fixtures">
+    <div class="football-day-heading">
+      <h4 class="football-day-title">{{ day_group.label }}</h4>
+    </div>
     {% if day_group.matches|length > 0 %}
     <div class="football-grid">
     {% for match in day_group.matches %}

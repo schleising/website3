@@ -8,24 +8,59 @@
 .football-day-list {
     display: flex;
     flex-direction: column;
-    gap: 0.8rem;
+    gap: 0.95rem;
 }
 
-.football-day-card {
-    padding: 0.7rem 0.8rem;
+.football-day-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.52rem;
+}
+
+.football-day-heading {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    margin: 0;
+}
+
+.football-day-heading::after {
+    content: "";
+    flex: 1 1 auto;
+    height: 0.125rem;
+    background: linear-gradient(90deg, rgba(78, 109, 147, 0.55) 0%, rgba(78, 109, 147, 0.14) 100%);
+    border-radius: 999rem;
 }
 
 .football-day-title {
-    margin: 0 0 0.6rem 0;
+    margin: 0;
     color: var(--brand-strong);
-    font-size: 1rem;
+    font-size: 0.84rem;
     font-weight: 700;
+    letter-spacing: 0.01rem;
+    padding: 0.15rem 0.55rem;
+    border-radius: 999rem;
+    border: 0.0625rem solid rgba(120, 149, 183, 0.6);
+    background: rgba(255, 255, 255, 0.78);
+    white-space: nowrap;
+}
+
+.football-day-group.is-today .football-day-title {
+    color: #ffffff;
+    background: linear-gradient(135deg, #2a5b90 0%, #4d7bb1 100%);
+    border-color: rgba(31, 69, 112, 0.82);
+    box-shadow: 0 0.2rem 0.45rem rgba(22, 38, 61, 0.15);
+}
+
+.football-day-group.is-today .football-day-heading::after {
+    background: linear-gradient(90deg, rgba(42, 91, 144, 0.82) 0%, rgba(42, 91, 144, 0.18) 100%);
 }
 
 .football-day-empty {
-    margin: 0.1rem 0;
+    margin: 0;
+    padding: 0.12rem 0.1rem;
     color: var(--text-soft);
-    font-size: 0.9rem;
+    font-size: 0.84rem;
 }
 
 .football-season-card {

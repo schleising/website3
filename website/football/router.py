@@ -88,7 +88,7 @@ def _format_live_day_label(day_value: datetime, today_value: datetime) -> str:
     if day_value.date() == today_value.date():
         return "Today"
 
-    return f"{day_value.strftime('%a')}, {_ordinal_day(day_value.day)} {day_value.strftime('%b')}"
+    return f"{day_value.strftime('%A')}, {_ordinal_day(day_value.day)} {day_value.strftime('%B')}"
 
 
 def _build_live_day_groups(matches: list, today_value: datetime) -> list[dict]:
