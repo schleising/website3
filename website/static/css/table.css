@@ -6,6 +6,12 @@
     user-select: none;
 }
 
+.table-container table,
+.table-container th,
+.table-container td {
+    font-size: var(--bs-body-font-size);
+}
+
 .header-data {
     color: #f8fbff;
     background-color: var(--brand-soft);

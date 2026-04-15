@@ -7,6 +7,11 @@ body {
     height: 100%;
 }
 
+html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+}
+
 :root {
     --page-bg: radial-gradient(circle at 15% 10%, #eef4ff 0%, #f7f9fc 52%, #edf3f9 100%);
     --surface: #ffffff;
