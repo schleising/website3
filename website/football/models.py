@@ -319,6 +319,10 @@ class MatchList(BaseModel):
     matches: list[Match]
 
 
+class LiveTableList(BaseModel):
+    table_list: list[LiveTableItem]
+
+
 # Simplified match type for gpt4
 class SimplifiedMatch(BaseModel):
     status: str

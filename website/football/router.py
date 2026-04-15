@@ -38,6 +38,7 @@ from .football_utils import update_match_timezone, create_bet_standings
 from .models import (
     FootballBetList,
     MatchList,
+    LiveTableList,
     LiveTableItem,
     SimplifiedMatch,
     SimplifiedTableRow,
@@ -563,6 +564,26 @@ async def websocket_endpoint(websocket: WebSocket):
 
     except WebSocketDisconnect:
         logging.info("Football Socket Closed")
+
+
+@football_router.websocket("/ws/table/")
+async def websocket_table_endpoint(websocket: WebSocket):
+    await websocket.accept()
+
+    logging.info("Football Table Websocket Opened")
+
+    try:
+        while True:
+            recv = await websocket.receive_text()
+            msg = json.loads(recv)
+
+            if msg.get("messageType") == "get_table":
+                table_list = await get_table_db()
+                payload = LiveTableList(table_list=table_list)
+                await websocket.send_text(payload.model_dump_json())
+
+    except WebSocketDisconnect:
+        logging.info("Football Table Socket Closed")
 
 
 # Endpoint to subscribe to push notifications

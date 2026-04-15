@@ -4,6 +4,9 @@
 <link rel="stylesheet" href="/css/table.css?v1.0.9">
 {% block football_scripts %}
 <script defer src="/js/football/visibility_refresh.js?v1.0.0"></script>
+{% if is_current_season|default(false) %}
+<script defer src="/js/football/table_live.js?v1.0.1"></script>
+{% endif %}
 {% endblock %}
 {% block title %}<title>Football - {{ title }}</title>{% endblock %}
 {% endblock %}
@@ -42,13 +45,13 @@
         <th class="header-data data centre-align medium-table">Form</th>
       </tr>
     </thead>
-    <tbody>
+    <tbody id="football-live-table-body" data-season-key="{{ selected_season_key|default(current_season_key)|default('') }}">
       {% for table_item in table_list %}
-      <tr class="data-row">
+      <tr class="data-row" data-team-id="{{ table_item.team.id }}">
         <td class="row-data data position">
-          <div>{{ table_item.position }}</div>
+          <div class="table-position-value">{{ table_item.position }}</div>
           {% if table_item.has_started %}
-          <div class="{{ table_item.css_class }}">
+          <div class="table-position-delta {{ table_item.css_class }}">
             {{ table_item.score_string }}
           </div>
           {% endif %}
@@ -59,14 +62,14 @@
             <a class="team-name" href="/football/matches/team/{{ table_item.team.id }}/?season={{ selected_season_key|default(current_season_key)|default('') }}">{{ table_item.team.short_name }}</a>
           </div>
         </td>
-        <td class="row-data data right-align">{{ table_item.played_games }}</td>
-        <td class="row-data data medium-table right-align">{{ table_item.won }}</td>
-        <td class="row-data data medium-table right-align">{{ table_item.draw }}</td>
-        <td class="row-data data medium-table right-align">{{ table_item.lost }}</td>
-        <td class="row-data data large-table right-align">{{ table_item.goals_for }}</td>
-        <td class="row-data data large-table right-align">{{ table_item.goals_against }}</td>
-        <td class="row-data data right-align">{{ table_item.goal_difference }}</td>
-        <td class="row-data data right-align">{{ table_item.points }}</td>
+        <td class="row-data data right-align table-played">{{ table_item.played_games }}</td>
+        <td class="row-data data medium-table right-align table-won">{{ table_item.won }}</td>
+        <td class="row-data data medium-table right-align table-draw">{{ table_item.draw }}</td>
+        <td class="row-data data medium-table right-align table-lost">{{ table_item.lost }}</td>
+        <td class="row-data data large-table right-align table-goals-for">{{ table_item.goals_for }}</td>
+        <td class="row-data data large-table right-align table-goals-against">{{ table_item.goals_against }}</td>
+        <td class="row-data data right-align table-goal-difference">{{ table_item.goal_difference }}</td>
+        <td class="row-data data right-align table-points">{{ table_item.points }}</td>
         <td class="row-data data medium-table right-align">
           <div class="form-container">
             {% if table_item.form_list|length > 0 %}
