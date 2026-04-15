@@ -13,12 +13,9 @@ document.addEventListener('readystatechange', event => {
         console.log("Load Event")
         const pageUrl = new URL(window.location.href);
         const wsProtocol = pageUrl.protocol === "https:" ? "wss:" : "ws:";
-        const pathname = pageUrl.pathname.endsWith("/")
-            ? pageUrl.pathname
-            : pageUrl.pathname + "/";
 
-        // Keep query params (season etc.) while targeting the websocket endpoint.
-        url = `${wsProtocol}//${pageUrl.host}${pathname}ws/${pageUrl.search}`;
+        // Always use the football websocket endpoint, regardless of current sub-route.
+        url = `${wsProtocol}//${pageUrl.host}/football/ws/${pageUrl.search}`;
 
         // Check whether the websocket is open, if not open it
         openWebSocket();

@@ -1,8 +1,10 @@
 {% extends "base.html" %}
 
 {% block scripts %}
+{% if enable_live_updates|default(false) %}
+<script defer src="/js/football/football.js?v1.0.2"></script>
+{% endif %}
 {% if live_matches %}
-<script defer src="/js/football/football.js?v1.0.1"></script>
 <script defer src="/js/football/live_day_scroll.js?v1.0.1"></script>
 <script defer src="/js/football/visibility_refresh.js"></script>
 <script defer src="/js/football/scope.js"></script>
