@@ -226,7 +226,7 @@ async def _build_football_season_context(
         "is_current_season": selected_season_key == current_season_key,
         "season_switch_path": "/football/table/",
         "current_season_url": f"/football/table/?season={current_season_key}",
-        "live_scores_url": f"/football/?season={selected_season_key}",
+        "live_scores_url": "/football/",
         "table_url": f"/football/table/?season={selected_season_key}",
         "month_nav_links": _build_month_nav_links(selected_season_key),
     }
@@ -235,26 +235,15 @@ async def _build_football_season_context(
 @football_router.get("/", response_class=HTMLResponse)
 async def get_live_matches(
     request: Request,
-    season: str | None = Query(default=None),
 ):
     logging.debug(f"/football/: {request}")
 
-    season_context = await _build_football_season_context(request, season)
+    season_context = await _build_football_season_context(request, None)
     selected_season_key = season_context["selected_season_key"]
 
-    if season_context["is_current_season"]:
-        start_date, end_date = _live_scores_window()
-        page_title = "Upcoming Matches"
-        live_matches = True
-    else:
-        viewing_month = datetime.today().month
-        viewing_year = _year_for_season_month(viewing_month, selected_season_key)
-        _, last_day_of_month = monthrange(viewing_year, viewing_month)
-
-        start_date = datetime(viewing_year, viewing_month, 1, 0, 0, 0)
-        end_date = datetime(viewing_year, viewing_month, last_day_of_month, 23, 59, 59)
-        page_title = month_name[viewing_month]
-        live_matches = False
+    start_date, end_date = _live_scores_window()
+    page_title = "Upcoming Matches"
+    live_matches = True
 
     matches = await retreive_matches(start_date, end_date, selected_season_key)
     matches = update_match_timezone(matches)
