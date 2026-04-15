@@ -242,7 +242,7 @@ async def get_live_matches(
     selected_season_key = season_context["selected_season_key"]
 
     start_date, end_date = _live_scores_window()
-    page_title = "Upcoming Matches"
+    page_title = "Latest Matches"
     live_matches = True
 
     matches = await retreive_matches(start_date, end_date, selected_season_key)

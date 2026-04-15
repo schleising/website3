@@ -4,7 +4,7 @@
 
 {% block header %}
 <h3 class="header-text football-header-text">
-  <span class="football-header-title">{% if team_matches_view|default(false) %}{{ title }}{% elif live_matches %}Upcoming Matches{% else %}{{ title }}'s Matches{% endif %}</span>
+  <span class="football-header-title">{% if team_matches_view|default(false) %}{{ title }}{% elif live_matches %}{{ title }}{% else %}{{ title }}'s Matches{% endif %}</span>
   {% if not live_matches %}
   <button
     type="button"

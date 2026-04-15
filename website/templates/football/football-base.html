@@ -27,7 +27,7 @@
 
 {% block sidebar %}
 {% if is_current_season|default(true) %}
-<a href="{{ live_scores_url|default('/football/') }}" class="sub-level-nav">Live Scores</a>
+<a href="{{ live_scores_url|default('/football/') }}" class="sub-level-nav">Latest Matches</a>
 {% endif %}
 <a href="{{ table_url|default('/football/table/') }}" class="sub-level-nav">{% if is_current_season|default(true) %}Live League Table{% else %}League Table{% endif %}</a>
 {% if month_nav_links is defined %}
