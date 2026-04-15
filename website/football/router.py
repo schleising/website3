@@ -51,6 +51,7 @@ football_router = APIRouter(prefix="/football")
 SEASON_MONTH_ORDER = [8, 9, 10, 11, 12, 1, 2, 3, 4, 5]
 LIVE_DAYS_BEFORE_TODAY = 7
 LIVE_DAYS_AFTER_TODAY = 6
+LONDON_TZ = ZoneInfo("Europe/London")
 
 
 def _season_year_bounds(season_key: str) -> tuple[int, int]:
@@ -139,7 +140,9 @@ def _build_match_day_groups(matches: list, today_value: datetime) -> list[dict]:
 
 
 def _live_scores_window() -> tuple[datetime, datetime]:
-    today_start = datetime.today().replace(hour=0, minute=0, second=0, microsecond=0)
+    today_start = datetime.now(tz=LONDON_TZ).replace(
+        hour=0, minute=0, second=0, microsecond=0
+    )
     window_start = today_start - timedelta(days=LIVE_DAYS_BEFORE_TODAY)
     window_end = (today_start + timedelta(days=LIVE_DAYS_AFTER_TODAY)).replace(
         hour=23, minute=59, second=59, microsecond=0
@@ -149,7 +152,7 @@ def _live_scores_window() -> tuple[datetime, datetime]:
 
 
 def _has_today_matches(matches: list) -> bool:
-    today_date = datetime.now(tz=ZoneInfo("Europe/London")).date()
+    today_date = datetime.now(tz=LONDON_TZ).date()
 
     for match in matches:
         match_datetime = match.local_date if match.local_date is not None else match.utc_date
@@ -230,7 +233,9 @@ async def get_live_matches(
     matches = update_match_timezone(matches)
     enable_live_updates = _has_today_matches(matches)
     live_today_anchor = start_date + timedelta(days=LIVE_DAYS_BEFORE_TODAY)
-    today_anchor = datetime.today().replace(hour=0, minute=0, second=0, microsecond=0)
+    today_anchor = datetime.now(tz=LONDON_TZ).replace(
+        hour=0, minute=0, second=0, microsecond=0
+    )
     day_groups = (
         _build_live_day_groups(matches, live_today_anchor)
         if live_matches
@@ -272,7 +277,9 @@ async def get_months_matches(
     matches = await retreive_matches(start_date, end_date, selected_season_key)
     matches = update_match_timezone(matches)
     enable_live_updates = _has_today_matches(matches)
-    today_anchor = datetime.today().replace(hour=0, minute=0, second=0, microsecond=0)
+    today_anchor = datetime.now(tz=LONDON_TZ).replace(
+        hour=0, minute=0, second=0, microsecond=0
+    )
     day_groups = _build_match_day_groups(matches, today_anchor)
 
     return TEMPLATES.TemplateResponse(
@@ -303,7 +310,9 @@ async def get_teams_matches(
     team_name, matches = await retreive_team_matches(team_id, selected_season_key)
     matches = update_match_timezone(matches)
     enable_live_updates = _has_today_matches(matches)
-    today_anchor = datetime.today().replace(hour=0, minute=0, second=0, microsecond=0)
+    today_anchor = datetime.now(tz=LONDON_TZ).replace(
+        hour=0, minute=0, second=0, microsecond=0
+    )
     day_groups = _build_match_day_groups(matches, today_anchor)
 
     return TEMPLATES.TemplateResponse(
