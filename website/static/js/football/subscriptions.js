@@ -54,6 +54,13 @@ function setAllSelections(checked) {
     updateSelectionCount();
 }
 
+function resetToUnsubscribedState(statusMessage) {
+    hasActiveSubscription = false;
+    setAllSelections(false);
+    setActionButtonsDisabled(false);
+    setStatus(statusMessage || "Not currently subscribed. Select teams and save to subscribe.");
+}
+
 function setStatus(message, isError = false) {
     if (!subscriptionStatus) {
         return;
@@ -145,16 +152,23 @@ async function loadPreferences() {
         const subscription = await getCurrentSubscription();
 
         if (!subscription) {
-            hasActiveSubscription = false;
-            updateSelectionCount();
-            syncSelectAllState();
-            setActionButtonsDisabled(false);
-            setStatus("Not currently subscribed. Select teams and save to subscribe.");
+            resetToUnsubscribedState("Not currently subscribed. Select teams and save to subscribe.");
             return;
         }
 
         const payload = { subscription };
         const data = await requestJson("/football/subscription/preferences/", "POST", payload);
+
+        if (!data.is_subscribed) {
+            try {
+                await subscription.unsubscribe();
+            } catch (error) {
+                console.warn("Failed to remove stale browser subscription", error);
+            }
+
+            resetToUnsubscribedState("Not currently subscribed. Select teams and save to subscribe.");
+            return;
+        }
 
         if (!Array.isArray(data.team_ids)) {
             setStatus("Subscription loaded, but team preferences were empty.");
@@ -173,8 +187,7 @@ async function loadPreferences() {
         setStatus(`Loaded current preferences for ${data.username || "Anonymous User"}.`);
     } catch (error) {
         console.error("Failed to load preferences", error);
-        hasActiveSubscription = false;
-        setActionButtonsDisabled(false);
+        resetToUnsubscribedState("Unable to load existing subscription preferences.");
         setStatus("Unable to load existing subscription preferences.", true);
     }
 }
@@ -235,8 +248,7 @@ async function unsubscribeAll() {
 
         await requestJson("/football/subscription/preferences/", "DELETE", { subscription });
         await subscription.unsubscribe();
-        hasActiveSubscription = false;
-        setStatus("Unsubscribed from notifications.");
+        resetToUnsubscribedState("Not currently subscribed. Select teams and save to subscribe.");
     } catch (error) {
         console.error("Failed to unsubscribe", error);
         setStatus("Unable to unsubscribe right now.", true);
