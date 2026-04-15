@@ -2,7 +2,7 @@
 
 {% block football_head %}
 <script defer src="/js/football/scope.js?v1.0.0"></script>
-<script defer src="/js/football/subscriptions.js?v1.0.0"></script>
+<script defer src="/js/football/subscriptions.js?v1.0.1"></script>
 {% endblock %}
 
 {% block title %}<title>Football - {{ title }}</title>{% endblock %}
@@ -10,7 +10,6 @@
 {% block header %}
 <h3 class="header-text football-header-text">
   <span class="football-header-title">{{ title }}</span>
-  <span class="football-season-marker">{{ current_season_short_label }}</span>
 </h3>
 {% endblock %}
 
@@ -46,7 +45,7 @@
 
   <div class="football-subscriptions-actions">
     <button type="button" class="btn btn-primary" id="subscription-save">Save Preferences</button>
-    <button type="button" class="btn btn-primary" id="subscription-unsubscribe">Unsubscribe</button>
+    <button type="button" class="btn btn-primary" id="subscription-unsubscribe" disabled>Unsubscribe</button>
   </div>
   <p class="football-subscriptions-status" id="subscription-status" aria-live="polite"></p>
   {% else %}

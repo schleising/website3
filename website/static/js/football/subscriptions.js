@@ -4,6 +4,7 @@ const subscriptionSaveButton = document.getElementById("subscription-save");
 const subscriptionUnsubscribeButton = document.getElementById("subscription-unsubscribe");
 const subscriptionStatus = document.getElementById("subscription-status");
 const subscriptionSelectedCount = document.getElementById("subscription-selected-count");
+let hasActiveSubscription = false;
 
 const serviceWorkerPath = "/sw.js";
 const vapidPublicKey = "BAE-ATyX2xQGdyv9W5vcsI7qzA1FSui3UYNHgKFSKMmR12_7L9xQcVcDz8JbweMOTWb7npz6VMQMQC1BUylu00E";
@@ -68,7 +69,7 @@ function setActionButtonsDisabled(disabled) {
     }
 
     if (subscriptionUnsubscribeButton) {
-        subscriptionUnsubscribeButton.disabled = disabled;
+        subscriptionUnsubscribeButton.disabled = disabled || !hasActiveSubscription;
     }
 
     if (subscriptionSelectAll) {
@@ -144,8 +145,10 @@ async function loadPreferences() {
         const subscription = await getCurrentSubscription();
 
         if (!subscription) {
+            hasActiveSubscription = false;
             updateSelectionCount();
             syncSelectAllState();
+            setActionButtonsDisabled(false);
             setStatus("Not currently subscribed. Select teams and save to subscribe.");
             return;
         }
@@ -165,9 +168,13 @@ async function loadPreferences() {
 
         updateSelectionCount();
         syncSelectAllState();
+        hasActiveSubscription = true;
+        setActionButtonsDisabled(false);
         setStatus(`Loaded current preferences for ${data.username || "Anonymous User"}.`);
     } catch (error) {
         console.error("Failed to load preferences", error);
+        hasActiveSubscription = false;
+        setActionButtonsDisabled(false);
         setStatus("Unable to load existing subscription preferences.", true);
     }
 }
@@ -204,6 +211,7 @@ async function savePreferences() {
         };
 
         await requestJson("/football/subscription/preferences/", "PUT", payload);
+        hasActiveSubscription = true;
         setStatus("Preferences saved.");
     } catch (error) {
         console.error("Failed to save preferences", error);
@@ -227,6 +235,7 @@ async function unsubscribeAll() {
 
         await requestJson("/football/subscription/preferences/", "DELETE", { subscription });
         await subscription.unsubscribe();
+        hasActiveSubscription = false;
         setStatus("Unsubscribed from notifications.");
     } catch (error) {
         console.error("Failed to unsubscribe", error);
@@ -265,6 +274,7 @@ document.addEventListener("DOMContentLoaded", () => {
         subscriptionUnsubscribeButton.addEventListener("click", unsubscribeAll);
     }
 
+    setActionButtonsDisabled(false);
     updateSelectionCount();
     syncSelectAllState();
     loadPreferences();

@@ -394,7 +394,7 @@ async def get_subscriptions_page(request: Request):
         "football/subscriptions_template.html",
         {
             "request": request,
-            "title": "Notification Subscriptions",
+            "title": "Notifications",
             "live_matches": False,
             "enable_live_updates": False,
             "matches": [],
