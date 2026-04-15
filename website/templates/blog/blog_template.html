@@ -1,13 +1,13 @@
 {% extends "base.html" %}
 
 {% block head %}
-<link rel="stylesheet" href="/css/right-nav.css?v1.0.0">
-<link rel="stylesheet" href="/css/blog/blog.css?v1.0.3">
-<link rel="stylesheet" href="/css/markdown/markdown.css?v1.0.2">
-<link rel="stylesheet" href="/css/markdown/styles.css?v1.0.1">
+<link rel="stylesheet" href="/css/right-nav.css?v1.1.0">
+<link rel="stylesheet" href="/css/blog/blog.css?v1.1.0">
+<link rel="stylesheet" href="/css/markdown/markdown.css?v1.1.0">
+<link rel="stylesheet" href="/css/markdown/styles.css?v1.1.0">
 {% block scripts %}
 <script defer src="https://cdn.jsdelivr.net/npm/mermaid@9/dist/mermaid.min.js"></script>
-<script defer src="/js/blog/blog.js?v1.0.0"></script>
+<script defer src="/js/blog/blog.js?v1.1.0"></script>
 {% endblock %}
 {% block title %}<title>{% if blog_entry != None %}{{ blog_entry.title }}{% else %}Blog{% endif %}</title>{% endblock %}
 {% endblock %}
