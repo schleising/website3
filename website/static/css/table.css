@@ -67,51 +67,51 @@
 }
 
 .data-row.table-zone-ucl > .row-data {
-    background-color: rgba(58, 102, 156, 0.08);
+    background-color: rgba(44, 96, 178, 0.11);
 }
 
 .data-row.table-zone-ucl > .position {
-    box-shadow: inset 0.17rem 0 0 rgba(58, 102, 156, 0.52);
+    box-shadow: inset 0.17rem 0 0 rgba(35, 83, 160, 0.72);
 }
 
 .data-row.table-zone-ucl:hover > .row-data {
-    background-color: rgba(58, 102, 156, 0.12);
+    background-color: rgba(44, 96, 178, 0.17);
 }
 
 .data-row.table-zone-uel > .row-data {
-    background-color: rgba(178, 131, 72, 0.09);
+    background-color: rgba(201, 137, 42, 0.12);
 }
 
 .data-row.table-zone-uel > .position {
-    box-shadow: inset 0.17rem 0 0 rgba(178, 131, 72, 0.54);
+    box-shadow: inset 0.17rem 0 0 rgba(172, 112, 26, 0.72);
 }
 
 .data-row.table-zone-uel:hover > .row-data {
-    background-color: rgba(178, 131, 72, 0.13);
+    background-color: rgba(201, 137, 42, 0.19);
 }
 
 .data-row.table-zone-uecl > .row-data {
-    background-color: rgba(76, 131, 108, 0.09);
+    background-color: rgba(38, 150, 129, 0.11);
 }
 
 .data-row.table-zone-uecl > .position {
-    box-shadow: inset 0.17rem 0 0 rgba(76, 131, 108, 0.55);
+    box-shadow: inset 0.17rem 0 0 rgba(24, 119, 101, 0.72);
 }
 
 .data-row.table-zone-uecl:hover > .row-data {
-    background-color: rgba(76, 131, 108, 0.13);
+    background-color: rgba(38, 150, 129, 0.18);
 }
 
 .data-row.table-zone-relegation > .row-data {
-    background-color: rgba(154, 93, 104, 0.09);
+    background-color: rgba(186, 63, 87, 0.12);
 }
 
 .data-row.table-zone-relegation > .position {
-    box-shadow: inset 0.17rem 0 0 rgba(154, 93, 104, 0.54);
+    box-shadow: inset 0.17rem 0 0 rgba(155, 38, 60, 0.74);
 }
 
 .data-row.table-zone-relegation:hover > .row-data {
-    background-color: rgba(154, 93, 104, 0.13);
+    background-color: rgba(186, 63, 87, 0.2);
 }
 
 .data-row.table-range-focus > .position {
