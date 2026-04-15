@@ -140,6 +140,29 @@ def _build_match_day_groups(matches: list, today_value: datetime) -> list[dict]:
     return day_groups
 
 
+def _build_team_month_groups(matches: list) -> list[dict]:
+    grouped_matches: dict[tuple[int, int], list] = {}
+
+    for match in matches:
+        match_datetime = match.local_date if match.local_date is not None else match.utc_date
+        month_key = (match_datetime.year, match_datetime.month)
+        grouped_matches.setdefault(month_key, []).append(match)
+
+    month_groups: list[dict] = []
+
+    for year_value, month_value in sorted(grouped_matches):
+        month_label = datetime(year_value, month_value, 1).strftime("%B %Y")
+        month_groups.append(
+            {
+                "label": month_label,
+                "matches": grouped_matches[(year_value, month_value)],
+                "is_today": False,
+            }
+        )
+
+    return month_groups
+
+
 def _live_scores_window() -> tuple[datetime, datetime]:
     today_start = datetime.now(tz=LONDON_TZ).replace(
         hour=0, minute=0, second=0, microsecond=0
@@ -311,10 +334,7 @@ async def get_teams_matches(
     team_name, matches = await retreive_team_matches(team_id, selected_season_key)
     matches = update_match_timezone(matches)
     enable_live_updates = _has_today_matches(matches)
-    today_anchor = datetime.now(tz=LONDON_TZ).replace(
-        hour=0, minute=0, second=0, microsecond=0
-    )
-    day_groups = _build_match_day_groups(matches, today_anchor)
+    day_groups = _build_team_month_groups(matches)
 
     return TEMPLATES.TemplateResponse(
         request,
