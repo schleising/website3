@@ -86,7 +86,6 @@ function updateFormContainer(row, formList, formText) {
     if (Array.isArray(formList) && formList.length > 0) {
         formList
             .slice()
-            .reverse()
             .forEach(item => {
                 const formElement = document.createElement("div");
                 formElement.className = `form-character ${item.css_class || ""}`.trim();
