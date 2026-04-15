@@ -66,6 +66,27 @@
     background-color: var(--surface-soft);
 }
 
+.data-row.table-range-focus > .position {
+    box-shadow: none;
+    background-color: rgba(66, 86, 112, 0.09);
+}
+
+.data-row.table-range-high > .position {
+    background-color: rgba(84, 126, 103, 0.12);
+}
+
+.data-row.table-range-high-boundary > .position {
+    background-color: rgba(84, 126, 103, 0.2);
+}
+
+.data-row.table-range-low > .position {
+    background-color: rgba(146, 98, 107, 0.12);
+}
+
+.data-row.table-range-low-boundary > .position {
+    background-color: rgba(146, 98, 107, 0.2);
+}
+
 .table-container .team-and-badge {
     column-gap: var(--table-team-gap);
 }

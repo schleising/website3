@@ -1,8 +1,16 @@
 let footballTableSocket = null;
 let footballTableUrl;
 let footballTableIntervalId = null;
+let selectedTeamId = null;
 
 const FOOTBALL_TABLE_REFRESH_INTERVAL_MS = 10000;
+const RANGE_CLASSES = [
+    "table-range-focus",
+    "table-range-high",
+    "table-range-high-boundary",
+    "table-range-low",
+    "table-range-low-boundary"
+];
 
 function escapeHtml(value) {
     if (value === null || value === undefined) {
@@ -104,6 +112,10 @@ function updateTeamLink(row, teamId, seasonKey) {
 }
 
 function updateTableRow(row, tableItem, seasonKey) {
+    row.dataset.position = String(tableItem.position);
+    row.dataset.played = String(tableItem.played_games);
+    row.dataset.points = String(tableItem.points);
+
     updateTextIfChanged(row.querySelector(".table-position-value"), tableItem.position);
     updatePositionDelta(row, tableItem);
     updateTextIfChanged(row.querySelector(".table-played"), tableItem.played_games);
@@ -116,6 +128,159 @@ function updateTableRow(row, tableItem, seasonKey) {
     updateTextIfChanged(row.querySelector(".table-points"), tableItem.points);
     updateFormContainer(row, tableItem.form_list, tableItem.form);
     updateTeamLink(row, tableItem.team.id, seasonKey);
+}
+
+function getTableRows() {
+    const tbody = document.getElementById("football-live-table-body");
+    if (!tbody) {
+        return [];
+    }
+
+    return Array.from(tbody.querySelectorAll("tr[data-team-id]"));
+}
+
+function clearRangeHighlights() {
+    getTableRows().forEach(row => {
+        RANGE_CLASSES.forEach(className => row.classList.remove(className));
+    });
+}
+
+function asNumber(value) {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function applyRangeHighlights(activeRow) {
+    if (!activeRow) {
+        clearRangeHighlights();
+        return;
+    }
+
+    const rows = getTableRows();
+    if (rows.length < 2) {
+        clearRangeHighlights();
+        return;
+    }
+
+    clearRangeHighlights();
+    activeRow.classList.add("table-range-focus");
+
+    const teamCount = rows.length;
+    const totalGames = Math.max((teamCount - 1) * 2, 0);
+    const activePosition = asNumber(activeRow.dataset.position);
+    const activePoints = asNumber(activeRow.dataset.points);
+    const activePlayed = asNumber(activeRow.dataset.played);
+    const activeMaxPoints = activePoints + Math.max(0, totalGames - activePlayed) * 3;
+    const activeMinPoints = activePoints;
+
+    const highestPossiblePosition =
+        1 + rows.filter(row => row !== activeRow && asNumber(row.dataset.points) > activeMaxPoints).length;
+
+    const lowestPossiblePosition =
+        1 + rows.filter(row => {
+            if (row === activeRow) {
+                return false;
+            }
+
+            const otherPoints = asNumber(row.dataset.points);
+            const otherPlayed = asNumber(row.dataset.played);
+            const otherMaxPoints = otherPoints + Math.max(0, totalGames - otherPlayed) * 3;
+            return otherMaxPoints >= activeMinPoints;
+        }).length;
+
+    rows.forEach(row => {
+        if (row === activeRow) {
+            return;
+        }
+
+        const rowPosition = asNumber(row.dataset.position);
+
+        if (rowPosition < activePosition && rowPosition >= highestPossiblePosition) {
+            row.classList.add("table-range-high");
+            if (rowPosition === highestPossiblePosition) {
+                row.classList.add("table-range-high-boundary");
+            }
+        }
+
+        if (rowPosition > activePosition && rowPosition <= lowestPossiblePosition) {
+            row.classList.add("table-range-low");
+            if (rowPosition === lowestPossiblePosition) {
+                row.classList.add("table-range-low-boundary");
+            }
+        }
+    });
+}
+
+function syncSelectedHighlight() {
+    if (!selectedTeamId) {
+        clearRangeHighlights();
+        return;
+    }
+
+    const rows = getTableRows();
+    const selectedRow = rows.find(row => row.dataset.teamId === selectedTeamId);
+
+    if (!selectedRow) {
+        selectedTeamId = null;
+        clearRangeHighlights();
+        return;
+    }
+
+    applyRangeHighlights(selectedRow);
+}
+
+function setupRangeInteractions() {
+    const tbody = document.getElementById("football-live-table-body");
+    if (!tbody) {
+        return;
+    }
+
+    tbody.addEventListener("mouseover", event => {
+        if (selectedTeamId) {
+            return;
+        }
+
+        const row = event.target.closest("tr[data-team-id]");
+        if (!row || !tbody.contains(row)) {
+            return;
+        }
+
+        applyRangeHighlights(row);
+    });
+
+    tbody.addEventListener("mouseleave", () => {
+        if (selectedTeamId) {
+            syncSelectedHighlight();
+            return;
+        }
+
+        clearRangeHighlights();
+    });
+
+    tbody.addEventListener("click", event => {
+        if (event.target.closest("a")) {
+            return;
+        }
+
+        const row = event.target.closest("tr[data-team-id]");
+        if (!row || !tbody.contains(row)) {
+            return;
+        }
+
+        const teamId = row.dataset.teamId;
+        if (!teamId) {
+            return;
+        }
+
+        if (selectedTeamId === teamId) {
+            selectedTeamId = null;
+            clearRangeHighlights();
+            return;
+        }
+
+        selectedTeamId = teamId;
+        applyRangeHighlights(row);
+    });
 }
 
 function patchLiveTable(tableList) {
@@ -142,6 +307,8 @@ function patchLiveTable(tableList) {
         updateTableRow(row, tableItem, seasonKey);
         tbody.appendChild(row);
     });
+
+    syncSelectedHighlight();
 }
 
 function renderLiveTable(tableList) {
@@ -216,5 +383,6 @@ document.addEventListener("readystatechange", event => {
     const wsProtocol = pageUrl.protocol === "https:" ? "wss:" : "ws:";
     footballTableUrl = `${wsProtocol}//${pageUrl.host}/football/ws/table/${pageUrl.search}`;
 
+    setupRangeInteractions();
     openTableWebSocket();
 });
