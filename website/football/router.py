@@ -247,7 +247,7 @@ async def get_live_matches(
 
     matches = await retreive_matches(start_date, end_date, selected_season_key)
     matches = update_match_timezone(matches)
-    enable_live_updates = _has_today_matches(matches)
+    enable_live_updates = True
     live_today_anchor = start_date + timedelta(days=LIVE_DAYS_BEFORE_TODAY)
     today_anchor = datetime.now(tz=LONDON_TZ).replace(
         hour=0, minute=0, second=0, microsecond=0
