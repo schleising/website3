@@ -49,6 +49,8 @@ TEMPLATES = Jinja2Templates("/app/templates")
 football_router = APIRouter(prefix="/football")
 
 SEASON_MONTH_ORDER = [8, 9, 10, 11, 12, 1, 2, 3, 4, 5]
+LIVE_DAYS_BEFORE_TODAY = 7
+LIVE_DAYS_AFTER_TODAY = 6
 
 
 def _season_year_bounds(season_key: str) -> tuple[int, int]:
@@ -99,13 +101,14 @@ def _build_live_day_groups(matches: list, today_value: datetime) -> list[dict]:
 
     live_day_groups: list[dict] = []
 
-    for day_offset in range(7):
+    for day_offset in range(-LIVE_DAYS_BEFORE_TODAY, LIVE_DAYS_AFTER_TODAY + 1):
         day_datetime = today_value + timedelta(days=day_offset)
         day_key = day_datetime.date()
         live_day_groups.append(
             {
                 "label": _format_live_day_label(day_datetime, today_value),
                 "matches": grouped_matches.get(day_key, []),
+                "is_today": day_offset == 0,
             }
         )
 
@@ -113,8 +116,9 @@ def _build_live_day_groups(matches: list, today_value: datetime) -> list[dict]:
 
 
 def _live_scores_window() -> tuple[datetime, datetime]:
-    window_start = datetime.today().replace(hour=0, minute=0, second=0, microsecond=0)
-    window_end = (window_start + timedelta(days=6)).replace(
+    today_start = datetime.today().replace(hour=0, minute=0, second=0, microsecond=0)
+    window_start = today_start - timedelta(days=LIVE_DAYS_BEFORE_TODAY)
+    window_end = (today_start + timedelta(days=LIVE_DAYS_AFTER_TODAY)).replace(
         hour=23, minute=59, second=59, microsecond=0
     )
 
@@ -176,7 +180,7 @@ async def get_live_matches(
 
     if season_context["is_current_season"]:
         start_date, end_date = _live_scores_window()
-        page_title = "Today"
+        page_title = "Upcoming Matches"
         live_matches = True
     else:
         viewing_month = datetime.today().month
@@ -190,8 +194,9 @@ async def get_live_matches(
 
     matches = await retreive_matches(start_date, end_date, selected_season_key)
     matches = update_match_timezone(matches)
+    live_today_anchor = start_date + timedelta(days=LIVE_DAYS_BEFORE_TODAY)
     live_day_groups = (
-        _build_live_day_groups(matches, start_date) if live_matches else None
+        _build_live_day_groups(matches, live_today_anchor) if live_matches else None
     )
 
     return TEMPLATES.TemplateResponse(

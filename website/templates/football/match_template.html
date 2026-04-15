@@ -5,6 +5,7 @@
 {% block header %}
 <h3 class="header-text football-header-text">
   <span class="football-header-title">{% if team_matches_view|default(false) %}{{ title }}{% elif live_matches %}Upcoming Matches{% else %}{{ title }}'s Matches{% endif %}</span>
+  {% if not live_matches %}
   <button
     type="button"
     id="football-season-open"
@@ -15,6 +16,7 @@
   >
     {{ selected_season_short_label }}
   </button>
+  {% endif %}
 </h3>
 {% if live_matches %}
 <button class="btn btn-primary" id="subscribe-button" disabled="true" hidden="true">Subscribe</button>
@@ -26,7 +28,7 @@
 {% if live_matches and live_day_groups is defined and live_day_groups %}
 <div class="football-day-list">
   {% for day_group in live_day_groups %}
-  <section class="football-day-card site-card" aria-label="{{ day_group.label }} fixtures">
+  <section class="football-day-card site-card{% if day_group.is_today %} is-today{% endif %}" {% if day_group.is_today %}id="live-day-today"{% endif %} aria-label="{{ day_group.label }} fixtures">
     <h4 class="football-day-title">{{ day_group.label }}</h4>
     {% if day_group.matches|length > 0 %}
     <div class="football-grid">
