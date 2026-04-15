@@ -9,7 +9,14 @@ from motor.motor_asyncio import AsyncIOMotorCollection
 from ..database.database import get_data_by_date
 
 from . import pl_matches, pl_table, football_push, team_primary_colours, mongodb
-from .models import FormItem, Match, LiveTableItem, Team
+from .models import (
+    FormItem,
+    Match,
+    LiveTableItem,
+    Team,
+    PushSubscription,
+    PushSubscriptionDocument,
+)
 
 
 SEASON_KEY_PATTERN = re.compile(r"^\d{4}_\d{4}$")
@@ -21,6 +28,7 @@ FORM_RESULT_CLASS = {
     "L": "form-loss",
 }
 FIRST_PREMIER_LEAGUE_SEASON_START_YEAR = 1992
+_PUSH_SUBSCRIPTION_INDEXES_READY = False
 
 
 def _season_matches_collection_name(season_key: str) -> str:
@@ -394,28 +402,105 @@ async def get_table_db_for_season(season_key: str | None = None) -> list[LiveTab
     return table_list
 
 
-async def add_push_subscription(data: dict) -> bool:
-    if football_push is not None:
-        try:
-            await football_push.insert_one(data)
-        except DuplicateKeyError as ex:
-            logging.error(f"Error inserting subscription: {ex}")
-            return False
-    else:
+async def _ensure_push_subscription_indexes() -> None:
+    global _PUSH_SUBSCRIPTION_INDEXES_READY
+
+    if _PUSH_SUBSCRIPTION_INDEXES_READY:
+        return
+
+    if football_push is None:
+        return
+
+    await football_push.create_index("subscription.endpoint", unique=True)
+    await football_push.create_index("team_ids")
+    _PUSH_SUBSCRIPTION_INDEXES_READY = True
+
+
+def _subscription_query(subscription: PushSubscription) -> dict:
+    return {"subscription.endpoint": subscription.endpoint}
+
+
+async def upsert_push_subscription(subscription_doc: PushSubscriptionDocument) -> bool:
+    if football_push is None:
         logging.error("No DB connection")
+        return False
+
+    await _ensure_push_subscription_indexes()
+
+    now = datetime.now(tz=UTC)
+    team_ids = sorted(set(subscription_doc.team_ids))
+
+    try:
+        await football_push.update_one(
+            _subscription_query(subscription_doc.subscription),
+            {
+                "$set": {
+                    "subscription": subscription_doc.subscription.model_dump(
+                        by_alias=True, exclude_none=True
+                    ),
+                    "team_ids": team_ids,
+                    "username": subscription_doc.username,
+                    "updated_at": now,
+                },
+                "$setOnInsert": {
+                    "created_at": now,
+                },
+            },
+            upsert=True,
+        )
+    except DuplicateKeyError as ex:
+        logging.error(f"Error upserting subscription: {ex}")
         return False
 
     return True
 
 
-async def delete_push_subscription(data: dict) -> bool:
-    if football_push is not None:
-        result = await football_push.delete_one(data)
-        if result.deleted_count == 0:
-            logging.error("No subscription found to delete")
-            return False
-    else:
+async def get_push_subscription(
+    subscription: PushSubscription,
+) -> PushSubscriptionDocument | None:
+    if football_push is None:
+        logging.error("No DB connection")
+        return None
+
+    await _ensure_push_subscription_indexes()
+    existing = await football_push.find_one(_subscription_query(subscription))
+
+    if existing is None:
+        return None
+
+    return PushSubscriptionDocument.model_validate(existing)
+
+
+async def delete_push_subscription(subscription: PushSubscription) -> bool:
+    if football_push is None:
         logging.error("No DB connection")
         return False
 
+    await _ensure_push_subscription_indexes()
+    result = await football_push.delete_one(_subscription_query(subscription))
+
+    if result.deleted_count == 0:
+        logging.error("No subscription found to delete")
+        return False
+
     return True
+
+
+async def get_push_subscriptions_for_team_ids(
+    team_ids: list[int],
+) -> list[PushSubscriptionDocument]:
+    if football_push is None:
+        logging.error("No DB connection")
+        return []
+
+    await _ensure_push_subscription_indexes()
+    unique_team_ids = sorted(set(team_ids))
+
+    if len(unique_team_ids) == 0:
+        return []
+
+    cursor = football_push.find({"team_ids": {"$in": unique_team_ids}})
+    return [
+        PushSubscriptionDocument.model_validate(item)
+        async for item in cursor
+    ]

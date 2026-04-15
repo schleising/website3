@@ -6,6 +6,7 @@ from zoneinfo import ZoneInfo
 
 from fastapi import (
     APIRouter,
+    HTTPException,
     Query,
     Request,
     WebSocket,
@@ -30,7 +31,8 @@ from .football_db import (
     retreive_team_primary_colours,
     get_table_db,
     get_table_db_for_season,
-    add_push_subscription,
+    get_push_subscription,
+    upsert_push_subscription,
     delete_push_subscription,
 )
 
@@ -44,6 +46,12 @@ from .models import (
     SimplifiedMatch,
     SimplifiedTableRow,
     SimplifiedFootballData,
+    Team,
+    PushSubscriptionDocument,
+    SubscriptionLookupRequest,
+    SubscriptionPreferencesUpdateRequest,
+    SubscriptionPreferencesResponse,
+    SubscriptionOperationResponse,
 )
 
 TEMPLATES = Jinja2Templates("/app/templates")
@@ -235,6 +243,31 @@ async def _build_football_season_context(
     }
 
 
+async def _get_current_season_key() -> str:
+    available_season_keys = await get_available_season_keys()
+    return infer_current_season_key(available_season_keys)
+
+
+async def _get_current_season_teams(current_season_key: str) -> list[Team]:
+    current_table = await get_table_db_for_season(current_season_key)
+    team_by_id: dict[int, Team] = {}
+
+    for table_item in current_table:
+        team_by_id[table_item.team.id] = table_item.team
+
+    return sorted(team_by_id.values(), key=lambda team: team.short_name.lower())
+
+
+def _request_username(request: Request) -> str:
+    user = getattr(request.state, "user", None)
+    username = getattr(user, "username", None)
+
+    if isinstance(username, str) and username.strip() != "":
+        return username
+
+    return "Anonymous User"
+
+
 @football_router.get("/", response_class=HTMLResponse)
 async def get_live_matches(
     request: Request,
@@ -342,6 +375,30 @@ async def get_teams_matches(
             "live_matches": False,
             "enable_live_updates": enable_live_updates,
             "team_matches_view": True,
+            **season_context,
+        },
+    )
+
+
+@football_router.get("/subscriptions", response_class=HTMLResponse)
+@football_router.get("/subscriptions/", response_class=HTMLResponse)
+async def get_subscriptions_page(request: Request):
+    season_context = await _build_football_season_context(
+        request, None, show_selector=False
+    )
+    current_season_key = season_context["current_season_key"]
+    teams = await _get_current_season_teams(current_season_key)
+
+    return TEMPLATES.TemplateResponse(
+        request,
+        "football/subscriptions_template.html",
+        {
+            "request": request,
+            "title": "Notification Subscriptions",
+            "live_matches": False,
+            "enable_live_updates": False,
+            "matches": [],
+            "teams": teams,
             **season_context,
         },
     )
@@ -601,38 +658,147 @@ async def websocket_table_endpoint(websocket: WebSocket):
         logging.info("Football Table Socket Closed")
 
 
-# Endpoint to subscribe to push notifications
-@football_router.post("/subscribe", status_code=201)
-@football_router.post("/subscribe/", status_code=201)
-async def subscribe(request: Request, response: Response):
-    data = await request.json()
-    logging.debug(data)
+@football_router.post(
+    "/subscription/preferences",
+    response_model=SubscriptionPreferencesResponse,
+)
+@football_router.post(
+    "/subscription/preferences/",
+    response_model=SubscriptionPreferencesResponse,
+)
+async def get_subscription_preferences(payload: SubscriptionLookupRequest):
+    subscription_doc = await get_push_subscription(payload.subscription)
 
-    # Insert the subscription into the database
-    ok = await add_push_subscription(data)
+    if subscription_doc is None:
+        return SubscriptionPreferencesResponse(is_subscribed=False)
 
-    # Check if the subscription was added
+    return SubscriptionPreferencesResponse(
+        is_subscribed=True,
+        username=subscription_doc.username,
+        team_ids=sorted(set(subscription_doc.team_ids)),
+    )
+
+
+@football_router.put(
+    "/subscription/preferences",
+    response_model=SubscriptionPreferencesResponse,
+)
+@football_router.put(
+    "/subscription/preferences/",
+    response_model=SubscriptionPreferencesResponse,
+)
+async def update_subscription_preferences(
+    request: Request,
+    payload: SubscriptionPreferencesUpdateRequest,
+):
+    current_season_key = await _get_current_season_key()
+    current_teams = await _get_current_season_teams(current_season_key)
+    valid_team_ids = {team.id for team in current_teams}
+    selected_team_ids = sorted(
+        {team_id for team_id in payload.team_ids if team_id in valid_team_ids}
+    )
+
+    if len(selected_team_ids) == 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Select at least one valid current-season team.",
+        )
+
+    username = _request_username(request)
+    subscription_doc = PushSubscriptionDocument(
+        subscription=payload.subscription,
+        team_ids=selected_team_ids,
+        username=username,
+    )
+    ok = await upsert_push_subscription(subscription_doc)
+
     if not ok:
-        response.status_code = status.HTTP_400_BAD_REQUEST
-        return {"status": "error", "message": "Subscription already exists"}
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Unable to save subscription preferences.",
+        )
 
-    # Send a 201 response
-    return {"status": "success"}
+    return SubscriptionPreferencesResponse(
+        is_subscribed=True,
+        username=username,
+        team_ids=selected_team_ids,
+    )
 
 
-# Endpoint to unsubscribe from push notifications
-@football_router.delete("/unsubscribe", status_code=204)
-@football_router.delete("/unsubscribe/", status_code=204)
-async def unsubscribe(request: Request):
-    data = await request.json()
-    logging.debug(data)
+@football_router.api_route(
+    "/subscription/preferences",
+    methods=["DELETE"],
+    response_model=SubscriptionOperationResponse,
+)
+@football_router.api_route(
+    "/subscription/preferences/",
+    methods=["DELETE"],
+    response_model=SubscriptionOperationResponse,
+)
+async def remove_subscription_preferences(payload: SubscriptionLookupRequest):
+    ok = await delete_push_subscription(payload.subscription)
 
-    # Remove the subscription from the database
-    ok = await delete_push_subscription(data)
-
-    # Check if the subscription was deleted
     if not ok:
-        return {"status": "error", "message": "Subscription not found"}
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Subscription not found.",
+        )
 
-    # Send a 204 response
-    return {"status": "success"}
+    return SubscriptionOperationResponse(
+        status="success",
+        message="Subscription deleted.",
+    )
+
+
+# Legacy endpoint: subscribe request with all current-season teams.
+@football_router.post("/subscribe", response_model=SubscriptionOperationResponse)
+@football_router.post("/subscribe/", response_model=SubscriptionOperationResponse)
+async def subscribe(request: Request, payload: SubscriptionLookupRequest):
+    current_season_key = await _get_current_season_key()
+    current_teams = await _get_current_season_teams(current_season_key)
+    selected_team_ids = sorted({team.id for team in current_teams})
+    username = _request_username(request)
+
+    subscription_doc = PushSubscriptionDocument(
+        subscription=payload.subscription,
+        team_ids=selected_team_ids,
+        username=username,
+    )
+    ok = await upsert_push_subscription(subscription_doc)
+
+    if not ok:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Unable to save subscription.",
+        )
+
+    return SubscriptionOperationResponse(
+        status="success",
+        message="Subscribed to all current-season teams.",
+    )
+
+
+# Legacy endpoint: unsubscribe request.
+@football_router.api_route(
+    "/unsubscribe",
+    methods=["DELETE"],
+    response_model=SubscriptionOperationResponse,
+)
+@football_router.api_route(
+    "/unsubscribe/",
+    methods=["DELETE"],
+    response_model=SubscriptionOperationResponse,
+)
+async def unsubscribe(payload: SubscriptionLookupRequest):
+    ok = await delete_push_subscription(payload.subscription)
+
+    if not ok:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Subscription not found.",
+        )
+
+    return SubscriptionOperationResponse(
+        status="success",
+        message="Unsubscribed.",
+    )

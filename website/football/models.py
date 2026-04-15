@@ -2,7 +2,7 @@ from datetime import datetime
 from enum import Enum
 from pathlib import Path
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 class ShortName(str, Enum):
@@ -317,6 +317,73 @@ class Matches(BaseModel):
 
 class MatchList(BaseModel):
     matches: list[Match]
+
+
+class PushSubscriptionKeys(BaseModel):
+    p256dh: str
+    auth: str
+
+
+class PushSubscription(BaseModel):
+    endpoint: str
+    expiration_time: int | None = Field(default=None, alias="expirationTime")
+    keys: PushSubscriptionKeys
+
+    class Config:
+        populate_by_name = True
+
+
+class PushSubscriptionDocument(BaseModel):
+    subscription: PushSubscription
+    team_ids: list[int] = Field(default_factory=list)
+    username: str = "Anonymous User"
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def normalise_legacy_shape(cls, data):
+        if not isinstance(data, dict):
+            return data
+
+        if "subscription" in data:
+            return data
+
+        # Backward compatibility for legacy documents stored as raw PushSubscription.
+        if "endpoint" in data and "keys" in data:
+            return {
+                "subscription": {
+                    "endpoint": data.get("endpoint"),
+                    "expirationTime": data.get("expirationTime"),
+                    "keys": data.get("keys", {}),
+                },
+                "team_ids": data.get("team_ids", []),
+                "username": data.get("username", "Anonymous User"),
+                "created_at": data.get("created_at"),
+                "updated_at": data.get("updated_at"),
+            }
+
+        return data
+
+
+class SubscriptionLookupRequest(BaseModel):
+    subscription: PushSubscription
+
+
+class SubscriptionPreferencesUpdateRequest(BaseModel):
+    subscription: PushSubscription
+    team_ids: list[int] = Field(default_factory=list)
+
+
+class SubscriptionPreferencesResponse(BaseModel):
+    is_subscribed: bool
+    username: str = "Anonymous User"
+    team_ids: list[int] = Field(default_factory=list)
+
+
+class SubscriptionOperationResponse(BaseModel):
+    status: str
+    message: str
 
 
 class LiveTableList(BaseModel):

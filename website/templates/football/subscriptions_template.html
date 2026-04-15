@@ -1,0 +1,56 @@
+{% extends "football/football-base.html" %}
+
+{% block football_head %}
+<script defer src="/js/football/scope.js?v1.0.0"></script>
+<script defer src="/js/football/subscriptions.js?v1.0.0"></script>
+{% endblock %}
+
+{% block title %}<title>Football - {{ title }}</title>{% endblock %}
+
+{% block header %}
+<h3 class="header-text football-header-text">
+  <span class="football-header-title">{{ title }}</span>
+  <span class="football-season-marker">{{ current_season_short_label }}</span>
+</h3>
+{% endblock %}
+
+{% block football_content %}
+<section class="football-subscriptions site-card">
+  <p class="football-subscriptions-copy">
+    Choose the teams you want push notifications for in the current season. You can select multiple teams.
+  </p>
+
+  {% if teams|length > 0 %}
+  <div class="football-subscriptions-controls">
+    <label class="football-subscriptions-select-all" for="subscription-select-all">
+      <input id="subscription-select-all" type="checkbox">
+      Select / Deselect All
+    </label>
+    <p class="football-subscriptions-count" id="subscription-selected-count">0 selected</p>
+  </div>
+
+  <div class="football-subscriptions-grid" id="subscription-team-grid">
+    {% for team in teams %}
+    <label class="football-subscription-team" for="subscription-team-{{ team.id }}">
+      <input
+        type="checkbox"
+        id="subscription-team-{{ team.id }}"
+        class="football-subscription-checkbox"
+        value="{{ team.id }}"
+      >
+      <img class="team-badge" src="{{ team.local_crest }}" alt="{{ team.short_name }} crest">
+      <span>{{ team.short_name }}</span>
+    </label>
+    {% endfor %}
+  </div>
+
+  <div class="football-subscriptions-actions">
+    <button type="button" class="btn btn-primary" id="subscription-save">Save Preferences</button>
+    <button type="button" class="btn btn-primary" id="subscription-unsubscribe">Unsubscribe</button>
+  </div>
+  <p class="football-subscriptions-status" id="subscription-status" aria-live="polite"></p>
+  {% else %}
+  <p class="football-subscriptions-status">No teams are available for subscriptions yet.</p>
+  {% endif %}
+</section>
+{% endblock %}
