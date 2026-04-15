@@ -161,6 +161,33 @@ body.football-season-popup-open {
     vertical-align: middle;
 }
 
+.football-header-text {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    width: 100%;
+}
+
+.football-header-title {
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.football-season-marker-button {
+    margin-left: auto;
+    border: 0.0625rem solid rgba(158, 184, 215, 0.9);
+    cursor: pointer;
+}
+
+.football-season-marker-button:hover,
+.football-season-marker-button:focus-visible {
+    background: rgba(255, 255, 255, 0.92);
+    border-color: var(--brand-soft);
+    outline: none;
+}
+
 .h2h-layout {
     display: flex;
     flex-direction: column;
@@ -685,7 +712,11 @@ body.football-season-popup-open {
     }
 
     .football-season-marker {
-        margin-left: 0.35rem;
+        margin-left: auto;
         font-size: 0.68rem;
+    }
+
+    .football-header-text {
+        gap: 0.3rem;
     }
 }

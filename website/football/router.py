@@ -62,9 +62,11 @@ def _year_for_season_month(month: int, season_key: str) -> int:
 
 
 def _build_month_nav_links(selected_season_key: str) -> list[dict[str, str]]:
+    season_label = get_season_short_label(selected_season_key)
+
     return [
         {
-            "label": month_name[month],
+            "label": f"{month_name[month]} {season_label}",
             "url": f"/football/matches/{month}/?season={selected_season_key}",
         }
         for month in SEASON_MONTH_ORDER
@@ -106,8 +108,8 @@ async def _build_football_season_context(
         "current_season_label": get_season_label(current_season_key),
         "current_season_short_label": get_season_short_label(current_season_key),
         "is_current_season": selected_season_key == current_season_key,
-        "season_switch_path": request.url.path,
-        "current_season_url": f"{request.url.path}?season={current_season_key}",
+        "season_switch_path": "/football/table/",
+        "current_season_url": f"/football/table/?season={current_season_key}",
         "live_scores_url": f"/football/?season={selected_season_key}",
         "table_url": f"/football/table/?season={selected_season_key}",
         "month_nav_links": _build_month_nav_links(selected_season_key),
@@ -209,6 +211,7 @@ async def get_teams_matches(
             "matches": matches,
             "title": team_name,
             "live_matches": False,
+            "team_matches_view": True,
             **season_context,
         },
     )

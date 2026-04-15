@@ -15,10 +15,27 @@ function initialiseSeasonPopup() {
         return;
     }
 
-    const openPopup = () => {
+    // Keep popup layers at document root so hidden mobile sidebars cannot suppress them.
+    if (popupElement.parentElement !== document.body) {
+        document.body.appendChild(popupElement);
+    }
+
+    if (backdropElement.parentElement !== document.body) {
+        document.body.appendChild(backdropElement);
+    }
+
+    let lastOpenButton = openButton;
+
+    const openPopup = event => {
+        if (event && event.currentTarget instanceof HTMLElement) {
+            lastOpenButton = event.currentTarget;
+        }
+
         popupElement.classList.remove("hidden");
         backdropElement.classList.remove("hidden");
-        openButton.setAttribute("aria-expanded", "true");
+        if (lastOpenButton) {
+            lastOpenButton.setAttribute("aria-expanded", "true");
+        }
         backdropElement.setAttribute("aria-hidden", "false");
         document.body.classList.add("football-season-popup-open");
 
@@ -30,10 +47,14 @@ function initialiseSeasonPopup() {
     const closePopup = () => {
         popupElement.classList.add("hidden");
         backdropElement.classList.add("hidden");
-        openButton.setAttribute("aria-expanded", "false");
+        if (lastOpenButton) {
+            lastOpenButton.setAttribute("aria-expanded", "false");
+        }
         backdropElement.setAttribute("aria-hidden", "true");
         document.body.classList.remove("football-season-popup-open");
-        openButton.focus();
+        if (lastOpenButton) {
+            lastOpenButton.focus();
+        }
     };
 
     openButton.addEventListener("click", openPopup);

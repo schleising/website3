@@ -7,11 +7,8 @@
 {% block title %}<title>Football - Head to Head</title>{% endblock %}
 
 {% block header %}
-<h3 class="header-text">
-  Head to Head Matches
-  {% if not is_current_season %}
-  <span class="football-season-marker">{{ selected_season_short_label }}</span>
-  {% endif %}
+<h3 class="header-text football-header-text">
+  <span class="football-header-title">Head to Head Matches</span>
 </h3>
 {% endblock %}
 

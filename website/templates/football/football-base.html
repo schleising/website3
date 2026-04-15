@@ -11,29 +11,41 @@
 <script defer src="/js/football/scroll-scores.js"></script>
 {% endif %}
 {% if show_season_selector|default(false) %}
-<script defer src="/js/football/season_picker.js?v1.0.1"></script>
+<script defer src="/js/football/season_picker.js?v1.0.3"></script>
 {% endif %}
 {% endblock %}
 
 {% block head %}
 <link rel="stylesheet" href="/css/right-nav.css?v1.0.0">
-<link rel="stylesheet" href="/css/football/football.css?v1.4.2">
+<link rel="stylesheet" href="/css/football/football.css?v1.4.3">
 {% block football_head %}
 {% endblock %}
 {% endblock %}
 
 {% block sidebar %}
-{% if show_season_selector|default(false) and available_seasons is defined %}
-<button
-	type="button"
-	id="football-season-open"
-	class="sub-level-nav football-season-open"
-	aria-controls="football-season-popup"
-	aria-expanded="false"
->
-	Season {{ selected_season_short_label }}{% if is_current_season %} (Current){% else %} (Archive){% endif %}
-</button>
+{% if is_current_season|default(true) %}
+<a href="{{ live_scores_url|default('/football/') }}" class="sub-level-nav">Live Scores</a>
+{% endif %}
+<a href="{{ table_url|default('/football/table/') }}" class="sub-level-nav">{% if is_current_season|default(true) %}Live League Table{% else %}League Table{% endif %}</a>
+{% if month_nav_links is defined %}
+	{% for month_link in month_nav_links %}
+	<a href="{{ month_link.url }}" class="sub-level-nav">{{ month_link.label }}</a>
+	{% endfor %}
+{% else %}
+<a href="/football/matches/8/" class="sub-level-nav">August</a>
+<a href="/football/matches/9/" class="sub-level-nav">September</a>
+<a href="/football/matches/10/" class="sub-level-nav">October</a>
+<a href="/football/matches/11/" class="sub-level-nav">November</a>
+<a href="/football/matches/12/" class="sub-level-nav">December</a>
+<a href="/football/matches/1/" class="sub-level-nav">January</a>
+<a href="/football/matches/2/" class="sub-level-nav">February</a>
+<a href="/football/matches/3/" class="sub-level-nav">March</a>
+<a href="/football/matches/4/" class="sub-level-nav">April</a>
+<a href="/football/matches/5/" class="sub-level-nav">May</a>
+{% endif %}
+<a href="/football/head-to-head/{% if selected_season_key is defined %}?season={{ selected_season_key }}{% endif %}" class="sub-level-nav">Head to Head</a>
 
+{% if show_season_selector|default(false) and available_seasons is defined %}
 <div id="football-season-backdrop" class="football-season-backdrop hidden" aria-hidden="true"></div>
 <section
 	id="football-season-popup"
@@ -61,28 +73,6 @@
 		</div>
 	</form>
 </section>
-{% endif %}
-
-{% if is_current_season|default(true) %}
-<a href="{{ live_scores_url|default('/football/') }}" class="sub-level-nav">Live Scores</a>
-{% endif %}
-<a href="{{ table_url|default('/football/table/') }}" class="sub-level-nav">{% if is_current_season|default(true) %}Live League Table{% else %}League Table{% endif %}</a>
-<a href="/football/head-to-head/{% if selected_season_key is defined %}?season={{ selected_season_key }}{% endif %}" class="sub-level-nav">Head to Head</a>
-{% if month_nav_links is defined %}
-	{% for month_link in month_nav_links %}
-	<a href="{{ month_link.url }}" class="sub-level-nav">{{ month_link.label }}</a>
-	{% endfor %}
-{% else %}
-<a href="/football/matches/8/" class="sub-level-nav">August</a>
-<a href="/football/matches/9/" class="sub-level-nav">September</a>
-<a href="/football/matches/10/" class="sub-level-nav">October</a>
-<a href="/football/matches/11/" class="sub-level-nav">November</a>
-<a href="/football/matches/12/" class="sub-level-nav">December</a>
-<a href="/football/matches/1/" class="sub-level-nav">January</a>
-<a href="/football/matches/2/" class="sub-level-nav">February</a>
-<a href="/football/matches/3/" class="sub-level-nav">March</a>
-<a href="/football/matches/4/" class="sub-level-nav">April</a>
-<a href="/football/matches/5/" class="sub-level-nav">May</a>
 {% endif %}
 {% endblock %}
 {% block footer %}

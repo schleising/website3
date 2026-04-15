@@ -9,11 +9,18 @@
 {% endblock %}
 
 {% block header %}
-<h3 class="header-text">
-  {{ title }}
-  {% if not is_current_season %}
-  <span class="football-season-marker">{{ selected_season_short_label }}</span>
-  {% endif %}
+<h3 class="header-text football-header-text">
+  <span class="football-header-title">{{ title }}</span>
+  <button
+    type="button"
+    id="football-season-open"
+    class="football-season-marker football-season-marker-button"
+    aria-controls="football-season-popup"
+    aria-expanded="false"
+    aria-label="Open season selector"
+  >
+    {{ selected_season_short_label }}
+  </button>
 </h3>
 {% endblock %}
 
