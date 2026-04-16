@@ -8,11 +8,89 @@ document.addEventListener('readystatechange', event => {
             syncSidebarWidths();
         };
 
+        highlightCurrentSidebarLinks();
         updateSidebarVisibility();
         setupMobileSidebarToggles();
         syncSidebarWidths();
     }
 });
+
+function normalisePath(pathValue) {
+    if (!pathValue) {
+        return "/";
+    }
+
+    const trimmed = String(pathValue).trim();
+    if (trimmed === "") {
+        return "/";
+    }
+
+    if (trimmed === "/") {
+        return "/";
+    }
+
+    return trimmed.endsWith("/") ? trimmed.slice(0, -1) : trimmed;
+}
+
+function highlightCurrentSidebarLinks() {
+    const sidebarContainers = document.querySelectorAll(".left-sidebar .sub-level-nav-container, .right-sidebar .sub-level-nav-container");
+    if (sidebarContainers.length === 0) {
+        return;
+    }
+
+    const currentUrl = new URL(window.location.href);
+    const currentPath = normalisePath(currentUrl.pathname);
+
+    for (const container of sidebarContainers) {
+        const links = Array.from(container.querySelectorAll("a.sub-level-nav[href]"));
+        if (links.length === 0) {
+            continue;
+        }
+
+        let bestLink = null;
+        let bestScore = -1;
+
+        for (const link of links) {
+            link.classList.remove("is-current");
+            link.removeAttribute("aria-current");
+
+            let parsedHref;
+            try {
+                parsedHref = new URL(link.getAttribute("href"), currentUrl);
+            } catch {
+                continue;
+            }
+
+            if (parsedHref.origin !== currentUrl.origin) {
+                continue;
+            }
+
+            const linkPath = normalisePath(parsedHref.pathname);
+            const navPrefixAttr = link.getAttribute("data-nav-prefix");
+            const navPrefixPath = navPrefixAttr ? normalisePath(navPrefixAttr) : null;
+            const effectivePath = navPrefixPath || linkPath;
+
+            let score = -1;
+            if (effectivePath === currentPath) {
+                score = 10000 + effectivePath.length;
+            } else if (effectivePath !== "/" && currentPath.startsWith(`${effectivePath}/`)) {
+                score = 5000 + effectivePath.length;
+            } else if (effectivePath === "/" && currentPath === "/") {
+                score = 10000;
+            }
+
+            if (score > bestScore) {
+                bestScore = score;
+                bestLink = link;
+            }
+        }
+
+        if (bestLink) {
+            bestLink.classList.add("is-current");
+            bestLink.setAttribute("aria-current", "page");
+        }
+    }
+}
 
 function updateSidebarVisibility() {
     const main = document.getElementById("main");
