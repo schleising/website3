@@ -992,6 +992,20 @@ body.football-season-popup-open {
     }
 
     .football-header-text--season {
-        padding-right: 3.8rem;
+        display: flex;
+        align-items: center;
+        gap: 0.3rem;
+        padding-right: 0;
+    }
+
+    .football-header-text--season .football-season-marker-button {
+        position: static;
+        top: auto;
+        right: auto;
+        transform: none;
+        min-height: 2.15rem;
+        padding: 0.25rem 0.65rem;
+        font-size: 0.95rem;
+        line-height: 1.2;
     }
 }

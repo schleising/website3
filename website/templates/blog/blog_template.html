@@ -2,42 +2,67 @@
 
 {% block head %}
 <link rel="stylesheet" href="/css/right-nav.css?v1.1.0">
-<link rel="stylesheet" href="/css/blog/blog.css?v1.1.0">
+<link rel="stylesheet" href="/css/blog/blog.css?v1.2.0">
 <link rel="stylesheet" href="/css/markdown/markdown.css?v1.1.0">
 <link rel="stylesheet" href="/css/markdown/styles.css?v1.1.0">
 {% block scripts %}
+{% if not is_blog_index|default(false) %}
 <script defer src="https://cdn.jsdelivr.net/npm/mermaid@9/dist/mermaid.min.js"></script>
 <script defer src="/js/blog/blog.js?v1.1.0"></script>
+{% endif %}
 {% endblock %}
-{% block title %}<title>{% if blog_entry != None %}{{ blog_entry.title }}{% else %}Blog{% endif %}</title>{% endblock %}
+{% block title %}<title>{% if is_blog_index|default(false) %}Blog Index{% elif blog_entry != None %}{{ blog_entry.title }}{% else %}Blog{% endif %}</title>{% endblock %}
 {% endblock %}
 
-{% block canonical %}https://www.schleising.net/blog/{{ blog_entry.id }}/{% endblock %}
+{% block canonical %}{% if is_blog_index|default(false) %}https://www.schleising.net/blog/{% elif blog_entry != None %}https://www.schleising.net/blog/{{ blog_entry.id }}/{% else %}https://www.schleising.net/blog/{% endif %}{% endblock %}
 
 {% block header %}
 <h3 class="header-text">Blog</h3>
 {% endblock %}
 
 {% block content %}
-<h3 class="bottom-margin" id="blog-title">
-  {% if blog_entry != None %}
-    {{ blog_entry.title }}
+{% if is_blog_index|default(false) %}
+<section class="blog-index" aria-label="Blog index">
+  <h3 class="bottom-margin blog-index-title">Latest Posts</h3>
+  {% if blog_cards|length > 0 %}
+  <div class="blog-card-grid">
+    {% for card in blog_cards %}
+    <article class="blog-card site-card">
+      <h4 class="blog-card-title"><a href="/blog/{{ card.id }}/">{{ card.title }}</a></h4>
+      <p class="blog-card-meta">{{ card.last_updated.strftime('%d %b %Y') }} | {{ card.author }}</p>
+      <p class="blog-card-preview">{{ card.preview_text }}</p>
+      <a class="blog-card-link" href="/blog/{{ card.id }}/">Read post</a>
+    </article>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p class="blog-index-empty">No posts yet.</p>
   {% endif %}
-</h3>
-<h6 class="bottom-margin" id="blog-author">
-  {% if blog_entry != None %}
-    Author: {{ first_name }} {{ last_name }}
-  {% endif %}
-</h6>
-<div id="blog-view">
-  {% if blog_html != None %}
-    {{ blog_html|safe }}
-  {% endif %}
-</div>
+</section>
+{% else %}
+  <h3 class="bottom-margin" id="blog-title">
+    {% if blog_entry != None %}
+      {{ blog_entry.title }}
+    {% endif %}
+  </h3>
+  <h6 class="bottom-margin" id="blog-author">
+    {% if blog_entry != None %}
+      Author: {{ first_name }} {{ last_name }}
+    {% endif %}
+  </h6>
+  <div id="blog-view">
+    {% if blog_html != None %}
+      {{ blog_html|safe }}
+    {% endif %}
+  </div>
+{% endif %}
 {% endblock %}
 {% block sidebar %}
+  {% set current_path = request.url.path %}
+  <a href="/blog/" class="sub-level-nav{% if current_path == '/blog/' or current_path == '/blog' %} is-current{% endif %}"{% if current_path == '/blog/' or current_path == '/blog' %} aria-current="page"{% endif %}>Index</a>
   {% for blog in blog_list %}
-    <a href="/blog/{{ blog.id }}/" class="sub-level-nav" id="{{ blog.id }}">{{ blog.title }}</a>
+    {% set blog_path = '/blog/' ~ blog.id ~ '/' %}
+    <a href="{{ blog_path }}" class="sub-level-nav{% if current_path == blog_path %} is-current{% endif %}" id="{{ blog.id }}"{% if current_path == blog_path %} aria-current="page"{% endif %}>{{ blog.title }}</a>
   {% endfor %}
 {% endblock %}
 
