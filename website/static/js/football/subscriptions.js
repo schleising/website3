@@ -6,7 +6,7 @@ const subscriptionUnsubscribeButton = document.getElementById("subscription-unsu
 const subscriptionStatus = document.getElementById("subscription-status");
 const subscriptionSelectedCount = document.getElementById("subscription-selected-count");
 let hasActiveSubscription = false;
-const canManageSubscriptions = subscriptionSection?.dataset.canManageSubscriptions === "true";
+let canManageSubscriptions = subscriptionSection?.dataset.canManageSubscriptions === "true";
 const csrfToken = subscriptionSection?.dataset.csrfToken || "";
 
 const serviceWorkerPath = "/sw.js";
@@ -70,6 +70,16 @@ function defaultUnsubscribedMessage() {
     }
 
     return "This browser is not currently subscribed. Login or sign up to manage notifications.";
+}
+
+function statusMessageForOwnership(ownershipStatus, selectedCount) {
+    const countSuffix = selectedCount === 1 ? "team" : "teams";
+
+    if (ownershipStatus === "different_user") {
+        return `This browser subscription was set up by a different user (${selectedCount} ${countSuffix} selected). Sign in with that account to manage notifications.`;
+    }
+
+    return `This browser is subscribed to ${selectedCount} ${countSuffix}. Login or sign up to manage notifications.`;
 }
 
 function setStatus(message, isError = false) {
@@ -194,6 +204,10 @@ async function loadPreferences() {
             checkbox.checked = selectedIds.has(Number(checkbox.value));
         });
 
+        if (typeof data.can_manage_subscription === "boolean") {
+            canManageSubscriptions = data.can_manage_subscription;
+        }
+
         updateSelectionCount();
         syncSelectAllState();
         hasActiveSubscription = true;
@@ -205,8 +219,7 @@ async function loadPreferences() {
         }
 
         const selectedCount = selectedIds.size;
-        const suffix = selectedCount === 1 ? "team" : "teams";
-        setStatus(`This browser is subscribed to ${selectedCount} ${suffix}. Login or sign up to manage notifications.`);
+        setStatus(statusMessageForOwnership(data.ownership_status, selectedCount), data.ownership_status === "different_user");
     } catch (error) {
         console.error("Failed to load preferences", error);
         resetToUnsubscribedState("Unable to load existing subscription preferences.");

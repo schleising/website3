@@ -844,14 +844,38 @@ async def websocket_table_endpoint(websocket: WebSocket):
     "/subscription/preferences/",
     response_model=SubscriptionPreferencesResponse,
 )
-async def get_subscription_preferences(payload: SubscriptionLookupRequest):
+async def get_subscription_preferences(request: Request, payload: SubscriptionLookupRequest):
     subscription_doc = await get_push_subscription(payload.subscription)
+    username = _request_username(request)
+    is_logged_in = username != "Anonymous User"
 
     if subscription_doc is None:
-        return SubscriptionPreferencesResponse(is_subscribed=False)
+        return SubscriptionPreferencesResponse(
+            is_subscribed=False,
+            can_manage_subscription=is_logged_in,
+            ownership_status="none",
+        )
+
+    if not is_logged_in:
+        return SubscriptionPreferencesResponse(
+            is_subscribed=True,
+            can_manage_subscription=False,
+            ownership_status="logged_out",
+            team_ids=sorted(set(subscription_doc.team_ids)),
+        )
+
+    if subscription_doc.username == username:
+        return SubscriptionPreferencesResponse(
+            is_subscribed=True,
+            can_manage_subscription=True,
+            ownership_status="current_user",
+            team_ids=sorted(set(subscription_doc.team_ids)),
+        )
 
     return SubscriptionPreferencesResponse(
         is_subscribed=True,
+        can_manage_subscription=False,
+        ownership_status="different_user",
         team_ids=sorted(set(subscription_doc.team_ids)),
     )
 

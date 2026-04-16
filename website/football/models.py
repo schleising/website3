@@ -417,6 +417,8 @@ class SubscriptionPreferencesUpdateRequest(BaseModel):
 
 class SubscriptionPreferencesResponse(BaseModel):
     is_subscribed: bool
+    can_manage_subscription: bool = False
+    ownership_status: str = "none"
     team_ids: list[int] = Field(default_factory=list)
 
 
