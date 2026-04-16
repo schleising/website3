@@ -20,6 +20,7 @@ from .markdown.router import markdown_router
 from .blog.router import blog_router
 
 from .football.router import football_router
+from .football.football_db import initialise_teams_cache
 
 from .tools.router import tools_router
 
@@ -84,6 +85,7 @@ COLLECTION = MONGODB.get_collection("item_collection")
 # Close the connection when the app shuts down
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    await initialise_teams_cache()
     yield
     logging.debug("Closing DB Connection")
     MONGODB.client.close()

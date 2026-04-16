@@ -28,6 +28,8 @@ FORM_RESULT_CLASS = {
     "L": "form-loss",
 }
 FIRST_PREMIER_LEAGUE_SEASON_START_YEAR = 1992
+TEAM_CACHE: list[Team] = []
+TEAM_CACHE_INITIALISED = False
 
 
 def _season_matches_collection_name(season_key: str) -> str:
@@ -156,6 +158,78 @@ async def _get_match_collections(include_all_seasons: bool = False) -> list[Asyn
     return collections
 
 
+async def _get_table_collections(include_all_seasons: bool = False) -> list[AsyncIOMotorCollection]:
+    if not include_all_seasons:
+        return [pl_table] if pl_table is not None else []
+
+    collections: list[AsyncIOMotorCollection] = []
+
+    for season_key in await get_available_season_keys():
+        collection = mongodb.get_collection(_season_table_collection_name(season_key))
+        if collection is not None:
+            collections.append(collection)
+
+    if len(collections) == 0 and pl_table is not None:
+        collections.append(pl_table)
+
+    return collections
+
+
+def _sort_teams(teams_by_id: dict[int, Team]) -> list[Team]:
+    return sorted(teams_by_id.values(), key=lambda team: str(team.short_name).lower())
+
+
+async def _load_all_teams_from_tables() -> list[Team]:
+    teams_by_id: dict[int, Team] = {}
+    table_collections = await _get_table_collections(include_all_seasons=True)
+
+    for collection in table_collections:
+        from_db_cursor = collection.find({}, {"team": 1, "_id": 0})
+
+        async for item in from_db_cursor:
+            team_dict = item.get("team")
+
+            if isinstance(team_dict, dict):
+                team = Team.model_validate(team_dict)
+                teams_by_id[team.id] = team
+
+    return _sort_teams(teams_by_id)
+
+
+async def _load_all_teams_from_matches() -> list[Team]:
+    teams_by_id: dict[int, Team] = {}
+    match_collections = await _get_match_collections(include_all_seasons=True)
+
+    for collection in match_collections:
+        from_db_cursor = collection.find({}, {"home_team": 1, "away_team": 1, "_id": 0})
+
+        async for item in from_db_cursor:
+            for field_name in ["home_team", "away_team"]:
+                team_dict = item.get(field_name)
+
+                if isinstance(team_dict, dict):
+                    team = Team.model_validate(team_dict)
+                    teams_by_id[team.id] = team
+
+    return _sort_teams(teams_by_id)
+
+
+async def initialise_teams_cache() -> None:
+    global TEAM_CACHE_INITIALISED, TEAM_CACHE
+
+    if TEAM_CACHE_INITIALISED:
+        return
+
+    TEAM_CACHE = await _load_all_teams_from_tables()
+
+    if len(TEAM_CACHE) == 0:
+        logging.warning("Team cache table preload returned no teams, falling back to match collections")
+        TEAM_CACHE = await _load_all_teams_from_matches()
+
+    TEAM_CACHE_INITIALISED = True
+    logging.info(f"Football team cache initialised with {len(TEAM_CACHE)} teams")
+
+
 async def retreive_matches(
     date_from: datetime, date_to: datetime, season_key: str | None = None
 ) -> list[Match]:
@@ -277,26 +351,11 @@ async def retreive_head_to_head_matches_by_id(
 
 
 async def retreive_all_teams() -> list[Team]:
-    teams_by_id: dict[int, Team] = {}
+    if not TEAM_CACHE_INITIALISED:
+        await initialise_teams_cache()
 
-    match_collections = await _get_match_collections(include_all_seasons=True)
-
-    if len(match_collections) == 0:
-        logging.error("No DB connection")
-        return []
-
-    for collection in match_collections:
-        from_db_cursor = collection.find({}, {"home_team": 1, "away_team": 1, "_id": 0})
-
-        async for item in from_db_cursor:
-            for field_name in ["home_team", "away_team"]:
-                team_dict = item.get(field_name)
-
-                if isinstance(team_dict, dict):
-                    team = Team.model_validate(team_dict)
-                    teams_by_id[team.id] = team
-
-    return sorted(teams_by_id.values(), key=lambda team: str(team.short_name).lower())
+    # Return a shallow copy to avoid accidental caller mutation of cache state.
+    return TEAM_CACHE.copy()
 
 
 async def retreive_team_primary_colours(team_ids: list[int]) -> dict[int, str]:
