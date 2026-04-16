@@ -51,7 +51,7 @@
             <a class="sub-level-nav{% if current_section == 'markdown' %} is-current{% endif %}" href="/markdown/"{% if current_section == 'markdown' %} aria-current="page"{% endif %}>Markdown Editor</a>
             <a class="sub-level-nav{% if current_section == 'account' %} is-current{% endif %}" href="/account/logout/"{% if current_section == 'account' %} aria-current="page"{% endif %}>Logout</a>
             {% else %}
-            <a class="sub-level-nav{% if current_section == 'account' %} is-current{% endif %}" href="/account/login/"{% if current_section == 'account' %} aria-current="page"{% endif %}>Login</a>
+            <a class="sub-level-nav{% if current_section == 'account' %} is-current{% endif %}" href="/account/login/?next={{ request.url.path|urlencode }}"{% if current_section == 'account' %} aria-current="page"{% endif %}>Login</a>
             {% endif %}
           </div>
         </div>

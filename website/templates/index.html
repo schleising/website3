@@ -45,7 +45,7 @@
 			</article>
 		</a>
 		{% else %}
-		<a class="home-card-link" href="/account/login/">
+		<a class="home-card-link" href="/account/login/?next={{ request.url.path|urlencode }}">
 			<article class="home-card site-card">
 				<img class="home-card-image" src="/images/home/login.svg" alt="Login form illustration">
 				<h4>Login</h4>

@@ -23,7 +23,7 @@
   </p>
   {% if not can_manage_subscriptions %}
   <p class="football-subscriptions-auth-message">
-    <a href="/account/login/">Login</a> or <a href="/account/create/">sign up</a> to subscribe and manage notification preferences.
+    <a href="/account/login/?next={{ request.url.path|urlencode }}">Login</a> or <a href="/account/create/">sign up</a> to subscribe and manage notification preferences.
   </p>
   {% endif %}
 

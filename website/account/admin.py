@@ -208,9 +208,9 @@ async def get_current_active_user(
         if current_user.disabled:
             # If the user is disabled set request.state.user to None
             request.state.user = None
-
-        # If the user exists set request.state.user to be the user
-        request.state.user = current_user
+        else:
+            # If the user exists and is active set request.state.user to be the user
+            request.state.user = current_user
     else:
         # If we have not got a user set request.state.user to None
         request.state.user = None
@@ -266,9 +266,8 @@ def get_login_response(user: User, url: str) -> RedirectResponse:
     )
 
     # Create a redirect response to the login success page
-    response = RedirectResponse(
-        f"/account/{url}", status_code=status.HTTP_303_SEE_OTHER
-    )
+    target_url = url if url.startswith("/") else f"/account/{url}"
+    response = RedirectResponse(target_url, status_code=status.HTTP_303_SEE_OTHER)
 
     # Set a cookie on the response with the contents as the JWT token
     response.set_cookie(
