@@ -27,7 +27,7 @@
     <summary class="football-jump-trigger">Jump To</summary>
     <div class="football-jump-dropdown sub-level-nav-container">
       {% if is_current_season|default(false) and current_day_anchor %}
-      <a class="sub-level-nav football-jump-link" href="#{{ current_day_anchor }}" data-center-next-match="true">Today</a>
+      <a class="sub-level-nav football-jump-link football-jump-link-today" href="#{{ current_day_anchor }}" data-center-next-match="true">Today</a>
       {% endif %}
       {% for target in jump_targets %}
       <a class="sub-level-nav football-jump-link" href="#{{ target.anchor }}">{{ target.label }}</a>

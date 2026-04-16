@@ -98,6 +98,14 @@ body:has(#content > .football-content-pad) #main {
     margin: 0;
 }
 
+.football-jump-link-today {
+    border-radius: 0.38rem;
+    background: rgba(226, 238, 252, 0.62);
+    color: rgba(31, 69, 112, 0.92);
+    font-weight: 600;
+    margin-bottom: 0.2rem;
+}
+
 @media screen and (max-width: 42rem) {
     .football-all-matches-toolbar {
         z-index: 9;
