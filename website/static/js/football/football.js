@@ -12,6 +12,8 @@ var shouldPollForUpdates = false;
 
 // Latest Matches view needs an initial full-window payload to hydrate all visible day rows.
 var isLiveMatchesView = false;
+var hasHydratedInitialFullWindow = false;
+var loadedDayKey = null;
 
 // Add a callback for state changes
 document.addEventListener('readystatechange', event => {
@@ -25,9 +27,30 @@ document.addEventListener('readystatechange', event => {
 
         const footballContent = document.querySelector('.football-content-pad');
         isLiveMatchesView = footballContent?.dataset.liveMatchesView === 'true';
+        loadedDayKey = getDayKey(new Date());
 
         // Check whether the websocket is open, if not open it
         openWebSocket();
+    }
+});
+
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'visible') {
+        return;
+    }
+
+    if (hasDayChangedSinceLoad()) {
+        window.location.reload();
+        return;
+    }
+
+    if (!ws || ws.readyState === WebSocket.CLOSED) {
+        openWebSocket();
+        return;
+    }
+
+    if (ws.readyState === WebSocket.OPEN) {
+        sendMessage(true);
     }
 });
 
@@ -113,7 +136,10 @@ function openWebSocket() {
         console.log("Initial Football Websocket Refresh")
         shouldPollForUpdates = false;
         syncPollingInterval();
-        sendMessage(!isLiveMatchesView);
+
+        const shouldRequestCurrentDayOnly = !(isLiveMatchesView && !hasHydratedInitialFullWindow);
+        sendMessage(shouldRequestCurrentDayOnly);
+        hasHydratedInitialFullWindow = true;
     });
 };
 
@@ -196,4 +222,17 @@ function syncPollingInterval() {
         clearInterval(intervalId);
         intervalId = null;
     }
+}
+
+function getDayKey(dateValue) {
+    return `${dateValue.getFullYear()}-${dateValue.getMonth()}-${dateValue.getDate()}`;
+}
+
+function hasDayChangedSinceLoad() {
+    if (!loadedDayKey) {
+        loadedDayKey = getDayKey(new Date());
+        return false;
+    }
+
+    return getDayKey(new Date()) !== loadedDayKey;
 }

@@ -3,9 +3,8 @@
 {% block football_head %}
 <link rel="stylesheet" href="/css/table.css?v1.6.11">
 {% block football_scripts %}
-<script defer src="/js/football/visibility_refresh.js?v1.1.0"></script>
 {% if is_current_season|default(false) %}
-<script defer src="/js/football/table_live.js?v1.6.0"></script>
+<script defer src="/js/football/table_live.js?v1.6.1"></script>
 {% endif %}
 {% endblock %}
 {% block title %}<title>Football - {{ title }}</title>{% endblock %}

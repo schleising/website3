@@ -2,6 +2,7 @@ let footballTableSocket = null;
 let footballTableUrl;
 let footballTableIntervalId = null;
 let selectedTeamId = null;
+let footballTableLoadedDayKey = null;
 
 const FOOTBALL_TABLE_REFRESH_INTERVAL_MS = 10000;
 const RANGE_CLASSES = [
@@ -400,6 +401,19 @@ function openTableWebSocket() {
     });
 }
 
+function getDayKey(dateValue) {
+    return `${dateValue.getFullYear()}-${dateValue.getMonth()}-${dateValue.getDate()}`;
+}
+
+function hasTableDayChangedSinceLoad() {
+    if (!footballTableLoadedDayKey) {
+        footballTableLoadedDayKey = getDayKey(new Date());
+        return false;
+    }
+
+    return getDayKey(new Date()) !== footballTableLoadedDayKey;
+}
+
 document.addEventListener("readystatechange", event => {
     if (event.target.readyState !== "complete") {
         return;
@@ -413,7 +427,21 @@ document.addEventListener("readystatechange", event => {
     const pageUrl = new URL(window.location.href);
     const wsProtocol = pageUrl.protocol === "https:" ? "wss:" : "ws:";
     footballTableUrl = `${wsProtocol}//${pageUrl.host}/football/ws/table/${pageUrl.search}`;
+    footballTableLoadedDayKey = getDayKey(new Date());
 
     setupRangeInteractions();
     openTableWebSocket();
+});
+
+document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState !== "visible") {
+        return;
+    }
+
+    if (hasTableDayChangedSinceLoad()) {
+        window.location.reload();
+        return;
+    }
+
+    ensureTableSocketAndRefresh();
 });
