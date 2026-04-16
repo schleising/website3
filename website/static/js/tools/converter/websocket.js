@@ -406,8 +406,8 @@ function openWebSocket() {
                     expectedCompletionTime.setMinutes(expectedCompletionTime.getMinutes() + minutes);
                     expectedCompletionTime.setSeconds(expectedCompletionTime.getSeconds() + seconds);
 
-                    // Format the expected completion time into a string with the format %A HH:MM
-                    const expectedCompletionTimeString = expectedCompletionTime.toLocaleString('en-GB', {weekday: 'long', hour12: false, hour: '2-digit', minute: '2-digit'});
+                    // Format the expected completion time into a string with the format %a HH:MM
+                    const expectedCompletionTimeString = expectedCompletionTime.toLocaleString('en-GB', { weekday: 'short', hour12: false, hour: '2-digit', minute: '2-digit' });
 
                     let completeString = conversionStatus.converting_files[conversionNumber].progress.toFixed(2) + "%";
 

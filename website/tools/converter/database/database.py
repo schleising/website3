@@ -55,18 +55,17 @@ class DatabaseTools:
                 file_data.end_conversion_time - file_data.start_conversion_time
             )
 
-        # Convert the total conversion time to a string in the format "HH hours MM minutes"
-        hours = total_conversion_time.seconds // 3600
-        minutes = (total_conversion_time.seconds // 60) % 60
+        # Convert total conversion time to compact card format.
+        total_minutes = max(0, int(total_conversion_time.total_seconds() // 60))
+        hours = total_minutes // 60
+        minutes = total_minutes % 60
 
         if hours == 0:
             total_conversion_time_string = f"{minutes} minutes"
         elif hours == 1:
-            total_conversion_time_string = f"1 hour {minutes} minutes"
-        elif minutes == 0:
-            total_conversion_time_string = f"{hours} hours"
+            total_conversion_time_string = f"1hr {minutes} mins"
         else:
-            total_conversion_time_string = f"{hours} hours {minutes} minutes"
+            total_conversion_time_string = f"{hours}hrs {minutes} mins"
 
         # Create a ConvertedFileData object
         return ConvertedFileData(
