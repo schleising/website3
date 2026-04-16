@@ -7,6 +7,7 @@ const subscriptionStatus = document.getElementById("subscription-status");
 const subscriptionSelectedCount = document.getElementById("subscription-selected-count");
 let hasActiveSubscription = false;
 const canManageSubscriptions = subscriptionSection?.dataset.canManageSubscriptions === "true";
+const csrfToken = subscriptionSection?.dataset.csrfToken || "";
 
 const serviceWorkerPath = "/sw.js";
 const vapidPublicKey = "BAE-ATyX2xQGdyv9W5vcsI7qzA1FSui3UYNHgKFSKMmR12_7L9xQcVcDz8JbweMOTWb7npz6VMQMQC1BUylu00E";
@@ -138,6 +139,7 @@ async function requestJson(url, method, payload) {
         method,
         headers: {
             "Content-Type": "application/json",
+            "X-CSRF-Token": csrfToken,
         },
         body: JSON.stringify(payload),
     });

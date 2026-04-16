@@ -20,6 +20,7 @@
   <p>Please enter your name, email address and password to create an account</p>
 </div>
 <form class="row g-3" method="post" action="/account/create_user/">
+  <input type="hidden" name="csrf_token" value="{{ request.state.csrf_token|default('') }}">
   <input type="hidden" name="form_loaded_at" value="{{ form_loaded_at|default('') }}">
   <div style="position:absolute;left:-10000px;top:auto;width:1px;height:1px;overflow:hidden;" aria-hidden="true">
     <label for="website">Leave this field empty</label>

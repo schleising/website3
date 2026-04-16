@@ -12,6 +12,7 @@ from .database.database import Database
 
 from .account.router import account_router
 from .account.admin import get_current_active_user
+from .account.csrf import CSRF_COOKIE_NAME, ensure_csrf_token
 
 from .aircraft_db.router import aircraft_router
 
@@ -102,6 +103,27 @@ app = FastAPI(
 
 # Add the Real IP middleware
 app.add_middleware(RealIPMiddleware, trusted_proxies=None)
+
+
+@app.middleware("http")
+async def csrf_cookie_middleware(request: Request, call_next):
+    csrf_token = ensure_csrf_token(request)
+    request.state.csrf_token = csrf_token
+
+    response = await call_next(request)
+
+    existing = request.cookies.get(CSRF_COOKIE_NAME)
+    if existing != csrf_token:
+        response.set_cookie(
+            key=CSRF_COOKIE_NAME,
+            value=csrf_token,
+            secure=True,
+            httponly=False,
+            samesite="lax",
+            path="/",
+        )
+
+    return response
 
 # Include the account router
 app.include_router(account_router)

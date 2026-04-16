@@ -2,10 +2,12 @@ from calendar import monthrange, month_name
 from datetime import date, datetime, timedelta
 import json
 import logging
+from ..account.csrf import validate_csrf
 from zoneinfo import ZoneInfo
 
 from fastapi import (
     APIRouter,
+    Depends,
     HTTPException,
     Query,
     Request,
@@ -865,6 +867,7 @@ async def get_subscription_preferences(payload: SubscriptionLookupRequest):
 async def update_subscription_preferences(
     request: Request,
     payload: SubscriptionPreferencesUpdateRequest,
+    _: None = Depends(validate_csrf),
 ):
     current_season_key = await _get_current_season_key()
     current_teams = await _get_current_season_teams(current_season_key)
@@ -912,7 +915,11 @@ async def update_subscription_preferences(
     methods=["DELETE"],
     response_model=SubscriptionOperationResponse,
 )
-async def remove_subscription_preferences(request: Request, payload: SubscriptionLookupRequest):
+async def remove_subscription_preferences(
+    request: Request,
+    payload: SubscriptionLookupRequest,
+    _: None = Depends(validate_csrf),
+):
     username = _require_logged_in_username(request)
     existing_subscription = await get_push_subscription(payload.subscription)
     _assert_subscription_owner(existing_subscription, username)
@@ -934,7 +941,11 @@ async def remove_subscription_preferences(request: Request, payload: Subscriptio
 # Legacy endpoint: subscribe request with all current-season teams.
 @football_router.post("/subscribe", response_model=SubscriptionOperationResponse)
 @football_router.post("/subscribe/", response_model=SubscriptionOperationResponse)
-async def subscribe(request: Request, payload: SubscriptionLookupRequest):
+async def subscribe(
+    request: Request,
+    payload: SubscriptionLookupRequest,
+    _: None = Depends(validate_csrf),
+):
     current_season_key = await _get_current_season_key()
     current_teams = await _get_current_season_teams(current_season_key)
     selected_team_ids = sorted({team.id for team in current_teams})
@@ -973,7 +984,11 @@ async def subscribe(request: Request, payload: SubscriptionLookupRequest):
     methods=["DELETE"],
     response_model=SubscriptionOperationResponse,
 )
-async def unsubscribe(request: Request, payload: SubscriptionLookupRequest):
+async def unsubscribe(
+    request: Request,
+    payload: SubscriptionLookupRequest,
+    _: None = Depends(validate_csrf),
+):
     username = _require_logged_in_username(request)
     existing_subscription = await get_push_subscription(payload.subscription)
     _assert_subscription_owner(existing_subscription, username)

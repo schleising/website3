@@ -9,6 +9,7 @@ from fastapi.templating import Jinja2Templates
 from starlette.responses import RedirectResponse
 
 from .admin import authenticate_user, create_new_user, get_login_response
+from .csrf import validate_csrf
 from .user_model import User, CreateUserForm
 
 # Set the Jinja template location
@@ -162,7 +163,11 @@ async def get_logout_page(request: Request, result: str | None = None):
 
 @account_router.post("/token", response_class=HTMLResponse)
 @account_router.post("/token/", response_class=HTMLResponse)
-async def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends()):
+async def login(
+    request: Request,
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    _: None = Depends(validate_csrf),
+):
     submitted_form = await request.form()
     submitted_next = submitted_form.get("next")
     next_path = _safe_next_path(submitted_next if isinstance(submitted_next, str) else None)
@@ -214,7 +219,11 @@ async def get_create_page(request: Request, result: str | None = None):
 
 @account_router.post("/create_user")
 @account_router.post("/create_user/")
-async def create_user(request: Request, form_data: CreateUserForm = Depends()):
+async def create_user(
+    request: Request,
+    form_data: CreateUserForm = Depends(),
+    _: None = Depends(validate_csrf),
+):
     if _is_signup_rate_limited(request):
         return RedirectResponse(
             "/account/create/?result=create_failed",
