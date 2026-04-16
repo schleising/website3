@@ -173,15 +173,35 @@ def _build_team_month_groups(matches: list) -> list[dict]:
     for year_value, month_value in sorted(grouped_matches):
         month_label = datetime(year_value, month_value, 1).strftime("%B %Y")
         month_key = (year_value, month_value)
+        anchor_id = f"month-{year_value}-{month_value:02d}"
         month_groups.append(
             {
                 "label": month_label,
                 "matches": grouped_matches[(year_value, month_value)],
                 "is_current_period": month_key == current_month_key,
+                "anchor_id": anchor_id,
+                "month_key": month_key,
             }
         )
 
     return month_groups
+
+
+def _build_team_matches_current_anchor(month_groups: list[dict], today_value: datetime) -> str | None:
+    if len(month_groups) == 0:
+        return None
+
+    current_month_key = (today_value.year, today_value.month)
+
+    for month_group in month_groups:
+        month_key = month_group.get("month_key")
+        anchor_id = month_group.get("anchor_id")
+
+        if isinstance(month_key, tuple) and month_key >= current_month_key and isinstance(anchor_id, str):
+            return anchor_id
+
+    last_anchor = month_groups[-1].get("anchor_id")
+    return last_anchor if isinstance(last_anchor, str) else None
 
 
 def _live_scores_window() -> tuple[datetime, datetime]:
@@ -458,6 +478,20 @@ async def get_teams_matches(
     matches = update_match_timezone(matches)
     enable_live_updates = _has_today_matches(matches)
     day_groups = _build_team_month_groups(matches)
+    today_anchor = datetime.now(tz=LONDON_TZ).replace(
+        hour=0, minute=0, second=0, microsecond=0
+    )
+    jump_targets = [
+        {"label": day_group["label"], "anchor": day_group["anchor_id"]}
+        for day_group in day_groups
+        if isinstance(day_group.get("label"), str)
+        and isinstance(day_group.get("anchor_id"), str)
+    ]
+    current_day_anchor = (
+        _build_team_matches_current_anchor(day_groups, today_anchor)
+        if season_context["is_current_season"]
+        else None
+    )
 
     return TEMPLATES.TemplateResponse(
         request,
@@ -470,6 +504,8 @@ async def get_teams_matches(
             "live_matches": False,
             "enable_live_updates": enable_live_updates,
             "team_matches_view": True,
+            "jump_targets": jump_targets,
+            "current_day_anchor": current_day_anchor,
             **season_context,
         },
     )

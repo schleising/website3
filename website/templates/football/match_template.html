@@ -21,8 +21,8 @@
 {% endblock %}
 
 {% block football_content %}
-{% if all_matches_view|default(false) and jump_targets is defined and jump_targets|length > 0 %}
-<section id="football-all-matches-toolbar" class="football-all-matches-toolbar" data-auto-center-next-match="{{ 'true' if is_current_season|default(false) else 'false' }}" aria-label="All matches quick navigation">
+{% if jump_targets is defined and jump_targets|length > 0 %}
+<section id="football-all-matches-toolbar" class="football-all-matches-toolbar" data-auto-center-next-match="{{ 'true' if all_matches_view|default(false) and is_current_season|default(false) else 'false' }}" aria-label="Match list quick navigation">
   <details class="football-jump-menu" id="football-jump-menu">
     <summary class="football-jump-trigger">Jump To</summary>
     <div class="football-jump-dropdown sub-level-nav-container">
