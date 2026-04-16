@@ -10,7 +10,14 @@ document.addEventListener("readystatechange", (event) => {
     const jumpLinks = document.querySelectorAll(".football-jump-link");
 
     for (const link of jumpLinks) {
-        link.addEventListener("click", () => {
+        link.addEventListener("click", (clickEvent) => {
+            const shouldCenterNextMatch = link.dataset.centerNextMatch === "true";
+
+            if (shouldCenterNextMatch) {
+                clickEvent.preventDefault();
+                centerNextMatchCard();
+            }
+
             if (jumpMenu && jumpMenu.hasAttribute("open")) {
                 jumpMenu.removeAttribute("open");
             }
@@ -56,7 +63,18 @@ function positionToolbar(toolbar, contentContainer, contentPad) {
         }
     }
 
-    toolbar.style.top = `${Math.round(contentRect.top + insetPadPx)}px`;
+    const firstDayHeading = document.querySelector(".football-day-heading");
+    let dividerPillOffsetPx = 0;
+
+    if (firstDayHeading) {
+        const headingStyle = window.getComputedStyle(firstDayHeading);
+        const parsedHeadingPadTop = parseFloat(headingStyle.paddingTop);
+        if (!Number.isNaN(parsedHeadingPadTop) && parsedHeadingPadTop > 0) {
+            dividerPillOffsetPx = parsedHeadingPadTop;
+        }
+    }
+
+    toolbar.style.top = `${Math.round(contentRect.top + insetPadPx + dividerPillOffsetPx)}px`;
 
     const rightOffset = Math.max(
         Math.round(window.innerWidth - contentRect.right + insetPadPx),
