@@ -13,9 +13,12 @@ document.addEventListener("readystatechange", (event) => {
         link.addEventListener("click", (clickEvent) => {
             const shouldCenterNextMatch = link.dataset.centerNextMatch === "true";
 
+            clickEvent.preventDefault();
+
             if (shouldCenterNextMatch) {
-                clickEvent.preventDefault();
                 centerNextMatchCard();
+            } else {
+                smoothScrollToAnchor(link.getAttribute("href"));
             }
 
             if (jumpMenu && jumpMenu.hasAttribute("open")) {
@@ -118,6 +121,30 @@ function centerNextMatchCard() {
         targetCard.scrollIntoView({
             behavior: "smooth",
             block: "center",
+            inline: "nearest",
+        });
+    });
+}
+
+function smoothScrollToAnchor(hrefValue) {
+    if (!hrefValue || !hrefValue.startsWith("#")) {
+        return;
+    }
+
+    const targetId = hrefValue.slice(1);
+    if (!targetId) {
+        return;
+    }
+
+    const targetElement = document.getElementById(targetId);
+    if (!targetElement) {
+        return;
+    }
+
+    requestAnimationFrame(() => {
+        targetElement.scrollIntoView({
+            behavior: "smooth",
+            block: "start",
             inline: "nearest",
         });
     });
