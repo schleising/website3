@@ -29,6 +29,14 @@
     flex-direction: column;
     gap: 0.55rem;
     min-height: 11rem;
+    text-decoration: none;
+    color: inherit;
+}
+
+.blog-card:hover,
+.blog-card:focus-visible {
+    border-color: var(--brand-soft);
+    box-shadow: 0 0.6rem 1.25rem rgba(27, 53, 85, 0.12);
 }
 
 .blog-card-title {
@@ -37,15 +45,13 @@
     line-height: 1.22;
 }
 
-.blog-card-title a {
+.blog-card-title {
     color: var(--brand-strong);
-    text-decoration: none;
 }
 
-.blog-card-title a:hover,
-.blog-card-title a:focus-visible {
+.blog-card:hover .blog-card-title,
+.blog-card:focus-visible .blog-card-title {
     color: var(--brand);
-    text-decoration: underline;
 }
 
 .blog-card-meta {
@@ -65,11 +71,10 @@
     align-self: flex-start;
     font-weight: 600;
     color: var(--brand-strong);
-    text-decoration: none;
 }
 
-.blog-card-link:hover,
-.blog-card-link:focus-visible {
+.blog-card:hover .blog-card-link,
+.blog-card:focus-visible .blog-card-link {
     color: var(--brand);
     text-decoration: underline;
 }

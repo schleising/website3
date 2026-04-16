@@ -2,7 +2,7 @@
 
 {% block head %}
 <link rel="stylesheet" href="/css/right-nav.css?v1.1.0">
-<link rel="stylesheet" href="/css/blog/blog.css?v1.2.0">
+<link rel="stylesheet" href="/css/blog/blog.css?v1.2.1">
 <link rel="stylesheet" href="/css/markdown/markdown.css?v1.1.0">
 <link rel="stylesheet" href="/css/markdown/styles.css?v1.1.0">
 {% block scripts %}
@@ -27,12 +27,12 @@
   {% if blog_cards|length > 0 %}
   <div class="blog-card-grid">
     {% for card in blog_cards %}
-    <article class="blog-card site-card">
-      <h4 class="blog-card-title"><a href="/blog/{{ card.id }}/">{{ card.title }}</a></h4>
+    <a class="blog-card site-card" href="/blog/{{ card.id }}/" aria-label="Open blog post: {{ card.title }}">
+      <h4 class="blog-card-title">{{ card.title }}</h4>
       <p class="blog-card-meta">{{ card.last_updated.strftime('%d %b %Y') }} | {{ card.author }}</p>
       <p class="blog-card-preview">{{ card.preview_text }}</p>
-      <a class="blog-card-link" href="/blog/{{ card.id }}/">Read post</a>
-    </article>
+      <span class="blog-card-link">Read post</span>
+    </a>
     {% endfor %}
   </div>
   {% else %}
