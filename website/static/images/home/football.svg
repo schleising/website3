@@ -25,9 +25,8 @@
   <rect x="66" y="76" width="12" height="28" rx="3" fill="none" stroke="#f7fff9" stroke-width="3"/>
   <rect x="242" y="76" width="12" height="28" rx="3" fill="none" stroke="#f7fff9" stroke-width="3"/>
 
-  <circle cx="106" cy="90" r="2.5" fill="#f7fff9"/>
-  <circle cx="214" cy="90" r="2.5" fill="#f7fff9"/>
+  <circle cx="84" cy="90" r="2.5" fill="#f7fff9"/>
+  <circle cx="236" cy="90" r="2.5" fill="#f7fff9"/>
   <path d="M94 78a18 18 0 0 1 0 24" fill="none" stroke="#f7fff9" stroke-width="3" stroke-linecap="round"/>
   <path d="M226 78a18 18 0 0 0 0 24" fill="none" stroke="#f7fff9" stroke-width="3" stroke-linecap="round"/>
-  <path d="M52 90h8M260 90h8" stroke="#f7fff9" stroke-width="3" stroke-linecap="round"/>
 </svg>
