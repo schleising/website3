@@ -1,16 +1,33 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 180" role="img" aria-label="Blog illustration">
   <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#ffe9bd"/>
-      <stop offset="1" stop-color="#ffd07a"/>
+    <linearGradient id="blog-bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#eef4ff"/>
+      <stop offset="1" stop-color="#d4e1f0"/>
+    </linearGradient>
+    <linearGradient id="blog-panel" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1f4570"/>
+      <stop offset="1" stop-color="#315f90"/>
     </linearGradient>
   </defs>
-  <rect width="320" height="180" rx="20" fill="url(#bg)"/>
-  <rect x="64" y="26" width="192" height="128" rx="12" fill="#ffffff"/>
-  <rect x="84" y="52" width="152" height="10" rx="5" fill="#b7802a" fill-opacity="0.3"/>
-  <rect x="84" y="72" width="132" height="8" rx="4" fill="#b7802a" fill-opacity="0.22"/>
-  <rect x="84" y="88" width="140" height="8" rx="4" fill="#b7802a" fill-opacity="0.22"/>
-  <rect x="84" y="104" width="120" height="8" rx="4" fill="#b7802a" fill-opacity="0.22"/>
-  <circle cx="220" cy="120" r="16" fill="#e89d2f"/>
-  <path d="M212 120l6 6 10-12" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect width="320" height="180" rx="20" fill="url(#blog-bg)"/>
+  <circle cx="48" cy="24" r="64" fill="#ffffff" fill-opacity="0.42"/>
+  <circle cx="282" cy="146" r="74" fill="#b9cce2" fill-opacity="0.2"/>
+
+  <g transform="translate(56 28) rotate(-5 72 62)">
+    <rect x="0" y="0" width="146" height="120" rx="22" fill="#fbf5ee" stroke="#d6c7b4"/>
+    <rect x="0" y="0" width="146" height="34" rx="22" fill="#d5e2f1"/>
+    <circle cx="18" cy="17" r="5" fill="#88a9cb"/>
+    <circle cx="34" cy="17" r="5" fill="#88a9cb" fill-opacity="0.62"/>
+    <rect x="18" y="50" width="78" height="10" rx="5" fill="#2a5b90" fill-opacity="0.24"/>
+    <rect x="18" y="70" width="104" height="8" rx="4" fill="#2a5b90" fill-opacity="0.18"/>
+    <rect x="18" y="86" width="96" height="8" rx="4" fill="#2a5b90" fill-opacity="0.18"/>
+    <rect x="18" y="102" width="68" height="8" rx="4" fill="#2a5b90" fill-opacity="0.18"/>
+  </g>
+
+  <rect x="206" y="44" width="74" height="50" rx="18" fill="url(#blog-panel)"/>
+  <path d="M224 59h38" stroke="#f6fbff" stroke-width="6" stroke-linecap="round"/>
+  <path d="M224 75h28" stroke="#f6fbff" stroke-opacity="0.72" stroke-width="6" stroke-linecap="round"/>
+  <path d="M214 116l18-32 20 11-18 32-14 8z" fill="#d8a668"/>
+  <path d="M232 85l20 11" stroke="#1f4570" stroke-width="4" stroke-linecap="round"/>
+  <path d="M220 135l7-14 10 6-17 8z" fill="#fbf5ee"/>
 </svg>

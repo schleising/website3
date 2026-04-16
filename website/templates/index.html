@@ -14,7 +14,7 @@
 	<div class="home-cards-grid">
 		<a class="home-card-link" href="/football/table/">
 			<article class="home-card site-card">
-				<img class="home-card-image" src="/images/home/football.svg" alt="Football pitch illustration">
+				<img class="home-card-image" src="/images/home/football.svg?v1.4.0" alt="Football pitch illustration">
 				<h4>Football</h4>
 				<p>View live scores, tables, and match details.</p>
 			</article>
@@ -22,7 +22,7 @@
 
 		<a class="home-card-link" href="/aircraft/">
 			<article class="home-card site-card">
-				<img class="home-card-image" src="/images/home/aircraft.svg" alt="Aircraft in sky illustration">
+				<img class="home-card-image" src="/images/home/aircraft.svg?v1.4.0" alt="Aircraft tail-number search illustration">
 				<h4>OpenSky Database</h4>
 				<p>Search and browse aircraft database records.</p>
 			</article>
@@ -30,7 +30,7 @@
 
 		<a class="home-card-link" href="/blog/">
 			<article class="home-card site-card">
-				<img class="home-card-image" src="/images/home/blog.svg" alt="Blog document illustration">
+				<img class="home-card-image" src="/images/home/blog.svg?v1.3.0" alt="Editorial blog article illustration">
 				<h4>Blog</h4>
 				<p>Read posts and updates.</p>
 			</article>
@@ -39,7 +39,7 @@
 		{% if request.state.user != None %}
 		<a class="home-card-link" href="/markdown/">
 			<article class="home-card site-card">
-				<img class="home-card-image" src="/images/home/markdown.svg" alt="Markdown editor illustration">
+				<img class="home-card-image" src="/images/home/markdown.svg?v1.3.0" alt="Live markdown preview illustration">
 				<h4>Markdown Editor</h4>
 				<p>Create and edit markdown content.</p>
 			</article>
@@ -47,7 +47,7 @@
 		{% else %}
 		<a class="home-card-link" href="/account/login/?next={{ request.url.path|urlencode }}">
 			<article class="home-card site-card">
-				<img class="home-card-image" src="/images/home/login.svg" alt="Login form illustration">
+				<img class="home-card-image" src="/images/home/login.svg?v1.3.0" alt="Secure login illustration">
 				<h4>Login</h4>
 				<p>Sign in to access member-only pages.</p>
 			</article>

@@ -1,15 +1,33 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 180" role="img" aria-label="Football illustration">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 180" role="img" aria-label="Football pitch illustration">
   <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#b6f7d2"/>
-      <stop offset="1" stop-color="#5ad3a2"/>
+    <linearGradient id="football-bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#eef4ff"/>
+      <stop offset="1" stop-color="#c8dcf1"/>
+    </linearGradient>
+    <linearGradient id="football-pitch" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#2f9a60"/>
+      <stop offset="1" stop-color="#23794c"/>
     </linearGradient>
   </defs>
-  <rect width="320" height="180" rx="20" fill="url(#bg)"/>
-  <rect x="24" y="22" width="272" height="136" rx="14" fill="#ffffff" fill-opacity="0.35"/>
-  <rect x="48" y="44" width="224" height="92" rx="8" fill="none" stroke="#0f5f47" stroke-width="5"/>
-  <line x1="160" y1="44" x2="160" y2="136" stroke="#0f5f47" stroke-width="5"/>
-  <circle cx="160" cy="90" r="20" fill="none" stroke="#0f5f47" stroke-width="5"/>
-  <circle cx="92" cy="90" r="10" fill="#0f5f47" fill-opacity="0.22"/>
-  <circle cx="228" cy="90" r="10" fill="#0f5f47" fill-opacity="0.22"/>
+  <rect width="320" height="180" rx="20" fill="url(#football-bg)"/>
+  <circle cx="50" cy="26" r="66" fill="#ffffff" fill-opacity="0.4"/>
+  <circle cx="284" cy="152" r="78" fill="#9fc0e4" fill-opacity="0.18"/>
+
+  <ellipse cx="160" cy="148" rx="90" ry="12" fill="#4e6f90" fill-opacity="0.14"/>
+  <rect x="52" y="24" width="216" height="132" rx="22" fill="url(#football-pitch)"/>
+  <rect x="66" y="38" width="188" height="104" rx="12" fill="none" stroke="#f7fff9" stroke-width="3"/>
+  <line x1="160" y1="38" x2="160" y2="142" stroke="#f7fff9" stroke-width="3"/>
+  <circle cx="160" cy="90" r="18" fill="none" stroke="#f7fff9" stroke-width="3"/>
+  <circle cx="160" cy="90" r="2.5" fill="#f7fff9"/>
+
+  <rect x="66" y="62" width="28" height="56" rx="4" fill="none" stroke="#f7fff9" stroke-width="3"/>
+  <rect x="226" y="62" width="28" height="56" rx="4" fill="none" stroke="#f7fff9" stroke-width="3"/>
+  <rect x="66" y="76" width="12" height="28" rx="3" fill="none" stroke="#f7fff9" stroke-width="3"/>
+  <rect x="242" y="76" width="12" height="28" rx="3" fill="none" stroke="#f7fff9" stroke-width="3"/>
+
+  <circle cx="106" cy="90" r="2.5" fill="#f7fff9"/>
+  <circle cx="214" cy="90" r="2.5" fill="#f7fff9"/>
+  <path d="M94 78a18 18 0 0 1 0 24" fill="none" stroke="#f7fff9" stroke-width="3" stroke-linecap="round"/>
+  <path d="M226 78a18 18 0 0 0 0 24" fill="none" stroke="#f7fff9" stroke-width="3" stroke-linecap="round"/>
+  <path d="M52 90h8M260 90h8" stroke="#f7fff9" stroke-width="3" stroke-linecap="round"/>
 </svg>

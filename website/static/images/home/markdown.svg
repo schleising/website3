@@ -1,16 +1,31 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 180" role="img" aria-label="Markdown editor illustration">
   <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#d9d4ff"/>
-      <stop offset="1" stop-color="#b1a6ff"/>
+    <linearGradient id="md-bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#eef4ff"/>
+      <stop offset="1" stop-color="#d1e0f2"/>
+    </linearGradient>
+    <linearGradient id="md-panel" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1f4570"/>
+      <stop offset="1" stop-color="#315f90"/>
     </linearGradient>
   </defs>
-  <rect width="320" height="180" rx="20" fill="url(#bg)"/>
-  <rect x="40" y="30" width="240" height="120" rx="12" fill="#ffffff" fill-opacity="0.94"/>
-  <rect x="56" y="46" width="64" height="10" rx="5" fill="#7c6fff" fill-opacity="0.35"/>
-  <rect x="56" y="64" width="96" height="8" rx="4" fill="#7c6fff" fill-opacity="0.25"/>
-  <rect x="56" y="80" width="84" height="8" rx="4" fill="#7c6fff" fill-opacity="0.25"/>
-  <path d="M176 108 L176 70 L188 88 L200 70 L200 108" fill="none" stroke="#5a4cd4" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M214 82 L232 100 L250 82" fill="none" stroke="#5a4cd4" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
-  <line x1="232" y1="100" x2="232" y2="112" stroke="#5a4cd4" stroke-width="7" stroke-linecap="round"/>
+  <rect width="320" height="180" rx="20" fill="url(#md-bg)"/>
+  <circle cx="48" cy="24" r="64" fill="#ffffff" fill-opacity="0.42"/>
+  <circle cx="286" cy="146" r="74" fill="#bdcfe4" fill-opacity="0.22"/>
+
+  <rect x="36" y="34" width="112" height="112" rx="22" fill="url(#md-panel)"/>
+  <path d="M58 62v25M74 58v25M50 70h33M48 82h33" stroke="#9cc8ef" stroke-width="5" stroke-linecap="round"/>
+  <rect x="58" y="98" width="54" height="8" rx="4" fill="#edf4fb"/>
+  <rect x="58" y="112" width="66" height="8" rx="4" fill="#86b1dc"/>
+  <rect x="58" y="126" width="42" height="8" rx="4" fill="#edf4fb" fill-opacity="0.44"/>
+
+  <rect x="170" y="40" width="114" height="100" rx="22" fill="#fbfdff" stroke="#d7e3f0"/>
+  <rect x="186" y="58" width="48" height="10" rx="5" fill="#2a5b90" fill-opacity="0.22"/>
+  <rect x="186" y="78" width="78" height="8" rx="4" fill="#2a5b90" fill-opacity="0.16"/>
+  <rect x="186" y="94" width="68" height="8" rx="4" fill="#2a5b90" fill-opacity="0.16"/>
+  <path d="M186 116l8 8 14-15" fill="none" stroke="#6aa986" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="206" y="112" width="38" height="8" rx="4" fill="#6aa986" fill-opacity="0.32"/>
+
+  <path d="M148 92h18" stroke="#ffffff" stroke-width="6" stroke-linecap="round"/>
+  <path d="M158 82l12 10-12 10" fill="none" stroke="#ffffff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>

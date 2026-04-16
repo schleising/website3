@@ -1,15 +1,29 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 180" role="img" aria-label="Login illustration">
   <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#cce8ff"/>
-      <stop offset="1" stop-color="#9fd2ff"/>
+    <linearGradient id="login-bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#eef4ff"/>
+      <stop offset="1" stop-color="#c8dcf1"/>
+    </linearGradient>
+    <linearGradient id="login-panel" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1f4570"/>
+      <stop offset="1" stop-color="#315f90"/>
     </linearGradient>
   </defs>
-  <rect width="320" height="180" rx="20" fill="url(#bg)"/>
-  <rect x="68" y="30" width="184" height="120" rx="12" fill="#ffffff" fill-opacity="0.92"/>
-  <rect x="96" y="60" width="128" height="12" rx="6" fill="#3d7fb6" fill-opacity="0.2"/>
-  <rect x="96" y="82" width="128" height="12" rx="6" fill="#3d7fb6" fill-opacity="0.2"/>
-  <rect x="96" y="108" width="92" height="20" rx="10" fill="#4a93d1"/>
-  <path d="M170 118h26" stroke="#ffffff" stroke-width="4" stroke-linecap="round"/>
-  <path d="M192 112l8 6-8 6" fill="none" stroke="#ffffff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect width="320" height="180" rx="20" fill="url(#login-bg)"/>
+  <circle cx="48" cy="24" r="64" fill="#ffffff" fill-opacity="0.42"/>
+  <circle cx="286" cy="146" r="74" fill="#b7cae0" fill-opacity="0.2"/>
+
+  <rect x="40" y="42" width="122" height="96" rx="22" fill="#fbfdff" stroke="#d8e3ee"/>
+  <circle cx="101" cy="73" r="16" fill="#d6e5f4"/>
+  <path d="M101 59c6 0 10 5 10 11s-4 11-10 11-10-5-10-11 4-11 10-11zm0 29c16 0 28 8 28 18v4H73v-4c0-10 12-18 28-18z" fill="#2a5b90"/>
+  <rect x="65" y="117" width="72" height="10" rx="5" fill="#2a5b90" fill-opacity="0.2"/>
+
+  <rect x="212" y="38" width="56" height="108" rx="18" fill="url(#login-panel)"/>
+  <rect x="225" y="73" width="12" height="34" rx="6" fill="#9cc8ef"/>
+  <circle cx="251" cy="90" r="4" fill="#f6fbff"/>
+  <path d="M150 90h58" stroke="#ffffff" stroke-width="7" stroke-linecap="round"/>
+  <path d="M194 76l18 14-18 14" fill="none" stroke="#ffffff" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <path d="M198 44h18l8 8-8 8h-18l-8-8z" fill="#80d3a5"/>
+  <path d="M199 52l5 5 9-10" fill="none" stroke="#1f4570" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
