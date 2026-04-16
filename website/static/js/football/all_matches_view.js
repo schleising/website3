@@ -74,7 +74,7 @@ function positionToolbar(toolbar, contentContainer, contentPad) {
         }
     }
 
-    toolbar.style.top = `${Math.round(contentRect.top + insetPadPx + dividerPillOffsetPx)}px`;
+    toolbar.style.top = `${Math.round(contentRect.top + dividerPillOffsetPx)}px`;
 
     const rightOffset = Math.max(
         Math.round(window.innerWidth - contentRect.right + insetPadPx),
