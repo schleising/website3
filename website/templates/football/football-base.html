@@ -2,7 +2,7 @@
 
 {% block scripts %}
 {% if enable_live_updates|default(false) %}
-<script defer src="/js/football/football.js?v1.1.0"></script>
+<script defer src="/js/football/football.js?v1.2.2"></script>
 {% endif %}
 {% if all_matches_view|default(false) or team_matches_view|default(false) %}
 <script defer src="/js/football/all_matches_view.js?v1.0.7"></script>
@@ -72,7 +72,7 @@
 {% endblock %}
 
 {% block content %}
-<div class="football-content-pad">
+<div class="football-content-pad" data-live-matches-view="{{ 'true' if live_matches|default(false) else 'false' }}">
 {% block football_content %}
 {% endblock %}
 </div>

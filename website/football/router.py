@@ -216,6 +216,14 @@ def _live_scores_window() -> tuple[datetime, datetime]:
     return window_start, window_end
 
 
+def _today_scores_window() -> tuple[datetime, datetime]:
+    today_start = datetime.now(tz=LONDON_TZ).replace(
+        hour=0, minute=0, second=0, microsecond=0
+    )
+    today_end = today_start.replace(hour=23, minute=59, second=59, microsecond=0)
+    return today_start, today_end
+
+
 def _season_matches_window(season_key: str) -> tuple[datetime, datetime]:
     season_start_year, season_end_year = _season_year_bounds(season_key)
     return (
@@ -443,7 +451,7 @@ async def get_months_matches(
 
     matches = await retreive_matches(start_date, end_date, selected_season_key)
     matches = update_match_timezone(matches)
-    enable_live_updates = _has_today_matches(matches)
+    enable_live_updates = bool(season_context["is_current_season"])
     today_anchor = datetime.now(tz=LONDON_TZ).replace(
         hour=0, minute=0, second=0, microsecond=0
     )
@@ -476,7 +484,7 @@ async def get_teams_matches(
 
     team_name, matches = await retreive_team_matches(team_id, selected_season_key)
     matches = update_match_timezone(matches)
-    enable_live_updates = _has_today_matches(matches)
+    enable_live_updates = bool(season_context["is_current_season"])
     day_groups = _build_team_month_groups(matches)
     today_anchor = datetime.now(tz=LONDON_TZ).replace(
         hour=0, minute=0, second=0, microsecond=0
@@ -748,6 +756,8 @@ async def websocket_endpoint(websocket: WebSocket):
     logging.info("Football Websocket Opened")
 
     try:
+        selected_season_key = websocket.query_params.get("season")
+
         while True:
             # Wait for a message from the client
             recv = await websocket.receive_text()
@@ -757,8 +767,14 @@ async def websocket_endpoint(websocket: WebSocket):
 
             if msg["messageType"] == "get_scores":
                 logging.debug("Football Websocket")
-                start_date, end_date = _live_scores_window()
-                matches = await retreive_matches(start_date, end_date)
+                if bool(msg.get("currentDayOnly", False)):
+                    start_date, end_date = _today_scores_window()
+                else:
+                    start_date, end_date = _live_scores_window()
+
+                matches = await retreive_matches(
+                    start_date, end_date, selected_season_key
+                )
                 logging.debug("Got matches")
 
                 match_list = MatchList(matches=matches)

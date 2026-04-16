@@ -7,6 +7,12 @@ var url;
 // Variable for the periodic task
 var intervalId = null;
 
+// True when at least one current-day match is still due or live and polling should continue.
+var shouldPollForUpdates = false;
+
+// Latest Matches view needs an initial full-window payload to hydrate all visible day rows.
+var isLiveMatchesView = false;
+
 // Add a callback for state changes
 document.addEventListener('readystatechange', event => {
     if (event.target.readyState === "complete") {
@@ -16,6 +22,9 @@ document.addEventListener('readystatechange', event => {
 
         // Always use the football websocket endpoint, regardless of current sub-route.
         url = `${wsProtocol}//${pageUrl.host}/football/ws/${pageUrl.search}`;
+
+        const footballContent = document.querySelector('.football-content-pad');
+        isLiveMatchesView = footballContent?.dataset.liveMatchesView === 'true';
 
         // Check whether the websocket is open, if not open it
         openWebSocket();
@@ -94,16 +103,17 @@ function openWebSocket() {
             scoreWidget.getElementsByClassName("home-team-score")[0].innerHTML = home;
             scoreWidget.getElementsByClassName("away-team-score")[0].innerHTML = away;
         });
+
+        shouldPollForUpdates = hasRefreshableMatchToday(matches.matches);
+        syncPollingInterval();
     };
 
     // Add the event listener
     ws.addEventListener('open', (event) => {
-        console.log("Setting Interval")
-        if (intervalId != null) {
-            clearInterval(intervalId);
-        }
-        intervalId = setInterval(checkSocketAndSendMessage, 1000);
-        checkSocketAndSendMessage();
+        console.log("Initial Football Websocket Refresh")
+        shouldPollForUpdates = false;
+        syncPollingInterval();
+        sendMessage(!isLiveMatchesView);
     });
 };
 
@@ -114,17 +124,76 @@ function checkSocketAndSendMessage(event) {
         // Open the new socket
         openWebSocket();
     } else {
+        if (!shouldPollForUpdates) {
+            return;
+        }
+
         // If the socket is already open, just send the message
-        sendMessage(event);
+        sendMessage(true);
     }
 };
 
-function sendMessage(event) {
+function sendMessage(currentDayOnly) {
+    const shouldRequestCurrentDayOnly = currentDayOnly !== false;
+
     // Create the message
     msg = {
-        messageType: 'get_scores'
+        messageType: 'get_scores',
+        currentDayOnly: shouldRequestCurrentDayOnly,
     };
 
     // Convert the JSON to a string and send it to the server
     ws.send(JSON.stringify(msg));
 };
+
+function hasRefreshableMatchToday(matchList) {
+    if (!Array.isArray(matchList)) {
+        return false;
+    }
+
+    const refreshStatuses = new Set([
+        'SCHEDULED',
+        'TIMED',
+        'AWARDED',
+        'IN_PLAY',
+        'PAUSED',
+        'SUSPENDED',
+    ]);
+
+    return matchList.some(match => refreshStatuses.has(match.status) && isTodayMatch(match));
+}
+
+function isTodayMatch(match) {
+    if (!match || (typeof match !== 'object')) {
+        return false;
+    }
+
+    const rawDate = match.local_date || match.utc_date;
+    if (!rawDate) {
+        return false;
+    }
+
+    const parsedDate = new Date(rawDate);
+    if (Number.isNaN(parsedDate.getTime())) {
+        return false;
+    }
+
+    const now = new Date();
+    return parsedDate.getFullYear() === now.getFullYear()
+        && parsedDate.getMonth() === now.getMonth()
+        && parsedDate.getDate() === now.getDate();
+}
+
+function syncPollingInterval() {
+    if (shouldPollForUpdates) {
+        if (intervalId == null) {
+            intervalId = setInterval(checkSocketAndSendMessage, 1000);
+        }
+        return;
+    }
+
+    if (intervalId != null) {
+        clearInterval(intervalId);
+        intervalId = null;
+    }
+}
