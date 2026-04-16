@@ -1,4 +1,6 @@
 from urllib.parse import urlencode, urlparse
+from collections import deque
+from time import time
 
 from fastapi import APIRouter, Request, Depends, status
 from fastapi.security import OAuth2PasswordRequestForm
@@ -14,6 +16,63 @@ TEMPLATES = Jinja2Templates("/app/templates")
 
 # Create an account router
 account_router = APIRouter(prefix="/account")
+
+SIGNUP_WINDOW_SECONDS = 15 * 60
+SIGNUP_MAX_ATTEMPTS_PER_WINDOW = 6
+SIGNUP_MIN_FORM_FILL_SECONDS = 2.5
+SIGNUP_MAX_FORM_AGE_SECONDS = 2 * 60 * 60
+
+signup_attempts_by_ip: dict[str, deque[float]] = {}
+
+
+def _client_ip(request: Request) -> str:
+    client = request.client
+    host = getattr(client, "host", None)
+    if isinstance(host, str) and host.strip() != "":
+        return host.strip()
+    return "unknown"
+
+
+def _prune_signup_attempts(now_ts: float, attempts: deque[float]) -> None:
+    cutoff = now_ts - SIGNUP_WINDOW_SECONDS
+    while len(attempts) > 0 and attempts[0] < cutoff:
+        attempts.popleft()
+
+
+def _is_signup_rate_limited(request: Request) -> bool:
+    now_ts = time()
+    ip = _client_ip(request)
+    attempts = signup_attempts_by_ip.setdefault(ip, deque())
+    _prune_signup_attempts(now_ts, attempts)
+    return len(attempts) >= SIGNUP_MAX_ATTEMPTS_PER_WINDOW
+
+
+def _record_signup_attempt(request: Request) -> None:
+    now_ts = time()
+    ip = _client_ip(request)
+    attempts = signup_attempts_by_ip.setdefault(ip, deque())
+    _prune_signup_attempts(now_ts, attempts)
+    attempts.append(now_ts)
+
+
+def _is_bot_like_create_submission(form_data: CreateUserForm) -> bool:
+    # Honeypot should stay empty for human users.
+    if form_data.website.strip() != "":
+        return True
+
+    now_ts = time()
+    try:
+        loaded_at = float(form_data.form_loaded_at)
+    except (TypeError, ValueError):
+        return True
+
+    elapsed = now_ts - loaded_at
+    if elapsed < SIGNUP_MIN_FORM_FILL_SECONDS:
+        return True
+    if elapsed > SIGNUP_MAX_FORM_AGE_SECONDS:
+        return True
+
+    return False
 
 
 def _safe_next_path(raw_next: str | None) -> str | None:
@@ -143,13 +202,33 @@ async def login_success(request: Request):
 async def get_create_page(request: Request, result: str | None = None):
     # Render the create account page
     return TEMPLATES.TemplateResponse(
-        request, "account/create.html", {"request": request, "result": result}
+        request,
+        "account/create.html",
+        {
+            "request": request,
+            "result": result,
+            "form_loaded_at": f"{time():.6f}",
+        },
     )
 
 
 @account_router.post("/create_user")
 @account_router.post("/create_user/")
 async def create_user(request: Request, form_data: CreateUserForm = Depends()):
+    if _is_signup_rate_limited(request):
+        return RedirectResponse(
+            "/account/create/?result=create_failed",
+            status_code=status.HTTP_303_SEE_OTHER,
+        )
+
+    _record_signup_attempt(request)
+
+    if _is_bot_like_create_submission(form_data):
+        return RedirectResponse(
+            "/account/create/?result=create_failed",
+            status_code=status.HTTP_303_SEE_OTHER,
+        )
+
     # Try to create the new user
     user = await create_new_user(
         form_data.firstname, form_data.lastname, form_data.username, form_data.password

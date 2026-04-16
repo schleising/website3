@@ -23,8 +23,12 @@ class CreateUserForm:
         lastname: str = Form(),
         username: str = Form(),
         password: str = Form(),
+        website: str = Form(default=""),
+        form_loaded_at: str = Form(default=""),
     ):
         self.firstname = firstname
         self.lastname = lastname
         self.username = username
         self.password = password
+        self.website = website
+        self.form_loaded_at = form_loaded_at
