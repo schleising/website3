@@ -82,6 +82,8 @@ function bindCrestPreview(selectId, crestId) {
         return;
     }
 
+    const placeholderCrestPath = "/images/football/crests/unknown_team.svg";
+
     const applyPreview = () => {
         const selectedOption = selectElement.options[selectElement.selectedIndex];
         const crestPath = selectedOption ? selectedOption.dataset.crest : "";
@@ -90,8 +92,8 @@ function bindCrestPreview(selectId, crestId) {
             crestElement.src = crestPath;
             crestElement.classList.remove("hidden");
         } else {
-            crestElement.removeAttribute("src");
-            crestElement.classList.add("hidden");
+            crestElement.src = placeholderCrestPath;
+            crestElement.classList.remove("hidden");
         }
     };
 

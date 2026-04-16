@@ -253,12 +253,32 @@ function syncSelectedHighlight() {
     const selectedRow = rows.find(row => row.dataset.teamId === selectedTeamId);
 
     if (!selectedRow) {
-        selectedTeamId = null;
-        clearRangeHighlights();
+        // Keep the selected id so highlight can be restored on subsequent websocket payloads.
         return;
     }
 
     applyRangeHighlights(selectedRow);
+}
+
+function clearSelectionIfTappedOutsideSelectedRow(event) {
+    if (!selectedTeamId) {
+        return;
+    }
+
+    const rows = getTableRows();
+    const selectedRow = rows.find(row => row.dataset.teamId === selectedTeamId);
+
+    if (!selectedRow) {
+        return;
+    }
+
+    const target = event.target;
+    if (target instanceof Node && selectedRow.contains(target)) {
+        return;
+    }
+
+    selectedTeamId = null;
+    clearRangeHighlights();
 }
 
 function setupRangeInteractions() {
@@ -304,15 +324,11 @@ function setupRangeInteractions() {
             return;
         }
 
-        if (selectedTeamId === teamId) {
-            selectedTeamId = null;
-            clearRangeHighlights();
-            return;
-        }
-
         selectedTeamId = teamId;
         applyRangeHighlights(row);
     });
+
+    document.addEventListener("click", clearSelectionIfTappedOutsideSelectedRow);
 }
 
 function patchLiveTable(tableList) {
