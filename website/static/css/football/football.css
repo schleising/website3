@@ -53,7 +53,7 @@ body:has(#content > .football-content-pad) #main {
     list-style: none;
     border: 0.0625rem solid rgba(158, 184, 215, 0.95);
     border-radius: 999rem;
-    background: rgba(255, 255, 255, 0.92);
+    background: rgba(255, 255, 255, 0.72);
     color: var(--brand-strong);
     padding: 0.28rem 0.75rem;
     font-size: 0.78rem;
@@ -68,7 +68,7 @@ body:has(#content > .football-content-pad) #main {
 
 .football-jump-menu[open] .football-jump-trigger,
 .football-jump-menu:hover .football-jump-trigger {
-    background: rgba(255, 255, 255, 0.98);
+    background: rgba(255, 255, 255, 0.86);
     border-color: var(--brand-soft);
 }
 
