@@ -9,6 +9,7 @@ from markdown import markdown
 from fastapi.encoders import jsonable_encoder
 
 from ..account.user_model import User
+from ..utils.html_sanitizer import sanitize_html
 
 from .models import (
     MarkdownDataMessage,
@@ -35,6 +36,7 @@ async def convert_to_markdown(
             "md_mermaid",
         ],
     )
+    converted_text = sanitize_html(converted_text)
 
     # Indicates whether data has been saved to the DB
     data_saved = None

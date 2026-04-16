@@ -10,6 +10,7 @@ from ..database.models import ObjectIdPydanticAnnotation
 from ..account import user_collection
 
 from ..account.user_model import User
+from ..utils.html_sanitizer import sanitize_html
 
 async def get_blog_list() -> list[MarkdownDataFromDb]:
     # Check we have connected to the database
@@ -55,6 +56,7 @@ def get_blog_html(current_blog: MarkdownDataFromDb | None) -> str | None:
             'pymdownx.extra',
             'md_mermaid',
         ])
+        blog_html = sanitize_html(blog_html)
     else:
         # Set the HTML to None
         blog_html = None

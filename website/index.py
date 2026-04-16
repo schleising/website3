@@ -1,4 +1,5 @@
 import logging
+import os
 from contextlib import asynccontextmanager
 
 from starlette.types import ASGIApp, Receive, Scope, Send
@@ -34,7 +35,7 @@ class RealIPMiddleware:
 
     def __init__(self, app: ASGIApp, trusted_proxies=None):
         self.app = app
-        # List of trusted proxy IPs; if None, accept all
+        # List of trusted proxy IPs/CIDRs allowed to set forwarded IP headers.
         self.trusted_proxies = trusted_proxies or []
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send):
@@ -51,12 +52,13 @@ class RealIPMiddleware:
                 # X-Forwarded-For may contain a comma-separated list; take first
                 client_ip = xff.split(",")[0].strip()
 
-            # Optional: restrict to requests from trusted proxies only
-            if self.trusted_proxies and scope.get("client"):
-                _, remote_port = scope["client"]
+            # Trust forwarded headers only from explicitly configured proxies.
+            if scope.get("client"):
                 remote_ip = scope["client"][0]
                 if remote_ip not in self.trusted_proxies:
-                    client_ip = None  # ignore headers from untrusted sources
+                    client_ip = None
+            else:
+                client_ip = None
 
             if client_ip:
                 # Patch the ASGI client tuple (ip, port)
@@ -102,7 +104,12 @@ app = FastAPI(
 )
 
 # Add the Real IP middleware
-app.add_middleware(RealIPMiddleware, trusted_proxies=None)
+trusted_proxy_list = [
+    proxy.strip()
+    for proxy in os.getenv("TRUSTED_PROXY_IPS", "").split(",")
+    if proxy.strip() != ""
+]
+app.add_middleware(RealIPMiddleware, trusted_proxies=trusted_proxy_list)
 
 
 @app.middleware("http")

@@ -22,5 +22,12 @@ COPY GeoLite2-City/GeoLite2-City.mmdb /app/GeoLite2-City.mmdb
 # Copy the Pre-built binary file from the previous stage
 COPY --from=builder /app/go-bet-server /app/go-bet-server
 
+# Create an unprivileged runtime user and lock down ownership
+RUN addgroup -S app && adduser -S -G app app && \
+	chown -R app:app /app
+
+# Run as non-root
+USER app
+
 # Command to run the executable
 ENTRYPOINT [ "/app/go-bet-server" ]
