@@ -53,7 +53,7 @@ services:
     image: mongo
     hostname: mongodb
     ports:
-      - "127.0.0.1:27017:27017"
+      - "27017:27017"
     volumes:
       - db_volume:/data/db:rw
       - db_conf:/data/configdb
