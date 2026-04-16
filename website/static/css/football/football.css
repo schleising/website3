@@ -834,6 +834,31 @@ body.football-season-popup-open {
     color: var(--text-soft);
 }
 
+.football-subscriptions-auth-message {
+    margin: 0;
+    color: var(--brand-strong);
+    font-weight: 600;
+}
+
+.football-subscriptions-auth-message a {
+    color: var(--brand);
+}
+
+.football-subscriptions.is-readonly {
+    background: rgba(246, 249, 253, 0.94);
+}
+
+.football-subscriptions.is-readonly .football-subscription-team {
+    opacity: 0.82;
+    cursor: not-allowed;
+}
+
+.football-subscriptions.is-readonly .football-subscriptions-actions .btn,
+.football-subscriptions.is-readonly .football-subscriptions-select-all input,
+.football-subscriptions.is-readonly .football-subscription-checkbox {
+    cursor: not-allowed;
+}
+
 .football-subscriptions-controls {
     display: flex;
     align-items: center;

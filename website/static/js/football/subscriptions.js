@@ -1,10 +1,12 @@
 const subscriptionTeamGrid = document.getElementById("subscription-team-grid");
+const subscriptionSection = document.querySelector(".football-subscriptions[data-can-manage-subscriptions]");
 const subscriptionSelectAll = document.getElementById("subscription-select-all");
 const subscriptionSaveButton = document.getElementById("subscription-save");
 const subscriptionUnsubscribeButton = document.getElementById("subscription-unsubscribe");
 const subscriptionStatus = document.getElementById("subscription-status");
 const subscriptionSelectedCount = document.getElementById("subscription-selected-count");
 let hasActiveSubscription = false;
+const canManageSubscriptions = subscriptionSection?.dataset.canManageSubscriptions === "true";
 
 const serviceWorkerPath = "/sw.js";
 const vapidPublicKey = "BAE-ATyX2xQGdyv9W5vcsI7qzA1FSui3UYNHgKFSKMmR12_7L9xQcVcDz8JbweMOTWb7npz6VMQMQC1BUylu00E";
@@ -58,7 +60,15 @@ function resetToUnsubscribedState(statusMessage) {
     hasActiveSubscription = false;
     setAllSelections(false);
     setActionButtonsDisabled(false);
-    setStatus(statusMessage || "Not currently subscribed. Select teams and save to subscribe.");
+    setStatus(statusMessage || defaultUnsubscribedMessage());
+}
+
+function defaultUnsubscribedMessage() {
+    if (canManageSubscriptions) {
+        return "Not currently subscribed. Select teams and save to subscribe.";
+    }
+
+    return "This browser is not currently subscribed. Login or sign up to manage notifications.";
 }
 
 function setStatus(message, isError = false) {
@@ -71,20 +81,22 @@ function setStatus(message, isError = false) {
 }
 
 function setActionButtonsDisabled(disabled) {
+    const effectiveDisabled = disabled || !canManageSubscriptions;
+
     if (subscriptionSaveButton) {
-        subscriptionSaveButton.disabled = disabled;
+        subscriptionSaveButton.disabled = effectiveDisabled;
     }
 
     if (subscriptionUnsubscribeButton) {
-        subscriptionUnsubscribeButton.disabled = disabled || !hasActiveSubscription;
+        subscriptionUnsubscribeButton.disabled = effectiveDisabled || !hasActiveSubscription;
     }
 
     if (subscriptionSelectAll) {
-        subscriptionSelectAll.disabled = disabled;
+        subscriptionSelectAll.disabled = effectiveDisabled;
     }
 
     getTeamCheckboxes().forEach(checkbox => {
-        checkbox.disabled = disabled;
+        checkbox.disabled = effectiveDisabled;
     });
 }
 
@@ -152,7 +164,7 @@ async function loadPreferences() {
         const subscription = await getCurrentSubscription();
 
         if (!subscription) {
-            resetToUnsubscribedState("Not currently subscribed. Select teams and save to subscribe.");
+            resetToUnsubscribedState();
             return;
         }
 
@@ -166,7 +178,7 @@ async function loadPreferences() {
                 console.warn("Failed to remove stale browser subscription", error);
             }
 
-            resetToUnsubscribedState("Not currently subscribed. Select teams and save to subscribe.");
+            resetToUnsubscribedState();
             return;
         }
 
@@ -184,7 +196,15 @@ async function loadPreferences() {
         syncSelectAllState();
         hasActiveSubscription = true;
         setActionButtonsDisabled(false);
-        setStatus(`Loaded current preferences for ${data.username || "Anonymous User"}.`);
+
+        if (canManageSubscriptions) {
+            setStatus("Loaded current preferences.");
+            return;
+        }
+
+        const selectedCount = selectedIds.size;
+        const suffix = selectedCount === 1 ? "team" : "teams";
+        setStatus(`This browser is subscribed to ${selectedCount} ${suffix}. Login or sign up to manage notifications.`);
     } catch (error) {
         console.error("Failed to load preferences", error);
         resetToUnsubscribedState("Unable to load existing subscription preferences.");
@@ -207,6 +227,11 @@ async function ensurePushSubscription() {
 }
 
 async function savePreferences() {
+    if (!canManageSubscriptions) {
+        setStatus("Login or sign up to manage notifications.", true);
+        return;
+    }
+
     const teamIds = getSelectedTeamIds();
     if (teamIds.length === 0) {
         setStatus("Select at least one team before saving.", true);
@@ -235,6 +260,11 @@ async function savePreferences() {
 }
 
 async function unsubscribeAll() {
+    if (!canManageSubscriptions) {
+        setStatus("Login or sign up to manage notifications.", true);
+        return;
+    }
+
     setActionButtonsDisabled(true);
     setStatus("Unsubscribing...");
 
@@ -278,11 +308,11 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     });
 
-    if (subscriptionSaveButton) {
+    if (canManageSubscriptions && subscriptionSaveButton) {
         subscriptionSaveButton.addEventListener("click", savePreferences);
     }
 
-    if (subscriptionUnsubscribeButton) {
+    if (canManageSubscriptions && subscriptionUnsubscribeButton) {
         subscriptionUnsubscribeButton.addEventListener("click", unsubscribeAll);
     }
 

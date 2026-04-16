@@ -417,7 +417,6 @@ class SubscriptionPreferencesUpdateRequest(BaseModel):
 
 class SubscriptionPreferencesResponse(BaseModel):
     is_subscribed: bool
-    username: str = "Anonymous User"
     team_ids: list[int] = Field(default_factory=list)
 
 

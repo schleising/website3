@@ -354,6 +354,34 @@ def _request_username(request: Request) -> str:
     return "Anonymous User"
 
 
+def _require_logged_in_username(request: Request) -> str:
+    username = _request_username(request)
+    if username == "Anonymous User":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Login required to manage notifications.",
+        )
+    return username
+
+
+def _assert_subscription_owner(
+    existing_subscription: PushSubscriptionDocument | None,
+    username: str,
+) -> None:
+    if existing_subscription is None:
+        return
+
+    owner = existing_subscription.username.strip()
+    if owner == "" or owner == "Anonymous User":
+        return
+
+    if owner != username:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="This subscription is managed by a different account.",
+        )
+
+
 @football_router.get("/", response_class=HTMLResponse)
 async def get_live_matches(
     request: Request,
@@ -538,6 +566,7 @@ async def get_subscriptions_page(request: Request):
             "enable_live_updates": False,
             "matches": [],
             "teams": teams,
+            "can_manage_subscriptions": _request_username(request) != "Anonymous User",
             **season_context,
         },
     )
@@ -821,7 +850,6 @@ async def get_subscription_preferences(payload: SubscriptionLookupRequest):
 
     return SubscriptionPreferencesResponse(
         is_subscribed=True,
-        username=subscription_doc.username,
         team_ids=sorted(set(subscription_doc.team_ids)),
     )
 
@@ -851,7 +879,10 @@ async def update_subscription_preferences(
             detail="Select at least one valid current-season team.",
         )
 
-    username = _request_username(request)
+    username = _require_logged_in_username(request)
+    existing_subscription = await get_push_subscription(payload.subscription)
+    _assert_subscription_owner(existing_subscription, username)
+
     subscription_doc = PushSubscriptionDocument(
         subscription=payload.subscription,
         team_ids=selected_team_ids,
@@ -867,7 +898,6 @@ async def update_subscription_preferences(
 
     return SubscriptionPreferencesResponse(
         is_subscribed=True,
-        username=username,
         team_ids=selected_team_ids,
     )
 
@@ -882,7 +912,11 @@ async def update_subscription_preferences(
     methods=["DELETE"],
     response_model=SubscriptionOperationResponse,
 )
-async def remove_subscription_preferences(payload: SubscriptionLookupRequest):
+async def remove_subscription_preferences(request: Request, payload: SubscriptionLookupRequest):
+    username = _require_logged_in_username(request)
+    existing_subscription = await get_push_subscription(payload.subscription)
+    _assert_subscription_owner(existing_subscription, username)
+
     ok = await delete_push_subscription(payload.subscription)
 
     if not ok:
@@ -904,7 +938,10 @@ async def subscribe(request: Request, payload: SubscriptionLookupRequest):
     current_season_key = await _get_current_season_key()
     current_teams = await _get_current_season_teams(current_season_key)
     selected_team_ids = sorted({team.id for team in current_teams})
-    username = _request_username(request)
+    username = _require_logged_in_username(request)
+
+    existing_subscription = await get_push_subscription(payload.subscription)
+    _assert_subscription_owner(existing_subscription, username)
 
     subscription_doc = PushSubscriptionDocument(
         subscription=payload.subscription,
@@ -936,7 +973,11 @@ async def subscribe(request: Request, payload: SubscriptionLookupRequest):
     methods=["DELETE"],
     response_model=SubscriptionOperationResponse,
 )
-async def unsubscribe(payload: SubscriptionLookupRequest):
+async def unsubscribe(request: Request, payload: SubscriptionLookupRequest):
+    username = _require_logged_in_username(request)
+    existing_subscription = await get_push_subscription(payload.subscription)
+    _assert_subscription_owner(existing_subscription, username)
+
     ok = await delete_push_subscription(payload.subscription)
 
     if not ok:
