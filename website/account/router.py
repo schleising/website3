@@ -101,6 +101,7 @@ def _safe_next_path(raw_next: str | None) -> str | None:
     blocked_prefixes = (
         "/account/login",
         "/account/token",
+        "/account/logout",
     )
     lower_path = parsed.path.lower()
     if any(lower_path.startswith(prefix) for prefix in blocked_prefixes):
@@ -170,7 +171,8 @@ async def login(
 ):
     submitted_form = await request.form()
     submitted_next = submitted_form.get("next")
-    next_path = _safe_next_path(submitted_next if isinstance(submitted_next, str) else None)
+    raw_next = submitted_next if isinstance(submitted_next, str) else None
+    next_path = _safe_next_path(raw_next)
 
     # Check the username and password, if valid the user will be returned, if not it will be None
     user = await authenticate_user(form_data.username, form_data.password)
@@ -186,7 +188,10 @@ async def login(
         return response
 
     # Get the login response
-    redirect_target = next_path or "/account/login_success/"
+    if raw_next is not None and raw_next.strip() != "" and next_path is None:
+        redirect_target = "/"
+    else:
+        redirect_target = next_path or "/account/login_success/"
     response = get_login_response(user, redirect_target)
 
     # Return the response
