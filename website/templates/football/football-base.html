@@ -4,6 +4,9 @@
 {% if enable_live_updates|default(false) %}
 <script defer src="/js/football/football.js?v1.1.0"></script>
 {% endif %}
+{% if all_matches_view|default(false) %}
+<script defer src="/js/football/all_matches_view.js?v1.0.0"></script>
+{% endif %}
 {% if live_matches %}
 <script defer src="/js/football/live_day_scroll.js?v1.1.0"></script>
 <script defer src="/js/football/visibility_refresh.js?v1.0.0"></script>
@@ -18,7 +21,7 @@
 
 {% block head %}
 <link rel="stylesheet" href="/css/right-nav.css?v1.1.0">
-<link rel="stylesheet" href="/css/football/football.css?v1.5.1">
+<link rel="stylesheet" href="/css/football/football.css?v1.5.2">
 {% block football_head %}
 {% endblock %}
 {% endblock %}
@@ -28,22 +31,7 @@
 <a href="{{ live_scores_url|default('/football/') }}" class="sub-level-nav">Latest Matches</a>
 {% endif %}
 <a href="{{ table_url|default('/football/table/') }}" class="sub-level-nav">{% if is_current_season|default(true) %}Live League Table{% else %}League Table{% endif %}</a>
-{% if month_nav_links is defined %}
-	{% for month_link in month_nav_links %}
-	<a href="{{ month_link.url }}" class="sub-level-nav">{{ month_link.label }}</a>
-	{% endfor %}
-{% else %}
-<a href="/football/matches/8/" class="sub-level-nav">August</a>
-<a href="/football/matches/9/" class="sub-level-nav">September</a>
-<a href="/football/matches/10/" class="sub-level-nav">October</a>
-<a href="/football/matches/11/" class="sub-level-nav">November</a>
-<a href="/football/matches/12/" class="sub-level-nav">December</a>
-<a href="/football/matches/1/" class="sub-level-nav">January</a>
-<a href="/football/matches/2/" class="sub-level-nav">February</a>
-<a href="/football/matches/3/" class="sub-level-nav">March</a>
-<a href="/football/matches/4/" class="sub-level-nav">April</a>
-<a href="/football/matches/5/" class="sub-level-nav">May</a>
-{% endif %}
+<a href="{{ all_matches_url|default('/football/matches/all/') }}" class="sub-level-nav">All Matches</a>
 <a href="/football/head-to-head/{% if selected_season_key is defined %}?season={{ selected_season_key }}{% endif %}" class="sub-level-nav">Head to Head</a>
 {% if is_current_season|default(true) %}
 <a href="/football/subscriptions/" class="sub-level-nav">Notifications</a>

@@ -4,7 +4,7 @@
 
 {% block header %}
 <h3 class="header-text football-header-text">
-  <span class="football-header-title">{% if team_matches_view|default(false) %}{{ title }}{% elif live_matches %}{{ title }}{% else %}{{ title }}'s Matches{% endif %}</span>
+  <span class="football-header-title">{% if team_matches_view|default(false) or all_matches_view|default(false) %}{{ title }}{% elif live_matches %}{{ title }}{% else %}{{ title }}'s Matches{% endif %}</span>
   {% if not live_matches %}
   <button
     type="button"
@@ -21,17 +21,38 @@
 {% endblock %}
 
 {% block football_content %}
+{% if all_matches_view|default(false) and jump_targets is defined and jump_targets|length > 0 %}
+<section class="football-all-matches-toolbar" aria-label="All matches quick navigation">
+  <details class="football-jump-menu" id="football-jump-menu">
+    <summary class="football-jump-trigger">Jump To</summary>
+    <div class="football-jump-dropdown site-card">
+      {% if current_day_anchor %}
+      <a class="football-jump-link" href="#{{ current_day_anchor }}">Current Date</a>
+      {% endif %}
+      {% for target in jump_targets %}
+      <a class="football-jump-link" href="#{{ target.anchor }}">{{ target.label }}</a>
+      {% endfor %}
+    </div>
+  </details>
+</section>
+{% endif %}
+
 {% if day_groups is defined and day_groups %}
 <div class="football-day-list">
   {% for day_group in day_groups %}
-  <section class="football-day-group{% if day_group.is_current_period %} is-today{% endif %}" {% if day_group.is_current_period %}id="live-day-today"{% endif %} aria-label="{{ day_group.label }} fixtures">
+  <section
+    class="football-day-group{% if day_group.is_current_period %} is-today{% endif %}"
+    id="{{ day_group.anchor_id|default('') }}"
+    {% if day_group.is_current_period and live_matches %}data-live-day-today="true"{% endif %}
+    aria-label="{{ day_group.label }} fixtures"
+  >
     <div class="football-day-heading">
       <h4 class="football-day-title">{{ day_group.label }}</h4>
     </div>
     {% if day_group.matches|length > 0 %}
     <div class="football-grid">
     {% for match in day_group.matches %}
-      <div class="score-widget site-card" id="{{ match.id }}">
+      <div class="score-widget site-card" id="{{ match.id }}" data-match-time="{{ match.local_date.isoformat() }}">
         <div class="date-and-time">
           {% if live_matches %}
           <div class="match-start">{{ match.local_date.strftime('%H:%M %Z') }}</div>

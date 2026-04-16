@@ -5,7 +5,7 @@ document.addEventListener("readystatechange", event => {
 });
 
 function scrollTodayCardToTop() {
-    const todayCard = document.getElementById("live-day-today");
+    const todayCard = document.querySelector('[data-live-day-today="true"]');
     const topGapPx = 14;
 
     if (!todayCard) {

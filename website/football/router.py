@@ -138,11 +138,14 @@ def _build_match_day_groups(matches: list, today_value: datetime) -> list[dict]:
 
     for day_key in sorted(grouped_matches):
         day_datetime = datetime.combine(day_key, datetime.min.time())
+        anchor_id = f"day-{day_key.isoformat()}"
         day_groups.append(
             {
                 "label": _format_live_day_label(day_datetime, today_value),
                 "matches": grouped_matches[day_key],
                 "is_current_period": day_key == today_value.date(),
+                "day_key": day_key,
+                "anchor_id": anchor_id,
             }
         )
 
@@ -185,6 +188,54 @@ def _live_scores_window() -> tuple[datetime, datetime]:
     )
 
     return window_start, window_end
+
+
+def _season_matches_window(season_key: str) -> tuple[datetime, datetime]:
+    season_start_year, season_end_year = _season_year_bounds(season_key)
+    return (
+        datetime(season_start_year, 7, 1, 0, 0, 0),
+        datetime(season_end_year, 6, 30, 23, 59, 59),
+    )
+
+
+def _build_all_matches_jump_targets(day_groups: list[dict], today_value: datetime) -> tuple[str | None, list[dict[str, str]]]:
+    if len(day_groups) == 0:
+        return (None, [])
+
+    current_anchor: str | None = None
+
+    for day_group in day_groups:
+        day_key = day_group.get("day_key")
+        if isinstance(day_key, date) and day_key >= today_value.date():
+            current_anchor = day_group.get("anchor_id")
+            break
+
+    if current_anchor is None:
+        current_anchor = day_groups[-1].get("anchor_id")
+
+    month_targets: list[dict[str, str]] = []
+    seen_month_keys: set[tuple[int, int]] = set()
+
+    for day_group in day_groups:
+        day_key = day_group.get("day_key")
+        anchor_id = day_group.get("anchor_id")
+
+        if not isinstance(day_key, date) or not isinstance(anchor_id, str):
+            continue
+
+        month_key = (day_key.year, day_key.month)
+        if month_key in seen_month_keys:
+            continue
+
+        seen_month_keys.add(month_key)
+        month_targets.append(
+            {
+                "label": day_key.strftime("%B %Y"),
+                "anchor": anchor_id,
+            }
+        )
+
+    return (current_anchor, month_targets)
 
 
 def _has_today_matches(matches: list) -> bool:
@@ -239,6 +290,7 @@ async def _build_football_season_context(
         "current_season_url": f"/football/table/?season={current_season_key}",
         "live_scores_url": "/football/",
         "table_url": f"/football/table/?season={selected_season_key}",
+        "all_matches_url": f"/football/matches/all/?season={selected_season_key}",
         "month_nav_links": _build_month_nav_links(selected_season_key),
     }
 
@@ -304,6 +356,43 @@ async def get_live_matches(
             "title": page_title,
             "live_matches": live_matches,
             "enable_live_updates": enable_live_updates,
+            **season_context,
+        },
+    )
+
+
+@football_router.get("/matches/all", response_class=HTMLResponse)
+@football_router.get("/matches/all/", response_class=HTMLResponse)
+async def get_all_season_matches(
+    request: Request,
+    season: str | None = Query(default=None),
+):
+    season_context = await _build_football_season_context(request, season)
+    selected_season_key = season_context["selected_season_key"]
+
+    start_date, end_date = _season_matches_window(selected_season_key)
+    matches = await retreive_matches(start_date, end_date, selected_season_key)
+    matches = update_match_timezone(matches)
+
+    today_anchor = datetime.now(tz=LONDON_TZ).replace(
+        hour=0, minute=0, second=0, microsecond=0
+    )
+    day_groups = _build_match_day_groups(matches, today_anchor)
+    current_day_anchor, jump_targets = _build_all_matches_jump_targets(day_groups, today_anchor)
+
+    return TEMPLATES.TemplateResponse(
+        request,
+        "football/match_template.html",
+        {
+            "request": request,
+            "matches": matches,
+            "day_groups": day_groups,
+            "title": "All Matches",
+            "live_matches": False,
+            "all_matches_view": True,
+            "enable_live_updates": bool(season_context["is_current_season"]),
+            "current_day_anchor": current_day_anchor,
+            "jump_targets": jump_targets,
             **season_context,
         },
     )
