@@ -95,9 +95,15 @@ def _ordinal_day(day_of_month: int) -> str:
     return f"{day_of_month}{suffix}"
 
 
-def _format_live_day_label(day_value: datetime, today_value: datetime) -> str:
-    if day_value.date() == today_value.date():
+def _format_match_day_label(day_value: datetime, today_value: datetime) -> str:
+    day_delta = (day_value.date() - today_value.date()).days
+
+    if day_delta == -1:
+        return "Yesterday"
+    if day_delta == 0:
         return "Today"
+    if day_delta == 1:
+        return "Tomorrow"
 
     return f"{day_value.strftime('%A')}, {_ordinal_day(day_value.day)} {day_value.strftime('%B')}"
 
@@ -117,7 +123,7 @@ def _build_live_day_groups(matches: list, today_value: datetime) -> list[dict]:
         day_key = day_datetime.date()
         live_day_groups.append(
             {
-                "label": _format_live_day_label(day_datetime, today_value),
+                "label": _format_match_day_label(day_datetime, today_value),
                 "matches": grouped_matches.get(day_key, []),
                 "is_current_period": day_offset == 0,
             }
@@ -141,7 +147,7 @@ def _build_match_day_groups(matches: list, today_value: datetime) -> list[dict]:
         anchor_id = f"day-{day_key.isoformat()}"
         day_groups.append(
             {
-                "label": _format_live_day_label(day_datetime, today_value),
+                "label": _format_match_day_label(day_datetime, today_value),
                 "matches": grouped_matches[day_key],
                 "is_current_period": day_key == today_value.date(),
                 "day_key": day_key,
