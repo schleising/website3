@@ -5,7 +5,8 @@ document.addEventListener("readystatechange", (event) => {
 
     const jumpMenu = document.getElementById("football-jump-menu");
     const toolbar = document.getElementById("football-all-matches-toolbar");
-    const dayList = document.querySelector(".football-day-list");
+    const contentContainer = document.getElementById("content");
+    const contentPad = document.querySelector(".football-content-pad");
     const jumpLinks = document.querySelectorAll(".football-jump-link");
 
     for (const link of jumpLinks) {
@@ -27,9 +28,9 @@ document.addEventListener("readystatechange", (event) => {
         }
     });
 
-    positionToolbar(toolbar, dayList);
-    window.addEventListener("resize", () => positionToolbar(toolbar, dayList));
-    window.addEventListener("scroll", () => positionToolbar(toolbar, dayList), { passive: true });
+    positionToolbar(toolbar, contentContainer, contentPad);
+    window.addEventListener("resize", () => positionToolbar(toolbar, contentContainer, contentPad));
+    window.addEventListener("scroll", () => positionToolbar(toolbar, contentContainer, contentPad), { passive: true });
 
     const shouldAutoCenter = toolbar?.dataset.autoCenterNextMatch === "true";
 
@@ -38,14 +39,30 @@ document.addEventListener("readystatechange", (event) => {
     }
 });
 
-function positionToolbar(toolbar, dayList) {
-    if (!toolbar || !dayList) {
+function positionToolbar(toolbar, contentContainer, contentPad) {
+    if (!toolbar || !contentContainer) {
         return;
     }
 
-    const listRect = dayList.getBoundingClientRect();
-    const listRightSpacing = Math.max(window.innerWidth - listRect.right + 10, 10);
-    toolbar.style.right = `${Math.round(listRightSpacing)}px`;
+    const contentRect = contentContainer.getBoundingClientRect();
+    const fallbackPadPx = 14;
+    let insetPadPx = fallbackPadPx;
+
+    if (contentPad) {
+        const padStyle = window.getComputedStyle(contentPad);
+        const parsedPad = parseFloat(padStyle.paddingTop);
+        if (!Number.isNaN(parsedPad) && parsedPad > 0) {
+            insetPadPx = parsedPad;
+        }
+    }
+
+    toolbar.style.top = `${Math.round(contentRect.top + insetPadPx)}px`;
+
+    const rightOffset = Math.max(
+        Math.round(window.innerWidth - contentRect.right + insetPadPx),
+        8,
+    );
+    toolbar.style.right = `${rightOffset}px`;
 }
 
 function centerNextMatchCard() {

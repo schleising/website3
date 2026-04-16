@@ -38,8 +38,8 @@ body:has(#content > .football-content-pad) #main {
 
 .football-all-matches-toolbar {
     position: fixed;
-    top: 5.2rem;
-    right: 1.2rem;
+    top: 0;
+    right: 0;
     z-index: 10;
     display: flex;
     justify-content: flex-end;
@@ -99,8 +99,6 @@ body:has(#content > .football-content-pad) #main {
 
 @media screen and (max-width: 42rem) {
     .football-all-matches-toolbar {
-        top: 4.7rem;
-        right: 0.65rem;
         z-index: 9;
     }
 }
