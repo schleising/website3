@@ -28,7 +28,6 @@ FORM_RESULT_CLASS = {
     "L": "form-loss",
 }
 FIRST_PREMIER_LEAGUE_SEASON_START_YEAR = 1992
-_PUSH_SUBSCRIPTION_INDEXES_READY = False
 
 
 def _season_matches_collection_name(season_key: str) -> str:
@@ -402,20 +401,6 @@ async def get_table_db_for_season(season_key: str | None = None) -> list[LiveTab
     return table_list
 
 
-async def _ensure_push_subscription_indexes() -> None:
-    global _PUSH_SUBSCRIPTION_INDEXES_READY
-
-    if _PUSH_SUBSCRIPTION_INDEXES_READY:
-        return
-
-    if football_push is None:
-        return
-
-    await football_push.create_index("subscription.endpoint", unique=True)
-    await football_push.create_index("team_ids")
-    _PUSH_SUBSCRIPTION_INDEXES_READY = True
-
-
 def _subscription_query(subscription: PushSubscription) -> dict:
     return {"subscription.endpoint": subscription.endpoint}
 
@@ -424,8 +409,6 @@ async def upsert_push_subscription(subscription_doc: PushSubscriptionDocument) -
     if football_push is None:
         logging.error("No DB connection")
         return False
-
-    await _ensure_push_subscription_indexes()
 
     now = datetime.now(tz=UTC)
     team_ids = sorted(set(subscription_doc.team_ids))
@@ -462,7 +445,6 @@ async def get_push_subscription(
         logging.error("No DB connection")
         return None
 
-    await _ensure_push_subscription_indexes()
     existing = await football_push.find_one(_subscription_query(subscription))
 
     if existing is None:
@@ -476,7 +458,6 @@ async def delete_push_subscription(subscription: PushSubscription) -> bool:
         logging.error("No DB connection")
         return False
 
-    await _ensure_push_subscription_indexes()
     result = await football_push.delete_one(_subscription_query(subscription))
 
     if result.deleted_count == 0:
@@ -493,7 +474,6 @@ async def get_push_subscriptions_for_team_ids(
         logging.error("No DB connection")
         return []
 
-    await _ensure_push_subscription_indexes()
     unique_team_ids = sorted(set(team_ids))
 
     if len(unique_team_ids) == 0:
