@@ -30,14 +30,14 @@
     --zone-rel: rgba(184, 65, 91, 0.11);
     --zone-rel-hover: rgba(184, 65, 91, 0.18);
     --zone-rel-marker: #a23a50;
-    --range-focus-bg: rgba(49, 78, 114, 0.21);
-    --range-focus-fg: #152d4b;
-    --range-high-bg: rgba(56, 138, 96, 0.23);
-    --range-high-boundary-bg: rgba(56, 138, 96, 0.34);
-    --range-high-fg: #133d2a;
-    --range-low-bg: rgba(168, 87, 106, 0.22);
-    --range-low-boundary-bg: rgba(168, 87, 106, 0.34);
-    --range-low-fg: #5a1c2a;
+    --range-focus-bg: rgba(54, 88, 126, 0.14);
+    --range-focus-fg: #1b3555;
+    --range-high-bg: rgba(70, 129, 102, 0.16);
+    --range-high-boundary-bg: rgba(70, 129, 102, 0.24);
+    --range-high-fg: #1f4a37;
+    --range-low-bg: rgba(149, 89, 102, 0.16);
+    --range-low-boundary-bg: rgba(149, 89, 102, 0.24);
+    --range-low-fg: #5a2e39;
 }
 
 .table-container[data-team-count="20"] {
@@ -107,13 +107,10 @@
 
 .data-row.table-range-focus > .position {
     background-color: var(--range-focus-bg);
-    color: var(--range-focus-fg);
 }
 
 .data-row.table-range-high > .position {
     background-color: var(--range-high-bg);
-    color: var(--range-high-fg);
-    font-weight: 700;
 }
 
 .data-row.table-range-high-boundary > .position {
@@ -122,8 +119,6 @@
 
 .data-row.table-range-low > .position {
     background-color: var(--range-low-bg);
-    color: var(--range-low-fg);
-    font-weight: 700;
 }
 
 .data-row.table-range-low-boundary > .position {

@@ -3,6 +3,7 @@ let footballTableUrl;
 let footballTableIntervalId = null;
 let selectedTeamId = null;
 let footballTableLoadedDayKey = null;
+let lastInteractionPointerType = "mouse";
 
 const FOOTBALL_TABLE_REFRESH_INTERVAL_MS = 10000;
 const RANGE_CLASSES = [
@@ -287,6 +288,20 @@ function setupRangeInteractions() {
         return;
     }
 
+    document.addEventListener("pointerdown", event => {
+        if (typeof event.pointerType === "string" && event.pointerType !== "") {
+            lastInteractionPointerType = event.pointerType;
+        }
+    }, { passive: true });
+
+    document.addEventListener("touchstart", () => {
+        lastInteractionPointerType = "touch";
+    }, { passive: true });
+
+    document.addEventListener("mousedown", () => {
+        lastInteractionPointerType = "mouse";
+    }, { passive: true });
+
     tbody.addEventListener("mouseover", event => {
         if (selectedTeamId) {
             return;
@@ -311,6 +326,10 @@ function setupRangeInteractions() {
 
     tbody.addEventListener("click", event => {
         if (event.target.closest("a")) {
+            return;
+        }
+
+        if (lastInteractionPointerType === "mouse") {
             return;
         }
 
