@@ -37,12 +37,12 @@ body:has(#content > .football-content-pad) #main {
 }
 
 .football-all-matches-toolbar {
-    position: sticky;
-    top: 0.6rem;
-    z-index: 18;
+    position: fixed;
+    top: 5.2rem;
+    right: 1.2rem;
+    z-index: 10;
     display: flex;
     justify-content: flex-end;
-    margin-bottom: 0.35rem;
 }
 
 .football-jump-menu {
@@ -77,34 +77,32 @@ body:has(#content > .football-content-pad) #main {
     top: calc(100% + 0.3rem);
     right: 0;
     min-width: 12.5rem;
-    max-height: min(55vh, 18rem);
-    overflow-y: auto;
+    max-height: none;
+    overflow: visible;
     display: none;
     flex-direction: column;
-    gap: 0.2rem;
-    padding: 0.45rem;
+    gap: 0;
+    padding: 0.46rem;
     border-radius: 0.6rem;
+    border: 0.0625rem solid rgba(156, 183, 219, 0.88);
+    background: var(--surface-soft);
+    box-shadow: 0 0.5rem 1rem rgba(16, 36, 63, 0.18);
 }
 
-.football-jump-menu[open] .football-jump-dropdown,
-.football-jump-menu:hover .football-jump-dropdown {
+.football-jump-menu[open] .football-jump-dropdown {
     display: flex;
 }
 
 .football-jump-link {
-    border-radius: 0.45rem;
-    padding: 0.28rem 0.42rem;
-    color: var(--brand-strong);
-    text-decoration: none;
-    font-size: 0.79rem;
-    font-weight: 600;
+    margin: 0;
 }
 
-.football-jump-link:hover,
-.football-jump-link:focus-visible {
-    background: rgba(104, 143, 191, 0.16);
-    color: var(--brand-strong);
-    outline: none;
+@media screen and (max-width: 42rem) {
+    .football-all-matches-toolbar {
+        top: 4.7rem;
+        right: 0.65rem;
+        z-index: 9;
+    }
 }
 
 .football-day-group {

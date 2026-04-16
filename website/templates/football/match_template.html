@@ -22,15 +22,15 @@
 
 {% block football_content %}
 {% if all_matches_view|default(false) and jump_targets is defined and jump_targets|length > 0 %}
-<section class="football-all-matches-toolbar" aria-label="All matches quick navigation">
+<section id="football-all-matches-toolbar" class="football-all-matches-toolbar" data-auto-center-next-match="{{ 'true' if is_current_season|default(false) else 'false' }}" aria-label="All matches quick navigation">
   <details class="football-jump-menu" id="football-jump-menu">
     <summary class="football-jump-trigger">Jump To</summary>
-    <div class="football-jump-dropdown site-card">
+    <div class="football-jump-dropdown sub-level-nav-container">
       {% if current_day_anchor %}
-      <a class="football-jump-link" href="#{{ current_day_anchor }}">Current Date</a>
+      <a class="sub-level-nav football-jump-link" href="#{{ current_day_anchor }}">Current Date</a>
       {% endif %}
       {% for target in jump_targets %}
-      <a class="football-jump-link" href="#{{ target.anchor }}">{{ target.label }}</a>
+      <a class="sub-level-nav football-jump-link" href="#{{ target.anchor }}">{{ target.label }}</a>
       {% endfor %}
     </div>
   </details>
@@ -42,8 +42,7 @@
   {% for day_group in day_groups %}
   <section
     class="football-day-group{% if day_group.is_current_period %} is-today{% endif %}"
-    id="{{ day_group.anchor_id|default('') }}"
-    {% if day_group.is_current_period and live_matches %}data-live-day-today="true"{% endif %}
+    {% if day_group.is_current_period and live_matches %}id="live-day-today"{% elif day_group.anchor_id is defined %}id="{{ day_group.anchor_id }}"{% endif %}
     aria-label="{{ day_group.label }} fixtures"
   >
     <div class="football-day-heading">
