@@ -1,5 +1,6 @@
 .football-content-pad {
-    padding: 1.35rem;
+    --football-content-pad-space: 1.35rem;
+    padding: var(--football-content-pad-space);
     display: flex;
     flex: 1 1 auto;
     flex-direction: column;
@@ -34,6 +35,11 @@ body:has(#content > .football-content-pad) #main {
     display: flex;
     flex-direction: column;
     gap: 0.95rem;
+    padding-bottom: var(--football-content-pad-space, 1.35rem);
+}
+
+.football-grid--standalone {
+    padding-bottom: var(--football-content-pad-space, 1.35rem);
 }
 
 .football-all-matches-toolbar {
@@ -923,7 +929,8 @@ body.football-season-popup-open {
 
 @media screen and (max-width: 50rem) {
     .football-content-pad {
-        padding: 0.58rem;
+        --football-content-pad-space: 0.58rem;
+        padding: var(--football-content-pad-space);
     }
 
     .football-grid {
