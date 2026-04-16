@@ -3,7 +3,7 @@
 {% block title %}<title>Football - {{ title }}</title>{% endblock %}
 
 {% block header %}
-<h3 class="header-text football-header-text">
+<h3 class="header-text football-header-text{% if not live_matches %} football-header-text--season{% endif %}">
   <span class="football-header-title">{% if team_matches_view|default(false) or all_matches_view|default(false) %}{{ title }}{% elif live_matches %}{{ title }}{% else %}{{ title }}'s Matches{% endif %}</span>
   {% if not live_matches %}
   <button

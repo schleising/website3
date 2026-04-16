@@ -1,23 +1,10 @@
 .football-content-pad {
-    --football-content-pad-space: 1.35rem;
+    --football-content-pad-space: clamp(0.9rem, 1.45vw, 1.35rem);
     padding: var(--football-content-pad-space);
     display: flex;
     flex: 1 1 auto;
     flex-direction: column;
     min-height: 0;
-}
-
-body:has(#content > .football-content-pad) #outer {
-    padding: 0.9rem;
-    gap: 0.85rem;
-}
-
-body:has(#content > .football-content-pad) #header {
-    padding: 1rem 1.2rem;
-}
-
-body:has(#content > .football-content-pad) #main {
-    gap: 0.85rem;
 }
 
 #content:has(> .football-content-pad) {
@@ -338,13 +325,17 @@ body.football-season-popup-open {
 }
 
 .football-header-text {
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
-    width: 100%;
+    line-height: 1.2;
 }
 
-.football-header-title {
+.football-header-text--season {
+    position: relative;
+    width: 100%;
+    padding-right: 4.4rem;
+}
+
+.football-header-text--season .football-header-title {
+    display: block;
     min-width: 0;
     white-space: nowrap;
     overflow: hidden;
@@ -352,9 +343,19 @@ body.football-season-popup-open {
 }
 
 .football-season-marker-button {
-    margin-left: auto;
+    margin-left: 0;
     border: 0.0625rem solid rgba(158, 184, 215, 0.9);
+    min-height: 1.5rem;
+    padding: 0.08rem 0.45rem;
+    line-height: 1.1;
     cursor: pointer;
+}
+
+.football-header-text--season .football-season-marker-button {
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
 }
 
 .football-season-marker-button:hover,
@@ -362,6 +363,15 @@ body.football-season-popup-open {
     background: rgba(255, 255, 255, 0.92);
     border-color: var(--brand-soft);
     outline: none;
+}
+
+@media screen and (min-width: 50.01rem) {
+    .football-season-marker-button {
+        min-height: 1.18rem;
+        padding: 0.02rem 0.36rem;
+        font-size: 0.68rem;
+        line-height: 1;
+    }
 }
 
 .h2h-layout {
@@ -981,7 +991,7 @@ body.football-season-popup-open {
         font-size: 0.68rem;
     }
 
-    .football-header-text {
-        gap: 0.3rem;
+    .football-header-text--season {
+        padding-right: 3.8rem;
     }
 }
