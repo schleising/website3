@@ -17,6 +17,8 @@
     /** @type {HTMLElement | null} */
     const categoryList = document.getElementById("feed-category-settings-list");
     /** @type {HTMLElement | null} */
+    const subscriptionTableWrap = document.getElementById("feed-subscription-table-wrap");
+    /** @type {HTMLElement | null} */
     const statusNode = document.getElementById("feed-settings-status");
 
     /** @type {string} */
@@ -31,6 +33,10 @@
     const categoryUnmuteTemplate = root.dataset.categoryUnmuteTemplate || "";
     /** @type {string} */
     const categoryColorTemplate = root.dataset.categoryColorTemplate || "";
+    /** @type {string} */
+    const subscriptionUpdateTemplate = root.dataset.subscriptionUpdateTemplate || "";
+    /** @type {string} */
+    const subscriptionDeleteTemplate = root.dataset.subscriptionDeleteTemplate || "";
     /** @type {string} */
     const csrfToken = root.dataset.csrfToken || "";
 
@@ -57,15 +63,23 @@
      * @param {Record<string, any>} payload
      * @returns {Promise<Record<string, any>>}
      */
-    async function requestJson(url, method, payload) {
-        const response = await fetch(url, {
+    async function requestJson(url, method, payload = null) {
+        const headers = {
+            "X-CSRF-Token": csrfToken,
+        };
+
+        /** @type {RequestInit} */
+        const requestOptions = {
             method,
-            headers: {
-                "Content-Type": "application/json",
-                "X-CSRF-Token": csrfToken,
-            },
-            body: JSON.stringify(payload),
-        });
+            headers,
+        };
+
+        if (payload !== null) {
+            headers["Content-Type"] = "application/json";
+            requestOptions.body = JSON.stringify(payload);
+        }
+
+        const response = await fetch(url, requestOptions);
 
         let body = {};
         try {
@@ -91,6 +105,17 @@
      */
     function categoryEndpoint(template, categoryId) {
         return template.replace("__CATEGORY_ID__", encodeURIComponent(categoryId));
+    }
+
+    /**
+     * Build endpoint from subscription template and subscription id.
+     *
+     * @param {string} template
+     * @param {string} subscriptionId
+     * @returns {string}
+     */
+    function subscriptionEndpoint(template, subscriptionId) {
+        return template.replace("__SUBSCRIPTION_ID__", encodeURIComponent(subscriptionId));
     }
 
     /**
@@ -122,6 +147,71 @@
         if (colorChip instanceof HTMLElement) {
             colorChip.style.backgroundColor = colorHex;
         }
+    }
+
+    /**
+     * Resolve a category color from the category settings list.
+     *
+     * @param {string} categoryId
+     * @returns {string}
+     */
+    function resolveCategoryColor(categoryId) {
+        if (categoryId === "") {
+            return "#1F6FEB";
+        }
+
+        const categoryItem = document.querySelector(`.feed-category-settings-item[data-category-id="${CSS.escape(categoryId)}"]`);
+        if (!(categoryItem instanceof HTMLElement)) {
+            return "#1F6FEB";
+        }
+
+        const colorInput = categoryItem.querySelector(".feed-category-color-input");
+        if (colorInput instanceof HTMLInputElement && colorInput.value.trim() !== "") {
+            return colorInput.value;
+        }
+
+        return "#1F6FEB";
+    }
+
+    /**
+     * Update all subscription category chips that reference a category.
+     *
+     * @param {string} categoryId
+     * @param {string} colorHex
+     */
+    function updateSubscriptionCategoryColor(categoryId, colorHex) {
+        if (categoryId === "") {
+            return;
+        }
+
+        const chips = document.querySelectorAll(`.feed-subscription-category-pill[data-category-id="${CSS.escape(categoryId)}"]`);
+        chips.forEach(chip => {
+            if (chip instanceof HTMLElement) {
+                chip.style.setProperty("--feed-category-color", colorHex);
+            }
+        });
+    }
+
+    /**
+     * Sync a subscription row's category chip with its selected category.
+     *
+     * @param {HTMLElement} row
+     * @param {string} categoryId
+     */
+    function syncSubscriptionRowChip(row, categoryId) {
+        const chip = row.querySelector(".feed-subscription-category-pill");
+        const categorySelect = row.querySelector(".feed-subscription-category-select");
+        if (!(chip instanceof HTMLElement) || !(categorySelect instanceof HTMLSelectElement)) {
+            return;
+        }
+
+        const selectedOption = categorySelect.options[categorySelect.selectedIndex];
+        const categoryName = selectedOption ? selectedOption.textContent || "Category" : "Category";
+        const categoryColor = resolveCategoryColor(categoryId);
+
+        chip.dataset.categoryId = categoryId;
+        chip.textContent = categoryName;
+        chip.style.setProperty("--feed-category-color", categoryColor);
     }
 
     /**
@@ -275,10 +365,112 @@
             const normalizedColor = String(payload.color_hex || target.value);
             target.value = normalizedColor;
             updateSidebarCategoryColor(categoryId, normalizedColor);
+            updateSubscriptionCategoryColor(categoryId, normalizedColor);
             setStatus("Category color updated.");
         } catch (error) {
             setStatus(error instanceof Error ? error.message : "Unable to update category color.", true);
         }
+    }
+
+    /**
+     * Handle save/delete actions for existing subscriptions.
+     *
+     * @param {MouseEvent} event
+     */
+    async function onSubscriptionActionClick(event) {
+        const target = /** @type {HTMLElement | null} */ (event.target instanceof HTMLElement ? event.target : null);
+        if (!target) {
+            return;
+        }
+
+        const row = target.closest(".feed-subscription-row");
+        if (!(row instanceof HTMLElement)) {
+            return;
+        }
+
+        const subscriptionId = String(row.dataset.subscriptionId || "").trim();
+        if (subscriptionId === "") {
+            return;
+        }
+
+        if (target.classList.contains("feed-subscription-save-button")) {
+            const urlInput = row.querySelector(".feed-subscription-url-input");
+            const categorySelect = row.querySelector(".feed-subscription-category-select");
+            if (!(urlInput instanceof HTMLInputElement) || !(categorySelect instanceof HTMLSelectElement)) {
+                return;
+            }
+
+            const feedUrl = urlInput.value.trim();
+            const categoryId = categorySelect.value.trim();
+            if (feedUrl === "" || categoryId === "") {
+                setStatus("Subscription URL and category are required.", true);
+                return;
+            }
+
+            setStatus("Saving subscription changes...");
+
+            try {
+                const endpoint = subscriptionEndpoint(subscriptionUpdateTemplate, subscriptionId);
+                const payload = await requestJson(endpoint, "POST", {
+                    feed_url: feedUrl,
+                    category_id: categoryId,
+                });
+
+                const updatedUrl = String(payload.normalized_url || feedUrl);
+                const updatedCategoryId = String(payload.category_id || categoryId);
+                const updatedSubscriptionId = String(payload.subscription_id || subscriptionId);
+                const updatedSourceTitle = String(payload.source_title || "").trim();
+
+                row.dataset.subscriptionId = updatedSubscriptionId;
+                urlInput.value = updatedUrl;
+                categorySelect.value = updatedCategoryId;
+                if (updatedSourceTitle !== "") {
+                    const titleCell = row.querySelector("td");
+                    if (titleCell instanceof HTMLElement) {
+                        titleCell.textContent = updatedSourceTitle;
+                    }
+                }
+                syncSubscriptionRowChip(row, updatedCategoryId);
+
+                setStatus("Subscription updated.");
+            } catch (error) {
+                setStatus(error instanceof Error ? error.message : "Unable to update subscription.", true);
+            }
+
+            return;
+        }
+
+        if (target.classList.contains("feed-subscription-delete-button")) {
+            setStatus("Deleting subscription...");
+
+            try {
+                const endpoint = subscriptionEndpoint(subscriptionDeleteTemplate, subscriptionId);
+                await requestJson(endpoint, "DELETE");
+                row.remove();
+                setStatus("Subscription deleted.");
+            } catch (error) {
+                setStatus(error instanceof Error ? error.message : "Unable to delete subscription.", true);
+            }
+        }
+    }
+
+    /**
+     * Keep row chip text/color in sync while category selection changes.
+     *
+     * @param {Event} event
+     */
+    function onSubscriptionCategorySelectChange(event) {
+        const target = /** @type {HTMLElement | null} */ (event.target instanceof HTMLElement ? event.target : null);
+        if (!(target instanceof HTMLSelectElement) || !target.classList.contains("feed-subscription-category-select")) {
+            return;
+        }
+
+        const row = target.closest(".feed-subscription-row");
+        if (!(row instanceof HTMLElement)) {
+            return;
+        }
+
+        syncSubscriptionRowChip(row, target.value.trim());
     }
 
     if (addForm) {
@@ -292,6 +484,11 @@
     if (categoryList) {
         categoryList.addEventListener("click", onCategoryButtonClick);
         categoryList.addEventListener("change", onCategoryColorChange);
+    }
+
+    if (subscriptionTableWrap) {
+        subscriptionTableWrap.addEventListener("click", onSubscriptionActionClick);
+        subscriptionTableWrap.addEventListener("change", onSubscriptionCategorySelectChange);
     }
 
     // Validate category endpoint wiring once at startup.

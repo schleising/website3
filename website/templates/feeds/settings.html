@@ -13,6 +13,8 @@
   data-category-mute-template="/feeds/api/categories/__CATEGORY_ID__/mute/"
   data-category-unmute-template="/feeds/api/categories/__CATEGORY_ID__/unmute/"
   data-category-color-template="/feeds/api/categories/__CATEGORY_ID__/color/"
+  data-subscription-update-template="/feeds/api/subscriptions/__SUBSCRIPTION_ID__/"
+  data-subscription-delete-template="/feeds/api/subscriptions/__SUBSCRIPTION_ID__/"
   data-csrf-token="{{ request.state.csrf_token|default('') }}"
 >
   <article class="site-card feed-settings-card">
@@ -74,24 +76,49 @@
     {% if subscriptions|length == 0 %}
     <p>No subscriptions yet.</p>
     {% else %}
-    <div class="feed-subscription-table-wrap">
+    <div id="feed-subscription-table-wrap" class="feed-subscription-table-wrap">
       <table class="feed-subscription-table">
         <thead>
           <tr>
             <th>Feed</th>
             <th>URL</th>
             <th>Category</th>
+            <th>Actions</th>
           </tr>
         </thead>
         <tbody>
           {% for subscription in subscriptions %}
-          <tr>
+          <tr class="feed-subscription-row" data-subscription-id="{{ subscription.subscription_id }}">
             <td>{{ subscription.source_title }}</td>
-            <td><a href="{{ subscription.source_url }}" target="_blank" rel="noopener">{{ subscription.source_url }}</a></td>
             <td>
-              <span class="feed-category-pill" style="--feed-category-color: {{ subscription.category_color_hex }};">
+              <input
+                type="url"
+                class="feed-subscription-url-input"
+                value="{{ subscription.source_url }}"
+                aria-label="Subscription URL for {{ subscription.source_title }}"
+              >
+            </td>
+            <td>
+              <span
+                class="feed-category-pill feed-subscription-category-pill"
+                data-category-id="{{ subscription.category_id }}"
+                style="--feed-category-color: {{ subscription.category_color_hex }};"
+              >
                 {{ subscription.category_name }}
               </span>
+              <select class="feed-subscription-category-select" aria-label="Category for {{ subscription.source_title }}">
+                {% for category_item in categories %}
+                <option value="{{ category_item.category_id }}"{% if category_item.category_id == subscription.category_id %} selected{% endif %}>
+                  {{ category_item.name }}
+                </option>
+                {% endfor %}
+              </select>
+            </td>
+            <td>
+              <div class="feed-subscription-actions">
+                <button type="button" class="btn btn-primary feed-subscription-save-button">Save</button>
+                <button type="button" class="btn btn-danger feed-subscription-delete-button">Delete</button>
+              </div>
             </td>
           </tr>
           {% endfor %}

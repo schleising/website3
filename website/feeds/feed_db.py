@@ -295,6 +295,123 @@ async def create_or_update_subscription(
     return new_subscription, True
 
 
+async def load_user_category(
+    user_id: str,
+    category_id: str,
+) -> FeedCategoryDocument | None:
+    """Load a user-owned category document by ID."""
+
+    if feed_categories_collection is None:
+        return None
+
+    try:
+        category_object_id = ObjectId(category_id)
+    except Exception:
+        return None
+
+    category_doc = await feed_categories_collection.find_one(
+        {"_id": category_object_id, "user_id": user_id}
+    )
+    if category_doc is None:
+        return None
+
+    return FeedCategoryDocument.model_validate(category_doc)
+
+
+async def update_subscription_details(
+    user_id: str,
+    subscription_id: str,
+    normalized_url: str,
+    source_title: str,
+    category_id: str,
+) -> dict[str, Any] | None:
+    """Update an existing user subscription URL and category."""
+
+    if user_feed_subscriptions_collection is None:
+        return None
+
+    try:
+        subscription_object_id = ObjectId(subscription_id)
+    except Exception:
+        return None
+
+    category_doc = await load_user_category(user_id, category_id)
+    if category_doc is None or category_doc.id is None:
+        return None
+
+    source_doc = await ensure_feed_source(normalized_url, source_title)
+
+    existing_subscription = await user_feed_subscriptions_collection.find_one(
+        {"_id": subscription_object_id, "user_id": user_id}
+    )
+    if existing_subscription is None:
+        return None
+
+    now = utc_now()
+    duplicate_subscription = await user_feed_subscriptions_collection.find_one(
+        {
+            "user_id": user_id,
+            "feed_id": source_doc["_id"],
+            "_id": {"$ne": subscription_object_id},
+        }
+    )
+
+    if duplicate_subscription is not None:
+        await user_feed_subscriptions_collection.update_one(
+            {"_id": duplicate_subscription["_id"]},
+            {
+                "$set": {
+                    "category_id": category_doc.id,
+                    "updated_at": now,
+                }
+            },
+        )
+        await user_feed_subscriptions_collection.delete_one(
+            {"_id": subscription_object_id, "user_id": user_id}
+        )
+
+        updated_subscription = await user_feed_subscriptions_collection.find_one(
+            {"_id": duplicate_subscription["_id"], "user_id": user_id}
+        )
+    else:
+        await user_feed_subscriptions_collection.update_one(
+            {"_id": subscription_object_id, "user_id": user_id},
+            {
+                "$set": {
+                    "feed_id": source_doc["_id"],
+                    "category_id": category_doc.id,
+                    "updated_at": now,
+                }
+            },
+        )
+        updated_subscription = await user_feed_subscriptions_collection.find_one(
+            {"_id": subscription_object_id, "user_id": user_id}
+        )
+
+    source_id = source_doc.get("_id")
+    if isinstance(source_id, ObjectId):
+        await request_immediate_feed_refresh({source_id})
+
+    return dict(updated_subscription) if updated_subscription is not None else None
+
+
+async def delete_subscription(user_id: str, subscription_id: str) -> bool:
+    """Delete a user-owned subscription."""
+
+    if user_feed_subscriptions_collection is None:
+        return False
+
+    try:
+        subscription_object_id = ObjectId(subscription_id)
+    except Exception:
+        return False
+
+    result = await user_feed_subscriptions_collection.delete_one(
+        {"_id": subscription_object_id, "user_id": user_id}
+    )
+    return result.deleted_count > 0
+
+
 async def list_category_documents(user_id: str) -> list[FeedCategoryDocument]:
     """Return all categories for a user sorted by configured order."""
 
@@ -499,7 +616,6 @@ async def count_recently_read(
     article_cursor = feed_articles_collection.find(
         {
             "_id": {"$in": article_ids},
-            "is_deleted": False,
         },
         {"feed_id": 1},
     )
@@ -550,7 +666,7 @@ async def get_article_list(
             user_id=user_id,
             categories_by_id=categories_by_id,
             feed_to_category=feed_to_category,
-            limit=limit,
+            limit=None,
         )
         return FeedArticleListResponse(
             category="recently-read",
@@ -721,7 +837,7 @@ async def list_recently_read_cards(
     user_id: str,
     categories_by_id: dict[ObjectId, FeedCategoryDocument],
     feed_to_category: dict[ObjectId, ObjectId],
-    limit: int,
+    limit: int | None,
 ) -> list[FeedArticleCard]:
     """Return recently-read article cards from the last seven days."""
 
@@ -735,18 +851,17 @@ async def list_recently_read_cards(
     }
 
     threshold = utc_now() - timedelta(days=7)
-    state_cursor = (
-        user_article_states_collection.find(
-            {
-                "user_id": user_id,
-                "is_read": True,
-                "read_at": {"$gte": threshold},
-            },
-            {"article_id": 1, "read_at": 1},
-        )
-        .sort("read_at", DESCENDING)
-        .limit(max(limit * 2, limit))
-    )
+    state_cursor = user_article_states_collection.find(
+        {
+            "user_id": user_id,
+            "is_read": True,
+            "read_at": {"$gte": threshold},
+        },
+        {"article_id": 1, "read_at": 1},
+    ).sort("read_at", DESCENDING)
+
+    if isinstance(limit, int) and limit > 0:
+        state_cursor = state_cursor.limit(max(limit * 2, limit))
 
     state_rows = [doc async for doc in state_cursor]
     if len(state_rows) == 0:
@@ -768,7 +883,6 @@ async def list_recently_read_cards(
     article_cursor = feed_articles_collection.find(
         {
             "_id": {"$in": article_ids},
-            "is_deleted": False,
         }
     )
     article_map = {doc["_id"]: doc async for doc in article_cursor if "_id" in doc}
@@ -825,12 +939,16 @@ async def list_recently_read_cards(
             )
         )
 
-        if len(ordered_cards) >= limit:
+        if isinstance(limit, int) and limit > 0 and len(ordered_cards) >= limit:
             break
 
     ordered_cards.sort(
         key=lambda card: card.read_at or datetime.fromtimestamp(0, tz=UTC), reverse=True
     )
+
+    if isinstance(limit, int) and limit > 0:
+        return ordered_cards[:limit]
+
     return ordered_cards
 
 

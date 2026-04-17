@@ -3,14 +3,14 @@
 {% block title %}<title>{{ title }}</title>{% endblock %}
 
 {% block head %}
-<link rel="stylesheet" href="/css/feeds/feeds.css?v1.0.2">
+<link rel="stylesheet" href="/css/feeds/feeds.css?v1.0.3">
 {% endblock %}
 
 {% block scripts %}
 {% if feed_page_mode == "reader" %}
-<script defer src="/js/feeds/reader.js?v1.0.2"></script>
+<script defer src="/js/feeds/reader.js?v1.0.3"></script>
 {% elif feed_page_mode == "settings" %}
-<script defer src="/js/feeds/settings.js?v1.0.2"></script>
+<script defer src="/js/feeds/settings.js?v1.0.3"></script>
 {% endif %}
 {% endblock %}
 
@@ -35,7 +35,6 @@
   data-category-shortcut="recently-read"
 >
   <span class="feed-category-name">Recently Read</span>
-  <span class="feed-category-count">({{ recently_read_count }})</span>
 </a>
 {% for category_item in categories %}
 <a

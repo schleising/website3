@@ -85,6 +85,13 @@
 70. In unread views, articles marked as read shall remain visible in the current session as greyed cards and shall be removed only after the user navigates away and returns to the category
 71. The system shall not auto-create a default General category at page load; categories shall be created only through explicit user actions (add/import/category assignment)
 72. Updating category colours on the settings page shall not trigger a full page reload or scroll-position jump
+73. The feed reader shall not render dedicated "Unread Articles" or card-style empty-state banners; when no articles are present it shall show subtle inline hint text within the content area
+74. The Recently Read right-menu entry shall not display an unread-count badge
+75. Recently Read shall include all items read within the last seven days (subject to active category mute rules)
+76. When a category view first loads, no article shall be pre-selected; pressing `j` shall select the first visible article
+77. Category colour changes in settings shall live-update category chips in the current subscriptions list
+78. The settings page shall allow editing an existing subscription to change both feed URL and assigned category
+79. The settings page shall allow deleting an existing subscription
 
 ## Design
 
@@ -358,12 +365,14 @@ sequenceDiagram
 	1. `GET /feeds/api/articles`: list articles with filters.
 	2. `GET /feeds/api/categories`: list categories with unread counts and mute state.
 	3. `POST /feeds/api/subscriptions`: add subscription with category assignment.
-	4. `POST /feeds/api/articles/{article_id}/read`: mark article as read.
-	5. `POST /feeds/api/categories/{category_id}/mute`: mute category.
-	6. `POST /feeds/api/categories/{category_id}/unmute`: unmute category.
-	7. `POST /feeds/api/categories/{category_id}/color`: update category color preference.
-	8. `POST /feeds/api/opml/import`: import subscriptions/categories from OPML.
-	9. `GET /feeds/api/opml/export`: export subscriptions/categories as OPML.
+	4. `POST /feeds/api/subscriptions/{subscription_id}`: update subscription URL/category.
+	5. `DELETE /feeds/api/subscriptions/{subscription_id}`: delete subscription.
+	6. `POST /feeds/api/articles/{article_id}/read`: mark article as read.
+	7. `POST /feeds/api/categories/{category_id}/mute`: mute category.
+	8. `POST /feeds/api/categories/{category_id}/unmute`: unmute category.
+	9. `POST /feeds/api/categories/{category_id}/color`: update category color preference.
+	10. `POST /feeds/api/opml/import`: import subscriptions/categories from OPML.
+	11. `GET /feeds/api/opml/export`: export subscriptions/categories as OPML.
 
 #### 5.2 API Query Semantics
 
@@ -385,6 +394,7 @@ sequenceDiagram
 
 1. Request models:
 	1. Add subscription payload.
+	2. Update subscription payload.
 	2. Mark read payload.
 	3. Category mute/unmute payload.
 	4. Category color update payload.
@@ -395,6 +405,7 @@ sequenceDiagram
 	3. Standard operation result model.
 	4. Category metadata model with mute state and color.
 	5. OPML import summary model (created feeds/categories, skipped duplicates, errors).
+	6. Subscription update and delete response models.
 3. Validation rules:
 	1. Feed URL must be `http/https`, normalized, length-limited.
 	2. Category IDs and article IDs must be valid object IDs/UUIDs.
@@ -435,10 +446,11 @@ sequenceDiagram
 	1. full-width article cards.
 	2. oldest unread at top.
 	3. when an unread article is marked read, it remains in the current session view with greyed styling.
+	4. no dedicated header or card-style empty-state banner; empty views show subtle inline hint text.
 3. Right sidebar:
 	1. `All Feeds` with unread total.
 	2. category list with unread count each.
-	3. `Recently Read` bucket (7-day window).
+	3. `Recently Read` bucket (7-day window, no unread-count badge).
 	4. muted categories visually indicated.
 	5. category color chips/markers consistent with feed cards.
 4. New unread articles include a subtle `New` badge and accent until they are marked read.
@@ -453,6 +465,7 @@ sequenceDiagram
 4. Category click:
 	1. apply category filter.
 	2. keep muted exclusion logic.
+5. Category loads begin with no selected card; the first `j` selects the first card.
 
 #### 6.4 Polling and UI Consistency
 
@@ -473,12 +486,14 @@ sequenceDiagram
 	3. Export OPML action (download current user subscriptions/categories).
 	4. Category mute/unmute controls.
 	5. Category color picker with reset-to-default option.
+	6. Editable subscription table for updating URL/category and deleting subscriptions.
 2. Import UX behavior:
 	1. Show import preview summary after successful parse.
 	2. Display created/updated/skipped counts and actionable error rows.
 	3. Refresh category counts and unread views after successful import.
 	4. Assign deterministic fallback colors to newly created categories when color is absent.
 3. Category colour updates apply in-place without full-page reloads to avoid scroll jumps.
+4. Subscription and category updates live-sync the relevant category chips in the settings subscription list and right menu.
 
 #### 6.6 Rendering and JavaScript Strategy
 
@@ -755,6 +770,13 @@ Test -> Requirement Matrix template:
 | 70 | Read items remain grey in-session until navigation reset | 6.2, 6.4 |
 | 71 | No automatic General category creation | 3.1, 6.5 |
 | 72 | Settings color changes do not reload/jump | 6.5 |
+| 73 | No dedicated unread header or card-style empty state | 6.2 |
+| 74 | Recently Read shows no unread-count badge | 6.2 |
+| 75 | Recently Read includes all reads from last 7 days | 5.2, 6.2 |
+| 76 | No preselected article on load; first j selects first item | 6.3 |
+| 77 | Settings color change live-updates subscription chips | 6.5 |
+| 78 | Settings can edit subscription URL/category | 5.1, 5.3, 6.5 |
+| 79 | Settings can delete subscriptions | 5.1, 5.3, 6.5 |
 
 ### 16. Traceability Table: Design -> Requirements
 
@@ -773,19 +795,19 @@ Test -> Requirement Matrix template:
 | 4.2 Feed Deduplication Strategy | 46, 56, 57 |
 | 4.3 Retention Guard Rules | 58, 59, 60 |
 | 4.4 Test Scenario Controls | 17, 22, 23 |
-| 5. FastAPI Design | 1, 2, 3, 4, 5, 35, 61, 62, 63, 64, 65, 66 |
-| 5.1 Route Structure | 1, 28, 32, 33, 40, 43, 44, 45, 62, 63, 64, 65, 66 |
-| 5.2 API Query Semantics | 29, 36, 37, 38, 39, 41, 51, 63, 66, 69 |
-| 5.3 Pydantic Models | 2, 3, 4, 5, 35, 44, 51, 64, 65 |
+| 5. FastAPI Design | 1, 2, 3, 4, 5, 35, 61, 62, 63, 64, 65, 66, 78, 79 |
+| 5.1 Route Structure | 1, 28, 32, 33, 40, 43, 44, 45, 62, 63, 64, 65, 66, 78, 79 |
+| 5.2 API Query Semantics | 29, 36, 37, 38, 39, 41, 51, 63, 66, 69, 75 |
+| 5.3 Pydantic Models | 2, 3, 4, 5, 35, 44, 51, 64, 65, 78, 79 |
 | 5.4 OPML Import and Export Contract | 44, 45 |
-| 6. Frontend UX and Interaction Design | 6, 7, 10, 26, 27, 29, 30, 31, 32, 33, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 47, 48, 49, 50, 51, 62, 67, 68, 70, 72 |
+| 6. Frontend UX and Interaction Design | 6, 7, 10, 26, 27, 29, 30, 31, 32, 33, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 47, 48, 49, 50, 51, 62, 67, 68, 70, 72, 73, 74, 75, 76, 77, 78, 79 |
 | 6.1 Navigation and Access | 26, 27, 28 |
-| 6.2 Main Reader Layout | 6, 7, 29, 36, 38, 39, 41, 50, 51, 69, 70 |
-| 6.3 Keyboard and Interaction Rules | 31, 32, 37, 62, 67 |
+| 6.2 Main Reader Layout | 6, 7, 29, 36, 38, 39, 41, 50, 51, 69, 70, 73, 74, 75 |
+| 6.3 Keyboard and Interaction Rules | 31, 32, 37, 62, 67, 76 |
 | 6.4 Polling and UI Consistency | 8, 9, 30, 47, 48, 49, 50, 67, 68, 70 |
-| 6.5 Settings and OPML Workflows | 33, 40, 42, 43, 44, 45, 46, 47, 51, 71, 72 |
+| 6.5 Settings and OPML Workflows | 33, 40, 42, 43, 44, 45, 46, 47, 51, 71, 72, 77, 78, 79 |
 | 6.6 Rendering and JavaScript Strategy | 10, 11 |
-| 7. Security and Data Integrity | 1, 2, 3, 4, 5, 10, 21, 27, 35, 65, 66 |
+| 7. Security and Data Integrity | 1, 2, 3, 4, 5, 10, 21, 27, 35, 65, 66, 78, 79 |
 | 8. Retention and Data Lifecycle | 58, 59, 60 |
 | 9. Error Handling and Resilience | 8, 9, 17, 64, 65 |
 | 10. Monitoring and Auditability | 15, 17, 20, 46, 57, 60 |

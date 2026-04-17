@@ -13,19 +13,9 @@
   data-mark-read-endpoint-template="/feeds/api/articles/__ARTICLE_ID__/read/"
   data-csrf-token="{{ request.state.csrf_token|default('') }}"
 >
-  <header class="feeds-reader-header site-card">
-    <div>
-      <h4 class="feeds-reader-title">Unread Articles</h4>
-      <p class="feeds-reader-subtitle">Use j/k to move, Enter or Space to open and mark as read.</p>
-    </div>
-  </header>
-
   <div id="feeds-article-list" class="feeds-article-list">
     {% if articles|length == 0 %}
-    <article class="feed-empty-state site-card" id="feeds-empty-state">
-      <h5>No articles available</h5>
-      <p>Add subscriptions in Settings or try a different filter.</p>
-    </article>
+    <p class="feeds-empty-hint" id="feeds-empty-hint">No unread articles in this view.</p>
     {% else %}
     {% for article in articles %}
     <article

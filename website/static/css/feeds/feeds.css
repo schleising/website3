@@ -30,6 +30,15 @@
     gap: 0.9rem;
 }
 
+.feeds-empty-hint {
+    margin: 0;
+    padding: 1.2rem 0.85rem;
+    border-radius: 0.65rem;
+    background: color-mix(in srgb, var(--surface-soft), #ffffff 18%);
+    color: color-mix(in srgb, var(--text-soft), #6c7585 25%);
+    font-size: 0.95rem;
+}
+
 .feed-empty-state {
     padding: 1.1rem;
 }
@@ -301,6 +310,26 @@
 .feed-subscription-table td a:hover,
 .feed-subscription-table td a:focus-visible {
     text-decoration: underline;
+}
+
+.feed-subscription-url-input,
+.feed-subscription-category-select {
+    width: 100%;
+    min-height: 2.1rem;
+    border: 0.0625rem solid var(--line);
+    border-radius: 0.5rem;
+    padding: 0.35rem 0.5rem;
+    background: #ffffff;
+}
+
+.feed-subscription-category-select {
+    margin-top: 0.4rem;
+}
+
+.feed-subscription-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
 }
 
 .feed-settings-status {

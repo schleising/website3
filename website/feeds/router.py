@@ -10,6 +10,7 @@ from fastapi.templating import Jinja2Templates
 from ..account.csrf import validate_csrf
 from .feed_db import (
     create_or_update_subscription,
+    delete_subscription,
     export_opml,
     get_article_list,
     get_categories_with_counts,
@@ -20,6 +21,7 @@ from .feed_db import (
     normalize_color_hex,
     set_category_color,
     set_category_muted,
+    update_subscription_details,
     validate_feed_url,
 )
 from .models import (
@@ -31,6 +33,9 @@ from .models import (
     FeedOpmlImportResult,
     FeedSubscriptionCreateRequest,
     FeedSubscriptionCreateResponse,
+    FeedSubscriptionDeleteResponse,
+    FeedSubscriptionUpdateRequest,
+    FeedSubscriptionUpdateResponse,
 )
 
 TEMPLATES = Jinja2Templates("/app/templates")
@@ -196,6 +201,81 @@ async def create_subscription(
         source_title=source_title,
         created_subscription=created_subscription,
     )
+
+
+@feeds_router.post(
+    "/api/subscriptions/{subscription_id}",
+    response_model=FeedSubscriptionUpdateResponse,
+)
+@feeds_router.post(
+    "/api/subscriptions/{subscription_id}/",
+    response_model=FeedSubscriptionUpdateResponse,
+)
+async def update_subscription(
+    request: Request,
+    subscription_id: str,
+    payload: FeedSubscriptionUpdateRequest,
+    _: None = Depends(validate_csrf),
+) -> FeedSubscriptionUpdateResponse:
+    """Update subscription URL and category for the authenticated user."""
+
+    username = _require_logged_in_user(request)
+
+    if payload.category_id.strip() == "":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Category is required.",
+        )
+
+    normalized_url, source_title = await validate_feed_url(payload.feed_url)
+    updated_doc = await update_subscription_details(
+        user_id=username,
+        subscription_id=subscription_id,
+        normalized_url=normalized_url,
+        source_title=source_title,
+        category_id=payload.category_id,
+    )
+
+    if updated_doc is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Subscription or category not found.",
+        )
+
+    return FeedSubscriptionUpdateResponse(
+        subscription_id=str(updated_doc["_id"]),
+        feed_id=str(updated_doc["feed_id"]),
+        category_id=str(updated_doc["category_id"]),
+        normalized_url=normalized_url,
+        source_title=source_title,
+    )
+
+
+@feeds_router.delete(
+    "/api/subscriptions/{subscription_id}",
+    response_model=FeedSubscriptionDeleteResponse,
+)
+@feeds_router.delete(
+    "/api/subscriptions/{subscription_id}/",
+    response_model=FeedSubscriptionDeleteResponse,
+)
+async def delete_subscription_route(
+    request: Request,
+    subscription_id: str,
+    _: None = Depends(validate_csrf),
+) -> FeedSubscriptionDeleteResponse:
+    """Delete a subscription for the authenticated user."""
+
+    username = _require_logged_in_user(request)
+    deleted = await delete_subscription(username, subscription_id)
+
+    if not deleted:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Subscription not found.",
+        )
+
+    return FeedSubscriptionDeleteResponse(subscription_id=subscription_id, deleted=True)
 
 
 @feeds_router.post("/api/articles/{article_id}/read")

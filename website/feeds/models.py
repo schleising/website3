@@ -152,6 +152,30 @@ class FeedSubscriptionCreateResponse(BaseModel):
     created_subscription: bool
 
 
+class FeedSubscriptionUpdateRequest(BaseModel):
+    """Subscription update payload for URL/category changes."""
+
+    feed_url: str
+    category_id: str
+
+
+class FeedSubscriptionUpdateResponse(BaseModel):
+    """Subscription update response payload."""
+
+    subscription_id: str
+    feed_id: str
+    category_id: str
+    normalized_url: str
+    source_title: str
+
+
+class FeedSubscriptionDeleteResponse(BaseModel):
+    """Subscription deletion response payload."""
+
+    subscription_id: str
+    deleted: bool
+
+
 class FeedCategoryOperationResponse(BaseModel):
     """Generic response for category preference updates."""
 

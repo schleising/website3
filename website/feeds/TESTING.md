@@ -114,6 +114,7 @@ docker compose -f docker-compose-test.yaml logs -f mongodb
 | IT-FEEDS-005 | Manual | 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 61 | Test environment lifecycle, accessibility, and architecture evidence.
 | IT-FEEDS-006 | Manual | 33, 34, 64 | Subscription persistence and per-user ownership isolation.
 | IT-FEEDS-007 | Manual | 67, 68, 69, 70, 72 | Sidebar highlight/count immediacy, read-card in-session retention, recently-read stability, and settings no-jump behavior.
+| IT-FEEDS-008 | Manual | 73, 74, 75, 76, 77, 78, 79 | Reader empty-state/selection behavior, recently-read presentation/completeness, live subscription chip updates, and subscription edit/delete workflows.
 
 ### Requirement to Test Matrix
 
@@ -176,3 +177,10 @@ docker compose -f docker-compose-test.yaml logs -f mongodb
 | 70 | IT-FEEDS-007 |
 | 71 | UT-FEEDS-005 |
 | 72 | IT-FEEDS-007 |
+| 73 | IT-FEEDS-008 |
+| 74 | IT-FEEDS-008 |
+| 75 | IT-FEEDS-008 |
+| 76 | IT-FEEDS-008 |
+| 77 | IT-FEEDS-008 |
+| 78 | IT-FEEDS-008 |
+| 79 | IT-FEEDS-008 |

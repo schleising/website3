@@ -38,6 +38,10 @@
     const newUnreadStorageKey = "feeds-reader-new-unread-v1";
     /** @type {number} */
     const maxStoredArticleIds = 2500;
+    /** @type {string} */
+    const emptyHintMessage = selectedCategory === "recently-read"
+        ? "No recently read articles in the last 7 days."
+        : "No unread articles in this view.";
 
     /** @type {number} */
     let selectedIndex = -1;
@@ -133,6 +137,26 @@
      */
     function getCards() {
         return Array.from(articleList.querySelectorAll(".feed-article-card"));
+    }
+
+    /**
+     * Render subtle empty-state hint text inside the article list container.
+     */
+    function renderInlineEmptyHint() {
+        articleList.innerHTML = "";
+        const hint = document.createElement("p");
+        hint.className = "feeds-empty-hint";
+        hint.id = "feeds-empty-hint";
+        hint.textContent = emptyHintMessage;
+        articleList.appendChild(hint);
+    }
+
+    /**
+     * Clear selected styling from all cards and reset keyboard pointer.
+     */
+    function clearCardSelection() {
+        selectedIndex = -1;
+        getCards().forEach(card => card.classList.remove("is-selected"));
     }
 
     /**
@@ -498,12 +522,8 @@
         persistArticleIdState();
 
         if (finalIds.length === 0) {
-            articleList.innerHTML = "";
-            const emptyState = document.createElement("article");
-            emptyState.className = "feed-empty-state site-card";
-            emptyState.innerHTML = "<h5>No articles available</h5><p>Add subscriptions in Settings or try a different filter.</p>";
-            articleList.appendChild(emptyState);
-            selectedIndex = -1;
+            renderInlineEmptyHint();
+            clearCardSelection();
             return;
         }
 
@@ -518,8 +538,12 @@
             }
         }
 
-        const fallbackIndex = selectedIndex >= 0 ? Math.min(selectedIndex, finalIds.length - 1) : 0;
-        setSelectedIndex(fallbackIndex, { scrollIntoView: false });
+        if (selectedIndex >= 0) {
+            const fallbackIndex = Math.min(selectedIndex, finalIds.length - 1);
+            setSelectedIndex(fallbackIndex, { scrollIntoView: false });
+        } else {
+            clearCardSelection();
+        }
         window.scrollTo({ top: previousScrollY, behavior: "auto" });
     }
 
@@ -596,10 +620,7 @@
             }
         }
         if (recentlyReadLink) {
-            const recentlyReadCountNode = recentlyReadLink.querySelector(".feed-category-count");
-            if (recentlyReadCountNode) {
-                recentlyReadCountNode.textContent = `(${Number(payload.recently_read_count || 0)})`;
-            }
+            // Recently Read intentionally has no unread-count badge.
         }
 
         const categories = Array.isArray(payload.categories) ? payload.categories : [];
@@ -701,8 +722,11 @@
         }
 
         if (event.key === "Enter" || event.key === " ") {
+            if (selectedIndex < 0) {
+                return;
+            }
             event.preventDefault();
-            const card = cards[selectedIndex >= 0 ? selectedIndex : 0];
+            const card = cards[selectedIndex];
             openAndMarkCard(card);
         }
     }
@@ -755,9 +779,7 @@
     initializeArticleBadgeStateFromSsr();
     syncSidebarSelection();
 
-    if (getCards().length > 0) {
-        setSelectedIndex(0, { scrollIntoView: false });
-    }
+    clearCardSelection();
 
     window.setInterval(refreshFeedData, 10000);
 })();
