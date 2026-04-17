@@ -56,6 +56,23 @@
     border-left: 0.2rem solid color-mix(in srgb, var(--brand-strong), #ffffff 35%);
 }
 
+.feed-article-card.is-read-article {
+    background: color-mix(in srgb, var(--surface-soft), #9aa7bb 10%);
+    border-left: 0.2rem solid color-mix(in srgb, #9aa7bb, #ffffff 55%);
+}
+
+.feed-article-card.is-read-article .feed-article-title a,
+.feed-article-card.is-read-article .feed-source-title,
+.feed-article-card.is-read-article .feed-article-author,
+.feed-article-card.is-read-article .feed-article-summary,
+.feed-article-card.is-read-article .feed-article-meta-right {
+    color: color-mix(in srgb, var(--text-soft), #7f8794 38%);
+}
+
+.feed-article-card.is-read-article .feed-mark-read-button {
+    opacity: 0.72;
+}
+
 .feed-article-card.is-selected,
 .feed-article-card:focus-visible {
     outline-color: rgba(77, 123, 177, 0.66);

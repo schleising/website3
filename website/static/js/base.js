@@ -40,6 +40,7 @@ function highlightCurrentSidebarLinks() {
 
     const currentUrl = new URL(window.location.href);
     const currentPath = normalisePath(currentUrl.pathname);
+    const currentSearch = currentUrl.searchParams.toString();
 
     for (const container of sidebarContainers) {
         const links = Array.from(container.querySelectorAll("a.sub-level-nav[href]"));
@@ -66,6 +67,7 @@ function highlightCurrentSidebarLinks() {
             }
 
             const linkPath = normalisePath(parsedHref.pathname);
+            const linkSearch = parsedHref.searchParams.toString();
             const navPrefixAttr = link.getAttribute("data-nav-prefix");
             const navPrefixPath = navPrefixAttr ? normalisePath(navPrefixAttr) : null;
             const effectivePath = navPrefixPath || linkPath;
@@ -73,6 +75,20 @@ function highlightCurrentSidebarLinks() {
             let score = -1;
             if (effectivePath === currentPath) {
                 score = 10000 + effectivePath.length;
+
+                if (linkSearch === currentSearch) {
+                    score += 10000;
+                } else if (linkSearch === "") {
+                    score += 1000;
+                } else {
+                    const isSubsetMatch = Array.from(parsedHref.searchParams.entries()).every(
+                        ([key, value]) => currentUrl.searchParams.get(key) === value
+                    );
+
+                    if (isSubsetMatch) {
+                        score += 5000 + parsedHref.searchParams.size;
+                    }
+                }
             } else if (effectivePath !== "/" && currentPath.startsWith(`${effectivePath}/`)) {
                 score = 5000 + effectivePath.length;
             } else if (effectivePath === "/" && currentPath === "/") {

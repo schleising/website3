@@ -28,8 +28,6 @@ from .models import (
     FeedOpmlImportResult,
 )
 
-DEFAULT_CATEGORY_NAME = feed_utils.DEFAULT_CATEGORY_NAME
-
 
 def utc_now() -> datetime:
     """Return the current UTC timestamp with timezone information."""
@@ -133,7 +131,9 @@ async def ensure_category(user_id: str, category_name: str) -> tuple[FeedCategor
     if feed_categories_collection is None:
         raise RuntimeError("Feed categories collection is not available.")
 
-    trimmed_name = category_name.strip() or DEFAULT_CATEGORY_NAME
+    trimmed_name = category_name.strip()
+    if trimmed_name == "":
+        raise ValueError("Category name is required.")
 
     existing_doc = await feed_categories_collection.find_one(
         {"user_id": user_id, "name": trimmed_name}
@@ -846,12 +846,25 @@ async def mark_article_read(user_id: str, article_id: str) -> bool:
         return False
 
     now = utc_now()
+    existing_state = await user_article_states_collection.find_one(
+        {"user_id": user_id, "article_id": article_object_id},
+        {"is_read": 1, "read_at": 1},
+    )
+
+    existing_read_at = existing_state.get("read_at") if isinstance(existing_state, dict) else None
+    preserve_existing_read_at = (
+        isinstance(existing_state, dict)
+        and bool(existing_state.get("is_read"))
+        and isinstance(existing_read_at, datetime)
+    )
+    read_at_value = existing_read_at if preserve_existing_read_at else now
+
     await user_article_states_collection.update_one(
         {"user_id": user_id, "article_id": article_object_id},
         {
             "$set": {
                 "is_read": True,
-                "read_at": now,
+                "read_at": read_at_value,
                 "updated_at": now,
             },
             "$setOnInsert": {
@@ -947,7 +960,7 @@ async def import_opml(
     created_category_names: set[str] = set()
 
     for feed_url, title, category_name in entries:
-        category_to_use = category_name.strip() or options.default_category_name.strip() or DEFAULT_CATEGORY_NAME
+        category_to_use = category_name.strip() or options.default_category_name.strip() or "Imported"
 
         try:
             normalized_url = normalize_feed_url(feed_url)
@@ -1082,14 +1095,6 @@ async def get_feed_settings_context(user_id: str) -> dict[str, Any]:
         "all_unread_count": category_payload.all_unread_count,
         "recently_read_count": category_payload.recently_read_count,
     }
-
-
-async def ensure_default_category(user_id: str) -> None:
-    """Ensure each user has at least one category for feed assignment."""
-
-    categories = await list_category_documents(user_id)
-    if len(categories) == 0:
-        await ensure_category(user_id, DEFAULT_CATEGORY_NAME)
 
 
 async def log_feed_operation_error(operation_name: str, exc: Exception) -> None:

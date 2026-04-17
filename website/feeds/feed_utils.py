@@ -4,8 +4,6 @@ import hashlib
 from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 import xml.etree.ElementTree as ET
 
-DEFAULT_CATEGORY_NAME = "General"
-
 
 def normalize_feed_url(feed_url: str) -> str:
     """Normalize feed URL for deduplication and storage."""
@@ -88,7 +86,7 @@ def parse_opml_entries(opml_bytes: bytes) -> tuple[list[tuple[str, str, str]], l
         text = (node.attrib.get("text") or node.attrib.get("title") or "").strip()
 
         if xml_url != "":
-            category_name = current_category or DEFAULT_CATEGORY_NAME
+            category_name = current_category or ""
             title = text or xml_url
             entries.append((xml_url, title, category_name))
 

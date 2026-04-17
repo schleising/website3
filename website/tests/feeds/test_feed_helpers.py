@@ -75,7 +75,7 @@ class FeedHelperTests(unittest.TestCase):
         self.assertEqual(errors, [])
         self.assertEqual(len(entries), 2)
         self.assertEqual(entries[0], ("https://example.com/feed.xml", "Example Feed", "Tech"))
-        self.assertEqual(entries[1], ("https://news.example.com/rss", "News Feed", "General"))
+        self.assertEqual(entries[1], ("https://news.example.com/rss", "News Feed", ""))
 
     def test_parse_opml_entries_raises_on_invalid_xml(self) -> None:
         with self.assertRaises(ValueError):

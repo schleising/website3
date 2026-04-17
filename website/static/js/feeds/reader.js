@@ -17,7 +17,10 @@
     }
 
     /** @type {string} */
-    const selectedCategory = root.dataset.selectedCategory || "all";
+    const categoryFromUrl = new URLSearchParams(window.location.search).get("category");
+    const selectedCategory = (categoryFromUrl && categoryFromUrl.trim() !== ""
+        ? categoryFromUrl
+        : (root.dataset.selectedCategory || "all"));
     /** @type {string} */
     const selectedStatus = root.dataset.selectedStatus || "unread";
     /** @type {string} */
@@ -39,8 +42,14 @@
     /** @type {number} */
     let selectedIndex = -1;
 
+    /** @type {boolean} */
+    const retainSessionReadCards = selectedStatus === "unread";
+
     /** @type {Set<string>} */
     const pendingReadIds = new Set();
+
+    /** @type {Set<string>} */
+    const sessionReadArticleIds = new Set();
 
     /** @type {Set<string>} */
     const knownArticleIds = loadIdSet(knownArticleStorageKey);
@@ -134,6 +143,33 @@
      */
     function getCardArticleId(card) {
         return String(card.dataset.articleId || "").trim();
+    }
+
+    /**
+     * Return whether a card is already marked read in current UI state.
+     *
+     * @param {HTMLElement} card
+     * @returns {boolean}
+     */
+    function isCardMarkedRead(card) {
+        return card.dataset.isRead === "true" || card.classList.contains("is-read-article");
+    }
+
+    /**
+     * Apply read styling and action state for a card.
+     *
+     * @param {HTMLElement} card
+     * @param {boolean} isRead
+     */
+    function setCardReadAppearance(card, isRead) {
+        card.dataset.isRead = isRead ? "true" : "false";
+        card.classList.toggle("is-read-article", isRead);
+
+        const markReadButton = card.querySelector(".feed-mark-read-button");
+        if (markReadButton instanceof HTMLButtonElement) {
+            markReadButton.disabled = isRead;
+            markReadButton.textContent = isRead ? "Read" : "Mark Read";
+        }
     }
 
     /**
@@ -242,14 +278,14 @@
     }
 
     /**
-     * Mark a card as read through the API and remove it from DOM.
+    * Mark a card as read through the API and update card/sidebar state.
      *
      * @param {HTMLElement} card
      * @returns {Promise<void>}
      */
     async function markCardRead(card) {
         const articleId = card.dataset.articleId || "";
-        if (articleId === "") {
+        if (articleId === "" || isCardMarkedRead(card)) {
             return;
         }
 
@@ -271,26 +307,13 @@
                 return;
             }
 
+            sessionReadArticleIds.add(articleId);
             newUnreadArticleIds.delete(articleId);
             persistArticleIdState();
 
-            if (selectedStatus === "unread") {
-                card.remove();
-
-                const cards = getCards();
-                if (cards.length === 0) {
-                    selectedIndex = -1;
-                    return;
-                }
-
-                setSelectedIndex(
-                    Math.min(selectedIndex, cards.length - 1),
-                    { scrollIntoView: false }
-                );
-                return;
-            }
-
+            setCardReadAppearance(card, true);
             setCardNewBadge(card, false);
+            await refreshSidebarCounts();
         } finally {
             pendingReadIds.delete(articleId);
         }
@@ -307,6 +330,7 @@
         card.className = "feed-article-card site-card";
         card.dataset.articleId = String(article.article_id || "");
         card.dataset.articleLink = String(article.link || "");
+        card.dataset.isRead = Boolean(article.is_read) ? "true" : "false";
         card.tabIndex = 0;
 
         const header = document.createElement("header");
@@ -386,6 +410,8 @@
         actions.appendChild(openButton);
         card.appendChild(actions);
 
+        setCardReadAppearance(card, Boolean(article.is_read));
+
         return card;
     }
 
@@ -424,18 +450,11 @@
             incomingIdsInOrder.push(articleId);
         });
 
-        if (incomingIdsInOrder.length === 0) {
-            articleList.innerHTML = "";
-            const emptyState = document.createElement("article");
-            emptyState.className = "feed-empty-state site-card";
-            emptyState.innerHTML = "<h5>No articles available</h5><p>Add subscriptions in Settings or try a different filter.</p>";
-            articleList.appendChild(emptyState);
-            selectedIndex = -1;
-            return;
-        }
-
         const finalIds = previousIdsInOrder
-            .filter(articleId => incomingById.has(articleId))
+            .filter(articleId => (
+                incomingById.has(articleId)
+                || (retainSessionReadCards && sessionReadArticleIds.has(articleId))
+            ))
             .concat(incomingIdsInOrder.filter(articleId => !previousCardMap.has(articleId)));
 
         incomingIdsInOrder.forEach(articleId => {
@@ -460,23 +479,35 @@
 
         finalIds.forEach(articleId => {
             const article = incomingById.get(articleId);
-            if (!article) {
+            const existingCard = previousCardMap.get(articleId);
+            const card = existingCard || (article ? renderArticleCard(article) : null);
+            if (!(card instanceof HTMLElement)) {
                 return;
             }
 
-            const existingCard = previousCardMap.get(articleId);
-            const card = existingCard || renderArticleCard(article);
-            const isUnread = !Boolean(article.is_read);
-            setCardNewBadge(card, isUnread && newUnreadArticleIds.has(articleId));
+            const isRead = sessionReadArticleIds.has(articleId) || Boolean(article && article.is_read);
+            if (isRead) {
+                newUnreadArticleIds.delete(articleId);
+            }
+
+            setCardReadAppearance(card, isRead);
+            setCardNewBadge(card, !isRead && newUnreadArticleIds.has(articleId));
             fragment.appendChild(card);
         });
 
-        articleList.replaceChildren(fragment);
+        persistArticleIdState();
 
         if (finalIds.length === 0) {
+            articleList.innerHTML = "";
+            const emptyState = document.createElement("article");
+            emptyState.className = "feed-empty-state site-card";
+            emptyState.innerHTML = "<h5>No articles available</h5><p>Add subscriptions in Settings or try a different filter.</p>";
+            articleList.appendChild(emptyState);
             selectedIndex = -1;
             return;
         }
+
+        articleList.replaceChildren(fragment);
 
         if (previousSelectedId !== "") {
             const selectedIdIndex = finalIds.indexOf(previousSelectedId);
@@ -503,15 +534,50 @@
                 return;
             }
 
-            if (selectedStatus === "unread" && !knownArticleIds.has(articleId) && hadKnownArticleHistory) {
+            const isRead = isCardMarkedRead(card);
+
+            if (!isRead && selectedStatus === "unread" && !knownArticleIds.has(articleId) && hadKnownArticleHistory) {
                 newUnreadArticleIds.add(articleId);
             }
 
+            if (isRead) {
+                newUnreadArticleIds.delete(articleId);
+            }
+
             knownArticleIds.add(articleId);
-            setCardNewBadge(card, newUnreadArticleIds.has(articleId));
+            setCardReadAppearance(card, isRead);
+            setCardNewBadge(card, !isRead && newUnreadArticleIds.has(articleId));
         });
 
         persistArticleIdState();
+    }
+
+    /**
+     * Ensure the currently active sidebar category link remains highlighted.
+     */
+    function syncSidebarSelection() {
+        const activeCategory = selectedCategory;
+        const sidebarLinks = document.querySelectorAll(
+            ".right-sidebar .sub-level-nav[data-category-shortcut], .right-sidebar .feed-category-link[data-category-id]"
+        );
+
+        sidebarLinks.forEach(link => {
+            if (!(link instanceof HTMLElement)) {
+                return;
+            }
+
+            const shortcutId = String(link.dataset.categoryShortcut || "").trim();
+            const categoryId = String(link.dataset.categoryId || "").trim();
+            const linkCategory = shortcutId || categoryId;
+            const isCurrent = linkCategory !== "" && linkCategory === activeCategory;
+
+            link.classList.toggle("is-current", isCurrent);
+            if (isCurrent) {
+                link.setAttribute("aria-current", "page");
+            } else {
+                link.removeAttribute("aria-current");
+            }
+        });
     }
 
     /**
@@ -520,14 +586,20 @@
      * @param {{ all_unread_count?: number, recently_read_count?: number, categories?: Array<Record<string, any>> }} payload
      */
     function updateSidebarCounts(payload) {
-        const allLink = document.querySelector('a[href="/feeds/?category=all"]');
-        const recentlyReadLink = document.querySelector('a[href="/feeds/?category=recently-read"]');
+        const allLink = document.querySelector('.feed-category-shortcut[data-category-shortcut="all"]');
+        const recentlyReadLink = document.querySelector('.feed-category-shortcut[data-category-shortcut="recently-read"]');
 
         if (allLink) {
-            allLink.textContent = `All Feeds (${Number(payload.all_unread_count || 0)})`;
+            const allCountNode = allLink.querySelector(".feed-category-count");
+            if (allCountNode) {
+                allCountNode.textContent = `(${Number(payload.all_unread_count || 0)})`;
+            }
         }
         if (recentlyReadLink) {
-            recentlyReadLink.textContent = `Recently Read (${Number(payload.recently_read_count || 0)})`;
+            const recentlyReadCountNode = recentlyReadLink.querySelector(".feed-category-count");
+            if (recentlyReadCountNode) {
+                recentlyReadCountNode.textContent = `(${Number(payload.recently_read_count || 0)})`;
+            }
         }
 
         const categories = Array.isArray(payload.categories) ? payload.categories : [];
@@ -549,6 +621,27 @@
                 colorNode.style.backgroundColor = String(category.color_hex || "#1F6FEB");
             }
         });
+
+        syncSidebarSelection();
+    }
+
+    /**
+     * Refresh sidebar counts only.
+     *
+     * @returns {Promise<void>}
+     */
+    async function refreshSidebarCounts() {
+        try {
+            const response = await fetch(categoriesEndpoint, { method: "GET" });
+            if (!response.ok) {
+                return;
+            }
+
+            const payload = await response.json();
+            updateSidebarCounts(payload);
+        } catch (_error) {
+            // Keep existing sidebar data when refresh fails.
+        }
     }
 
     /**
@@ -660,6 +753,7 @@
 
     // Initialize card selection from SSR content and start polling.
     initializeArticleBadgeStateFromSsr();
+    syncSidebarSelection();
 
     if (getCards().length > 0) {
         setSelectedIndex(0, { scrollIntoView: false });

@@ -29,9 +29,10 @@
     {% else %}
     {% for article in articles %}
     <article
-      class="feed-article-card site-card"
+      class="feed-article-card site-card{% if article.is_read %} is-read-article{% endif %}"
       data-article-id="{{ article.article_id }}"
       data-article-link="{{ article.link }}"
+      data-is-read="{{ 'true' if article.is_read else 'false' }}"
       tabindex="0"
     >
       <header class="feed-article-card-header">
@@ -59,7 +60,13 @@
       {% endif %}
 
       <footer class="feed-article-actions">
-        <button type="button" class="btn btn-primary feed-mark-read-button">Mark Read</button>
+        <button
+          type="button"
+          class="btn btn-primary feed-mark-read-button"
+          {% if article.is_read %}disabled{% endif %}
+        >
+          {% if article.is_read %}Read{% else %}Mark Read{% endif %}
+        </button>
         <a href="{{ article.link }}" target="_blank" rel="noopener" class="btn btn-primary">Open</a>
       </footer>
     </article>

@@ -103,6 +103,28 @@
     }
 
     /**
+     * Update right-sidebar category color chip without reloading.
+     *
+     * @param {string} categoryId
+     * @param {string} colorHex
+     */
+    function updateSidebarCategoryColor(categoryId, colorHex) {
+        if (categoryId === "") {
+            return;
+        }
+
+        const link = document.querySelector(`.feed-category-link[data-category-id="${CSS.escape(categoryId)}"]`);
+        if (!(link instanceof HTMLElement)) {
+            return;
+        }
+
+        const colorChip = link.querySelector(".feed-category-color");
+        if (colorChip instanceof HTMLElement) {
+            colorChip.style.backgroundColor = colorHex;
+        }
+    }
+
+    /**
      * Handle subscription creation form submit.
      *
      * @param {SubmitEvent} event
@@ -249,9 +271,11 @@
         setStatus("Updating category color...");
 
         try {
-            await requestJson(endpoint, "POST", { color_hex: target.value });
+            const payload = await requestJson(endpoint, "POST", { color_hex: target.value });
+            const normalizedColor = String(payload.color_hex || target.value);
+            target.value = normalizedColor;
+            updateSidebarCategoryColor(categoryId, normalizedColor);
             setStatus("Category color updated.");
-            reloadPageSoon();
         } catch (error) {
             setStatus(error instanceof Error ? error.message : "Unable to update category color.", true);
         }

@@ -53,6 +53,7 @@ Current automated suite:
   - Category color validation.
   - Deterministic category color stability.
   - OPML parsing behavior and error handling.
+  - OPML entries without parent categories remain uncategorized (no implicit `General` category).
 - `backend/src/tests/feed_worker/test_refresh_policy.py`
   - Force-refresh flag scheduling behavior.
   - 5-minute baseline fetch cadence guard behavior.
@@ -105,12 +106,14 @@ docker compose -f docker-compose-test.yaml logs -f mongodb
 | UT-FEEDS-002 | Yes | 51 | Category color normalization validation.
 | UT-FEEDS-003 | Yes | 33, 64 | Feed URL normalization and validation for subscription flows.
 | UT-FEEDS-004 | Yes | 46, 55, 23 | Backend source refresh policy (forced refresh and 5-minute cadence).
+| UT-FEEDS-005 | Yes | 44, 71 | OPML parsing preserves blank category entries so import defaults are explicit.
 | IT-FEEDS-001 | Manual | 26, 27, 28, 35, 36, 37, 38, 39, 40, 41, 42, 43, 51 | Navigation/auth/sidebar/category/settings behavior across feed pages.
 | IT-FEEDS-002 | Manual | 29, 30, 31, 32, 47, 48, 49, 50, 62, 63, 65, 66 | Reader rendering, polling stability, keyboard, read-state and API behavior.
 | IT-FEEDS-003 | Manual | 46, 52, 53, 54, 55, 56, 57, 58, 59, 60 | Backend worker threading, immediate refresh trigger, dedupe, retention lifecycle.
 | IT-FEEDS-004 | Manual | 45 | OPML export payload and interoperability checks.
 | IT-FEEDS-005 | Manual | 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 61 | Test environment lifecycle, accessibility, and architecture evidence.
 | IT-FEEDS-006 | Manual | 33, 34, 64 | Subscription persistence and per-user ownership isolation.
+| IT-FEEDS-007 | Manual | 67, 68, 69, 70, 72 | Sidebar highlight/count immediacy, read-card in-session retention, recently-read stability, and settings no-jump behavior.
 
 ### Requirement to Test Matrix
 
@@ -167,3 +170,9 @@ docker compose -f docker-compose-test.yaml logs -f mongodb
 | 64 | UT-FEEDS-003, IT-FEEDS-006 |
 | 65 | IT-FEEDS-002 |
 | 66 | IT-FEEDS-002 |
+| 67 | IT-FEEDS-007 |
+| 68 | IT-FEEDS-007 |
+| 69 | IT-FEEDS-007 |
+| 70 | IT-FEEDS-007 |
+| 71 | UT-FEEDS-005 |
+| 72 | IT-FEEDS-007 |

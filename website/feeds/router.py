@@ -10,7 +10,6 @@ from fastapi.templating import Jinja2Templates
 from ..account.csrf import validate_csrf
 from .feed_db import (
     create_or_update_subscription,
-    ensure_default_category,
     export_opml,
     get_article_list,
     get_categories_with_counts,
@@ -88,8 +87,6 @@ async def feed_reader_page(
     if username is None:
         return _login_redirect_response("/feeds/")
 
-    await ensure_default_category(username)
-
     context = await get_feed_reader_context(username, category, status_filter)
 
     return TEMPLATES.TemplateResponse(
@@ -111,8 +108,6 @@ async def feed_settings_page(request: Request):
     username = _request_username(request)
     if username is None:
         return _login_redirect_response("/feeds/settings/")
-
-    await ensure_default_category(username)
 
     context = await get_feed_settings_context(username)
 
@@ -139,7 +134,6 @@ async def get_categories(request: Request) -> FeedCategoryListResponse:
     """Return sidebar category counts for the authenticated user."""
 
     username = _require_logged_in_user(request)
-    await ensure_default_category(username)
     return await get_categories_with_counts(username)
 
 
@@ -178,6 +172,12 @@ async def create_subscription(
     """Create a feed subscription for the authenticated user."""
 
     username = _require_logged_in_user(request)
+
+    if payload.category_name.strip() == "":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Category name is required.",
+        )
 
     normalized_url, source_title = await validate_feed_url(payload.feed_url)
     subscription_doc, created_subscription = await create_or_update_subscription(

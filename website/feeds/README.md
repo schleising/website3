@@ -79,6 +79,12 @@
 64. The FastAPI code shall provide an API endpoint to add new feed subscriptions for the logged in user, which shall validate the feed URL and return an appropriate response if the URL is invalid or the feed cannot be fetched
 65. The FastAPI code shall provide an API endpoint to mark articles as read for the logged in user, which shall update the database accordingly and return an appropriate response if the article ID is invalid or the user is not authorized to modify the article's read status
 66. The FastAPI code shall provide an API endpoint to retrieve the list of feed categories and their associated unread article counts for the logged in user, which shall return an appropriate response if the user is not authorized to access the feed data
+67. The right menu shall preserve the currently selected category highlight across polling refreshes, and shall not fall back to All Feeds unless the user explicitly navigates there
+68. Unread and recently-read counts in the right menu shall update immediately after a user marks an article as read, without waiting for the next 10-second polling cycle
+69. Recently Read membership shall remain stable for seven days from the original read timestamp, and shall not be reduced to a single polling cycle
+70. In unread views, articles marked as read shall remain visible in the current session as greyed cards and shall be removed only after the user navigates away and returns to the category
+71. The system shall not auto-create a default General category at page load; categories shall be created only through explicit user actions (add/import/category assignment)
+72. Updating category colours on the settings page shall not trigger a full page reload or scroll-position jump
 
 ## Design
 
@@ -257,6 +263,7 @@ erDiagram
 	1. Maps users to feeds and categories.
 4. `feed_category`:
 	1. User-owned categories, mute state, and color preference.
+	2. Categories are created only when explicitly requested by user actions (manual add/import).
 5. `user_article_state`:
 	1. Per-user read/unread lifecycle.
 	2. Supports recently read queries for last 7 days.
@@ -364,6 +371,7 @@ sequenceDiagram
 	1. `all`: all non-muted categories.
 	2. specific category id: only that category, unless muted.
 	3. `recently-read`: read items in last 7 days, newest first, excluding muted categories.
+	4. recently-read retention uses persisted read timestamps and remains stable for the full 7-day window.
 2. Primary article listing for main reader:
 	1. unread only by default.
 	2. oldest first (ascending publication date).
@@ -426,6 +434,7 @@ sequenceDiagram
 2. Main content region:
 	1. full-width article cards.
 	2. oldest unread at top.
+	3. when an unread article is marked read, it remains in the current session view with greyed styling.
 3. Right sidebar:
 	1. `All Feeds` with unread total.
 	2. category list with unread count each.
@@ -453,6 +462,8 @@ sequenceDiagram
 4. Show non-blocking error banner/toast if refresh fails.
 5. Preserve existing card order during polling updates and append newly arrived articles to avoid disruptive list movement.
 6. Keep visual position stable across refreshes unless a user action changes selection or read state.
+7. Sidebar unread/recently-read counts refresh immediately after mark-read operations.
+8. Sidebar selection highlight remains pinned to the active category across polling updates.
 
 #### 6.5 Settings and OPML Workflows
 
@@ -467,6 +478,7 @@ sequenceDiagram
 	2. Display created/updated/skipped counts and actionable error rows.
 	3. Refresh category counts and unread views after successful import.
 	4. Assign deterministic fallback colors to newly created categories when color is absent.
+3. Category colour updates apply in-place without full-page reloads to avoid scroll jumps.
 
 #### 6.6 Rendering and JavaScript Strategy
 
@@ -737,6 +749,12 @@ Test -> Requirement Matrix template:
 | 64 | Endpoint to add subscriptions + URL validation | 5.1, 5.3, 9 |
 | 65 | Endpoint to mark read with validation/auth checks | 5.1, 5.3, 7, 9 |
 | 66 | Endpoint for categories + unread count + auth | 5.1, 5.2, 7 |
+| 67 | Selected category highlight remains stable across polling | 6.3, 6.4 |
+| 68 | Sidebar counts update immediately after mark-read | 6.4 |
+| 69 | Recently Read remains stable for full 7 days | 5.2, 6.2 |
+| 70 | Read items remain grey in-session until navigation reset | 6.2, 6.4 |
+| 71 | No automatic General category creation | 3.1, 6.5 |
+| 72 | Settings color changes do not reload/jump | 6.5 |
 
 ### 16. Traceability Table: Design -> Requirements
 
@@ -747,8 +765,8 @@ Test -> Requirement Matrix template:
 | 2.1 Component Responsibilities | 1, 6, 8, 9, 10, 27, 29, 36, 51, 52, 53, 61 |
 | 2.2 OPML Interoperability Flow | 44, 45 |
 | 2.3 Local Test Environment Architecture | 16, 17, 19, 21 |
-| 3. Data Model Design | 34, 42, 51, 54, 57 |
-| 3.1 Collection Notes | 34, 42, 51, 54 |
+| 3. Data Model Design | 34, 42, 51, 54, 57, 71 |
+| 3.1 Collection Notes | 34, 42, 51, 54, 71 |
 | 3.2 Index Plan | 34, 54, 57, 60 |
 | 4. Backend Worker Design | 46, 52, 53, 55, 56, 57, 58, 59, 60 |
 | 4.1 Threading and Isolation | 53 |
@@ -757,15 +775,15 @@ Test -> Requirement Matrix template:
 | 4.4 Test Scenario Controls | 17, 22, 23 |
 | 5. FastAPI Design | 1, 2, 3, 4, 5, 35, 61, 62, 63, 64, 65, 66 |
 | 5.1 Route Structure | 1, 28, 32, 33, 40, 43, 44, 45, 62, 63, 64, 65, 66 |
-| 5.2 API Query Semantics | 29, 36, 37, 38, 39, 41, 51, 63, 66 |
+| 5.2 API Query Semantics | 29, 36, 37, 38, 39, 41, 51, 63, 66, 69 |
 | 5.3 Pydantic Models | 2, 3, 4, 5, 35, 44, 51, 64, 65 |
 | 5.4 OPML Import and Export Contract | 44, 45 |
-| 6. Frontend UX and Interaction Design | 6, 7, 10, 26, 27, 29, 30, 31, 32, 33, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 47, 48, 49, 50, 51, 62 |
+| 6. Frontend UX and Interaction Design | 6, 7, 10, 26, 27, 29, 30, 31, 32, 33, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 47, 48, 49, 50, 51, 62, 67, 68, 70, 72 |
 | 6.1 Navigation and Access | 26, 27, 28 |
-| 6.2 Main Reader Layout | 6, 7, 29, 36, 38, 39, 41, 50, 51 |
-| 6.3 Keyboard and Interaction Rules | 31, 32, 37, 62 |
-| 6.4 Polling and UI Consistency | 8, 9, 30, 47, 48, 49, 50 |
-| 6.5 Settings and OPML Workflows | 33, 40, 42, 43, 44, 45, 46, 47, 51 |
+| 6.2 Main Reader Layout | 6, 7, 29, 36, 38, 39, 41, 50, 51, 69, 70 |
+| 6.3 Keyboard and Interaction Rules | 31, 32, 37, 62, 67 |
+| 6.4 Polling and UI Consistency | 8, 9, 30, 47, 48, 49, 50, 67, 68, 70 |
+| 6.5 Settings and OPML Workflows | 33, 40, 42, 43, 44, 45, 46, 47, 51, 71, 72 |
 | 6.6 Rendering and JavaScript Strategy | 10, 11 |
 | 7. Security and Data Integrity | 1, 2, 3, 4, 5, 10, 21, 27, 35, 65, 66 |
 | 8. Retention and Data Lifecycle | 58, 59, 60 |

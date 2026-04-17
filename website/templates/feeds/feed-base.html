@@ -3,14 +3,14 @@
 {% block title %}<title>{{ title }}</title>{% endblock %}
 
 {% block head %}
-<link rel="stylesheet" href="/css/feeds/feeds.css?v1.0.0">
+<link rel="stylesheet" href="/css/feeds/feeds.css?v1.0.2">
 {% endblock %}
 
 {% block scripts %}
 {% if feed_page_mode == "reader" %}
-<script defer src="/js/feeds/reader.js?v1.0.0"></script>
+<script defer src="/js/feeds/reader.js?v1.0.2"></script>
 {% elif feed_page_mode == "settings" %}
-<script defer src="/js/feeds/settings.js?v1.0.0"></script>
+<script defer src="/js/feeds/settings.js?v1.0.2"></script>
 {% endif %}
 {% endblock %}
 
@@ -19,8 +19,24 @@
 {% endblock %}
 
 {% block sidebar %}
-<a href="/feeds/?category=all" class="sub-level-nav{% if selected_category == 'all' %} is-current{% endif %}" {% if selected_category == 'all' %}aria-current="page"{% endif %}>All Feeds ({{ all_unread_count }})</a>
-<a href="/feeds/?category=recently-read" class="sub-level-nav{% if selected_category == 'recently-read' %} is-current{% endif %}" {% if selected_category == 'recently-read' %}aria-current="page"{% endif %}>Recently Read ({{ recently_read_count }})</a>
+<a
+  href="/feeds/?category=all"
+  class="sub-level-nav feed-category-link feed-category-shortcut{% if selected_category == 'all' %} is-current{% endif %}"
+  {% if selected_category == 'all' %}aria-current="page"{% endif %}
+  data-category-shortcut="all"
+>
+  <span class="feed-category-name">All Feeds</span>
+  <span class="feed-category-count">({{ all_unread_count }})</span>
+</a>
+<a
+  href="/feeds/?category=recently-read"
+  class="sub-level-nav feed-category-link feed-category-shortcut{% if selected_category == 'recently-read' %} is-current{% endif %}"
+  {% if selected_category == 'recently-read' %}aria-current="page"{% endif %}
+  data-category-shortcut="recently-read"
+>
+  <span class="feed-category-name">Recently Read</span>
+  <span class="feed-category-count">({{ recently_read_count }})</span>
+</a>
 {% for category_item in categories %}
 <a
   href="/feeds/?category={{ category_item.category_id }}"
