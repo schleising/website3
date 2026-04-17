@@ -30,7 +30,7 @@ services:
       - ./backend/src:/src:ro
     environment:
       - PYTHONUNBUFFERED=1
-      - FEEDS_FETCH_INTERVAL_SECONDS=300
+      - FEEDS_FETCH_INTERVAL_SECONDS=900
       - FEEDS_RETRY_AFTER_FAILURE_SECONDS=900
       - FEEDS_FAILURE_MODE=none
     restart: unless-stopped

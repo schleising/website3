@@ -76,7 +76,7 @@ The backend feed worker supports environment toggles in `docker-compose-test.yam
 You can also shorten polling intervals for faster testing:
 
 - `FEEDS_CYCLE_INTERVAL_SECONDS` (default `15`)
-- `FEEDS_FETCH_INTERVAL_SECONDS` (default `300`)
+- `FEEDS_FETCH_INTERVAL_SECONDS` (default `900`)
 - `FEEDS_RETRY_AFTER_FAILURE_SECONDS` (default `900`)
 - `FEEDS_SOFT_DELETE_DAYS` (default `7`)
 - `FEEDS_HARD_DELETE_DAYS` (default `30`)
