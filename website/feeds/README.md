@@ -55,28 +55,30 @@
 46. Imported and newly added feeds shall trigger an immediate backend refresh to fetch the feed data and populate the feed reader without waiting for the next scheduled refresh cycle
 47. Actions that modify UI state such as marking an article as read or muting a category shall trigger an immediate UI update to reflect the change without waiting for the next scheduled refresh cycle
 48. When data is the main window is refreshed, the current keyboard selection shall be preserved where possible, and the user shall not lose their place in the feed list, the feed list shall only move in response to a user's action.
-49. Categories shall have colours that are consistent across the feed reader and the right menu, and these colours shall be stored in the database as a user preference for each category
+49. No UI element shall move without a user action, including new articles appearing in the feed list or updates to settings, to prevent disrupting the user's reading position
+50. New articles shall be visually indicated with a non-intrusive highlight or badge until they are marked as read
+51. Categories shall have colours that are consistent across the feed reader and the right menu, and these colours shall be stored in the database as a user preference for each category
 
 ### Backend Reqs
 
-50. Backend code shall be implemented in the backend/src/feeds directory, with appropriate subdirectories for database models, API endpoints, and background tasks
-51. The backend code shall be implemented as a new thread that runs alongside the existing backend code, and shall not interfere with the existing functionality of the site
-52. The backend code shall be responsible for creating a mongodb feeds database and the necessary collections and indexes to store feed data, user subscriptions, and read/unread status of articles
-53. The backend code shall fetch subscribed feeds once every 5 minutes and store the feed data in the database
-54. The backend shall only fetch each subscription once, even if multiple users are subscribed to the same feed, to avoid unnecessary network requests and reduce load on the feed servers
-55. The feeds shall be fetched and stored in the database in a way that allows for efficient querying and filtering by category, read/unread status, and other relevant criteria
-56. The backend shall mark articles as deleted after 7 days
-57. The backend shall permanently delete articles that have been marked as deleted for more than 30 days
-58. The backend shall not delete or purge articles that are still marked as unread by any user, even if they are older than the retention thresholds, to prevent data loss of unread articles
+52. Backend code shall be implemented in the backend/src/feeds directory, with appropriate subdirectories for database models, API endpoints, and background tasks
+53. The backend code shall be implemented as a new thread that runs alongside the existing backend code, and shall not interfere with the existing functionality of the site
+54. The backend code shall be responsible for creating a mongodb feeds database and the necessary collections and indexes to store feed data, user subscriptions, and read/unread status of articles
+55. The backend code shall fetch subscribed feeds once every 5 minutes and store the feed data in the database
+56. The backend shall only fetch each subscription once, even if multiple users are subscribed to the same feed, to avoid unnecessary network requests and reduce load on the feed servers
+57. The feeds shall be fetched and stored in the database in a way that allows for efficient querying and filtering by category, read/unread status, and other relevant criteria
+58. The backend shall mark articles as deleted after 7 days
+59. The backend shall permanently delete articles that have been marked as deleted for more than 30 days
+60. The backend shall not delete or purge articles that are still marked as unread by any user, even if they are older than the retention thresholds, to prevent data loss of unread articles
 
 ### FastAPI Reqs
 
-59. FastAPI code shall be implemented in the website/feeds directory, with appropriate subdirectories for API endpoints and database models
-60. The FastAPI code shall mark articles as read when the user clicks on them in the feed reader UI, and this information shall be stored in the database
-61. The FastAPI code shall provide an API endpoint to retrieve the list of feeds and their associated articles for the logged in user, with support for filtering by category and read/unread status
-62. The FastAPI code shall provide an API endpoint to add new feed subscriptions for the logged in user, which shall validate the feed URL and return an appropriate response if the URL is invalid or the feed cannot be fetched
-63. The FastAPI code shall provide an API endpoint to mark articles as read for the logged in user, which shall update the database accordingly and return an appropriate response if the article ID is invalid or the user is not authorized to modify the article's read status
-64. The FastAPI code shall provide an API endpoint to retrieve the list of feed categories and their associated unread article counts for the logged in user, which shall return an appropriate response if the user is not authorized to access the feed data
+61. FastAPI code shall be implemented in the website/feeds directory, with appropriate subdirectories for API endpoints and database models
+62. The FastAPI code shall mark articles as read when the user clicks on them in the feed reader UI, and this information shall be stored in the database
+63. The FastAPI code shall provide an API endpoint to retrieve the list of feeds and their associated articles for the logged in user, with support for filtering by category and read/unread status
+64. The FastAPI code shall provide an API endpoint to add new feed subscriptions for the logged in user, which shall validate the feed URL and return an appropriate response if the URL is invalid or the feed cannot be fetched
+65. The FastAPI code shall provide an API endpoint to mark articles as read for the logged in user, which shall update the database accordingly and return an appropriate response if the article ID is invalid or the user is not authorized to modify the article's read status
+66. The FastAPI code shall provide an API endpoint to retrieve the list of feed categories and their associated unread article counts for the logged in user, which shall return an appropriate response if the user is not authorized to access the feed data
 
 ## Design
 
