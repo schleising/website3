@@ -1,7 +1,7 @@
 {% extends "football/football-base.html" %}
 
 {% block football_head %}
-<link rel="stylesheet" href="/css/table.css?v1.7.2">
+<link rel="stylesheet" href="/css/table.css?v1.7.3">
 {% block football_scripts %}
 {% if is_current_season|default(false) %}
 <script defer src="/js/football/table_live.js?v1.7.0"></script>
@@ -70,15 +70,15 @@
             <a class="team-name" href="/football/matches/team/{{ table_item.team.id }}/?season={{ selected_season_key|default(current_season_key)|default('') }}">{{ table_item.team.short_name }}</a>
           </div>
         </div>
-        <div class="row-data data table-cell right-align table-played" role="cell">{{ table_item.played_games }}</div>
-        <div class="row-data data table-cell medium-table right-align table-won" role="cell">{{ table_item.won }}</div>
-        <div class="row-data data table-cell medium-table right-align table-draw" role="cell">{{ table_item.draw }}</div>
-        <div class="row-data data table-cell medium-table right-align table-lost" role="cell">{{ table_item.lost }}</div>
-        <div class="row-data data table-cell large-table right-align table-goals-for" role="cell">{{ table_item.goals_for }}</div>
-        <div class="row-data data table-cell large-table right-align table-goals-against" role="cell">{{ table_item.goals_against }}</div>
-        <div class="row-data data table-cell right-align table-goal-difference" role="cell">{{ table_item.goal_difference }}</div>
-        <div class="row-data data table-cell right-align table-points" role="cell">{{ table_item.points }}</div>
-        <div class="row-data data table-cell medium-table right-align" role="cell">
+        <div class="row-data data table-cell centre-align table-played" role="cell">{{ table_item.played_games }}</div>
+        <div class="row-data data table-cell medium-table centre-align table-won" role="cell">{{ table_item.won }}</div>
+        <div class="row-data data table-cell medium-table centre-align table-draw" role="cell">{{ table_item.draw }}</div>
+        <div class="row-data data table-cell medium-table centre-align table-lost" role="cell">{{ table_item.lost }}</div>
+        <div class="row-data data table-cell large-table centre-align table-goals-for" role="cell">{{ table_item.goals_for }}</div>
+        <div class="row-data data table-cell large-table centre-align table-goals-against" role="cell">{{ table_item.goals_against }}</div>
+        <div class="row-data data table-cell centre-align table-goal-difference" role="cell">{{ table_item.goal_difference }}</div>
+        <div class="row-data data table-cell centre-align table-points" role="cell">{{ table_item.points }}</div>
+        <div class="row-data data table-cell medium-table centre-align" role="cell">
           <div class="form-container">
             {% if table_item.form_list|length > 0 %}
               {% for form_item in table_item.form_list|reverse %}

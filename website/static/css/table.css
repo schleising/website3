@@ -13,7 +13,7 @@
     --table-row-border: 0.12rem;
     --table-row-min-height: 1.56rem;
     --table-row-max-height: 2.12rem;
-    --table-form-col-width: 5.6rem;
+    --table-form-col-width: calc((5 * (var(--table-form-size) + (2 * var(--table-form-margin)))) + (2 * var(--table-cell-px)) + 0.12rem);
     --table-text-line-height: 1.1;
     --table-team-gap: 0.55rem;
     --table-badge-size: 1.05rem;
@@ -228,8 +228,11 @@
 }
 
 .table-container .form-container {
-    justify-content: flex-end;
-    width: 100%;
+    justify-content: flex-start;
+    width: max-content;
+    min-width: max-content;
+    margin-left: auto;
+    margin-right: auto;
     flex-wrap: nowrap;
 }
 
@@ -250,7 +253,6 @@
     .table-container {
         --table-cell-py: 0.1rem;
         --table-cell-px: 0.68rem;
-        --table-form-col-width: 5.2rem;
         --table-grid-columns:
             minmax(3.2rem, 0.9fr)
             minmax(9.6rem, 2.6fr)
