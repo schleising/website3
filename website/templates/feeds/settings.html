@@ -47,10 +47,7 @@
     <div id="feed-category-settings-list" class="feed-category-settings-list">
       {% for category_item in categories %}
       <div class="feed-category-settings-item" data-category-id="{{ category_item.category_id }}">
-        <div class="feed-category-settings-labels">
-          <span class="feed-category-name">{{ category_item.name }}</span>
-          <span class="feed-category-count">Unread: {{ category_item.unread_count }}</span>
-        </div>
+        <span class="feed-category-settings-name">{{ category_item.name }}</span>
         <div class="feed-category-settings-controls">
           <input
             type="color"
@@ -60,10 +57,16 @@
           >
           <button
             type="button"
-            class="btn btn-primary feed-category-mute-button"
+            class="btn feed-category-mute-button feed-category-mute-icon-button{% if category_item.muted %} is-muted{% endif %}"
             data-muted="{{ 'true' if category_item.muted else 'false' }}"
+            aria-label="{% if category_item.muted %}Unmute{% else %}Mute{% endif %} category {{ category_item.name }}"
+            title="{% if category_item.muted %}Unmute{% else %}Mute{% endif %} category"
           >
-            {% if category_item.muted %}Unmute{% else %}Mute{% endif %}
+            <svg class="feed-action-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M11 5L6 9H3v6h3l5 4z"></path>
+              <path class="feed-mute-icon-wave" d="M15.5 8.5a5 5 0 0 1 0 7"></path>
+              <path class="feed-mute-icon-slash" d="M4 4l16 16"></path>
+            </svg>
           </button>
         </div>
       </div>
@@ -80,7 +83,6 @@
       <table class="feed-subscription-table">
         <thead>
           <tr>
-            <th>Image</th>
             <th>Feed</th>
             <th>URL</th>
             <th>Category</th>
@@ -90,17 +92,6 @@
         <tbody>
           {% for subscription in subscriptions %}
           <tr class="feed-subscription-row" data-subscription-id="{{ subscription.subscription_id }}">
-            <td class="feed-subscription-image-cell">
-              <img
-                class="feed-subscription-image"
-                src="{{ subscription.source_image_url | default('/icons/favicon.svg', true) }}"
-                alt=""
-                loading="lazy"
-                decoding="async"
-                referrerpolicy="no-referrer"
-                onerror="this.onerror=null;this.src='/icons/favicon.svg';"
-              >
-            </td>
             <td class="feed-subscription-title-cell" title="{{ subscription.source_title }}">{{ subscription.source_title }}</td>
             <td class="feed-subscription-url-cell">
               <a

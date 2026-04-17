@@ -39,8 +39,6 @@
     const subscriptionDeleteTemplate = root.dataset.subscriptionDeleteTemplate || "";
     /** @type {string} */
     const csrfToken = root.dataset.csrfToken || "";
-    /** @type {string} */
-    const fallbackSubscriptionImage = "/icons/favicon.svg";
 
     /**
      * Set user-facing status text.
@@ -127,6 +125,57 @@
         window.setTimeout(() => {
             window.location.reload();
         }, 450);
+    }
+
+    /**
+     * Update right-sidebar category count labels.
+     *
+     * @param {{ all_unread_count?: number, categories?: Array<Record<string, any>> }} payload
+     */
+    function updateSidebarCounts(payload) {
+        const allLink = document.querySelector('.feed-category-shortcut[data-category-shortcut="all"]');
+        if (allLink) {
+            const allCountNode = allLink.querySelector(".feed-category-count");
+            if (allCountNode) {
+                allCountNode.textContent = String(Number(payload.all_unread_count || 0));
+            }
+        }
+
+        const categories = Array.isArray(payload.categories) ? payload.categories : [];
+        categories.forEach(category => {
+            const categoryId = String(category.category_id || "");
+            const link = document.querySelector(`.feed-category-link[data-category-id="${CSS.escape(categoryId)}"]`);
+            if (!(link instanceof HTMLElement)) {
+                return;
+            }
+
+            const countNode = link.querySelector(".feed-category-count");
+            if (countNode instanceof HTMLElement) {
+                countNode.textContent = String(Number(category.unread_count || 0));
+                countNode.style.setProperty("--feed-category-accent", String(category.color_hex || "#1F6FEB"));
+            }
+
+            link.classList.toggle("is-muted", Boolean(category.muted));
+        });
+    }
+
+    /**
+     * Refresh right-sidebar counts and category state.
+     *
+     * @returns {Promise<void>}
+     */
+    async function refreshSidebarCounts() {
+        try {
+            const response = await fetch(categoriesEndpoint, { method: "GET" });
+            if (!response.ok) {
+                return;
+            }
+
+            const payload = await response.json();
+            updateSidebarCounts(payload);
+        } catch (_error) {
+            // Ignore sidebar refresh failures to avoid blocking settings interactions.
+        }
     }
 
     /**
@@ -370,11 +419,16 @@
      */
     async function onCategoryButtonClick(event) {
         const target = /** @type {HTMLElement | null} */ (event.target instanceof HTMLElement ? event.target : null);
-        if (!target || !target.classList.contains("feed-category-mute-button")) {
+        if (!target) {
             return;
         }
 
-        const item = target.closest(".feed-category-settings-item");
+        const actionButton = target.closest(".feed-category-mute-button");
+        if (!(actionButton instanceof HTMLButtonElement)) {
+            return;
+        }
+
+        const item = actionButton.closest(".feed-category-settings-item");
         if (!(item instanceof HTMLElement)) {
             return;
         }
@@ -384,7 +438,12 @@
             return;
         }
 
-        const currentlyMuted = target.dataset.muted === "true";
+        const categoryNameNode = item.querySelector(".feed-category-settings-name");
+        const categoryName = categoryNameNode instanceof HTMLElement
+            ? String(categoryNameNode.textContent || "").trim()
+            : "";
+
+        const currentlyMuted = actionButton.dataset.muted === "true";
         const endpoint = currentlyMuted
             ? categoryEndpoint(categoryUnmuteTemplate, categoryId)
             : categoryEndpoint(categoryMuteTemplate, categoryId);
@@ -394,10 +453,13 @@
         try {
             const payload = await requestJson(endpoint, "POST", {});
             const nowMuted = Boolean(payload.muted);
-            target.dataset.muted = nowMuted ? "true" : "false";
-            target.textContent = nowMuted ? "Unmute" : "Mute";
+            actionButton.dataset.muted = nowMuted ? "true" : "false";
+            actionButton.classList.toggle("is-muted", nowMuted);
+            const nextLabel = `${nowMuted ? "Unmute" : "Mute"} category${categoryName !== "" ? ` ${categoryName}` : ""}`;
+            actionButton.setAttribute("aria-label", nextLabel);
+            actionButton.title = nextLabel;
             setStatus(nowMuted ? "Category muted." : "Category unmuted.");
-            reloadPageSoon();
+            await refreshSidebarCounts();
         } catch (error) {
             setStatus(error instanceof Error ? error.message : "Unable to update category mute state.", true);
         }
@@ -435,6 +497,7 @@
             updateSidebarCategoryColor(categoryId, normalizedColor);
             updateSubscriptionCategoryColor(categoryId, normalizedColor);
             setStatus("Category color updated.");
+            await refreshSidebarCounts();
         } catch (error) {
             setStatus(error instanceof Error ? error.message : "Unable to update category color.", true);
         }
@@ -526,7 +589,6 @@
                 const updatedCategoryId = String(payload.category_id || categoryId);
                 const updatedSubscriptionId = String(payload.subscription_id || subscriptionId);
                 const updatedSourceTitle = String(payload.source_title || "").trim();
-                const updatedSourceImageUrl = String(payload.source_image_url || "").trim();
 
                 row.dataset.subscriptionId = updatedSubscriptionId;
                 urlInput.value = updatedUrl;
@@ -540,14 +602,11 @@
                         titleCell.textContent = updatedSourceTitle;
                     }
                 }
-                const imageNode = row.querySelector(".feed-subscription-image");
-                if (imageNode instanceof HTMLImageElement) {
-                    imageNode.src = updatedSourceImageUrl || fallbackSubscriptionImage;
-                }
                 syncSubscriptionRowChip(row, updatedCategoryId);
                 setSubscriptionRowEditMode(row, false);
 
                 setStatus("Subscription updated.");
+                await refreshSidebarCounts();
             } catch (error) {
                 setStatus(error instanceof Error ? error.message : "Unable to update subscription.", true);
             }
@@ -563,6 +622,7 @@
                 await requestJson(endpoint, "DELETE");
                 row.remove();
                 setStatus("Subscription deleted.");
+                await refreshSidebarCounts();
             } catch (error) {
                 setStatus(error instanceof Error ? error.message : "Unable to delete subscription.", true);
             }
@@ -614,5 +674,8 @@
     // Validate category endpoint wiring once at startup.
     if (categoriesEndpoint === "") {
         setStatus("Category API endpoint is not configured.", true);
+    } else {
+        refreshSidebarCounts();
+        window.setInterval(refreshSidebarCounts, 10000);
     }
 })();
