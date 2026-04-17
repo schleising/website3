@@ -326,33 +326,30 @@
             ? document.activeElement
             : null;
 
-        let openedViaWindow = false;
-        try {
-            const opened = window.open(link, "_blank", "noopener,noreferrer");
-            if (opened) {
-                openedViaWindow = true;
-                if (typeof opened.blur === "function") {
-                    opened.blur();
-                }
-            }
-        } catch (_error) {
-            openedViaWindow = false;
-        }
+        const openLink = document.createElement("a");
+        openLink.href = link;
+        openLink.target = "_blank";
+        openLink.rel = "noopener noreferrer";
+        openLink.style.position = "fixed";
+        openLink.style.left = "-9999px";
+        openLink.style.width = "1px";
+        openLink.style.height = "1px";
+        openLink.style.opacity = "0";
+        document.body.appendChild(openLink);
 
-        if (!openedViaWindow) {
-            const openLink = document.createElement("a");
-            openLink.href = link;
-            openLink.target = "_blank";
-            openLink.rel = "noopener noreferrer";
-            openLink.style.position = "fixed";
-            openLink.style.left = "-9999px";
-            openLink.style.width = "1px";
-            openLink.style.height = "1px";
-            openLink.style.opacity = "0";
-            document.body.appendChild(openLink);
-            openLink.click();
-            openLink.remove();
-        }
+        const openEvent = new MouseEvent("click", {
+            bubbles: true,
+            cancelable: true,
+            view: window,
+            button: 0,
+            buttons: 1,
+            ctrlKey: false,
+            metaKey: false,
+            shiftKey: false,
+            altKey: false,
+        });
+        openLink.dispatchEvent(openEvent);
+        openLink.remove();
 
         const restoreReaderFocus = () => {
             window.focus();
@@ -365,7 +362,15 @@
 
         window.setTimeout(() => {
             restoreReaderFocus();
-        }, 60);
+        }, 0);
+
+        window.setTimeout(() => {
+            restoreReaderFocus();
+        }, 75);
+
+        window.setTimeout(() => {
+            restoreReaderFocus();
+        }, 180);
     }
 
     /**
