@@ -42,6 +42,7 @@ class FeedArticleDocument(BaseModel):
     link: str
     author: str | None = None
     summary_html: str | None = None
+    media_image_url: str | None = None
     published_at: datetime | None = None
     fetched_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     is_deleted: bool = False
@@ -117,6 +118,7 @@ class FeedArticleCard(BaseModel):
     link: str
     author: str | None = None
     summary_html: str | None = None
+    media_image_url: str | None = None
     published_at: datetime | None = None
     feed_title: str
     category_id: str

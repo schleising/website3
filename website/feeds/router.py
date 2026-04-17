@@ -431,7 +431,14 @@ async def import_opml_data(
         duplicate_policy=duplicate_policy,
         default_category_name=default_category_name,
     )
-    return await import_opml(username, file_bytes, options)
+
+    try:
+        return await import_opml(username, file_bytes, options)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        ) from exc
 
 
 @feeds_router.get("/api/opml/export")

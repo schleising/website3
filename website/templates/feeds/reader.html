@@ -41,6 +41,12 @@
         <a href="{{ article.link }}" target="_blank" rel="noopener">{{ article.title }}</a>
       </h5>
 
+      {% if article.media_image_url %}
+      <figure class="feed-article-media">
+        <img src="{{ article.media_image_url }}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" />
+      </figure>
+      {% endif %}
+
       {% if article.author %}
       <p class="feed-article-author">By {{ article.author }}</p>
       {% endif %}
@@ -48,17 +54,6 @@
       {% if article.summary_html %}
       <div class="feed-article-summary">{{ article.summary_html | safe }}</div>
       {% endif %}
-
-      <footer class="feed-article-actions">
-        <button
-          type="button"
-          class="btn btn-primary feed-mark-read-button"
-          {% if article.is_read %}disabled{% endif %}
-        >
-          {% if article.is_read %}Read{% else %}Mark Read{% endif %}
-        </button>
-        <a href="{{ article.link }}" target="_blank" rel="noopener" class="btn btn-primary">Open</a>
-      </footer>
     </article>
     {% endfor %}
     {% endif %}

@@ -817,6 +817,7 @@ async def list_cards_for_feed_ids(
                 summary_html=sanitize_html(str(article_doc.get("summary_html", "")))
                 if article_doc.get("summary_html")
                 else None,
+                media_image_url=str(article_doc.get("media_image_url", "")).strip() or None,
                 published_at=article_doc.get("published_at"),
                 feed_title=source_title,
                 category_id=str(category.id),
@@ -929,6 +930,7 @@ async def list_recently_read_cards(
                 summary_html=sanitize_html(str(article_doc.get("summary_html", "")))
                 if article_doc.get("summary_html")
                 else None,
+                media_image_url=str(article_doc.get("media_image_url", "")).strip() or None,
                 published_at=article_doc.get("published_at"),
                 feed_title=source_title,
                 category_id=str(category.id),

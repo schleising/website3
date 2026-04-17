@@ -58,6 +58,11 @@ Current automated suite:
   - Force-refresh flag scheduling behavior.
   - 5-minute baseline fetch cadence guard behavior.
   - Retry-window interaction with forced refreshes.
+- `backend/src/tests/feed_worker/test_media_image_extraction.py`
+  - Largest media-tag image candidate selection.
+  - Relative media URL normalization.
+  - Image enclosure fallback behavior.
+  - Non-HTTP media URL rejection.
 
 ## Backend Failure Simulation
 
@@ -107,6 +112,7 @@ docker compose -f docker-compose-test.yaml logs -f mongodb
 | UT-FEEDS-003 | Yes | 33, 64 | Feed URL normalization and validation for subscription flows.
 | UT-FEEDS-004 | Yes | 46, 55, 23 | Backend source refresh policy (forced refresh and 5-minute cadence).
 | UT-FEEDS-005 | Yes | 44, 71 | OPML parsing preserves blank category entries so import defaults are explicit.
+| UT-FEEDS-006 | Yes | 83, 23 | Media-tag image extraction and largest-image selection logic.
 | IT-FEEDS-001 | Manual | 26, 27, 28, 35, 36, 37, 38, 39, 40, 41, 42, 43, 51 | Navigation/auth/sidebar/category/settings behavior across feed pages.
 | IT-FEEDS-002 | Manual | 29, 30, 31, 32, 47, 48, 49, 50, 62, 63, 65, 66 | Reader rendering, polling stability, keyboard, read-state and API behavior.
 | IT-FEEDS-003 | Manual | 46, 52, 53, 54, 55, 56, 57, 58, 59, 60 | Backend worker threading, immediate refresh trigger, dedupe, retention lifecycle.
@@ -115,6 +121,7 @@ docker compose -f docker-compose-test.yaml logs -f mongodb
 | IT-FEEDS-006 | Manual | 33, 34, 64 | Subscription persistence and per-user ownership isolation.
 | IT-FEEDS-007 | Manual | 67, 68, 69, 70, 72 | Sidebar highlight/count immediacy, read-card in-session retention, recently-read stability, and settings no-jump behavior.
 | IT-FEEDS-008 | Manual | 73, 74, 75, 76, 77, 78, 79 | Reader empty-state/selection behavior, recently-read presentation/completeness, live subscription chip updates, and subscription edit/delete workflows.
+| IT-FEEDS-009 | Manual | 80, 81, 82, 83 | Feed-card top-only accent styling, Enter/Space background-tab flow, no card action buttons, and inline media-image placement.
 
 ### Requirement to Test Matrix
 
@@ -126,10 +133,10 @@ docker compose -f docker-compose-test.yaml logs -f mongodb
 | 19 | IT-FEEDS-005 |
 | 20 | IT-FEEDS-005 |
 | 21 | IT-FEEDS-005 |
-| 22 | UT-FEEDS-001, UT-FEEDS-002, UT-FEEDS-003, UT-FEEDS-004, IT-FEEDS-005 |
-| 23 | UT-FEEDS-001, UT-FEEDS-002, UT-FEEDS-003, UT-FEEDS-004, IT-FEEDS-005 |
-| 24 | IT-FEEDS-001, IT-FEEDS-002, IT-FEEDS-003, IT-FEEDS-004, IT-FEEDS-005, IT-FEEDS-006 |
-| 25 | UT-FEEDS-001, UT-FEEDS-002, UT-FEEDS-003, UT-FEEDS-004, IT-FEEDS-005 |
+| 22 | UT-FEEDS-001, UT-FEEDS-002, UT-FEEDS-003, UT-FEEDS-004, UT-FEEDS-006, IT-FEEDS-005 |
+| 23 | UT-FEEDS-001, UT-FEEDS-002, UT-FEEDS-003, UT-FEEDS-004, UT-FEEDS-006, IT-FEEDS-005 |
+| 24 | IT-FEEDS-001, IT-FEEDS-002, IT-FEEDS-003, IT-FEEDS-004, IT-FEEDS-005, IT-FEEDS-006, IT-FEEDS-009 |
+| 25 | UT-FEEDS-001, UT-FEEDS-002, UT-FEEDS-003, UT-FEEDS-004, UT-FEEDS-006, IT-FEEDS-005 |
 | 26 | IT-FEEDS-001 |
 | 27 | IT-FEEDS-001 |
 | 28 | IT-FEEDS-001 |
@@ -184,3 +191,7 @@ docker compose -f docker-compose-test.yaml logs -f mongodb
 | 77 | IT-FEEDS-008 |
 | 78 | IT-FEEDS-008 |
 | 79 | IT-FEEDS-008 |
+| 80 | IT-FEEDS-009 |
+| 81 | IT-FEEDS-009 |
+| 82 | IT-FEEDS-009 |
+| 83 | UT-FEEDS-006, IT-FEEDS-009 |

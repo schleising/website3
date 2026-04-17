@@ -114,7 +114,7 @@
      * @param {string} subscriptionId
      * @returns {string}
      */
-    function subscriptionEndpoint(template, subscriptionId) {
+    function buildSubscriptionEndpoint(template, subscriptionId) {
         return template.replace("__SUBSCRIPTION_ID__", encodeURIComponent(subscriptionId));
     }
 
@@ -410,7 +410,7 @@
             setStatus("Saving subscription changes...");
 
             try {
-                const endpoint = subscriptionEndpoint(subscriptionUpdateTemplate, subscriptionId);
+                const endpoint = buildSubscriptionEndpoint(subscriptionUpdateTemplate, subscriptionId);
                 const payload = await requestJson(endpoint, "POST", {
                     feed_url: feedUrl,
                     category_id: categoryId,
@@ -444,7 +444,7 @@
             setStatus("Deleting subscription...");
 
             try {
-                const endpoint = subscriptionEndpoint(subscriptionDeleteTemplate, subscriptionId);
+                const endpoint = buildSubscriptionEndpoint(subscriptionDeleteTemplate, subscriptionId);
                 await requestJson(endpoint, "DELETE");
                 row.remove();
                 setStatus("Subscription deleted.");

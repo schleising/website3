@@ -180,7 +180,7 @@
     }
 
     /**
-     * Apply read styling and action state for a card.
+     * Apply read styling state for a card.
      *
      * @param {HTMLElement} card
      * @param {boolean} isRead
@@ -188,12 +188,6 @@
     function setCardReadAppearance(card, isRead) {
         card.dataset.isRead = isRead ? "true" : "false";
         card.classList.toggle("is-read-article", isRead);
-
-        const markReadButton = card.querySelector(".feed-mark-read-button");
-        if (markReadButton instanceof HTMLButtonElement) {
-            markReadButton.disabled = isRead;
-            markReadButton.textContent = isRead ? "Read" : "Mark Read";
-        }
     }
 
     /**
@@ -287,6 +281,35 @@
     }
 
     /**
+     * Open a URL in a new tab while preserving reader focus where the browser allows it.
+     *
+     * @param {string} link
+     * @returns {void}
+     */
+    function openInBackgroundTab(link) {
+        if (link === "") {
+            return;
+        }
+
+        const openLink = document.createElement("a");
+        openLink.href = link;
+        openLink.target = "_blank";
+        openLink.rel = "noopener noreferrer";
+        openLink.style.position = "fixed";
+        openLink.style.left = "-9999px";
+        openLink.style.width = "1px";
+        openLink.style.height = "1px";
+        openLink.style.opacity = "0";
+        document.body.appendChild(openLink);
+        openLink.click();
+        openLink.remove();
+
+        window.setTimeout(() => {
+            window.focus();
+        }, 0);
+    }
+
+    /**
      * Open a card link in a new tab and mark it read.
      *
      * @param {HTMLElement} card
@@ -294,9 +317,7 @@
      */
     async function openAndMarkCard(card) {
         const link = card.dataset.articleLink || "";
-        if (link !== "") {
-            window.open(link, "_blank", "noopener");
-        }
+        openInBackgroundTab(link);
 
         await markCardRead(card);
     }
@@ -401,6 +422,21 @@
         card.appendChild(header);
         card.appendChild(title);
 
+        if (article.media_image_url) {
+            const media = document.createElement("figure");
+            media.className = "feed-article-media";
+
+            const mediaImage = document.createElement("img");
+            mediaImage.src = String(article.media_image_url);
+            mediaImage.alt = "";
+            mediaImage.loading = "lazy";
+            mediaImage.decoding = "async";
+            mediaImage.referrerPolicy = "no-referrer";
+            media.appendChild(mediaImage);
+
+            card.appendChild(media);
+        }
+
         if (article.author) {
             const author = document.createElement("p");
             author.className = "feed-article-author";
@@ -414,25 +450,6 @@
             summary.innerHTML = String(article.summary_html);
             card.appendChild(summary);
         }
-
-        const actions = document.createElement("footer");
-        actions.className = "feed-article-actions";
-
-        const markButton = document.createElement("button");
-        markButton.type = "button";
-        markButton.className = "btn btn-primary feed-mark-read-button";
-        markButton.textContent = "Mark Read";
-
-        const openButton = document.createElement("a");
-        openButton.href = String(article.link || "#");
-        openButton.target = "_blank";
-        openButton.rel = "noopener";
-        openButton.className = "btn btn-primary";
-        openButton.textContent = "Open";
-
-        actions.appendChild(markButton);
-        actions.appendChild(openButton);
-        card.appendChild(actions);
 
         setCardReadAppearance(card, Boolean(article.is_read));
 
@@ -746,11 +763,6 @@
         const index = cards.indexOf(card);
         if (index >= 0) {
             setSelectedIndex(index, { markReadOnSelect: true, scrollIntoView: false });
-        }
-
-        if (target.classList.contains("feed-mark-read-button")) {
-            event.preventDefault();
-            markCardRead(card);
         }
     });
 

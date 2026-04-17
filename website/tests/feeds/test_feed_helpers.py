@@ -81,6 +81,22 @@ class FeedHelperTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             parse_opml_entries(b"<opml><body><outline>")
 
+    def test_parse_opml_entries_with_default_namespace(self) -> None:
+        opml_content = b"""<?xml version=\"1.0\" encoding=\"UTF-8\"?>
+<opml xmlns=\"http://www.w3.org/2005/Atom\" version=\"2.0\">
+  <body>
+    <outline text=\"Tech\">
+      <outline text=\"Example Feed\" xmlUrl=\"https://example.com/feed.xml\" />
+    </outline>
+  </body>
+</opml>
+"""
+
+        entries, errors = parse_opml_entries(opml_content)
+
+        self.assertEqual(errors, [])
+        self.assertEqual(entries, [("https://example.com/feed.xml", "Example Feed", "Tech")])
+
 
 if __name__ == "__main__":
     unittest.main()

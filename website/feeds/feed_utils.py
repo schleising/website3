@@ -75,7 +75,15 @@ def parse_opml_entries(opml_bytes: bytes) -> tuple[list[tuple[str, str, str]], l
     except ET.ParseError as exc:
         raise ValueError(f"Invalid OPML XML: {exc}") from exc
 
-    body = root.find("body")
+    def matches_tag(element: ET.Element, local_name: str) -> bool:
+        """Return True when an element tag matches a local name, with namespace support."""
+
+        if not isinstance(element.tag, str):
+            return False
+
+        return element.tag.rsplit("}", 1)[-1].lower() == local_name.lower()
+
+    body = next((child for child in root if matches_tag(child, "body")), None)
     if body is None:
         raise ValueError("OPML document does not contain a body section.")
 
@@ -90,7 +98,7 @@ def parse_opml_entries(opml_bytes: bytes) -> tuple[list[tuple[str, str, str]], l
             title = text or xml_url
             entries.append((xml_url, title, category_name))
 
-        child_outlines = [child for child in node if child.tag.lower().endswith("outline")]
+        child_outlines = [child for child in node if matches_tag(child, "outline")]
         if len(child_outlines) == 0:
             return
 
@@ -101,7 +109,7 @@ def parse_opml_entries(opml_bytes: bytes) -> tuple[list[tuple[str, str, str]], l
         for child in child_outlines:
             walk_outline(child, next_category)
 
-    for outline in [child for child in body if child.tag.lower().endswith("outline")]:
+    for outline in [child for child in body if matches_tag(child, "outline")]:
         walk_outline(outline, None)
 
     if len(entries) == 0:

@@ -92,6 +92,10 @@
 77. Category colour changes in settings shall live-update category chips in the current subscriptions list
 78. The settings page shall allow editing an existing subscription to change both feed URL and assigned category
 79. The settings page shall allow deleting an existing subscription
+80. Article cards shall not use a left-side state accent; feed card state styling shall use top-edge styling only to match other site cards
+81. Opening the selected article with `Enter` or `Space` shall keep the reader workflow in place by opening in a background tab where browser behavior permits
+82. Article cards shall not render dedicated `Mark Read`, `Read`, or `Open` action buttons
+83. When a feed entry contains media image metadata (for example `media:*` tags), the reader shall display the largest available image under the title and above the article content
 
 ## Design
 
@@ -266,6 +270,7 @@ erDiagram
 2. `feed_article`:
 	1. Global article cache keyed by `feed_id + dedupe_key`.
 	2. Includes retention lifecycle markers.
+	3. Stores optional media image URL metadata extracted from feed entry `media:*` tags.
 3. `user_feed_subscription`:
 	1. Maps users to feeds and categories.
 4. `feed_category`:
@@ -406,6 +411,7 @@ sequenceDiagram
 	4. Category metadata model with mute state and color.
 	5. OPML import summary model (created feeds/categories, skipped duplicates, errors).
 	6. Subscription update and delete response models.
+	7. Article media image URL field used for reader card rendering when present.
 3. Validation rules:
 	1. Feed URL must be `http/https`, normalized, length-limited.
 	2. Category IDs and article IDs must be valid object IDs/UUIDs.
@@ -447,6 +453,9 @@ sequenceDiagram
 	2. oldest unread at top.
 	3. when an unread article is marked read, it remains in the current session view with greyed styling.
 	4. no dedicated header or card-style empty-state banner; empty views show subtle inline hint text.
+	5. card state accenting uses top-edge styling only (no left accent stripe).
+	6. article cards render optional feed media image content directly under the title and before summary content.
+	7. article cards do not include dedicated Mark Read/Read/Open action buttons.
 3. Right sidebar:
 	1. `All Feeds` with unread total.
 	2. category list with unread count each.
@@ -460,7 +469,7 @@ sequenceDiagram
 1. `j`: move selection to next visible article card.
 2. `k`: move selection to previous visible article card.
 3. `Enter` or `Space`:
-	1. open selected article link in new tab.
+	1. open selected article link in a background tab where browser behavior permits, while preserving reader focus.
 	2. mark article as read via API.
 4. Category click:
 	1. apply category filter.
@@ -777,6 +786,10 @@ Test -> Requirement Matrix template:
 | 77 | Settings color change live-updates subscription chips | 6.5 |
 | 78 | Settings can edit subscription URL/category | 5.1, 5.3, 6.5 |
 | 79 | Settings can delete subscriptions | 5.1, 5.3, 6.5 |
+| 80 | Feed card state styling uses top accent only (no left stripe) | 6.2 |
+| 81 | Enter/Space open article in background tab flow | 6.3 |
+| 82 | Feed cards remove Mark Read/Read/Open action buttons | 6.2 |
+| 83 | Largest media-tag image renders below article title | 3.1, 5.3, 6.2 |
 
 ### 16. Traceability Table: Design -> Requirements
 
@@ -787,23 +800,23 @@ Test -> Requirement Matrix template:
 | 2.1 Component Responsibilities | 1, 6, 8, 9, 10, 27, 29, 36, 51, 52, 53, 61 |
 | 2.2 OPML Interoperability Flow | 44, 45 |
 | 2.3 Local Test Environment Architecture | 16, 17, 19, 21 |
-| 3. Data Model Design | 34, 42, 51, 54, 57, 71 |
-| 3.1 Collection Notes | 34, 42, 51, 54, 71 |
+| 3. Data Model Design | 34, 42, 51, 54, 57, 71, 83 |
+| 3.1 Collection Notes | 34, 42, 51, 54, 71, 83 |
 | 3.2 Index Plan | 34, 54, 57, 60 |
 | 4. Backend Worker Design | 46, 52, 53, 55, 56, 57, 58, 59, 60 |
 | 4.1 Threading and Isolation | 53 |
 | 4.2 Feed Deduplication Strategy | 46, 56, 57 |
 | 4.3 Retention Guard Rules | 58, 59, 60 |
 | 4.4 Test Scenario Controls | 17, 22, 23 |
-| 5. FastAPI Design | 1, 2, 3, 4, 5, 35, 61, 62, 63, 64, 65, 66, 78, 79 |
+| 5. FastAPI Design | 1, 2, 3, 4, 5, 35, 61, 62, 63, 64, 65, 66, 78, 79, 83 |
 | 5.1 Route Structure | 1, 28, 32, 33, 40, 43, 44, 45, 62, 63, 64, 65, 66, 78, 79 |
 | 5.2 API Query Semantics | 29, 36, 37, 38, 39, 41, 51, 63, 66, 69, 75 |
-| 5.3 Pydantic Models | 2, 3, 4, 5, 35, 44, 51, 64, 65, 78, 79 |
+| 5.3 Pydantic Models | 2, 3, 4, 5, 35, 44, 51, 64, 65, 78, 79, 83 |
 | 5.4 OPML Import and Export Contract | 44, 45 |
-| 6. Frontend UX and Interaction Design | 6, 7, 10, 26, 27, 29, 30, 31, 32, 33, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 47, 48, 49, 50, 51, 62, 67, 68, 70, 72, 73, 74, 75, 76, 77, 78, 79 |
+| 6. Frontend UX and Interaction Design | 6, 7, 10, 26, 27, 29, 30, 31, 32, 33, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 47, 48, 49, 50, 51, 62, 67, 68, 70, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83 |
 | 6.1 Navigation and Access | 26, 27, 28 |
-| 6.2 Main Reader Layout | 6, 7, 29, 36, 38, 39, 41, 50, 51, 69, 70, 73, 74, 75 |
-| 6.3 Keyboard and Interaction Rules | 31, 32, 37, 62, 67, 76 |
+| 6.2 Main Reader Layout | 6, 7, 29, 36, 38, 39, 41, 50, 51, 69, 70, 73, 74, 75, 80, 82, 83 |
+| 6.3 Keyboard and Interaction Rules | 31, 32, 37, 62, 67, 76, 81 |
 | 6.4 Polling and UI Consistency | 8, 9, 30, 47, 48, 49, 50, 67, 68, 70 |
 | 6.5 Settings and OPML Workflows | 33, 40, 42, 43, 44, 45, 46, 47, 51, 71, 72, 77, 78, 79 |
 | 6.6 Rendering and JavaScript Strategy | 10, 11 |
