@@ -676,6 +676,6 @@
         setStatus("Category API endpoint is not configured.", true);
     } else {
         refreshSidebarCounts();
-        window.setInterval(refreshSidebarCounts, 10000);
+        window.setInterval(refreshSidebarCounts, 2000);
     }
 })();

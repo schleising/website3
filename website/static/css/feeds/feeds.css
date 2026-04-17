@@ -201,6 +201,7 @@
     align-items: center;
     justify-content: flex-end;
     text-align: right;
+    min-width: 0;
 }
 
 .feed-category-link.is-muted {
@@ -212,6 +213,8 @@
     text-align: right;
     overflow: hidden;
     text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1 1 auto;
 }
 
 .feed-category-count {
@@ -364,14 +367,14 @@
 }
 
 .feed-subscription-table-wrap {
-    overflow-x: hidden;
+    overflow-x: auto;
 }
 
 .feed-subscription-table {
-    width: 100%;
+    width: max-content;
+    min-width: 100%;
     border-collapse: collapse;
-    min-width: 0;
-    table-layout: fixed;
+    table-layout: auto;
 }
 
 .feed-subscription-table th,
@@ -388,24 +391,24 @@
 }
 
 .feed-subscription-title-cell {
-    width: 20%;
+    width: 1%;
+    max-width: 16rem;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
 .feed-subscription-url-cell {
-    width: 48%;
-    min-width: 0;
+    width: auto;
 }
 
 .feed-subscription-category-cell {
-    width: 14%;
+    width: 1%;
     white-space: nowrap;
 }
 
 .feed-subscription-actions-cell {
-    width: 18%;
+    width: 1%;
     white-space: nowrap;
 }
 
@@ -414,8 +417,9 @@
     color: var(--brand-strong);
     text-decoration: none;
     white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    overflow: visible;
+    text-overflow: clip;
+    max-width: none;
 }
 
 .feed-subscription-table td a:hover,
@@ -540,5 +544,28 @@
 
     .feed-category-settings-controls {
         justify-content: flex-end;
+    }
+
+    .right-sidebar .feed-sidebar-link {
+        justify-content: flex-start;
+        text-align: left;
+        overflow: visible;
+    }
+
+    .feed-category-link {
+        justify-content: flex-start;
+        gap: 0.5rem;
+    }
+
+    .feed-category-name {
+        text-align: left;
+        overflow: visible;
+        text-overflow: clip;
+        white-space: normal;
+        word-break: break-word;
+    }
+
+    .feed-category-count {
+        flex: 0 0 auto;
     }
 }

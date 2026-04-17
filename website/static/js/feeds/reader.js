@@ -16,6 +16,9 @@
         return;
     }
 
+    /** @type {HTMLElement} */
+    const scrollContainer = /** @type {HTMLElement} */ (document.getElementById("content") || document.documentElement);
+
     /** @type {string} */
     const categoryFromUrl = new URLSearchParams(window.location.search).get("category");
     const selectedCategory = (categoryFromUrl && categoryFromUrl.trim() !== ""
@@ -437,13 +440,16 @@
             return;
         }
 
+        const containerRect = scrollContainer.getBoundingClientRect();
+        const containerTop = containerRect.top;
+
         getCards().forEach(card => {
             if (!(card instanceof HTMLElement) || isCardMarkedRead(card)) {
                 return;
             }
 
             const rect = card.getBoundingClientRect();
-            if (rect.bottom <= 0) {
+            if (rect.bottom <= containerTop) {
                 markCardRead(card);
             }
         });
@@ -929,5 +935,5 @@
     clearCardSelection();
     scheduleTouchScrollReadCheck();
 
-    window.setInterval(refreshFeedData, 10000);
+    window.setInterval(refreshFeedData, 2000);
 })();
