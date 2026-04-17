@@ -122,6 +122,9 @@
 
 .football-jump-link {
     margin: 0;
+    display: block;
+    width: 100%;
+    text-align: right;
 }
 
 .football-jump-link-today {
