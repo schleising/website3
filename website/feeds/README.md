@@ -19,50 +19,60 @@
 13. All code shall follow the existing style and conventions of the codebase, including naming conventions, file organization, and formatting, to ensure consistency across the project
 14. Where possible, new code shall be implemented in a way that allows for easy testing and maintainability, including modular design, separation of concerns, and adherence to SOLID principles
 15. Where possible, new code shall be implemented with performance and scalability in mind, including efficient database queries, caching strategies, and asynchronous processing where appropriate
+16. A local docker-compose-test.yaml file shall be provided that includes the necessary services and configuration to run the feed reader feature in a local development environment, including nginx with appropriate config file and a MongoDB instance with the appropriate collections and indexes, and any necessary environment variables or configuration files
+17. The test environment shall be configured to allow for easy testing and debugging of the feed reader feature, including access to logs, database data, and the ability to simulate different scenarios such as feed fetch failures or large numbers of subscriptions
+18. The test environment shall be documented with instructions on how to set up and run the feed reader feature, including any necessary dependencies, configuration steps, and troubleshooting tips
+19. The test environment shall be designed to closely mirror the production environment to ensure that tests are representative and reliable, while still allowing for flexibility and ease of use for developers
+20. The test environment shall be maintained and updated as needed to ensure that it remains functional and relevant as the feed reader feature evolves and new requirements are added
+21. The test environment shall only be accessible from the local machine to prevent unauthorized access and ensure the security of the development environment
+22. Automated tests shall be written to be run in the test environment
+23. The tests shall ensure coverage of all requirements, including edge cases and error scenarios, to ensure the robustness and reliability of the feed reader feature
+24. Requirements that cannot be automatically tested in the test environment shall be documented with justification and a plan for manual testing to ensure that they are still verified and validated as part of the development process
+25. Test results shall be documented and a Test -> Requirement and Requirement -> Test traceability matrix shall be maintained to ensure that all requirements are covered by tests and that all tests are linked to specific requirements for easy reference and validation
 
 ### UI and Functionality Reqs
 
-16. The feed reader links shall appear between Football and OpenSky Database in the left menu and the home page
-17. The feed reader shall only be available to logged in users
-18. The feed reader shall be available at the URL path `/feeds/`
-19. The feed reader shall display unread articles in full width cards on the feed reader page, with the oldest articles appearing at the top of the list
-20. The feed reader shall auto refresh every 10 seconds to check for new feeds
-21. The feed reader shall allow the user to move through feeds using j (next) and k (previous) keys, and open the selected feed in a new tab using the spacebar or enter key
-22. The feed reader shall allow the user to add new RSS feeds by entering a URL and clicking an "Add" button, all feeds should be added to a category
-23. The user added feeds shall be stored in the database for each user and persist across sessions
-24. A user shall only be able to view and modify their own feeds, not the feeds of other users
-25. The right menu shall display a list of feed categories and an unread article count for each category
-26. clicking on a category shall filter the feed reader to only show articles from that category
-27. The right menu shall have an all feeds category that shows all articles regardless of category with an unread article count for all feeds
-28. The right menu shall have a Recently Read category that shows all articles that have been marked as read in the last 7 days, sorted by most recently read first 
-29. It shall be possible to "mute" and "unmute" categories
-30. Articles from a muted category shall not appear in the feed reader, whichever category is currrently selected, but the unread article count for that category shall still be displayed in the right menu
-31. Muting and unmuting categories shall be implemented as a user preference stored in the database, and shall persist across sessions
-32. The feed reader shall have a settings page where users can manage their feed preferences, including muting and unmuting categories
-33. The feed reader shall import OPML files from Feedly and Inoreader, and add the feeds to the user's subscriptions with appropriate category assignments based on the OPML structure
-34. The feed reader shall export the user's feed subscriptions and categories as an OPML file that can be imported into other feed readers
-35. Categories shall have colours that are consistent across the feed reader and the right menu, and these colours shall be stored in the database as a user preference for each category
+26. The feed reader links shall appear between Football and OpenSky Database in the left menu and the home page
+27. The feed reader shall only be available to logged in users
+28. The feed reader shall be available at the URL path `/feeds/`
+29. The feed reader shall display unread articles in full width cards on the feed reader page, with the oldest articles appearing at the top of the list
+30. The feed reader shall auto refresh every 10 seconds to check for new feeds
+31. The feed reader shall allow the user to move through feeds using j (next) and k (previous) keys, and open the selected feed in a new tab using the spacebar or enter key
+32. The feed reader shall allow the user to add new RSS feeds by entering a URL and clicking an "Add" button, all feeds should be added to a category
+33. The user added feeds shall be stored in the database for each user and persist across sessions
+34. A user shall only be able to view and modify their own feeds, not the feeds of other users
+35. The right menu shall display a list of feed categories and an unread article count for each category
+36. clicking on a category shall filter the feed reader to only show articles from that category
+37. The right menu shall have an all feeds category that shows all articles regardless of category with an unread article count for all feeds
+38. The right menu shall have a Recently Read category that shows all articles that have been marked as read in the last 7 days, sorted by most recently read first 
+39. It shall be possible to "mute" and "unmute" categories
+40. Articles from a muted category shall not appear in the feed reader, whichever category is currrently selected, but the unread article count for that category shall still be displayed in the right menu
+41. Muting and unmuting categories shall be implemented as a user preference stored in the database, and shall persist across sessions
+42. The feed reader shall have a settings page where users can manage their feed preferences, including muting and unmuting categories
+43. The feed reader shall import OPML files from Feedly and Inoreader, and add the feeds to the user's subscriptions with appropriate category assignments based on the OPML structure
+44. The feed reader shall export the user's feed subscriptions and categories as an OPML file that can be imported into other feed readers
+45. Categories shall have colours that are consistent across the feed reader and the right menu, and these colours shall be stored in the database as a user preference for each category
 
 ### Backend Reqs
 
-36. Backend code shall be implemented in the backend/src/feeds directory, with appropriate subdirectories for database models, API endpoints, and background tasks
-37. The backend code shall be implemented as a new thread that runs alongside the existing backend code, and shall not interfere with the existing functionality of the site
-38. The backend code shall be responsible for creating a mongodb feeds database and the necessary collections and indexes to store feed data, user subscriptions, and read/unread status of articles
-39. The backend code shall fetch subscribed feeds once every 5 minutes and store the feed data in the database
-40. The backend shall only fetch each subscription once, even if multiple users are subscribed to the same feed, to avoid unnecessary network requests and reduce load on the feed servers
-41. The feeds shall be fetched and stored in the database in a way that allows for efficient querying and filtering by category, read/unread status, and other relevant criteria
-42. The backend shall mark articles as deleted after 7 days
-43. The backend shall permanently delete articles that have been marked as deleted for more than 30 days
-44. The backend shall not delete or purge articles that are still marked as unread by any user, even if they are older than the retention thresholds, to prevent data loss of unread articles
+46. Backend code shall be implemented in the backend/src/feeds directory, with appropriate subdirectories for database models, API endpoints, and background tasks
+47. The backend code shall be implemented as a new thread that runs alongside the existing backend code, and shall not interfere with the existing functionality of the site
+48. The backend code shall be responsible for creating a mongodb feeds database and the necessary collections and indexes to store feed data, user subscriptions, and read/unread status of articles
+49. The backend code shall fetch subscribed feeds once every 5 minutes and store the feed data in the database
+50. The backend shall only fetch each subscription once, even if multiple users are subscribed to the same feed, to avoid unnecessary network requests and reduce load on the feed servers
+51. The feeds shall be fetched and stored in the database in a way that allows for efficient querying and filtering by category, read/unread status, and other relevant criteria
+52. The backend shall mark articles as deleted after 7 days
+53. The backend shall permanently delete articles that have been marked as deleted for more than 30 days
+54. The backend shall not delete or purge articles that are still marked as unread by any user, even if they are older than the retention thresholds, to prevent data loss of unread articles
 
 ### FastAPI Reqs
 
-45. FastAPI code shall be implemented in the website/feeds directory, with appropriate subdirectories for API endpoints and database models
-46. The FastAPI code shall mark articles as read when the user clicks on them in the feed reader UI, and this information shall be stored in the database
-47. The FastAPI code shall provide an API endpoint to retrieve the list of feeds and their associated articles for the logged in user, with support for filtering by category and read/unread status
-48. The FastAPI code shall provide an API endpoint to add new feed subscriptions for the logged in user, which shall validate the feed URL and return an appropriate response if the URL is invalid or the feed cannot be fetched
-49. The FastAPI code shall provide an API endpoint to mark articles as read for the logged in user, which shall update the database accordingly and return an appropriate response if the article ID is invalid or the user is not authorized to modify the article's read status
-50. The FastAPI code shall provide an API endpoint to retrieve the list of feed categories and their associated unread article counts for the logged in user, which shall return an appropriate response if the user is not authorized to access the feed data
+55. FastAPI code shall be implemented in the website/feeds directory, with appropriate subdirectories for API endpoints and database models
+56. The FastAPI code shall mark articles as read when the user clicks on them in the feed reader UI, and this information shall be stored in the database
+57. The FastAPI code shall provide an API endpoint to retrieve the list of feeds and their associated articles for the logged in user, with support for filtering by category and read/unread status
+58. The FastAPI code shall provide an API endpoint to add new feed subscriptions for the logged in user, which shall validate the feed URL and return an appropriate response if the URL is invalid or the feed cannot be fetched
+59. The FastAPI code shall provide an API endpoint to mark articles as read for the logged in user, which shall update the database accordingly and return an appropriate response if the article ID is invalid or the user is not authorized to modify the article's read status
+60. The FastAPI code shall provide an API endpoint to retrieve the list of feed categories and their associated unread article counts for the logged in user, which shall return an appropriate response if the user is not authorized to access the feed data
 
 ## Design
 
