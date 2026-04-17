@@ -11,6 +11,39 @@
     padding: 0;
 }
 
+.football-return-to-today {
+    position: fixed;
+    z-index: 11;
+    border: 0.0625rem solid rgba(173, 197, 225, 0.62);
+    border-radius: 999rem;
+    background: rgba(255, 255, 255, 0.36);
+    backdrop-filter: blur(0.36rem);
+    -webkit-backdrop-filter: blur(0.36rem);
+    color: var(--brand-strong);
+    font-size: 0.82rem;
+    font-weight: 700;
+    letter-spacing: 0.01rem;
+    padding: 0.28rem 0.68rem;
+    line-height: 1.1;
+    box-shadow: 0 0.25rem 0.7rem rgba(23, 44, 73, 0.16);
+    opacity: 0;
+    transform: translateY(-0.25rem) scale(0.97);
+    pointer-events: none;
+    transition: opacity 140ms ease, transform 140ms ease, background 120ms ease, border-color 120ms ease;
+}
+
+.football-return-to-today.is-visible {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    pointer-events: auto;
+}
+
+.football-return-to-today:hover,
+.football-return-to-today:focus-visible {
+    background: rgba(255, 255, 255, 0.52);
+    border-color: rgba(106, 146, 189, 0.78);
+}
+
 .football-grid {
     display: grid;
     flex: 0 0 auto;
