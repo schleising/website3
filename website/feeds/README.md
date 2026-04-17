@@ -324,6 +324,7 @@ sequenceDiagram
 2. Resolve all user subscriptions to unique canonical URLs.
 3. Fetch each unique feed once per cycle.
 4. Fan out resulting articles to all subscribed users through query joins (no duplicate network fetch).
+5. Support an explicit source-level force-refresh flag so newly added/imported subscriptions trigger near-immediate worker fetches without breaking the regular 5-minute cadence.
 
 #### 4.3 Retention Guard Rules
 
@@ -431,6 +432,7 @@ sequenceDiagram
 	3. `Recently Read` bucket (7-day window).
 	4. muted categories visually indicated.
 	5. category color chips/markers consistent with feed cards.
+4. New unread articles include a subtle `New` badge and accent until they are marked read.
 
 #### 6.3 Keyboard and Interaction Rules
 
@@ -449,6 +451,8 @@ sequenceDiagram
 2. Polling request includes current category/filter context.
 3. Preserve current keyboard selection where possible after refresh.
 4. Show non-blocking error banner/toast if refresh fails.
+5. Preserve existing card order during polling updates and append newly arrived articles to avoid disruptive list movement.
+6. Keep visual position stable across refreshes unless a user action changes selection or read state.
 
 #### 6.5 Settings and OPML Workflows
 
@@ -698,75 +702,81 @@ Test -> Requirement Matrix template:
 | 29 | Unread cards, oldest first | 2.1, 5.2, 6.2 |
 | 30 | 10-second auto refresh | 2.1, 6.4 |
 | 31 | j/k + enter/space behavior | 2.1, 6.3 |
-| 32 | Add feed URL + category | 5.1, 5.3, 6.5 |
-| 33 | User subscriptions persist | 3.1, 3.2 |
-| 34 | User data isolation | 5.3, 7 |
-| 35 | Right menu categories + unread count | 2.1, 5.1, 6.2 |
-| 36 | Category click filters feeds | 5.2, 6.3 |
-| 37 | All Feeds category + unread count | 5.2, 6.2 |
-| 38 | Recently Read last 7 days, newest first | 5.2, 6.2 |
-| 39 | Mute/unmute categories | 5.1, 6.5 |
-| 40 | Muted categories hidden but counts shown | 5.2, 6.2 |
-| 41 | Mute persistence in DB | 3.1, 5.1, 6.5 |
-| 42 | Settings page for preferences | 5.1, 6.5 |
-| 43 | OPML import (Feedly/Inoreader) + categories | 2.2, 5.1, 5.3, 5.4, 6.5 |
-| 44 | OPML export of subscriptions/categories | 2.2, 5.1, 5.4, 6.5 |
-| 45 | Category colors consistent and persisted per user | 3.1, 5.1, 5.3, 6.2, 6.5 |
-| 46 | Backend code in `backend/src/feeds` | 2.1, 4 |
-| 47 | Backend thread parallel to existing site | 4.1 |
-| 48 | MongoDB feeds DB + collections/indexes | 3, 3.2 |
-| 49 | Fetch subscribed feeds every 5 minutes | 4 |
-| 50 | Deduped fetch for shared subscriptions | 4.2 |
-| 51 | Efficient query/filter storage | 3.2, 4.2, 5.2, 13 |
-| 52 | Mark articles deleted after 7 days | 4, 8 |
-| 53 | Permanently delete after 30 days | 4, 8 |
-| 54 | Never purge unread articles for any user | 4.3, 8 |
-| 55 | FastAPI code in `website/feeds` | 2.1, 5 |
-| 56 | Mark article read on click | 5.1, 6.3 |
-| 57 | Endpoint for feeds/articles with filters | 5.1, 5.2 |
-| 58 | Endpoint to add subscriptions + URL validation | 5.1, 5.3, 9 |
-| 59 | Endpoint to mark read with validation/auth checks | 5.1, 5.3, 7, 9 |
-| 60 | Endpoint for categories + unread count + auth | 5.1, 5.2, 7 |
+| 32 | Mark article read on click/tap/j-k selection | 5.1, 6.3 |
+| 33 | Add feed URL + category | 5.1, 5.3, 6.5 |
+| 34 | User subscriptions persist | 3.1, 3.2 |
+| 35 | User data isolation | 5.3, 7 |
+| 36 | Right menu categories + unread count | 2.1, 5.1, 6.2 |
+| 37 | Category click filters feeds | 5.2, 6.3 |
+| 38 | All Feeds category + unread count | 5.2, 6.2 |
+| 39 | Recently Read last 7 days, newest first | 5.2, 6.2 |
+| 40 | Mute/unmute categories | 5.1, 6.5 |
+| 41 | Muted categories hidden but counts shown | 5.2, 6.2 |
+| 42 | Mute persistence in DB | 3.1, 5.1, 6.5 |
+| 43 | Settings page for preferences | 5.1, 6.5 |
+| 44 | OPML import (Feedly/Inoreader) + categories | 2.2, 5.1, 5.3, 5.4, 6.5 |
+| 45 | OPML export of subscriptions/categories | 2.2, 5.1, 5.4, 6.5 |
+| 46 | Imported/newly added feeds trigger immediate backend refresh | 4, 4.2, 5.1, 6.5 |
+| 47 | UI state mutations update immediately without waiting for poll | 6.3, 6.4, 6.5 |
+| 48 | Refresh preserves keyboard selection/place where possible | 6.4 |
+| 49 | No UI movement without user action | 6.4 |
+| 50 | New articles visually indicated until marked read | 6.2, 6.4 |
+| 51 | Category colors consistent and persisted per user | 3.1, 5.1, 5.3, 6.2, 6.5 |
+| 52 | Backend code in `backend/src/feeds` | 2.1, 4 |
+| 53 | Backend thread parallel to existing site | 4.1 |
+| 54 | MongoDB feeds DB + collections/indexes | 3, 3.2 |
+| 55 | Fetch subscribed feeds every 5 minutes | 4 |
+| 56 | Deduped fetch for shared subscriptions | 4.2 |
+| 57 | Efficient query/filter storage | 3.2, 4.2, 5.2, 13 |
+| 58 | Mark articles deleted after 7 days | 4, 8 |
+| 59 | Permanently delete after 30 days | 4, 8 |
+| 60 | Never purge unread articles for any user | 4.3, 8 |
+| 61 | FastAPI code in `website/feeds` | 2.1, 5 |
+| 62 | FastAPI marks article read on click | 5.1, 6.3 |
+| 63 | Endpoint for feeds/articles with filters | 5.1, 5.2 |
+| 64 | Endpoint to add subscriptions + URL validation | 5.1, 5.3, 9 |
+| 65 | Endpoint to mark read with validation/auth checks | 5.1, 5.3, 7, 9 |
+| 66 | Endpoint for categories + unread count + auth | 5.1, 5.2, 7 |
 
 ### 16. Traceability Table: Design -> Requirements
 
 | Design Section | Requirement IDs |
 | --- | --- |
-| 1. Design Goals | 1, 6, 7, 10, 15, 16, 19, 22, 23, 25, 43, 44, 45, 54 |
-| 2. High-Level Architecture | 1, 6, 8, 9, 10, 27, 46, 47, 48, 49, 55 |
-| 2.1 Component Responsibilities | 1, 6, 8, 9, 10, 27, 29, 35, 45, 46, 47, 55 |
-| 2.2 OPML Interoperability Flow | 43, 44 |
+| 1. Design Goals | 1, 6, 7, 10, 15, 16, 19, 22, 23, 25, 44, 45, 46, 50, 51, 60 |
+| 2. High-Level Architecture | 1, 6, 8, 9, 10, 27, 52, 53, 54, 55, 61 |
+| 2.1 Component Responsibilities | 1, 6, 8, 9, 10, 27, 29, 36, 51, 52, 53, 61 |
+| 2.2 OPML Interoperability Flow | 44, 45 |
 | 2.3 Local Test Environment Architecture | 16, 17, 19, 21 |
-| 3. Data Model Design | 33, 41, 45, 48, 51 |
-| 3.1 Collection Notes | 33, 41, 45, 48 |
-| 3.2 Index Plan | 33, 48, 51, 54 |
-| 4. Backend Worker Design | 46, 47, 49, 50, 51, 52, 53, 54 |
-| 4.1 Threading and Isolation | 47 |
-| 4.2 Feed Deduplication Strategy | 50, 51 |
-| 4.3 Retention Guard Rules | 52, 53, 54 |
+| 3. Data Model Design | 34, 42, 51, 54, 57 |
+| 3.1 Collection Notes | 34, 42, 51, 54 |
+| 3.2 Index Plan | 34, 54, 57, 60 |
+| 4. Backend Worker Design | 46, 52, 53, 55, 56, 57, 58, 59, 60 |
+| 4.1 Threading and Isolation | 53 |
+| 4.2 Feed Deduplication Strategy | 46, 56, 57 |
+| 4.3 Retention Guard Rules | 58, 59, 60 |
 | 4.4 Test Scenario Controls | 17, 22, 23 |
-| 5. FastAPI Design | 1, 2, 3, 4, 5, 34, 55, 56, 57, 58, 59, 60 |
-| 5.1 Route Structure | 1, 28, 32, 39, 42, 43, 44, 45, 56, 57, 58, 59, 60 |
-| 5.2 API Query Semantics | 29, 35, 36, 37, 38, 40, 45, 57, 60 |
-| 5.3 Pydantic Models | 2, 3, 4, 5, 34, 43, 45, 58, 59 |
-| 5.4 OPML Import and Export Contract | 43, 44 |
-| 6. Frontend UX and Interaction Design | 6, 7, 10, 26, 27, 29, 30, 31, 32, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 56 |
+| 5. FastAPI Design | 1, 2, 3, 4, 5, 35, 61, 62, 63, 64, 65, 66 |
+| 5.1 Route Structure | 1, 28, 32, 33, 40, 43, 44, 45, 62, 63, 64, 65, 66 |
+| 5.2 API Query Semantics | 29, 36, 37, 38, 39, 41, 51, 63, 66 |
+| 5.3 Pydantic Models | 2, 3, 4, 5, 35, 44, 51, 64, 65 |
+| 5.4 OPML Import and Export Contract | 44, 45 |
+| 6. Frontend UX and Interaction Design | 6, 7, 10, 26, 27, 29, 30, 31, 32, 33, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 47, 48, 49, 50, 51, 62 |
 | 6.1 Navigation and Access | 26, 27, 28 |
-| 6.2 Main Reader Layout | 6, 7, 29, 35, 37, 38, 40, 45 |
-| 6.3 Keyboard and Interaction Rules | 31, 36, 56 |
-| 6.4 Polling and UI Consistency | 8, 9, 30 |
-| 6.5 Settings and OPML Workflows | 32, 39, 41, 42, 43, 44, 45 |
+| 6.2 Main Reader Layout | 6, 7, 29, 36, 38, 39, 41, 50, 51 |
+| 6.3 Keyboard and Interaction Rules | 31, 32, 37, 62 |
+| 6.4 Polling and UI Consistency | 8, 9, 30, 47, 48, 49, 50 |
+| 6.5 Settings and OPML Workflows | 33, 40, 42, 43, 44, 45, 46, 47, 51 |
 | 6.6 Rendering and JavaScript Strategy | 10, 11 |
-| 7. Security and Data Integrity | 1, 2, 3, 4, 5, 10, 21, 27, 34, 59, 60 |
-| 8. Retention and Data Lifecycle | 52, 53, 54 |
-| 9. Error Handling and Resilience | 8, 9, 17, 58, 59 |
-| 10. Monitoring and Auditability | 15, 17, 20, 51, 54 |
+| 7. Security and Data Integrity | 1, 2, 3, 4, 5, 10, 21, 27, 35, 65, 66 |
+| 8. Retention and Data Lifecycle | 58, 59, 60 |
+| 9. Error Handling and Resilience | 8, 9, 17, 64, 65 |
+| 10. Monitoring and Auditability | 15, 17, 20, 46, 57, 60 |
 | 11. Engineering Standards and Conventions | 11, 12, 13 |
 | 11.1 JavaScript Standards | 11 |
 | 11.2 Python Standards | 12 |
 | 11.3 Codebase Consistency | 13 |
 | 12. Testability and Maintainability | 14, 23 |
-| 13. Performance and Scalability | 15, 51 |
+| 13. Performance and Scalability | 15, 57 |
 | 14. Local Test Environment and Testing Strategy | 16, 17, 18, 19, 20, 21, 22, 23, 24, 25 |
 | 14.1 Local `docker-compose-test.yaml` Stack | 16, 19, 21 |
 | 14.2 Production Parity and Debugging | 17, 19 |

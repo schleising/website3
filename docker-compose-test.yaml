@@ -53,10 +53,11 @@ services:
       - mongodb
     volumes:
       - ./website:/app:ro
+      - ./backend/src:/backend-src:ro
       - ./test/config/website_db_server.txt:/app/database/db_server.txt:ro
     environment:
       - PYTHONUNBUFFERED=1
-    command: ["python", "-m", "unittest", "discover", "-s", "/app/tests"]
+    command: ["sh", "-c", "python -m unittest discover -s /app/tests && PYTHONPATH=/backend-src python -m unittest discover -s /backend-src/tests"]
     profiles: ["tests"]
 
 volumes:

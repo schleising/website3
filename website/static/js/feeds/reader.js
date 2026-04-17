@@ -29,8 +29,81 @@
     /** @type {string} */
     const csrfToken = root.dataset.csrfToken || "";
 
+    /** @type {string} */
+    const knownArticleStorageKey = "feeds-reader-known-articles-v1";
+    /** @type {string} */
+    const newUnreadStorageKey = "feeds-reader-new-unread-v1";
+    /** @type {number} */
+    const maxStoredArticleIds = 2500;
+
     /** @type {number} */
     let selectedIndex = -1;
+
+    /** @type {Set<string>} */
+    const pendingReadIds = new Set();
+
+    /** @type {Set<string>} */
+    const knownArticleIds = loadIdSet(knownArticleStorageKey);
+    /** @type {Set<string>} */
+    const newUnreadArticleIds = loadIdSet(newUnreadStorageKey);
+
+    /** @type {boolean} */
+    const hadKnownArticleHistory = knownArticleIds.size > 0;
+
+    /**
+     * Load a set of article IDs from localStorage.
+     *
+     * @param {string} storageKey
+     * @returns {Set<string>}
+     */
+    function loadIdSet(storageKey) {
+        try {
+            const serialized = window.localStorage.getItem(storageKey);
+            if (!serialized) {
+                return new Set();
+            }
+
+            const parsed = JSON.parse(serialized);
+            if (!Array.isArray(parsed)) {
+                return new Set();
+            }
+
+            return new Set(
+                parsed
+                    .filter(value => typeof value === "string")
+                    .map(value => value.trim())
+                    .filter(value => value !== "")
+            );
+        } catch (_error) {
+            return new Set();
+        }
+    }
+
+    /**
+     * Persist article ID sets with bounded size.
+     *
+     * @param {string} storageKey
+     * @param {Set<string>} values
+     */
+    function saveIdSet(storageKey, values) {
+        try {
+            const list = Array.from(values);
+            const bounded = list.length > maxStoredArticleIds
+                ? list.slice(list.length - maxStoredArticleIds)
+                : list;
+            window.localStorage.setItem(storageKey, JSON.stringify(bounded));
+        } catch (_error) {
+            // Ignore storage quota and serialization issues.
+        }
+    }
+
+    /**
+     * Persist known/new article ID state.
+     */
+    function persistArticleIdState() {
+        saveIdSet(knownArticleStorageKey, knownArticleIds);
+        saveIdSet(newUnreadStorageKey, newUnreadArticleIds);
+    }
 
     /**
      * Build URL for article list polling.
@@ -54,11 +127,72 @@
     }
 
     /**
+     * Extract card article ID.
+     *
+     * @param {HTMLElement} card
+     * @returns {string}
+     */
+    function getCardArticleId(card) {
+        return String(card.dataset.articleId || "").trim();
+    }
+
+    /**
+     * Return currently-selected article ID if available.
+     *
+     * @returns {string}
+     */
+    function getSelectedArticleId() {
+        const cards = getCards();
+        if (selectedIndex < 0 || selectedIndex >= cards.length) {
+            return "";
+        }
+
+        return getCardArticleId(cards[selectedIndex]);
+    }
+
+    /**
+     * Update card "new" badge state.
+     *
+     * @param {HTMLElement} card
+     * @param {boolean} showBadge
+     */
+    function setCardNewBadge(card, showBadge) {
+        const existingBadge = card.querySelector(".feed-new-badge");
+
+        if (!showBadge) {
+            if (existingBadge) {
+                existingBadge.remove();
+            }
+            card.classList.remove("is-new-article");
+            return;
+        }
+
+        card.classList.add("is-new-article");
+
+        if (existingBadge) {
+            return;
+        }
+
+        const leftMeta = card.querySelector(".feed-article-meta-left");
+        if (!(leftMeta instanceof HTMLElement)) {
+            return;
+        }
+
+        const badge = document.createElement("span");
+        badge.className = "feed-new-badge";
+        badge.textContent = "New";
+        leftMeta.appendChild(badge);
+    }
+
+    /**
      * Update card selected state and ensure focus visibility.
      *
      * @param {number} nextIndex
      */
-    function setSelectedIndex(nextIndex) {
+    function setSelectedIndex(nextIndex, options = {}) {
+        const markReadOnSelect = Boolean(options.markReadOnSelect);
+        const shouldScrollIntoView = options.scrollIntoView !== false;
+
         const cards = getCards();
         if (cards.length === 0) {
             selectedIndex = -1;
@@ -73,7 +207,13 @@
         });
 
         cards[boundedIndex].focus({ preventScroll: true });
-        cards[boundedIndex].scrollIntoView({ block: "nearest" });
+        if (shouldScrollIntoView) {
+            cards[boundedIndex].scrollIntoView({ block: "nearest" });
+        }
+
+        if (markReadOnSelect) {
+            markCardRead(cards[boundedIndex]);
+        }
     }
 
     /**
@@ -113,26 +253,47 @@
             return;
         }
 
-        const response = await fetch(buildMarkReadUrl(articleId), {
-            method: "POST",
-            headers: {
-                "X-CSRF-Token": csrfToken,
-            },
-        });
-
-        if (!response.ok) {
+        if (pendingReadIds.has(articleId)) {
             return;
         }
 
-        card.remove();
+        pendingReadIds.add(articleId);
 
-        const cards = getCards();
-        if (cards.length === 0) {
-            selectedIndex = -1;
-            return;
+        try {
+            const response = await fetch(buildMarkReadUrl(articleId), {
+                method: "POST",
+                headers: {
+                    "X-CSRF-Token": csrfToken,
+                },
+            });
+
+            if (!response.ok) {
+                return;
+            }
+
+            newUnreadArticleIds.delete(articleId);
+            persistArticleIdState();
+
+            if (selectedStatus === "unread") {
+                card.remove();
+
+                const cards = getCards();
+                if (cards.length === 0) {
+                    selectedIndex = -1;
+                    return;
+                }
+
+                setSelectedIndex(
+                    Math.min(selectedIndex, cards.length - 1),
+                    { scrollIntoView: false }
+                );
+                return;
+            }
+
+            setCardNewBadge(card, false);
+        } finally {
+            pendingReadIds.delete(articleId);
         }
-
-        setSelectedIndex(Math.min(selectedIndex, cards.length - 1));
     }
 
     /**
@@ -234,10 +395,37 @@
      * @param {{ articles?: Array<Record<string, any>> }} payload
      */
     function renderArticles(payload) {
-        const cards = Array.isArray(payload.articles) ? payload.articles : [];
-        articleList.innerHTML = "";
+        const incomingArticles = Array.isArray(payload.articles) ? payload.articles : [];
+        const previousCards = getCards();
+        const previousCardMap = new Map();
+        const previousIdsInOrder = [];
+        const previousSelectedId = getSelectedArticleId();
+        const previousScrollY = window.scrollY;
 
-        if (cards.length === 0) {
+        previousCards.forEach(card => {
+            const articleId = getCardArticleId(card);
+            if (articleId === "") {
+                return;
+            }
+
+            previousIdsInOrder.push(articleId);
+            previousCardMap.set(articleId, card);
+        });
+
+        const incomingById = new Map();
+        const incomingIdsInOrder = [];
+        incomingArticles.forEach(article => {
+            const articleId = String(article.article_id || "").trim();
+            if (articleId === "") {
+                return;
+            }
+
+            incomingById.set(articleId, article);
+            incomingIdsInOrder.push(articleId);
+        });
+
+        if (incomingIdsInOrder.length === 0) {
+            articleList.innerHTML = "";
             const emptyState = document.createElement("article");
             emptyState.className = "feed-empty-state site-card";
             emptyState.innerHTML = "<h5>No articles available</h5><p>Add subscriptions in Settings or try a different filter.</p>";
@@ -246,11 +434,84 @@
             return;
         }
 
-        cards.forEach(article => {
-            articleList.appendChild(renderArticleCard(article));
+        const finalIds = previousIdsInOrder
+            .filter(articleId => incomingById.has(articleId))
+            .concat(incomingIdsInOrder.filter(articleId => !previousCardMap.has(articleId)));
+
+        incomingIdsInOrder.forEach(articleId => {
+            const isAlreadyKnown = knownArticleIds.has(articleId);
+            const isAlreadyVisible = previousCardMap.has(articleId);
+
+            if (
+                selectedStatus === "unread" &&
+                !isAlreadyKnown &&
+                !isAlreadyVisible &&
+                hadKnownArticleHistory
+            ) {
+                newUnreadArticleIds.add(articleId);
+            }
+
+            knownArticleIds.add(articleId);
         });
 
-        setSelectedIndex(0);
+        persistArticleIdState();
+
+        const fragment = document.createDocumentFragment();
+
+        finalIds.forEach(articleId => {
+            const article = incomingById.get(articleId);
+            if (!article) {
+                return;
+            }
+
+            const existingCard = previousCardMap.get(articleId);
+            const card = existingCard || renderArticleCard(article);
+            const isUnread = !Boolean(article.is_read);
+            setCardNewBadge(card, isUnread && newUnreadArticleIds.has(articleId));
+            fragment.appendChild(card);
+        });
+
+        articleList.replaceChildren(fragment);
+
+        if (finalIds.length === 0) {
+            selectedIndex = -1;
+            return;
+        }
+
+        if (previousSelectedId !== "") {
+            const selectedIdIndex = finalIds.indexOf(previousSelectedId);
+            if (selectedIdIndex >= 0) {
+                setSelectedIndex(selectedIdIndex, { scrollIntoView: false });
+                window.scrollTo({ top: previousScrollY, behavior: "auto" });
+                return;
+            }
+        }
+
+        const fallbackIndex = selectedIndex >= 0 ? Math.min(selectedIndex, finalIds.length - 1) : 0;
+        setSelectedIndex(fallbackIndex, { scrollIntoView: false });
+        window.scrollTo({ top: previousScrollY, behavior: "auto" });
+    }
+
+    /**
+     * Initialize known/new article badge state from SSR-rendered cards.
+     */
+    function initializeArticleBadgeStateFromSsr() {
+        const cards = getCards();
+        cards.forEach(card => {
+            const articleId = getCardArticleId(card);
+            if (articleId === "") {
+                return;
+            }
+
+            if (selectedStatus === "unread" && !knownArticleIds.has(articleId) && hadKnownArticleHistory) {
+                newUnreadArticleIds.add(articleId);
+            }
+
+            knownArticleIds.add(articleId);
+            setCardNewBadge(card, newUnreadArticleIds.has(articleId));
+        });
+
+        persistArticleIdState();
     }
 
     /**
@@ -336,13 +597,13 @@
 
         if (event.key === "j") {
             event.preventDefault();
-            setSelectedIndex(selectedIndex + 1);
+            setSelectedIndex(selectedIndex + 1, { markReadOnSelect: true });
             return;
         }
 
         if (event.key === "k") {
             event.preventDefault();
-            setSelectedIndex(selectedIndex - 1);
+            setSelectedIndex(selectedIndex - 1, { markReadOnSelect: true });
             return;
         }
 
@@ -367,7 +628,7 @@
         const cards = getCards();
         const index = cards.indexOf(card);
         if (index >= 0) {
-            setSelectedIndex(index);
+            setSelectedIndex(index, { markReadOnSelect: true, scrollIntoView: false });
         }
 
         if (target.classList.contains("feed-mark-read-button")) {
@@ -398,8 +659,10 @@
     document.addEventListener("keydown", onKeyDown);
 
     // Initialize card selection from SSR content and start polling.
+    initializeArticleBadgeStateFromSsr();
+
     if (getCards().length > 0) {
-        setSelectedIndex(0);
+        setSelectedIndex(0, { scrollIntoView: false });
     }
 
     window.setInterval(refreshFeedData, 10000);

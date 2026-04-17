@@ -196,12 +196,36 @@ async def ensure_feed_source(normalized_url: str, source_title: str) -> dict[str
         "fetch_status": "new",
         "last_error": None,
         "next_retry_at": None,
+        "force_refresh_requested_at": None,
         "created_at": utc_now(),
         "updated_at": utc_now(),
     }
     result = await feed_sources_collection.insert_one(new_source)
     new_source["_id"] = result.inserted_id
     return new_source
+
+
+async def request_immediate_feed_refresh(feed_ids: set[ObjectId]) -> None:
+    """Flag sources for an immediate backend refresh cycle.
+
+    This sets a force-refresh marker consumed by the backend worker and clears
+    retry deferrals so newly-added/imported subscriptions are fetched quickly.
+    """
+
+    if feed_sources_collection is None or len(feed_ids) == 0:
+        return
+
+    now = utc_now()
+    await feed_sources_collection.update_many(
+        {"_id": {"$in": list(feed_ids)}},
+        {
+            "$set": {
+                "force_refresh_requested_at": now,
+                "next_retry_at": None,
+                "updated_at": now,
+            }
+        },
+    )
 
 
 async def create_or_update_subscription(
@@ -247,6 +271,10 @@ async def create_or_update_subscription(
                 "updated_at": utc_now(),
             }
 
+        source_id = source_doc.get("_id")
+        if isinstance(source_id, ObjectId):
+            await request_immediate_feed_refresh({source_id})
+
         return existing, False
 
     new_subscription = {
@@ -259,6 +287,11 @@ async def create_or_update_subscription(
 
     insert_result = await user_feed_subscriptions_collection.insert_one(new_subscription)
     new_subscription["_id"] = insert_result.inserted_id
+
+    source_id = source_doc.get("_id")
+    if isinstance(source_id, ObjectId):
+        await request_immediate_feed_refresh({source_id})
+
     return new_subscription, True
 
 

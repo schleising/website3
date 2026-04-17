@@ -20,6 +20,16 @@
 			</article>
 		</a>
 
+		{% if request.state.user != None %}
+		<a class="home-card-link" href="/feeds/">
+			<article class="home-card site-card">
+				<img class="home-card-image" src="/images/home/feeds.svg?v1.0.0" alt="News feed reader illustration">
+				<h4>Feeds</h4>
+				<p>Read and organize RSS or Atom articles by category.</p>
+			</article>
+		</a>
+		{% endif %}
+
 		<a class="home-card-link" href="/aircraft/">
 			<article class="home-card site-card">
 				<img class="home-card-image" src="/images/home/aircraft.svg?v1.4.0" alt="Aircraft tail-number search illustration">
@@ -33,14 +43,6 @@
 				<img class="home-card-image" src="/images/home/blog.svg?v1.3.0" alt="Editorial blog article illustration">
 				<h4>Blog</h4>
 				<p>Read posts and updates.</p>
-			</article>
-		</a>
-
-		<a class="home-card-link" href="/feeds/">
-			<article class="home-card site-card">
-				<img class="home-card-image" src="/images/home/feeds.svg?v1.0.0" alt="News feed reader illustration">
-				<h4>Feeds</h4>
-				<p>Read and organize RSS or Atom articles by category.</p>
 			</article>
 		</a>
 
