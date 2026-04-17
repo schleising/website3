@@ -25,7 +25,7 @@
 <section id="football-all-matches-toolbar" class="football-all-matches-toolbar" data-auto-center-next-match="{{ 'true' if all_matches_view|default(false) and is_current_season|default(false) else 'false' }}" aria-label="Match list quick navigation">
   <details class="football-jump-menu" id="football-jump-menu">
     <summary class="football-jump-trigger">Jump To</summary>
-    <div class="football-jump-dropdown sub-level-nav-container">
+    <div class="football-jump-dropdown">
       {% if is_current_season|default(false) and current_day_anchor %}
       <a class="sub-level-nav football-jump-link football-jump-link-today" href="#{{ current_day_anchor }}" data-center-next-match="true">Today</a>
       {% endif %}

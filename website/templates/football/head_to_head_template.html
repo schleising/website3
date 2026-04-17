@@ -1,7 +1,7 @@
 {% extends "football/football-base.html" %}
 
 {% block football_head %}
-<script defer src="/js/football/head_to_head.js?v1.1.1"></script>
+<script defer src="/js/football/head_to_head.js?v1.1.2"></script>
 {% endblock %}
 
 {% block title %}<title>Football - Head to Head</title>{% endblock %}
@@ -38,38 +38,22 @@
         <div class="h2h-team-grid">
           <label class="h2h-team-select" for="team-a-select">
             <span class="h2h-label">Team A</span>
-            <div class="h2h-select-row">
-              <img
-                id="team-a-crest"
-                class="h2h-crest"
-                src="{% if selected_team_a %}{{ selected_team_a.local_crest }}{% else %}/images/football/crests/unknown_team.svg{% endif %}"
-                alt="Team A crest preview"
-              >
-              <select id="team-a-select" name="team_a" required>
-                <option value="" disabled hidden {% if not selected_team_a %}selected{% endif %}>Select Team A</option>
-                {% for team in teams %}
-                <option value="{{ team.id }}" data-crest="{{ team.local_crest }}" {% if selected_team_a and selected_team_a.id == team.id %}selected{% endif %}>{{ team.short_name }}</option>
-                {% endfor %}
-              </select>
-            </div>
+            <select id="team-a-select" name="team_a" class="site-select" data-site-select-option-icon="data-crest" data-site-select-placeholder-icon="/images/football/crests/unknown_team.svg" required>
+              <option value="" disabled hidden {% if not selected_team_a %}selected{% endif %}>Select Team A</option>
+              {% for team in teams %}
+              <option value="{{ team.id }}" data-crest="{{ team.local_crest }}" {% if selected_team_a and selected_team_a.id == team.id %}selected{% endif %}>{{ team.short_name }}</option>
+              {% endfor %}
+            </select>
           </label>
 
           <label class="h2h-team-select" for="team-b-select">
             <span class="h2h-label">Team B</span>
-            <div class="h2h-select-row">
-              <img
-                id="team-b-crest"
-                class="h2h-crest"
-                src="{% if selected_team_b %}{{ selected_team_b.local_crest }}{% else %}/images/football/crests/unknown_team.svg{% endif %}"
-                alt="Team B crest preview"
-              >
-              <select id="team-b-select" name="team_b" required>
-                <option value="" disabled hidden {% if not selected_team_b %}selected{% endif %}>Select Team B</option>
-                {% for team in teams %}
-                <option value="{{ team.id }}" data-crest="{{ team.local_crest }}" {% if selected_team_b and selected_team_b.id == team.id %}selected{% endif %}>{{ team.short_name }}</option>
-                {% endfor %}
-              </select>
-            </div>
+            <select id="team-b-select" name="team_b" class="site-select" data-site-select-option-icon="data-crest" data-site-select-placeholder-icon="/images/football/crests/unknown_team.svg" required>
+              <option value="" disabled hidden {% if not selected_team_b %}selected{% endif %}>Select Team B</option>
+              {% for team in teams %}
+              <option value="{{ team.id }}" data-crest="{{ team.local_crest }}" {% if selected_team_b and selected_team_b.id == team.id %}selected{% endif %}>{{ team.short_name }}</option>
+              {% endfor %}
+            </select>
           </label>
         </div>
         <button type="submit" class="btn btn-primary">Show Matches</button>

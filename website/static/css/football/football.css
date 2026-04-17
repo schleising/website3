@@ -281,6 +281,21 @@
     gap: 0.7rem;
 }
 
+.football-season-popup.has-open-select-menu {
+    max-height: calc(100vh - 0.5rem);
+}
+
+.football-season-popup.has-open-select-menu .site-select-options {
+    position: static;
+    top: auto;
+    left: auto;
+    right: auto;
+    margin-top: 0.3rem;
+    width: 100%;
+    max-height: min(50vh, 18rem);
+    z-index: auto;
+}
+
 .football-season-popup-actions {
     display: flex;
     flex-wrap: wrap;
@@ -324,11 +339,6 @@ body.football-season-popup-open {
 
 .football-season-select {
     min-height: 2rem;
-    border: 0.0625rem solid rgba(163, 188, 221, 0.95);
-    border-radius: 0.45rem;
-    background: rgba(255, 255, 255, 0.95);
-    color: var(--text);
-    padding: 0.25rem 0.45rem;
     font-size: 0.85rem;
 }
 
@@ -479,6 +489,10 @@ body.football-season-popup-open {
     margin-top: 0;
 }
 
+.h2h-input-card:not(.collapsed) .h2h-input-content {
+    overflow: visible;
+}
+
 .h2h-results-card {
     display: flex;
     flex-direction: column;
@@ -533,50 +547,19 @@ body.football-season-popup-open {
     font-size: 0.9rem;
 }
 
-.h2h-select-row {
-    display: grid;
-    grid-template-columns: 2rem 1fr;
-    align-items: center;
-    gap: 0.45rem;
-}
-
-.h2h-crest {
-    width: 2rem;
-    height: 2rem;
-    object-fit: contain;
-    border: 0.0625rem solid var(--line);
-    border-radius: 0.4rem;
-    background: var(--surface);
-    padding: 0.2rem;
-}
-
-.h2h-crest.hidden {
-    visibility: hidden;
-}
-
-.h2h-select-row select {
+.h2h-team-select .site-select-menu {
     width: 100%;
+}
+
+.h2h-team-select .site-select-trigger {
     min-height: 2.1rem;
-    border: 0.0625rem solid rgba(163, 188, 221, 0.95);
-    border-radius: 0.5rem;
-    background-color: rgba(255, 255, 255, 0.95);
-    color: var(--text);
     font-weight: 600;
-    padding: 0.35rem 0.55rem;
 }
 
-.h2h-select-row select:invalid {
-    color: rgba(79, 95, 120, 0.65);
-}
-
-.h2h-select-row select option {
-    color: var(--text);
-}
-
-.h2h-select-row select:focus {
-    outline: none;
-    border-color: var(--brand-soft);
-    box-shadow: 0 0 0 0.15rem rgba(77, 123, 177, 0.2);
+.h2h-team-select .site-select-trigger-icon {
+    width: 1.24rem;
+    height: 1.24rem;
+    flex-basis: 1.24rem;
 }
 
 .h2h-grid {

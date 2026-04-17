@@ -2,8 +2,6 @@ document.addEventListener("readystatechange", event => {
     if (event.target.readyState === "complete") {
         initialiseInputCardToggle();
         resetResultsScrollPosition();
-        bindCrestPreview("team-a-select", "team-a-crest");
-        bindCrestPreview("team-b-select", "team-b-crest");
         initialiseOutcomeBarColours();
     }
 });
@@ -72,33 +70,6 @@ function initialiseInputCardToggle() {
             contentElement.style.maxHeight = contentElement.scrollHeight + "px";
         }
     });
-}
-
-function bindCrestPreview(selectId, crestId) {
-    const selectElement = document.getElementById(selectId);
-    const crestElement = document.getElementById(crestId);
-
-    if (!selectElement || !crestElement) {
-        return;
-    }
-
-    const placeholderCrestPath = "/images/football/crests/unknown_team.svg";
-
-    const applyPreview = () => {
-        const selectedOption = selectElement.options[selectElement.selectedIndex];
-        const crestPath = selectedOption ? selectedOption.dataset.crest : "";
-
-        if (crestPath) {
-            crestElement.src = crestPath;
-            crestElement.classList.remove("hidden");
-        } else {
-            crestElement.src = placeholderCrestPath;
-            crestElement.classList.remove("hidden");
-        }
-    };
-
-    selectElement.addEventListener("change", applyPreview);
-    applyPreview();
 }
 
 async function initialiseOutcomeBarColours() {

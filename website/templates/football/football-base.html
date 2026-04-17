@@ -20,7 +20,7 @@
 
 {% block head %}
 <link rel="stylesheet" href="/css/right-nav.css?v1.1.0">
-<link rel="stylesheet" href="/css/football/football.css?v1.5.24">
+<link rel="stylesheet" href="/css/football/football.css?v1.5.30">
 {% block football_head %}
 {% endblock %}
 {% endblock %}
@@ -51,7 +51,7 @@
 	</div>
 	<form class="football-season-popup-form" method="get" action="{{ season_switch_path }}">
 		<label class="football-season-label" for="football-season-select">Season</label>
-		<select id="football-season-select" name="season" class="football-season-select">
+		<select id="football-season-select" name="season" class="football-season-select site-select">
 			{% for season in available_seasons %}
 			<option value="{{ season.key }}" {% if season.selected %}selected{% endif %}>{{ season.label }}{% if season.is_current %} (Current){% endif %}</option>
 			{% endfor %}
