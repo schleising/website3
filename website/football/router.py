@@ -390,7 +390,11 @@ async def get_live_matches(
 ):
     logging.debug(f"/football/: {request}")
 
-    season_context = await _build_football_season_context(request, None)
+    season_context = await _build_football_season_context(
+        request,
+        None,
+        show_selector=False,
+    )
     selected_season_key = season_context["selected_season_key"]
 
     start_date, end_date = _live_scores_window()

@@ -220,29 +220,53 @@ function syncSidebarWidths() {
         return;
     }
 
+    const overlayMode = isOverlaySidebarMode();
+    if (overlayMode) {
+        // Clear previously applied widths so measurement can shrink when content changes.
+        leftSidebar.style.width = "";
+        rightSidebar.style.width = "";
+    }
+
     const leftWidth = measureSidebarContentWidth(leftSidebar);
     const rightAvailable = !rightSidebar.classList.contains("hidden-sidebar");
     const rightWidth = rightAvailable ? measureSidebarContentWidth(rightSidebar) : 0;
     const contentWidth = Math.max(leftWidth, rightWidth);
-    const overlayMode = isOverlaySidebarMode();
 
     if (!overlayMode && contentWidth > 0) {
-        sharedSidebarWidthPx = Math.max(sharedSidebarWidthPx, contentWidth);
+        // Keep desktop width in sync with current content instead of max-ever history.
+        sharedSidebarWidthPx = contentWidth;
     }
 
     if (overlayMode) {
+        const overlayMaxWidth = getOverlaySidebarMaxWidth();
         if (leftWidth > 0) {
-            leftSidebar.style.width = leftWidth + "px";
+            leftSidebar.style.width = Math.min(leftWidth, overlayMaxWidth) + "px";
         }
         if (rightAvailable && rightWidth > 0) {
-            rightSidebar.style.width = rightWidth + "px";
+            rightSidebar.style.width = Math.min(rightWidth, overlayMaxWidth) + "px";
         }
     } else if (sharedSidebarWidthPx > 0) {
         leftSidebar.style.width = sharedSidebarWidthPx + "px";
         rightSidebar.style.width = sharedSidebarWidthPx + "px";
     }
 
-    updateSidebarCollapseMode(Math.max(contentWidth, sharedSidebarWidthPx), rightAvailable);
+    const collapseProbeWidth = overlayMode ? contentWidth : Math.max(contentWidth, sharedSidebarWidthPx);
+    updateSidebarCollapseMode(collapseProbeWidth, rightAvailable);
+}
+
+function getOverlaySidebarMaxWidth() {
+    const viewportLimit = Math.max(160, Math.floor(window.innerWidth - 16));
+    const content = document.getElementById("content");
+    if (!content) {
+        return viewportLimit;
+    }
+
+    const contentRect = content.getBoundingClientRect();
+    if (!Number.isFinite(contentRect.width) || contentRect.width <= 0) {
+        return viewportLimit;
+    }
+
+    return Math.max(160, Math.min(viewportLimit, Math.floor(contentRect.width)));
 }
 
 function measureSidebarContentWidth(sidebar) {
@@ -256,8 +280,12 @@ function measureSidebarContentWidth(sidebar) {
         visibility: sidebar.style.visibility,
         position: sidebar.style.position,
         left: sidebar.style.left,
-        right: sidebar.style.right
+        right: sidebar.style.right,
+        width: sidebar.style.width
     };
+
+    // Prevent stale inline widths from inflating measured scroll width.
+    sidebar.style.width = "";
 
     const sidebarIsHidden = getComputedStyle(sidebar).display === "none";
     if (sidebarIsHidden) {
@@ -276,11 +304,16 @@ function measureSidebarContentWidth(sidebar) {
 
     const contentStyle = getComputedStyle(content);
     const sidebarStyle = getComputedStyle(sidebar);
-    const contentPad = parseFloat(contentStyle.paddingLeft) + parseFloat(contentStyle.paddingRight);
-    const sidebarPad = parseFloat(sidebarStyle.paddingLeft) + parseFloat(sidebarStyle.paddingRight);
-    const sidebarBorder = parseFloat(sidebarStyle.borderLeftWidth) + parseFloat(sidebarStyle.borderRightWidth);
+    const contentPad = (parseFloat(contentStyle.paddingLeft) || 0) + (parseFloat(contentStyle.paddingRight) || 0);
+    const sidebarPad = (parseFloat(sidebarStyle.paddingLeft) || 0) + (parseFloat(sidebarStyle.paddingRight) || 0);
+    const sidebarBorder = (parseFloat(sidebarStyle.borderLeftWidth) || 0) + (parseFloat(sidebarStyle.borderRightWidth) || 0);
+    const intrinsicWidth = Math.ceil(maxLinkWidth + contentPad + sidebarPad + sidebarBorder);
     const fallbackWidth = Math.ceil(content.scrollWidth);
-    const measuredWidth = Math.max(fallbackWidth, maxLinkWidth + contentPad + sidebarPad + sidebarBorder);
+    // If nav links exist, prefer intrinsic link measurement to avoid scrollWidth inflation
+    // from hidden/fixed descendants during breakpoint transitions.
+    const measuredWidth = links.length > 0
+        ? intrinsicWidth
+        : Math.max(fallbackWidth, intrinsicWidth);
 
     if (sidebarIsHidden) {
         sidebar.style.display = styleSnapshot.display;
@@ -289,6 +322,8 @@ function measureSidebarContentWidth(sidebar) {
         sidebar.style.left = styleSnapshot.left;
         sidebar.style.right = styleSnapshot.right;
     }
+
+    sidebar.style.width = styleSnapshot.width;
 
     return measuredWidth;
 }
