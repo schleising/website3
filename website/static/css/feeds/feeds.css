@@ -169,9 +169,11 @@
 
 .feed-article-media img {
     display: block;
-    width: 100%;
+    width: auto;
+    height: auto;
+    max-width: 100%;
     max-height: min(45vh, 20rem);
-    object-fit: cover;
+    object-fit: contain;
 }
 
 .feed-article-summary {
@@ -329,6 +331,31 @@
 
 .feed-subscription-category-select {
     margin-top: 0.4rem;
+}
+
+.feed-subscription-row .feed-subscription-url-input,
+.feed-subscription-row .feed-subscription-category-select,
+.feed-subscription-row .feed-subscription-save-button,
+.feed-subscription-row .feed-subscription-cancel-button {
+    display: none;
+}
+
+.feed-subscription-row.is-editing .feed-subscription-url-link,
+.feed-subscription-row.is-editing .feed-subscription-category-pill,
+.feed-subscription-row.is-editing .feed-subscription-edit-button {
+    display: none;
+}
+
+.feed-subscription-row.is-editing .feed-subscription-url-input,
+.feed-subscription-row.is-editing .feed-subscription-category-select,
+.feed-subscription-row.is-editing .feed-subscription-save-button,
+.feed-subscription-row.is-editing .feed-subscription-cancel-button {
+    display: inline-flex;
+}
+
+.feed-subscription-row.is-editing .feed-subscription-url-input,
+.feed-subscription-row.is-editing .feed-subscription-category-select {
+    display: block;
 }
 
 .feed-subscription-actions {

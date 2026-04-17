@@ -215,6 +215,72 @@
     }
 
     /**
+     * Sync a subscription row URL link from an edited/new URL value.
+     *
+     * @param {HTMLElement} row
+     * @param {string} feedUrl
+     */
+    function syncSubscriptionRowUrlLink(row, feedUrl) {
+        const urlLink = row.querySelector(".feed-subscription-url-link");
+        if (!(urlLink instanceof HTMLAnchorElement)) {
+            return;
+        }
+
+        const normalizedUrl = feedUrl.trim();
+        if (normalizedUrl === "") {
+            return;
+        }
+
+        urlLink.href = normalizedUrl;
+        urlLink.textContent = normalizedUrl;
+    }
+
+    /**
+     * Toggle row editing state and focus the URL input when entering edit mode.
+     *
+     * @param {HTMLElement} row
+     * @param {boolean} isEditing
+     */
+    function setSubscriptionRowEditMode(row, isEditing) {
+        row.classList.toggle("is-editing", isEditing);
+        row.dataset.isEditing = isEditing ? "true" : "false";
+
+        if (!isEditing) {
+            return;
+        }
+
+        const urlInput = row.querySelector(".feed-subscription-url-input");
+        if (urlInput instanceof HTMLInputElement) {
+            urlInput.focus();
+            urlInput.select();
+        }
+    }
+
+    /**
+     * Initialize subscription rows in read-only mode with synchronized chips and links.
+     */
+    function initializeSubscriptionRows() {
+        const rows = document.querySelectorAll(".feed-subscription-row");
+        rows.forEach(row => {
+            if (!(row instanceof HTMLElement)) {
+                return;
+            }
+
+            const urlInput = row.querySelector(".feed-subscription-url-input");
+            if (urlInput instanceof HTMLInputElement) {
+                syncSubscriptionRowUrlLink(row, urlInput.value);
+            }
+
+            const categorySelect = row.querySelector(".feed-subscription-category-select");
+            if (categorySelect instanceof HTMLSelectElement) {
+                syncSubscriptionRowChip(row, categorySelect.value.trim());
+            }
+
+            setSubscriptionRowEditMode(row, false);
+        });
+    }
+
+    /**
      * Handle subscription creation form submit.
      *
      * @param {SubmitEvent} event
@@ -393,6 +459,39 @@
             return;
         }
 
+        if (target.classList.contains("feed-subscription-edit-button")) {
+            const urlInput = row.querySelector(".feed-subscription-url-input");
+            const categorySelect = row.querySelector(".feed-subscription-category-select");
+            if (!(urlInput instanceof HTMLInputElement) || !(categorySelect instanceof HTMLSelectElement)) {
+                return;
+            }
+
+            row.dataset.originalFeedUrl = urlInput.value.trim();
+            row.dataset.originalCategoryId = categorySelect.value.trim();
+            setSubscriptionRowEditMode(row, true);
+            setStatus("Editing subscription.");
+            return;
+        }
+
+        if (target.classList.contains("feed-subscription-cancel-button")) {
+            const urlInput = row.querySelector(".feed-subscription-url-input");
+            const categorySelect = row.querySelector(".feed-subscription-category-select");
+            if (!(urlInput instanceof HTMLInputElement) || !(categorySelect instanceof HTMLSelectElement)) {
+                return;
+            }
+
+            const originalFeedUrl = String(row.dataset.originalFeedUrl || urlInput.value).trim();
+            const originalCategoryId = String(row.dataset.originalCategoryId || categorySelect.value).trim();
+
+            urlInput.value = originalFeedUrl;
+            categorySelect.value = originalCategoryId;
+            syncSubscriptionRowUrlLink(row, originalFeedUrl);
+            syncSubscriptionRowChip(row, originalCategoryId);
+            setSubscriptionRowEditMode(row, false);
+            setStatus("Edit cancelled.");
+            return;
+        }
+
         if (target.classList.contains("feed-subscription-save-button")) {
             const urlInput = row.querySelector(".feed-subscription-url-input");
             const categorySelect = row.querySelector(".feed-subscription-category-select");
@@ -424,6 +523,9 @@
                 row.dataset.subscriptionId = updatedSubscriptionId;
                 urlInput.value = updatedUrl;
                 categorySelect.value = updatedCategoryId;
+                row.dataset.originalFeedUrl = updatedUrl;
+                row.dataset.originalCategoryId = updatedCategoryId;
+                syncSubscriptionRowUrlLink(row, updatedUrl);
                 if (updatedSourceTitle !== "") {
                     const titleCell = row.querySelector("td");
                     if (titleCell instanceof HTMLElement) {
@@ -431,6 +533,7 @@
                     }
                 }
                 syncSubscriptionRowChip(row, updatedCategoryId);
+                setSubscriptionRowEditMode(row, false);
 
                 setStatus("Subscription updated.");
             } catch (error) {
@@ -470,6 +573,10 @@
             return;
         }
 
+        if (!row.classList.contains("is-editing")) {
+            return;
+        }
+
         syncSubscriptionRowChip(row, target.value.trim());
     }
 
@@ -489,6 +596,7 @@
     if (subscriptionTableWrap) {
         subscriptionTableWrap.addEventListener("click", onSubscriptionActionClick);
         subscriptionTableWrap.addEventListener("change", onSubscriptionCategorySelectChange);
+        initializeSubscriptionRows();
     }
 
     // Validate category endpoint wiring once at startup.

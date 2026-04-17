@@ -246,6 +246,7 @@
     function setSelectedIndex(nextIndex, options = {}) {
         const markReadOnSelect = Boolean(options.markReadOnSelect);
         const shouldScrollIntoView = options.scrollIntoView !== false;
+        const preferTopAlign = options.scrollMode === "top-if-needed";
 
         const cards = getCards();
         if (cards.length === 0) {
@@ -262,7 +263,18 @@
 
         cards[boundedIndex].focus({ preventScroll: true });
         if (shouldScrollIntoView) {
-            cards[boundedIndex].scrollIntoView({ block: "nearest" });
+            if (preferTopAlign) {
+                const selectedCard = cards[boundedIndex];
+                const rect = selectedCard.getBoundingClientRect();
+                const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+                const needsTopAlignment = rect.top < 0 || rect.top > viewportHeight || rect.bottom > viewportHeight;
+
+                if (needsTopAlignment) {
+                    selectedCard.scrollIntoView({ block: "start" });
+                }
+            } else {
+                cards[boundedIndex].scrollIntoView({ block: "nearest" });
+            }
         }
 
         if (markReadOnSelect) {
@@ -734,7 +746,10 @@
 
         if (event.key === "k") {
             event.preventDefault();
-            setSelectedIndex(selectedIndex - 1, { markReadOnSelect: true });
+            setSelectedIndex(selectedIndex - 1, {
+                markReadOnSelect: true,
+                scrollMode: "top-if-needed",
+            });
             return;
         }
 

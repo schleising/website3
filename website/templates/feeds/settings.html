@@ -91,6 +91,14 @@
           <tr class="feed-subscription-row" data-subscription-id="{{ subscription.subscription_id }}">
             <td>{{ subscription.source_title }}</td>
             <td>
+              <a
+                href="{{ subscription.source_url }}"
+                target="_blank"
+                rel="noopener"
+                class="feed-subscription-url-link"
+              >
+                {{ subscription.source_url }}
+              </a>
               <input
                 type="url"
                 class="feed-subscription-url-input"
@@ -116,7 +124,9 @@
             </td>
             <td>
               <div class="feed-subscription-actions">
+                <button type="button" class="btn btn-primary feed-subscription-edit-button">Edit</button>
                 <button type="button" class="btn btn-primary feed-subscription-save-button">Save</button>
+                <button type="button" class="btn feed-subscription-cancel-button">Cancel</button>
                 <button type="button" class="btn btn-danger feed-subscription-delete-button">Delete</button>
               </div>
             </td>
