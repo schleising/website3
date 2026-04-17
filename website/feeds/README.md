@@ -91,6 +91,8 @@ No application code is included in this document.
 8. Enforce explicit typing, documentation, and codebase conventions for maintainable implementation.
 9. Support category color preferences that are consistent across feed cards and right menu.
 10. Protect unread content from retention purges until all users have marked it as read.
+11. Provide a local, production-like Docker test environment for reliable development, debugging, and automated verification.
+12. Maintain auditable test evidence with bidirectional requirement-test traceability.
 
 ### 2. High-Level Architecture
 
@@ -157,6 +159,17 @@ sequenceDiagram
 	API->>API: Build OPML 2.0 document
 	API-->>UI: application/xml download
 ```
+
+#### 2.3 Local Test Environment Architecture
+
+1. Provide a repository-level `docker-compose-test.yaml` for local feed-reader testing.
+2. Test stack includes:
+	1. `nginx` with test-specific config that mirrors production routing behavior.
+	2. Main website/FastAPI application service.
+	3. Backend feed worker service.
+	4. MongoDB service with initialized collections and indexes.
+3. Service ports are bound to localhost-only interfaces for local-machine access.
+4. Test environment supports configurable failure simulation and high-volume scenarios through environment flags.
 
 ### 3. Data Model Design
 
@@ -312,6 +325,13 @@ sequenceDiagram
 2. Hard-delete threshold remains 30 days only for soft-deleted articles.
 3. Hard delete is blocked if any user still has the article marked unread.
 4. Purge and read-state cleanup run in a transaction-like batch to avoid orphaned state.
+
+#### 4.4 Test Scenario Controls
+
+1. Worker scheduling and retry intervals are configurable in test mode to accelerate feedback.
+2. Controlled failure injection is supported for timeout, malformed feed, and upstream error scenarios.
+3. High-subscription-volume simulation mode is supported to validate scaling behavior and query plans.
+4. Scenario controls are isolated to the local test environment and disabled in production configuration.
 
 ### 5. FastAPI Design (`website/feeds`)
 
@@ -572,7 +592,72 @@ sequenceDiagram
 5. Use asynchronous processing where appropriate for feed ingestion and OPML parsing.
 6. Keep SSR-first approach for fast first render and reduced frontend compute cost.
 
-### 14. Traceability Table: Requirements -> Design
+### 14. Local Test Environment and Testing Strategy
+
+#### 14.1 Local `docker-compose-test.yaml` Stack
+
+1. Provide a repository-level `docker-compose-test.yaml` to run feed-reader tests locally.
+2. Stack services include:
+	1. `nginx` with a test config that mirrors production path routing and proxy behavior.
+	2. Website/FastAPI application service.
+	3. Backend feed worker service.
+	4. MongoDB service with startup initialization for required collections and indexes.
+3. Environment and config files are versioned with safe local defaults and optional overrides.
+4. Exposed service ports are bound to localhost interfaces only.
+
+#### 14.2 Production Parity and Debugging
+
+1. Test topology mirrors production request flow while remaining lightweight for local iteration.
+2. Developers can inspect:
+	1. nginx access/error logs,
+	2. website and backend application logs,
+	3. database data/state for feeds, categories, subscriptions, and read markers.
+3. Environment supports controlled simulation for:
+	1. feed fetch failures,
+	2. malformed feed payloads,
+	3. large subscription counts.
+
+#### 14.3 Automated Test Execution
+
+1. Automated tests run inside or against the local test compose stack.
+2. Test sets include unit, API integration, and key end-to-end interaction paths.
+3. Test cases cover edge conditions and failure handling (network, validation, auth, retention, and OPML parsing).
+4. Test runs produce machine-readable and human-readable output for debugging.
+
+#### 14.4 Manual Validation for Non-Automatable Requirements
+
+1. Requirements that cannot be automated are documented with explicit justification.
+2. Each non-automated requirement has a manual test procedure and expected outcomes.
+3. Manual results are recorded alongside automated results for release validation.
+
+#### 14.5 Test Traceability Artifacts
+
+1. Maintain both matrices:
+	1. Requirement -> Test,
+	2. Test -> Requirement.
+2. Every requirement maps to one or more automated or manual test cases.
+3. Every test case references requirement IDs and includes current status.
+4. Test evidence (logs/reports/screenshots where needed) is linked to trace entries.
+
+Requirement -> Test Matrix template:
+
+| Requirement ID | Requirement Summary | Automated Test IDs | Manual Test IDs | Coverage Status |
+| --- | --- | --- | --- | --- |
+| 16 | Local test compose stack | IT-ENV-001 | MT-ENV-001 | Planned |
+
+Test -> Requirement Matrix template:
+
+| Test ID | Test Type | Covered Requirement IDs | Execution Environment | Latest Result |
+| --- | --- | --- | --- | --- |
+| IT-API-001 | Integration | 57, 60 | docker-compose-test | Not Run |
+
+#### 14.6 Test Environment Lifecycle and Documentation
+
+1. Maintain setup and troubleshooting instructions for the local test environment.
+2. Keep the test environment aligned with evolving feature requirements.
+3. Periodically review and refresh compose/config artifacts to prevent drift.
+
+### 15. Traceability Table: Requirements -> Design
 
 | Requirement | Requirement Summary | Design References |
 | --- | --- | --- |
@@ -589,88 +674,108 @@ sequenceDiagram
 | 11 | JSDoc with typed params and returns | 6.6, 11.1 |
 | 12 | Python type annotations and docstrings | 11.2 |
 | 13 | Follow existing codebase style and conventions | 11.3 |
-| 14 | Modular, maintainable, SOLID-oriented design | 12 |
+| 14 | Easy testing, maintainability, modularity, SOLID | 12, 14.3 |
 | 15 | Performance and scalability focus | 3.2, 4.2, 10, 13 |
-| 16 | Nav placement between Football/OpenSky | 6.1 |
-| 17 | Logged-in users only | 6.1, 7 |
-| 18 | Reader URL `/feeds/` | 5.1, 6.1 |
-| 19 | Unread cards, oldest first | 2.1, 5.2, 6.2 |
-| 20 | 10-second auto refresh | 2.1, 6.4 |
-| 21 | j/k + enter/space behavior | 2.1, 6.3 |
-| 22 | Add feed URL + category | 5.1, 5.3, 6.5 |
-| 23 | User subscriptions persist | 3.1, 3.2 |
-| 24 | User data isolation | 5.3, 7 |
-| 25 | Right menu categories + unread count | 2.1, 5.1, 6.2 |
-| 26 | Category click filters feeds | 5.2, 6.3 |
-| 27 | All Feeds category + unread count | 5.2, 6.2 |
-| 28 | Recently Read last 7 days, newest first | 5.2, 6.2 |
-| 29 | Mute/unmute categories | 5.1, 6.5 |
-| 30 | Muted categories hidden but counts shown | 5.2, 6.2 |
-| 31 | Mute persistence in DB | 3.1, 5.1, 6.5 |
-| 32 | Settings page for preferences | 5.1, 6.5 |
-| 33 | OPML import (Feedly/Inoreader) + categories | 2.2, 5.1, 5.3, 5.4, 6.5 |
-| 34 | OPML export of subscriptions/categories | 2.2, 5.1, 5.4, 6.5 |
-| 35 | Category colors consistent and persisted per user | 3.1, 5.1, 5.3, 6.2, 6.5 |
-| 36 | Backend code in `backend/src/feeds` | 2.1, 4 |
-| 37 | Backend thread parallel to existing site | 4.1 |
-| 38 | MongoDB feeds DB + collections/indexes | 3, 3.2 |
-| 39 | Fetch subscribed feeds every 5 minutes | 4 |
-| 40 | Deduped fetch for shared subscriptions | 4.2 |
-| 41 | Efficient query/filter storage | 3.2, 4.2, 5.2, 13 |
-| 42 | Mark articles deleted after 7 days | 4, 8 |
-| 43 | Permanently delete after 30 days | 4, 8 |
-| 44 | Never purge unread articles for any user | 4.3, 8 |
-| 45 | FastAPI code in `website/feeds` | 2.1, 5 |
-| 46 | Mark article read on click | 5.1, 6.3 |
-| 47 | Endpoint for feeds/articles with filters | 5.1, 5.2 |
-| 48 | Endpoint to add subscriptions + URL validation | 5.1, 5.3, 9 |
-| 49 | Endpoint to mark read with validation/auth checks | 5.1, 5.3, 7, 9 |
-| 50 | Endpoint for categories + unread count + auth | 5.1, 5.2, 7 |
+| 16 | Local `docker-compose-test.yaml` with nginx and MongoDB | 2.3, 14.1 |
+| 17 | Test env supports debugging and scenario simulation | 4.4, 14.2, 14.3 |
+| 18 | Test environment setup/run documentation | 14.1, 14.6 |
+| 19 | Test environment mirrors production behavior | 2.3, 14.1, 14.2 |
+| 20 | Test environment maintained over time | 10, 14.6 |
+| 21 | Test environment local-machine access only | 2.3, 7, 14.1 |
+| 22 | Automated tests run in test environment | 14.3 |
+| 23 | Tests cover all requirements, edge cases, errors | 12, 14.3, 14.5 |
+| 24 | Non-automatable requirements documented with manual plan | 14.4, 14.5 |
+| 25 | Test results documented with Test<->Requirement traceability | 14.5 |
+| 26 | Nav placement between Football/OpenSky | 6.1 |
+| 27 | Logged-in users only | 6.1, 7 |
+| 28 | Reader URL `/feeds/` | 5.1, 6.1 |
+| 29 | Unread cards, oldest first | 2.1, 5.2, 6.2 |
+| 30 | 10-second auto refresh | 2.1, 6.4 |
+| 31 | j/k + enter/space behavior | 2.1, 6.3 |
+| 32 | Add feed URL + category | 5.1, 5.3, 6.5 |
+| 33 | User subscriptions persist | 3.1, 3.2 |
+| 34 | User data isolation | 5.3, 7 |
+| 35 | Right menu categories + unread count | 2.1, 5.1, 6.2 |
+| 36 | Category click filters feeds | 5.2, 6.3 |
+| 37 | All Feeds category + unread count | 5.2, 6.2 |
+| 38 | Recently Read last 7 days, newest first | 5.2, 6.2 |
+| 39 | Mute/unmute categories | 5.1, 6.5 |
+| 40 | Muted categories hidden but counts shown | 5.2, 6.2 |
+| 41 | Mute persistence in DB | 3.1, 5.1, 6.5 |
+| 42 | Settings page for preferences | 5.1, 6.5 |
+| 43 | OPML import (Feedly/Inoreader) + categories | 2.2, 5.1, 5.3, 5.4, 6.5 |
+| 44 | OPML export of subscriptions/categories | 2.2, 5.1, 5.4, 6.5 |
+| 45 | Category colors consistent and persisted per user | 3.1, 5.1, 5.3, 6.2, 6.5 |
+| 46 | Backend code in `backend/src/feeds` | 2.1, 4 |
+| 47 | Backend thread parallel to existing site | 4.1 |
+| 48 | MongoDB feeds DB + collections/indexes | 3, 3.2 |
+| 49 | Fetch subscribed feeds every 5 minutes | 4 |
+| 50 | Deduped fetch for shared subscriptions | 4.2 |
+| 51 | Efficient query/filter storage | 3.2, 4.2, 5.2, 13 |
+| 52 | Mark articles deleted after 7 days | 4, 8 |
+| 53 | Permanently delete after 30 days | 4, 8 |
+| 54 | Never purge unread articles for any user | 4.3, 8 |
+| 55 | FastAPI code in `website/feeds` | 2.1, 5 |
+| 56 | Mark article read on click | 5.1, 6.3 |
+| 57 | Endpoint for feeds/articles with filters | 5.1, 5.2 |
+| 58 | Endpoint to add subscriptions + URL validation | 5.1, 5.3, 9 |
+| 59 | Endpoint to mark read with validation/auth checks | 5.1, 5.3, 7, 9 |
+| 60 | Endpoint for categories + unread count + auth | 5.1, 5.2, 7 |
 
-### 15. Traceability Table: Design -> Requirements
+### 16. Traceability Table: Design -> Requirements
 
 | Design Section | Requirement IDs |
 | --- | --- |
-| 1. Design Goals | 1, 6, 7, 10, 15, 33, 34, 35, 44 |
-| 2. High-Level Architecture | 1, 6, 8, 9, 10, 17, 36, 37, 38, 39, 45 |
-| 2.1 Component Responsibilities | 1, 6, 8, 9, 10, 17, 19, 25, 35, 36, 37, 45 |
-| 2.2 OPML Interoperability Flow | 33, 34 |
-| 3. Data Model Design | 23, 31, 35, 38, 41 |
-| 3.1 Collection Notes | 23, 31, 35, 38 |
-| 3.2 Index Plan | 23, 38, 41, 44 |
-| 4. Backend Worker Design | 36, 37, 39, 40, 41, 42, 43, 44 |
-| 4.1 Threading and Isolation | 37 |
-| 4.2 Feed Deduplication Strategy | 40, 41 |
-| 4.3 Retention Guard Rules | 42, 43, 44 |
-| 5. FastAPI Design | 1, 2, 3, 4, 5, 24, 45, 46, 47, 48, 49, 50 |
-| 5.1 Route Structure | 1, 18, 22, 29, 32, 33, 34, 35, 46, 47, 48, 49, 50 |
-| 5.2 API Query Semantics | 19, 25, 26, 27, 28, 30, 35, 47, 50 |
-| 5.3 Pydantic Models | 2, 3, 4, 5, 24, 33, 35, 48, 49 |
-| 5.4 OPML Import and Export Contract | 33, 34 |
-| 6. Frontend UX and Interaction Design | 6, 7, 10, 16, 17, 19, 20, 21, 22, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 46 |
-| 6.1 Navigation and Access | 16, 17, 18 |
-| 6.2 Main Reader Layout | 6, 7, 19, 25, 27, 28, 30, 35 |
-| 6.3 Keyboard and Interaction Rules | 21, 26, 46 |
-| 6.4 Polling and UI Consistency | 8, 9, 20 |
-| 6.5 Settings and OPML Workflows | 22, 29, 31, 32, 33, 34, 35 |
+| 1. Design Goals | 1, 6, 7, 10, 15, 16, 19, 22, 23, 25, 43, 44, 45, 54 |
+| 2. High-Level Architecture | 1, 6, 8, 9, 10, 27, 46, 47, 48, 49, 55 |
+| 2.1 Component Responsibilities | 1, 6, 8, 9, 10, 27, 29, 35, 45, 46, 47, 55 |
+| 2.2 OPML Interoperability Flow | 43, 44 |
+| 2.3 Local Test Environment Architecture | 16, 17, 19, 21 |
+| 3. Data Model Design | 33, 41, 45, 48, 51 |
+| 3.1 Collection Notes | 33, 41, 45, 48 |
+| 3.2 Index Plan | 33, 48, 51, 54 |
+| 4. Backend Worker Design | 46, 47, 49, 50, 51, 52, 53, 54 |
+| 4.1 Threading and Isolation | 47 |
+| 4.2 Feed Deduplication Strategy | 50, 51 |
+| 4.3 Retention Guard Rules | 52, 53, 54 |
+| 4.4 Test Scenario Controls | 17, 22, 23 |
+| 5. FastAPI Design | 1, 2, 3, 4, 5, 34, 55, 56, 57, 58, 59, 60 |
+| 5.1 Route Structure | 1, 28, 32, 39, 42, 43, 44, 45, 56, 57, 58, 59, 60 |
+| 5.2 API Query Semantics | 29, 35, 36, 37, 38, 40, 45, 57, 60 |
+| 5.3 Pydantic Models | 2, 3, 4, 5, 34, 43, 45, 58, 59 |
+| 5.4 OPML Import and Export Contract | 43, 44 |
+| 6. Frontend UX and Interaction Design | 6, 7, 10, 26, 27, 29, 30, 31, 32, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 56 |
+| 6.1 Navigation and Access | 26, 27, 28 |
+| 6.2 Main Reader Layout | 6, 7, 29, 35, 37, 38, 40, 45 |
+| 6.3 Keyboard and Interaction Rules | 31, 36, 56 |
+| 6.4 Polling and UI Consistency | 8, 9, 30 |
+| 6.5 Settings and OPML Workflows | 32, 39, 41, 42, 43, 44, 45 |
 | 6.6 Rendering and JavaScript Strategy | 10, 11 |
-| 7. Security and Data Integrity | 1, 2, 3, 4, 5, 10, 17, 24, 49, 50 |
-| 8. Retention and Data Lifecycle | 42, 43, 44 |
-| 9. Error Handling and Resilience | 8, 9, 48, 49 |
-| 10. Monitoring and Auditability | 15, 41, 44 |
+| 7. Security and Data Integrity | 1, 2, 3, 4, 5, 10, 21, 27, 34, 59, 60 |
+| 8. Retention and Data Lifecycle | 52, 53, 54 |
+| 9. Error Handling and Resilience | 8, 9, 17, 58, 59 |
+| 10. Monitoring and Auditability | 15, 17, 20, 51, 54 |
 | 11. Engineering Standards and Conventions | 11, 12, 13 |
 | 11.1 JavaScript Standards | 11 |
 | 11.2 Python Standards | 12 |
 | 11.3 Codebase Consistency | 13 |
-| 12. Testability and Maintainability | 14 |
-| 13. Performance and Scalability | 15, 41 |
+| 12. Testability and Maintainability | 14, 23 |
+| 13. Performance and Scalability | 15, 51 |
+| 14. Local Test Environment and Testing Strategy | 16, 17, 18, 19, 20, 21, 22, 23, 24, 25 |
+| 14.1 Local `docker-compose-test.yaml` Stack | 16, 19, 21 |
+| 14.2 Production Parity and Debugging | 17, 19 |
+| 14.3 Automated Test Execution | 22, 23 |
+| 14.4 Manual Validation for Non-Automatable Requirements | 24 |
+| 14.5 Test Traceability Artifacts | 25 |
+| 14.6 Test Environment Lifecycle and Documentation | 18, 20 |
 
-### 16. Phased Delivery Plan (No Code in This Step)
+### 17. Phased Delivery Plan (No Code in This Step)
 
 1. Phase 1: Data schemas, indexes, and feed worker thread skeleton.
 2. Phase 2: FastAPI endpoints and ownership validation.
 3. Phase 3: Feed reader page, right-menu filters, category colors, and polling.
-4. Phase 4: Keyboard navigation, settings page, mute/unmute UX, OPML import/export UX.
-5. Phase 5: Retention guard implementation for unread preservation and cleanup safety.
-6. Phase 6: Monitoring, quality-gate checks (typing, docs, JSDoc), and requirement acceptance checklist.
+4. Phase 4: Keyboard navigation, settings page, mute/unmute UX, and OPML import/export UX.
+5. Phase 5: Local `docker-compose-test.yaml` stack, scenario controls, and automated test harness.
+6. Phase 6: Retention guard implementation for unread preservation and cleanup safety.
+7. Phase 7: Monitoring, documented test evidence, bidirectional test traceability, and final requirement acceptance checklist.
 
