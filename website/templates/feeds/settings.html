@@ -80,6 +80,7 @@
       <table class="feed-subscription-table">
         <thead>
           <tr>
+            <th>Image</th>
             <th>Feed</th>
             <th>URL</th>
             <th>Category</th>
@@ -89,6 +90,17 @@
         <tbody>
           {% for subscription in subscriptions %}
           <tr class="feed-subscription-row" data-subscription-id="{{ subscription.subscription_id }}">
+            <td class="feed-subscription-image-cell">
+              <img
+                class="feed-subscription-image"
+                src="{{ subscription.source_image_url | default('/icons/favicon.svg', true) }}"
+                alt=""
+                loading="lazy"
+                decoding="async"
+                referrerpolicy="no-referrer"
+                onerror="this.onerror=null;this.src='/icons/favicon.svg';"
+              >
+            </td>
             <td class="feed-subscription-title-cell" title="{{ subscription.source_title }}">{{ subscription.source_title }}</td>
             <td class="feed-subscription-url-cell">
               <a

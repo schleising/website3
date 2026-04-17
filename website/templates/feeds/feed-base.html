@@ -3,14 +3,14 @@
 {% block title %}<title>{{ title }}</title>{% endblock %}
 
 {% block head %}
-<link rel="stylesheet" href="/css/feeds/feeds.css?v1.0.7">
+<link rel="stylesheet" href="/css/feeds/feeds.css?v1.0.8">
 {% endblock %}
 
 {% block scripts %}
 {% if feed_page_mode == "reader" %}
-<script defer src="/js/feeds/reader.js?v1.0.7"></script>
+<script defer src="/js/feeds/reader.js?v1.0.8"></script>
 {% elif feed_page_mode == "settings" %}
-<script defer src="/js/feeds/settings.js?v1.0.7"></script>
+<script defer src="/js/feeds/settings.js?v1.0.8"></script>
 {% endif %}
 {% endblock %}
 
@@ -28,14 +28,6 @@
   <span class="feed-category-count feed-category-unread-pill feed-category-unread-pill-all">{{ all_unread_count }}</span>
   <span class="feed-category-name">All Feeds</span>
 </a>
-<a
-  href="/feeds/?category=recently-read"
-  class="sub-level-nav feed-sidebar-link feed-category-link feed-category-shortcut{% if selected_category == 'recently-read' %} is-current{% endif %}"
-  {% if selected_category == 'recently-read' %}aria-current="page"{% endif %}
-  data-category-shortcut="recently-read"
->
-  <span class="feed-category-name">Recently Read</span>
-</a>
 {% for category_item in categories %}
 <a
   href="/feeds/?category={{ category_item.category_id }}"
@@ -47,6 +39,14 @@
   <span class="feed-category-name">{{ category_item.name }}</span>
 </a>
 {% endfor %}
+<a
+  href="/feeds/?category=recently-read"
+  class="sub-level-nav feed-sidebar-link feed-category-link feed-category-shortcut{% if selected_category == 'recently-read' %} is-current{% endif %}"
+  {% if selected_category == 'recently-read' %}aria-current="page"{% endif %}
+  data-category-shortcut="recently-read"
+>
+  <span class="feed-category-name">Recently Read</span>
+</a>
 <a href="/feeds/settings/" class="sub-level-nav feed-sidebar-link{% if feed_page_mode == 'settings' %} is-current{% endif %}" {% if feed_page_mode == 'settings' %}aria-current="page"{% endif %}>Settings</a>
 {% endblock %}
 

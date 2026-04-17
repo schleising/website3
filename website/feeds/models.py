@@ -19,6 +19,7 @@ class FeedSourceDocument(BaseModel):
     id: PyObjectId | None = Field(default=None, alias="_id")
     normalized_url: str
     title: str = ""
+    image_url: str | None = None
     etag: str | None = None
     last_modified: str | None = None
     last_fetched_at: datetime | None = None
@@ -151,6 +152,7 @@ class FeedSubscriptionCreateResponse(BaseModel):
     category_id: str
     normalized_url: str
     source_title: str
+    source_image_url: str | None = None
     created_subscription: bool
 
 
@@ -169,6 +171,7 @@ class FeedSubscriptionUpdateResponse(BaseModel):
     category_id: str
     normalized_url: str
     source_title: str
+    source_image_url: str | None = None
 
 
 class FeedSubscriptionDeleteResponse(BaseModel):

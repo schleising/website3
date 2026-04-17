@@ -190,6 +190,7 @@ async def ensure_feed_source(normalized_url: str, source_title: str) -> dict[str
     new_source = {
         "normalized_url": normalized_url,
         "title": source_title.strip() or normalized_url,
+        "image_url": None,
         "etag": None,
         "last_modified": None,
         "last_fetched_at": None,
@@ -458,6 +459,7 @@ async def list_user_subscription_rows(user_id: str) -> list[dict[str, Any]]:
                 "feed_id": str(sub["feed_id"]),
                 "source_title": str(source.get("title", source.get("normalized_url", "Feed"))),
                 "source_url": str(source.get("normalized_url", "")),
+                "source_image_url": str(source.get("image_url", "")).strip(),
                 "category_id": str(category.id),
                 "category_name": category.name,
                 "category_color_hex": category.color_hex,

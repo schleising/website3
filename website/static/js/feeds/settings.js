@@ -39,6 +39,8 @@
     const subscriptionDeleteTemplate = root.dataset.subscriptionDeleteTemplate || "";
     /** @type {string} */
     const csrfToken = root.dataset.csrfToken || "";
+    /** @type {string} */
+    const fallbackSubscriptionImage = "/icons/favicon.svg";
 
     /**
      * Set user-facing status text.
@@ -524,6 +526,7 @@
                 const updatedCategoryId = String(payload.category_id || categoryId);
                 const updatedSubscriptionId = String(payload.subscription_id || subscriptionId);
                 const updatedSourceTitle = String(payload.source_title || "").trim();
+                const updatedSourceImageUrl = String(payload.source_image_url || "").trim();
 
                 row.dataset.subscriptionId = updatedSubscriptionId;
                 urlInput.value = updatedUrl;
@@ -532,10 +535,14 @@
                 row.dataset.originalCategoryId = updatedCategoryId;
                 syncSubscriptionRowUrlLink(row, updatedUrl);
                 if (updatedSourceTitle !== "") {
-                    const titleCell = row.querySelector("td");
+                    const titleCell = row.querySelector(".feed-subscription-title-cell");
                     if (titleCell instanceof HTMLElement) {
                         titleCell.textContent = updatedSourceTitle;
                     }
+                }
+                const imageNode = row.querySelector(".feed-subscription-image");
+                if (imageNode instanceof HTMLImageElement) {
+                    imageNode.src = updatedSourceImageUrl || fallbackSubscriptionImage;
                 }
                 syncSubscriptionRowChip(row, updatedCategoryId);
                 setSubscriptionRowEditMode(row, false);

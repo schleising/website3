@@ -311,7 +311,7 @@
 .feed-subscription-table {
     width: 100%;
     border-collapse: collapse;
-    min-width: 58rem;
+    min-width: 62rem;
     table-layout: fixed;
 }
 
@@ -328,24 +328,37 @@
     font-weight: 700;
 }
 
+.feed-subscription-image-cell {
+    width: 7%;
+}
+
+.feed-subscription-image {
+    width: 2rem;
+    height: 2rem;
+    border-radius: 0.4rem;
+    border: 0.0625rem solid var(--line);
+    background: #ffffff;
+    object-fit: cover;
+}
+
 .feed-subscription-title-cell {
-    width: 25%;
+    width: 20%;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
 .feed-subscription-url-cell {
-    width: 42%;
+    width: 40%;
 }
 
 .feed-subscription-category-cell {
-    width: 16%;
+    width: 15%;
     white-space: nowrap;
 }
 
 .feed-subscription-actions-cell {
-    width: 17%;
+    width: 18%;
     white-space: nowrap;
 }
 
@@ -442,6 +455,17 @@
 @media screen and (max-width: 42rem) {
     .feed-article-card {
         padding: 0.72rem;
+    }
+
+    .feed-article-card-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.35rem;
+    }
+
+    .feed-article-meta-right {
+        width: 100%;
+        text-align: left;
     }
 
     .feed-article-title {
