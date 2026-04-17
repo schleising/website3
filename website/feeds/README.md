@@ -77,18 +77,24 @@ No application code is included in this document.
 4. Preserve responsive behavior with clear desktop/mobile parity.
 5. Make feed ingestion and querying efficient at scale using deduped fetches, retention policies, and indexes.
 6. Support standards-compatible OPML interoperability for import/export with category preservation.
+7. Prefer server-side rendering and minimize JavaScript to reduce frontend attack surface.
+8. Enforce explicit typing, documentation, and codebase conventions for maintainable implementation.
+9. Support category color preferences that are consistent across feed cards and right menu.
+10. Protect unread content from retention purges until all users have marked it as read.
 
 ### 2. High-Level Architecture
 
 ```mermaid
 flowchart LR
-	 Browser["Main Site Feed Reader UI"] -->|Fetch API + session cookie| FastAPI["FastAPI Feed Endpoints (/feeds/*)"]
-	 Settings["Feed Settings (Add/Mute/OPML)"] -->|Fetch API + file upload/download| FastAPI
+	 Browser["Main Site Feed Reader UI"] -->|Initial request| FastAPI["FastAPI Feed Endpoints (/feeds/*)"]
+	 FastAPI -->|SSR HTML templates| Browser
+	 Browser -->|Minimal Fetch API calls| FastAPI
+	 Settings["Feed Settings (Add/Mute/Color/OPML)"] -->|Fetch API + file upload/download| FastAPI
 	 FastAPI -->|Read/Write via Pydantic models| FeedDB[("MongoDB: feeds database")]
 	 Worker["Backend Feed Worker Thread"] -->|Every 5 min fetch unique subscriptions| Sources["External RSS/Atom Feeds"]
 	 Sources -->|Feed payloads| Worker
 	 Worker -->|Upsert feed sources and articles| FeedDB
-	 Worker -->|Retention: mark deleted after 7d, purge after 30d| FeedDB
+	 Worker -->|Retention with unread safety rules| FeedDB
 	 FastAPI -->|Unread counts, articles, settings| Browser
 	 FastAPI -->|OPML 2.0 import/export| Settings
 ```
@@ -99,20 +105,22 @@ flowchart LR
 	1. Renders unread article cards full-width, oldest first.
 	2. Polls every 10 seconds for updates.
 	3. Handles keyboard navigation (`j`, `k`, `Enter`, `Space`).
-	4. Uses only Fetch API calls to FastAPI.
+	4. Uses SSR for initial render and minimal JavaScript for incremental interactions.
+	5. Uses only Fetch API calls to FastAPI for all reads/writes.
 2. FastAPI layer (`website/feeds`):
 	1. Authenticates user context.
 	2. Validates request and response models using Pydantic.
 	3. Applies authorization rules so users only access their own subscriptions/preferences/read state.
 	4. Returns category counts and article lists with filtering.
+	5. Serves server-rendered templates for primary page loads.
 3. Backend worker (`backend/src/feeds`):
 	1. Runs in a dedicated thread alongside existing backend behavior.
 	2. Fetches each unique subscribed feed once every 5 minutes.
 	3. Upserts source metadata and normalized articles.
-	4. Applies retention lifecycle rules.
+	4. Applies retention lifecycle rules while preserving unread articles.
 4. MongoDB feeds database:
 	1. Stores global feed/article data.
-	2. Stores per-user subscriptions, categories, mute preferences, and read state.
+	2. Stores per-user subscriptions, categories, mute and color preferences, and read state.
 
 #### 2.2 OPML Interoperability Flow
 
@@ -161,6 +169,7 @@ erDiagram
 		  string user_id FK
 		  string name
 		  boolean muted
+		  string color_hex
 		  int sort_order
 		  datetime created_at
 		  datetime updated_at
@@ -218,7 +227,7 @@ erDiagram
 3. `user_feed_subscription`:
 	1. Maps users to feeds and categories.
 4. `feed_category`:
-	1. User-owned categories and mute state.
+	1. User-owned categories, mute state, and color preference.
 5. `user_article_state`:
 	1. Per-user read/unread lifecycle.
 	2. Supports recently read queries for last 7 days.
@@ -237,9 +246,11 @@ erDiagram
 4. `feed_category`:
 	1. Unique: `(user_id, name)`.
 	2. Query: `(user_id, muted, sort_order)`.
+	3. Query: `(user_id, color_hex)` for settings and consistency checks.
 5. `user_article_state`:
 	1. Unique: `(user_id, article_id)`.
 	2. Query: `(user_id, is_read, read_at)`.
+	3. Query: `(article_id, is_read)` to support unread-preservation retention checks.
 
 ### 4. Backend Worker Design (`backend/src/feeds`)
 
@@ -267,7 +278,8 @@ sequenceDiagram
 				end
 		  end
 		  W->>DB: Mark articles deleted when age > 7 days
-		  W->>DB: Permanently remove deleted articles older than 30 days
+		  W->>DB: Find deleted articles older than 30 days
+		  W->>DB: Purge only if no USER_ARTICLE_STATE remains unread
 	 end
 ```
 
@@ -284,6 +296,13 @@ sequenceDiagram
 3. Fetch each unique feed once per cycle.
 4. Fan out resulting articles to all subscribed users through query joins (no duplicate network fetch).
 
+#### 4.3 Retention Guard Rules
+
+1. Soft-delete threshold remains 7 days for aging articles.
+2. Hard-delete threshold remains 30 days only for soft-deleted articles.
+3. Hard delete is blocked if any user still has the article marked unread.
+4. Purge and read-state cleanup run in a transaction-like batch to avoid orphaned state.
+
 ### 5. FastAPI Design (`website/feeds`)
 
 #### 5.1 Route Structure
@@ -298,8 +317,9 @@ sequenceDiagram
 	4. `POST /feeds/api/articles/{article_id}/read`: mark article as read.
 	5. `POST /feeds/api/categories/{category_id}/mute`: mute category.
 	6. `POST /feeds/api/categories/{category_id}/unmute`: unmute category.
-	7. `POST /feeds/api/opml/import`: import subscriptions/categories from OPML.
-	8. `GET /feeds/api/opml/export`: export subscriptions/categories as OPML.
+	7. `POST /feeds/api/categories/{category_id}/color`: update category color preference.
+	8. `POST /feeds/api/opml/import`: import subscriptions/categories from OPML.
+	9. `GET /feeds/api/opml/export`: export subscriptions/categories as OPML.
 
 #### 5.2 API Query Semantics
 
@@ -313,6 +333,8 @@ sequenceDiagram
 3. Mute behavior:
 	1. muted categories are excluded from article results in all filters.
 	2. unread counts remain visible in right menu.
+4. Category presentation metadata:
+	1. category payloads include `color_hex` so right menu and feed cards stay visually consistent.
 
 #### 5.3 Pydantic Models
 
@@ -320,17 +342,20 @@ sequenceDiagram
 	1. Add subscription payload.
 	2. Mark read payload.
 	3. Category mute/unmute payload.
-	4. OPML import options payload (duplicate policy, default category policy).
+	4. Category color update payload.
+	5. OPML import options payload (duplicate policy, default category policy).
 2. Response models:
 	1. Article card model.
 	2. Category count model.
 	3. Standard operation result model.
-	4. OPML import summary model (created feeds/categories, skipped duplicates, errors).
+	4. Category metadata model with mute state and color.
+	5. OPML import summary model (created feeds/categories, skipped duplicates, errors).
 3. Validation rules:
 	1. Feed URL must be `http/https`, normalized, length-limited.
 	2. Category IDs and article IDs must be valid object IDs/UUIDs.
 	3. User-scoped resources must enforce owner equality with authenticated user.
 	4. OPML documents must be well-formed XML with supported outline attributes and size limits.
+	5. Category color must be a normalized hex color string (for example `#1F6FEB`).
 
 #### 5.4 OPML Import and Export Contract
 
@@ -345,7 +370,7 @@ sequenceDiagram
 2. Export (`GET /feeds/api/opml/export`):
 	1. Return `application/xml` OPML 2.0 document.
 	2. Emit categories as parent outlines and subscribed feeds as child outlines.
-	3. Include all user subscriptions and category associations, including muted categories.
+	3. Include all user subscriptions and category associations, including muted categories and category colors where supported by reader extensions.
 	4. Sort categories and feeds for stable output so repeated exports are diff-friendly.
 
 ### 6. Frontend UX and Interaction Design
@@ -369,6 +394,7 @@ sequenceDiagram
 	2. category list with unread count each.
 	3. `Recently Read` bucket (7-day window).
 	4. muted categories visually indicated.
+	5. category color chips/markers consistent with feed cards.
 
 #### 6.3 Keyboard and Interaction Rules
 
@@ -395,10 +421,24 @@ sequenceDiagram
 	2. Import OPML action (file picker + submit).
 	3. Export OPML action (download current user subscriptions/categories).
 	4. Category mute/unmute controls.
+	5. Category color picker with reset-to-default option.
 2. Import UX behavior:
 	1. Show import preview summary after successful parse.
 	2. Display created/updated/skipped counts and actionable error rows.
 	3. Refresh category counts and unread views after successful import.
+	4. Assign deterministic fallback colors to newly created categories when color is absent.
+
+#### 6.6 Rendering and JavaScript Strategy
+
+1. Render primary feed list and menus server-side for initial page load.
+2. Restrict JavaScript to:
+	1. keyboard navigation,
+	2. polling refresh,
+	3. OPML upload/download interactions,
+	4. category color picker interactivity.
+3. Keep JavaScript modules small and page-scoped to limit surface area.
+4. All JavaScript functions include JSDoc with typed params and return values.
+5. All JavaScript user input and API responses are validated and sanitized before use.
 
 ```mermaid
 sequenceDiagram
@@ -445,8 +485,10 @@ sequenceDiagram
 ### 8. Retention and Data Lifecycle
 
 1. Worker marks articles as logically deleted after 7 days (`is_deleted=true`, `deleted_at=now`).
-2. Worker hard deletes records with `is_deleted=true` and `deleted_at < now-30d`.
-3. User read-state records for purged articles are removed in same retention pass.
+2. Worker evaluates hard-delete candidates with `is_deleted=true` and `deleted_at < now-30d`.
+3. Candidates are only purged when no user has an unread state for that article.
+4. User read-state records are removed only for safely purged articles.
+5. Articles that remain unread for any user are retained regardless of age.
 
 ### 9. Error Handling and Resilience
 
@@ -464,6 +506,9 @@ sequenceDiagram
 	1. return 400 for malformed XML or unsupported structure.
 	2. return 413 for oversized files.
 	3. return per-item validation errors without aborting entire import when possible.
+6. Category color update failure:
+	1. return 400 for invalid color format.
+	2. return 403 for category ownership mismatch.
 
 ### 10. Monitoring and Auditability
 
@@ -478,8 +523,46 @@ sequenceDiagram
 	4. API latency/error rate.
 	5. OPML import success/failure count and item-level rejection rate.
 	6. OPML export count and average generation latency.
+	7. retention skip count due to unread-preservation guard.
+	8. category color update count and validation failure rate.
 
-### 11. Traceability Table: Requirements -> Design
+### 11. Engineering Standards and Conventions
+
+#### 11.1 JavaScript Standards
+
+1. All functions and methods use JSDoc comments.
+2. JSDoc includes explicit parameter and return typing.
+3. JavaScript modules follow least-privilege patterns and avoid unnecessary global state.
+
+#### 11.2 Python Standards
+
+1. All functions and methods include Python type annotations.
+2. Public and internal functions include docstrings describing purpose, parameters, and return values.
+3. Endpoint handlers and service-layer logic keep explicit types across request, domain, and response boundaries.
+
+#### 11.3 Codebase Consistency
+
+1. New code follows existing file layout and naming conventions in website and backend repositories.
+2. Formatting and style align with existing project standards.
+3. New modules are organized by responsibility to preserve clarity.
+
+### 12. Testability and Maintainability
+
+1. Prefer service-layer abstractions to isolate parsing, validation, persistence, and transport.
+2. Keep endpoint handlers thin and delegate business logic to testable modules.
+3. Design import/export and retention logic as deterministic units that can be tested with fixtures.
+4. Favor composable interfaces and dependency boundaries that support SOLID-style extension.
+
+### 13. Performance and Scalability
+
+1. Preserve deduplicated feed fetch strategy to minimize external requests.
+2. Use targeted indexes to support unread/category filters and retention guards.
+3. Keep polling deltas narrow and query plans bounded by user scope.
+4. Use short-lived caching where appropriate (for example category unread aggregates) with safe invalidation on user mutations.
+5. Use asynchronous processing where appropriate for feed ingestion and OPML parsing.
+6. Keep SSR-first approach for fast first render and reduced frontend compute cost.
+
+### 14. Traceability Table: Requirements -> Design
 
 | Requirement | Requirement Summary | Design References |
 | --- | --- | --- |
@@ -492,75 +575,92 @@ sequenceDiagram
 | 7 | Responsive desktop/mobile | 6.2, 6.4 |
 | 8 | Client reads via Fetch + errors | 2.1, 6.4, 9 |
 | 9 | Client writes via Fetch + errors | 2.1, 6.3, 6.5, 9 |
-| 10 | Nav placement between Football/OpenSky | 6.1 |
-| 11 | Logged-in users only | 6.1, 7 |
-| 12 | Reader URL `/feeds/` | 5.1, 6.1 |
-| 13 | Unread cards, oldest first | 2.1, 5.2, 6.2 |
-| 14 | 10-second auto refresh | 2.1, 6.4 |
-| 15 | j/k + enter/space behavior | 2.1, 6.3 |
-| 16 | Add feed URL + category | 5.1, 5.3, 6.5 |
-| 17 | User subscriptions persist | 3.1, 3.2 |
-| 18 | User data isolation | 5.3, 7 |
-| 19 | Right menu categories + unread count | 2.1, 5.1, 6.2 |
-| 20 | Category click filters feeds | 5.2, 6.3 |
-| 21 | All Feeds category + unread count | 5.2, 6.2 |
-| 22 | Recently Read last 7 days, newest first | 5.2, 6.2 |
-| 23 | Mute/unmute categories | 5.1, 6.5 |
-| 24 | Muted categories hidden but counts shown | 5.2, 6.2 |
-| 25 | Mute persistence in DB | 3.1, 5.1, 6.5 |
-| 26 | Settings page for preferences | 5.1, 6.5 |
-| 27 | OPML import (Feedly/Inoreader) + categories | 2.2, 5.1, 5.3, 5.4, 6.5 |
-| 28 | OPML export of subscriptions/categories | 2.2, 5.1, 5.4, 6.5 |
-| 29 | Backend code in `backend/src/feeds` | 2.1, 4 |
-| 30 | Backend thread parallel to existing site | 4.1 |
-| 31 | MongoDB feeds DB + collections/indexes | 3, 3.2 |
-| 32 | Fetch subscribed feeds every 5 minutes | 4 |
-| 33 | Deduped fetch for shared subscriptions | 4.2 |
-| 34 | Efficient query/filter storage | 3.2, 4.2, 5.2 |
-| 35 | Mark articles deleted after 7 days | 4, 8 |
-| 36 | Permanently delete after 30 days | 4, 8 |
-| 37 | FastAPI code in `website/feeds` | 2.1, 5 |
-| 38 | Mark article read on click | 5.1, 6.3 |
-| 39 | Endpoint for feeds/articles with filters | 5.1, 5.2 |
-| 40 | Endpoint to add subscriptions + URL validation | 5.1, 5.3, 9 |
-| 41 | Endpoint to mark read with validation/auth checks | 5.1, 5.3, 7, 9 |
-| 42 | Endpoint for categories + unread count + auth | 5.1, 5.2, 7 |
+| 10 | Minimize JavaScript, SSR-first, secure JS practices | 2, 6.6, 7, 11.1 |
+| 11 | JSDoc with typed params and returns | 6.6, 11.1 |
+| 12 | Python type annotations and docstrings | 11.2 |
+| 13 | Follow existing codebase style and conventions | 11.3 |
+| 14 | Modular, maintainable, SOLID-oriented design | 12 |
+| 15 | Performance and scalability focus | 3.2, 4.2, 10, 13 |
+| 16 | Nav placement between Football/OpenSky | 6.1 |
+| 17 | Logged-in users only | 6.1, 7 |
+| 18 | Reader URL `/feeds/` | 5.1, 6.1 |
+| 19 | Unread cards, oldest first | 2.1, 5.2, 6.2 |
+| 20 | 10-second auto refresh | 2.1, 6.4 |
+| 21 | j/k + enter/space behavior | 2.1, 6.3 |
+| 22 | Add feed URL + category | 5.1, 5.3, 6.5 |
+| 23 | User subscriptions persist | 3.1, 3.2 |
+| 24 | User data isolation | 5.3, 7 |
+| 25 | Right menu categories + unread count | 2.1, 5.1, 6.2 |
+| 26 | Category click filters feeds | 5.2, 6.3 |
+| 27 | All Feeds category + unread count | 5.2, 6.2 |
+| 28 | Recently Read last 7 days, newest first | 5.2, 6.2 |
+| 29 | Mute/unmute categories | 5.1, 6.5 |
+| 30 | Muted categories hidden but counts shown | 5.2, 6.2 |
+| 31 | Mute persistence in DB | 3.1, 5.1, 6.5 |
+| 32 | Settings page for preferences | 5.1, 6.5 |
+| 33 | OPML import (Feedly/Inoreader) + categories | 2.2, 5.1, 5.3, 5.4, 6.5 |
+| 34 | OPML export of subscriptions/categories | 2.2, 5.1, 5.4, 6.5 |
+| 35 | Category colors consistent and persisted per user | 3.1, 5.1, 5.3, 6.2, 6.5 |
+| 36 | Backend code in `backend/src/feeds` | 2.1, 4 |
+| 37 | Backend thread parallel to existing site | 4.1 |
+| 38 | MongoDB feeds DB + collections/indexes | 3, 3.2 |
+| 39 | Fetch subscribed feeds every 5 minutes | 4 |
+| 40 | Deduped fetch for shared subscriptions | 4.2 |
+| 41 | Efficient query/filter storage | 3.2, 4.2, 5.2, 13 |
+| 42 | Mark articles deleted after 7 days | 4, 8 |
+| 43 | Permanently delete after 30 days | 4, 8 |
+| 44 | Never purge unread articles for any user | 4.3, 8 |
+| 45 | FastAPI code in `website/feeds` | 2.1, 5 |
+| 46 | Mark article read on click | 5.1, 6.3 |
+| 47 | Endpoint for feeds/articles with filters | 5.1, 5.2 |
+| 48 | Endpoint to add subscriptions + URL validation | 5.1, 5.3, 9 |
+| 49 | Endpoint to mark read with validation/auth checks | 5.1, 5.3, 7, 9 |
+| 50 | Endpoint for categories + unread count + auth | 5.1, 5.2, 7 |
 
-### 12. Traceability Table: Design -> Requirements
+### 15. Traceability Table: Design -> Requirements
 
 | Design Section | Requirement IDs |
 | --- | --- |
-| 1. Design Goals | 1, 6, 7, 27, 28, 33, 34 |
-| 2. High-Level Architecture | 1, 6, 8, 9, 17, 29, 30, 31, 32, 37 |
-| 2.1 Component Responsibilities | 1, 6, 8, 9, 17, 19, 29, 30, 31, 37 |
-| 2.2 OPML Interoperability Flow | 27, 28 |
-| 3. Data Model Design | 17, 25, 31, 34 |
-| 3.1 Collection Notes | 17, 25, 31, 34 |
-| 3.2 Index Plan | 17, 31, 34 |
-| 4. Backend Worker Design | 29, 30, 32, 33, 34, 35, 36 |
-| 4.1 Threading and Isolation | 30 |
-| 4.2 Feed Deduplication Strategy | 33, 34 |
-| 5. FastAPI Design | 1, 2, 3, 4, 5, 18, 37, 38, 39, 40, 41, 42 |
-| 5.1 Route Structure | 1, 12, 16, 23, 26, 27, 28, 38, 39, 40, 41, 42 |
-| 5.2 API Query Semantics | 13, 19, 20, 21, 22, 24, 39, 42 |
-| 5.3 Pydantic Models | 2, 3, 4, 5, 18, 27, 40, 41 |
-| 5.4 OPML Import and Export Contract | 27, 28 |
-| 6. Frontend UX and Interaction Design | 6, 7, 10, 11, 13, 14, 15, 16, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 38 |
-| 6.1 Navigation and Access | 10, 11, 12 |
-| 6.2 Main Reader Layout | 6, 7, 13, 19, 21, 22, 24 |
-| 6.3 Keyboard and Interaction Rules | 15, 20, 38 |
-| 6.4 Polling and UI Consistency | 8, 9, 14 |
-| 6.5 Settings and OPML Workflows | 16, 23, 25, 26, 27, 28 |
-| 7. Security and Data Integrity | 1, 2, 3, 4, 5, 11, 18, 41, 42 |
-| 8. Retention and Data Lifecycle | 35, 36 |
-| 9. Error Handling and Resilience | 8, 9, 40, 41 |
-| 10. Monitoring and Auditability | 34 |
+| 1. Design Goals | 1, 6, 7, 10, 15, 33, 34, 35, 44 |
+| 2. High-Level Architecture | 1, 6, 8, 9, 10, 17, 36, 37, 38, 39, 45 |
+| 2.1 Component Responsibilities | 1, 6, 8, 9, 10, 17, 19, 25, 35, 36, 37, 45 |
+| 2.2 OPML Interoperability Flow | 33, 34 |
+| 3. Data Model Design | 23, 31, 35, 38, 41 |
+| 3.1 Collection Notes | 23, 31, 35, 38 |
+| 3.2 Index Plan | 23, 38, 41, 44 |
+| 4. Backend Worker Design | 36, 37, 39, 40, 41, 42, 43, 44 |
+| 4.1 Threading and Isolation | 37 |
+| 4.2 Feed Deduplication Strategy | 40, 41 |
+| 4.3 Retention Guard Rules | 42, 43, 44 |
+| 5. FastAPI Design | 1, 2, 3, 4, 5, 24, 45, 46, 47, 48, 49, 50 |
+| 5.1 Route Structure | 1, 18, 22, 29, 32, 33, 34, 35, 46, 47, 48, 49, 50 |
+| 5.2 API Query Semantics | 19, 25, 26, 27, 28, 30, 35, 47, 50 |
+| 5.3 Pydantic Models | 2, 3, 4, 5, 24, 33, 35, 48, 49 |
+| 5.4 OPML Import and Export Contract | 33, 34 |
+| 6. Frontend UX and Interaction Design | 6, 7, 10, 16, 17, 19, 20, 21, 22, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 46 |
+| 6.1 Navigation and Access | 16, 17, 18 |
+| 6.2 Main Reader Layout | 6, 7, 19, 25, 27, 28, 30, 35 |
+| 6.3 Keyboard and Interaction Rules | 21, 26, 46 |
+| 6.4 Polling and UI Consistency | 8, 9, 20 |
+| 6.5 Settings and OPML Workflows | 22, 29, 31, 32, 33, 34, 35 |
+| 6.6 Rendering and JavaScript Strategy | 10, 11 |
+| 7. Security and Data Integrity | 1, 2, 3, 4, 5, 10, 17, 24, 49, 50 |
+| 8. Retention and Data Lifecycle | 42, 43, 44 |
+| 9. Error Handling and Resilience | 8, 9, 48, 49 |
+| 10. Monitoring and Auditability | 15, 41, 44 |
+| 11. Engineering Standards and Conventions | 11, 12, 13 |
+| 11.1 JavaScript Standards | 11 |
+| 11.2 Python Standards | 12 |
+| 11.3 Codebase Consistency | 13 |
+| 12. Testability and Maintainability | 14 |
+| 13. Performance and Scalability | 15, 41 |
 
-### 13. Phased Delivery Plan (No Code in This Step)
+### 16. Phased Delivery Plan (No Code in This Step)
 
 1. Phase 1: Data schemas, indexes, and feed worker thread skeleton.
 2. Phase 2: FastAPI endpoints and ownership validation.
-3. Phase 3: Feed reader page, right-menu filters, and polling.
+3. Phase 3: Feed reader page, right-menu filters, category colors, and polling.
 4. Phase 4: Keyboard navigation, settings page, mute/unmute UX, OPML import/export UX.
-5. Phase 5: Retention jobs, monitoring, and requirement acceptance checklist.
+5. Phase 5: Retention guard implementation for unread preservation and cleanup safety.
+6. Phase 6: Monitoring, quality-gate checks (typing, docs, JSDoc), and requirement acceptance checklist.
 
