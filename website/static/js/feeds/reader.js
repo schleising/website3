@@ -52,6 +52,22 @@
     /** @type {Set<string>} */
     const pendingReadIds = new Set();
 
+    /** @type {boolean} */
+    const isTouchOnlyDevice = (() => {
+        const hasTouchCapability = typeof navigator.maxTouchPoints === "number"
+            ? navigator.maxTouchPoints > 0
+            : false;
+        const coarsePointer = window.matchMedia("(any-pointer: coarse)").matches;
+        const finePointer = window.matchMedia("(any-pointer: fine)").matches;
+        return (hasTouchCapability || coarsePointer) && !finePointer;
+    })();
+
+    /** @type {boolean} */
+    let nonTouchInputDetected = false;
+
+    /** @type {boolean} */
+    let touchScrollReadScheduled = false;
+
     /** @type {Set<string>} */
     const sessionReadArticleIds = new Set();
 
@@ -303,22 +319,50 @@
             return;
         }
 
-        const openLink = document.createElement("a");
-        openLink.href = link;
-        openLink.target = "_blank";
-        openLink.rel = "noopener noreferrer";
-        openLink.style.position = "fixed";
-        openLink.style.left = "-9999px";
-        openLink.style.width = "1px";
-        openLink.style.height = "1px";
-        openLink.style.opacity = "0";
-        document.body.appendChild(openLink);
-        openLink.click();
-        openLink.remove();
+        const previouslyFocused = document.activeElement instanceof HTMLElement
+            ? document.activeElement
+            : null;
+
+        let openedViaWindow = false;
+        try {
+            const opened = window.open(link, "_blank", "noopener,noreferrer");
+            if (opened) {
+                openedViaWindow = true;
+                if (typeof opened.blur === "function") {
+                    opened.blur();
+                }
+            }
+        } catch (_error) {
+            openedViaWindow = false;
+        }
+
+        if (!openedViaWindow) {
+            const openLink = document.createElement("a");
+            openLink.href = link;
+            openLink.target = "_blank";
+            openLink.rel = "noopener noreferrer";
+            openLink.style.position = "fixed";
+            openLink.style.left = "-9999px";
+            openLink.style.width = "1px";
+            openLink.style.height = "1px";
+            openLink.style.opacity = "0";
+            document.body.appendChild(openLink);
+            openLink.click();
+            openLink.remove();
+        }
+
+        const restoreReaderFocus = () => {
+            window.focus();
+            if (previouslyFocused instanceof HTMLElement && document.contains(previouslyFocused)) {
+                previouslyFocused.focus({ preventScroll: true });
+            }
+        };
+
+        restoreReaderFocus();
 
         window.setTimeout(() => {
-            window.focus();
-        }, 0);
+            restoreReaderFocus();
+        }, 60);
     }
 
     /**
@@ -374,6 +418,50 @@
         } finally {
             pendingReadIds.delete(articleId);
         }
+    }
+
+    /**
+     * Return whether touch-scroll read automation should run.
+     *
+     * @returns {boolean}
+     */
+    function shouldUseTouchScrollRead() {
+        return isTouchOnlyDevice && !nonTouchInputDetected;
+    }
+
+    /**
+     * Mark unread cards as read after they scroll above the viewport.
+     */
+    function markCardsReadAboveViewport() {
+        if (!shouldUseTouchScrollRead()) {
+            return;
+        }
+
+        getCards().forEach(card => {
+            if (!(card instanceof HTMLElement) || isCardMarkedRead(card)) {
+                return;
+            }
+
+            const rect = card.getBoundingClientRect();
+            if (rect.bottom <= 0) {
+                markCardRead(card);
+            }
+        });
+    }
+
+    /**
+     * Queue one touch-scroll read check per animation frame.
+     */
+    function scheduleTouchScrollReadCheck() {
+        if (!shouldUseTouchScrollRead() || touchScrollReadScheduled) {
+            return;
+        }
+
+        touchScrollReadScheduled = true;
+        window.requestAnimationFrame(() => {
+            touchScrollReadScheduled = false;
+            markCardsReadAboveViewport();
+        });
     }
 
     /**
@@ -503,9 +591,19 @@
             incomingIdsInOrder.push(articleId);
         });
 
+        if (selectedStatus === "unread") {
+            previousIdsInOrder
+                .filter(articleId => !incomingById.has(articleId))
+                .forEach(articleId => {
+                    sessionReadArticleIds.add(articleId);
+                    newUnreadArticleIds.delete(articleId);
+                });
+        }
+
         const finalIds = previousIdsInOrder
             .filter(articleId => (
                 incomingById.has(articleId)
+                || selectedStatus === "unread"
                 || (retainSessionReadCards && sessionReadArticleIds.has(articleId))
             ))
             .concat(incomingIdsInOrder.filter(articleId => !previousCardMap.has(articleId)));
@@ -574,6 +672,7 @@
             clearCardSelection();
         }
         window.scrollTo({ top: previousScrollY, behavior: "auto" });
+        scheduleTouchScrollReadCheck();
     }
 
     /**
@@ -727,6 +826,8 @@
      * @param {KeyboardEvent} event
      */
     function onKeyDown(event) {
+        nonTouchInputDetected = true;
+
         const target = /** @type {HTMLElement | null} */ (event.target instanceof HTMLElement ? event.target : null);
         if (target && ["INPUT", "TEXTAREA", "SELECT", "BUTTON"].includes(target.tagName)) {
             return;
@@ -801,11 +902,32 @@
 
     document.addEventListener("keydown", onKeyDown);
 
+    if (isTouchOnlyDevice) {
+        const markNonTouchInput = () => {
+            nonTouchInputDetected = true;
+        };
+
+        window.addEventListener("wheel", markNonTouchInput, { once: true, passive: true });
+        window.addEventListener("mousemove", markNonTouchInput, { once: true, passive: true });
+        window.addEventListener(
+            "pointerdown",
+            event => {
+                if (event.pointerType === "mouse" || event.pointerType === "pen") {
+                    markNonTouchInput();
+                }
+            },
+            { passive: true }
+        );
+        window.addEventListener("scroll", scheduleTouchScrollReadCheck, { passive: true });
+        window.addEventListener("touchmove", scheduleTouchScrollReadCheck, { passive: true });
+    }
+
     // Initialize card selection from SSR content and start polling.
     initializeArticleBadgeStateFromSsr();
     syncSidebarSelection();
 
     clearCardSelection();
+    scheduleTouchScrollReadCheck();
 
     window.setInterval(refreshFeedData, 10000);
 })();

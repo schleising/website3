@@ -364,14 +364,14 @@
 }
 
 .feed-subscription-table-wrap {
-    overflow-x: auto;
+    overflow-x: hidden;
 }
 
 .feed-subscription-table {
     width: 100%;
     border-collapse: collapse;
-    min-width: 48rem;
-    table-layout: auto;
+    min-width: 0;
+    table-layout: fixed;
 }
 
 .feed-subscription-table th,
@@ -388,24 +388,24 @@
 }
 
 .feed-subscription-title-cell {
-    width: 1%;
-    max-width: 18rem;
+    width: 20%;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
 .feed-subscription-url-cell {
-    width: auto;
+    width: 48%;
+    min-width: 0;
 }
 
 .feed-subscription-category-cell {
-    width: 1%;
+    width: 14%;
     white-space: nowrap;
 }
 
 .feed-subscription-actions-cell {
-    width: 1%;
+    width: 18%;
     white-space: nowrap;
 }
 
@@ -465,7 +465,7 @@
 .feed-subscription-actions {
     display: flex;
     justify-content: flex-end;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
     gap: 0.4rem;
 }
 
