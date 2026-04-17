@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 180" role="img" aria-labelledby="title desc">
+  <title id="title">Feed Reader</title>
+  <desc id="desc">Illustration of a feed dashboard with article cards and category tags.</desc>
+  <defs>
+    <linearGradient id="cardBg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f7fbff"/>
+      <stop offset="1" stop-color="#dff0ff"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#ff7a18"/>
+      <stop offset="1" stop-color="#ffb74d"/>
+    </linearGradient>
+  </defs>
+
+  <rect x="0" y="0" width="320" height="180" fill="#f2f8ff"/>
+  <rect x="18" y="22" width="284" height="136" rx="12" fill="url(#cardBg)" stroke="#9fc6ea" stroke-width="2"/>
+
+  <rect x="34" y="38" width="252" height="18" rx="5" fill="#c6def4"/>
+  <circle cx="46" cy="47" r="4" fill="#3277b3"/>
+  <rect x="56" y="43" width="80" height="8" rx="4" fill="#4f88be"/>
+
+  <rect x="34" y="66" width="118" height="80" rx="8" fill="#ffffff" stroke="#b7d4ec"/>
+  <rect x="42" y="75" width="42" height="14" rx="7" fill="#ffe8d1"/>
+  <rect x="42" y="96" width="98" height="7" rx="3.5" fill="#a7bfd5"/>
+  <rect x="42" y="108" width="90" height="7" rx="3.5" fill="#bfd2e3"/>
+  <rect x="42" y="120" width="58" height="7" rx="3.5" fill="#d2e0ec"/>
+
+  <rect x="166" y="66" width="120" height="30" rx="8" fill="#ffffff" stroke="#b7d4ec"/>
+  <rect x="176" y="74" width="28" height="14" rx="7" fill="#d7f5d1"/>
+  <rect x="212" y="78" width="64" height="6" rx="3" fill="#9fb9cf"/>
+
+  <rect x="166" y="102" width="120" height="44" rx="8" fill="#ffffff" stroke="#b7d4ec"/>
+  <rect x="176" y="110" width="98" height="7" rx="3.5" fill="#9cb8cf"/>
+  <rect x="176" y="122" width="90" height="7" rx="3.5" fill="#b9cee0"/>
+  <rect x="176" y="134" width="54" height="7" rx="3.5" fill="#d0deea"/>
+
+  <circle cx="274" cy="136" r="11" fill="url(#accent)"/>
+  <path d="M269 136l4 4 7-8" fill="none" stroke="#ffffff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

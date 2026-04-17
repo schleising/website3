@@ -1,0 +1,106 @@
+{% extends "feeds/feed-base.html" %}
+
+{% set feed_page_mode = "settings" %}
+
+{% block feeds_content %}
+<section
+  class="feeds-settings"
+  id="feeds-settings-root"
+  data-categories-endpoint="/feeds/api/categories/"
+  data-subscription-endpoint="/feeds/api/subscriptions/"
+  data-opml-import-endpoint="/feeds/api/opml/import/"
+  data-opml-export-endpoint="/feeds/api/opml/export/"
+  data-category-mute-template="/feeds/api/categories/__CATEGORY_ID__/mute/"
+  data-category-unmute-template="/feeds/api/categories/__CATEGORY_ID__/unmute/"
+  data-category-color-template="/feeds/api/categories/__CATEGORY_ID__/color/"
+  data-csrf-token="{{ request.state.csrf_token|default('') }}"
+>
+  <article class="site-card feed-settings-card">
+    <h4>Add Subscription</h4>
+    <form id="feed-add-form" class="feed-settings-form">
+      <label for="feed-url-input">Feed URL</label>
+      <input id="feed-url-input" name="feed_url" type="url" required placeholder="https://example.com/feed.xml">
+
+      <label for="feed-category-input">Category</label>
+      <input id="feed-category-input" name="category_name" type="text" required placeholder="Technology">
+
+      <button type="submit" class="btn btn-primary">Add Feed</button>
+    </form>
+  </article>
+
+  <article class="site-card feed-settings-card">
+    <h4>OPML Import / Export</h4>
+    <form id="feed-opml-import-form" class="feed-settings-form">
+      <label for="feed-opml-file">Import OPML</label>
+      <input id="feed-opml-file" name="opml_file" type="file" accept=".opml,.xml" required>
+      <button type="submit" class="btn btn-primary">Import</button>
+    </form>
+    <div class="feed-export-wrap">
+      <a href="/feeds/api/opml/export/" class="btn btn-primary">Export OPML</a>
+    </div>
+  </article>
+
+  <article class="site-card feed-settings-card">
+    <h4>Category Preferences</h4>
+    <div id="feed-category-settings-list" class="feed-category-settings-list">
+      {% for category_item in categories %}
+      <div class="feed-category-settings-item" data-category-id="{{ category_item.category_id }}">
+        <div class="feed-category-settings-labels">
+          <span class="feed-category-name">{{ category_item.name }}</span>
+          <span class="feed-category-count">Unread: {{ category_item.unread_count }}</span>
+        </div>
+        <div class="feed-category-settings-controls">
+          <input
+            type="color"
+            class="feed-category-color-input"
+            value="{{ category_item.color_hex }}"
+            aria-label="Select category color for {{ category_item.name }}"
+          >
+          <button
+            type="button"
+            class="btn btn-primary feed-category-mute-button"
+            data-muted="{{ 'true' if category_item.muted else 'false' }}"
+          >
+            {% if category_item.muted %}Unmute{% else %}Mute{% endif %}
+          </button>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </article>
+
+  <article class="site-card feed-settings-card">
+    <h4>Current Subscriptions</h4>
+    {% if subscriptions|length == 0 %}
+    <p>No subscriptions yet.</p>
+    {% else %}
+    <div class="feed-subscription-table-wrap">
+      <table class="feed-subscription-table">
+        <thead>
+          <tr>
+            <th>Feed</th>
+            <th>URL</th>
+            <th>Category</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for subscription in subscriptions %}
+          <tr>
+            <td>{{ subscription.source_title }}</td>
+            <td><a href="{{ subscription.source_url }}" target="_blank" rel="noopener">{{ subscription.source_url }}</a></td>
+            <td>
+              <span class="feed-category-pill" style="--feed-category-color: {{ subscription.category_color_hex }};">
+                {{ subscription.category_name }}
+              </span>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+  </article>
+
+  <div id="feed-settings-status" class="feed-settings-status" role="status" aria-live="polite"></div>
+</section>
+{% endblock %}

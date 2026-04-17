@@ -1,0 +1,64 @@
+services:
+  nginx:
+    image: nginx:1.27-alpine
+    depends_on:
+      - fastapi
+    ports:
+      - "127.0.0.1:8010:80"
+    volumes:
+      - ./test/nginx/nginx-test.conf:/etc/nginx/nginx.conf:ro
+    restart: unless-stopped
+
+  fastapi:
+    build: fastapi
+    depends_on:
+      - mongodb
+    volumes:
+      - ./website:/app:ro
+      - ./test/config/website_db_server.txt:/app/database/db_server.txt:ro
+    environment:
+      - PYTHONUNBUFFERED=1
+    restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  backend:
+    build: backend
+    depends_on:
+      - mongodb
+    volumes:
+      - ./backend/src:/src:ro
+    environment:
+      - PYTHONUNBUFFERED=1
+      - FEEDS_FETCH_INTERVAL_SECONDS=300
+      - FEEDS_RETRY_AFTER_FAILURE_SECONDS=900
+      - FEEDS_FAILURE_MODE=none
+    restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  mongodb:
+    image: mongo:7
+    hostname: mongodb
+    ports:
+      - "127.0.0.1:27018:27017"
+    volumes:
+      - db_volume_test:/data/db:rw
+      - db_conf_test:/data/configdb
+    restart: unless-stopped
+
+  feed-tests:
+    build: fastapi
+    depends_on:
+      - mongodb
+    volumes:
+      - ./website:/app:ro
+      - ./test/config/website_db_server.txt:/app/database/db_server.txt:ro
+    environment:
+      - PYTHONUNBUFFERED=1
+    command: ["python", "-m", "unittest", "discover", "-s", "/app/tests"]
+    profiles: ["tests"]
+
+volumes:
+  db_volume_test:
+  db_conf_test:

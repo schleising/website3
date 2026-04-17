@@ -1,0 +1,70 @@
+{% extends "feeds/feed-base.html" %}
+
+{% set feed_page_mode = "reader" %}
+
+{% block feeds_content %}
+<section
+  class="feeds-reader"
+  id="feeds-reader-root"
+  data-selected-category="{{ selected_category }}"
+  data-selected-status="{{ selected_status }}"
+  data-articles-endpoint="/feeds/api/articles/"
+  data-categories-endpoint="/feeds/api/categories/"
+  data-mark-read-endpoint-template="/feeds/api/articles/__ARTICLE_ID__/read/"
+  data-csrf-token="{{ request.state.csrf_token|default('') }}"
+>
+  <header class="feeds-reader-header site-card">
+    <div>
+      <h4 class="feeds-reader-title">Unread Articles</h4>
+      <p class="feeds-reader-subtitle">Use j/k to move, Enter or Space to open and mark as read.</p>
+    </div>
+  </header>
+
+  <div id="feeds-article-list" class="feeds-article-list">
+    {% if articles|length == 0 %}
+    <article class="feed-empty-state site-card" id="feeds-empty-state">
+      <h5>No articles available</h5>
+      <p>Add subscriptions in Settings or try a different filter.</p>
+    </article>
+    {% else %}
+    {% for article in articles %}
+    <article
+      class="feed-article-card site-card"
+      data-article-id="{{ article.article_id }}"
+      data-article-link="{{ article.link }}"
+      tabindex="0"
+    >
+      <header class="feed-article-card-header">
+        <div class="feed-article-meta-left">
+          <span class="feed-category-pill" style="--feed-category-color: {{ article.category_color_hex }};">{{ article.category_name }}</span>
+          <span class="feed-source-title">{{ article.feed_title }}</span>
+        </div>
+        <div class="feed-article-meta-right">
+          {% if article.published_at is not none %}
+          <time datetime="{{ article.published_at.isoformat() }}">{{ article.published_at.strftime('%Y-%m-%d %H:%M') }}</time>
+          {% endif %}
+        </div>
+      </header>
+
+      <h5 class="feed-article-title">
+        <a href="{{ article.link }}" target="_blank" rel="noopener">{{ article.title }}</a>
+      </h5>
+
+      {% if article.author %}
+      <p class="feed-article-author">By {{ article.author }}</p>
+      {% endif %}
+
+      {% if article.summary_html %}
+      <div class="feed-article-summary">{{ article.summary_html | safe }}</div>
+      {% endif %}
+
+      <footer class="feed-article-actions">
+        <button type="button" class="btn btn-primary feed-mark-read-button">Mark Read</button>
+        <a href="{{ article.link }}" target="_blank" rel="noopener" class="btn btn-primary">Open</a>
+      </footer>
+    </article>
+    {% endfor %}
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

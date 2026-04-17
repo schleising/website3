@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block title %}<title>{{ title }}</title>{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="/css/feeds/feeds.css?v1.0.0">
+{% endblock %}
+
+{% block scripts %}
+{% if feed_page_mode == "reader" %}
+<script defer src="/js/feeds/reader.js?v1.0.0"></script>
+{% elif feed_page_mode == "settings" %}
+<script defer src="/js/feeds/settings.js?v1.0.0"></script>
+{% endif %}
+{% endblock %}
+
+{% block header %}
+<h3 class="header-text">{{ title }}</h3>
+{% endblock %}
+
+{% block sidebar %}
+<a href="/feeds/?category=all" class="sub-level-nav{% if selected_category == 'all' %} is-current{% endif %}" {% if selected_category == 'all' %}aria-current="page"{% endif %}>All Feeds ({{ all_unread_count }})</a>
+<a href="/feeds/?category=recently-read" class="sub-level-nav{% if selected_category == 'recently-read' %} is-current{% endif %}" {% if selected_category == 'recently-read' %}aria-current="page"{% endif %}>Recently Read ({{ recently_read_count }})</a>
+{% for category_item in categories %}
+<a
+  href="/feeds/?category={{ category_item.category_id }}"
+  class="sub-level-nav feed-category-link{% if selected_category == category_item.category_id %} is-current{% endif %}{% if category_item.muted %} is-muted{% endif %}"
+  {% if selected_category == category_item.category_id %}aria-current="page"{% endif %}
+  data-category-id="{{ category_item.category_id }}"
+>
+  <span class="feed-category-color" style="background-color: {{ category_item.color_hex }};"></span>
+  <span class="feed-category-name">{{ category_item.name }}</span>
+  <span class="feed-category-count">({{ category_item.unread_count }})</span>
+</a>
+{% endfor %}
+<a href="/feeds/settings/" class="sub-level-nav{% if feed_page_mode == 'settings' %} is-current{% endif %}" {% if feed_page_mode == 'settings' %}aria-current="page"{% endif %}>Settings</a>
+{% endblock %}
+
+{% block footer %}
+<footer>Feed reader</footer>
+{% endblock %}
+
+{% block content %}
+<div class="feeds-page">
+{% block feeds_content %}{% endblock %}
+</div>
+{% endblock %}

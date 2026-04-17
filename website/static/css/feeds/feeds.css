@@ -1,0 +1,298 @@
+.feeds-page {
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+}
+
+.feeds-reader,
+.feeds-settings {
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+}
+
+.feeds-reader-header {
+    padding: 0.9rem;
+}
+
+.feeds-reader-title {
+    margin: 0;
+}
+
+.feeds-reader-subtitle {
+    margin: 0.25rem 0 0;
+    color: var(--text-soft);
+}
+
+.feeds-article-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+}
+
+.feed-empty-state {
+    padding: 1.1rem;
+}
+
+.feed-empty-state h5 {
+    margin: 0 0 0.35rem;
+}
+
+.feed-empty-state p {
+    margin: 0;
+    color: var(--text-soft);
+}
+
+.feed-article-card {
+    padding: 0.95rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+    outline: 0.0625rem solid transparent;
+    transition: outline-color 120ms ease, box-shadow 120ms ease;
+}
+
+.feed-article-card.is-selected,
+.feed-article-card:focus-visible {
+    outline-color: rgba(77, 123, 177, 0.66);
+    box-shadow: 0 0 0 0.2rem rgba(77, 123, 177, 0.2);
+}
+
+.feed-article-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 0.6rem;
+}
+
+.feed-article-meta-left {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
+    flex-wrap: wrap;
+}
+
+.feed-article-meta-right {
+    color: var(--text-soft);
+    font-size: 0.85rem;
+}
+
+.feed-category-pill {
+    --feed-category-color: #1f6feb;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.78rem;
+    padding: 0.2rem 0.45rem;
+    border-radius: 999px;
+    border: 0.0625rem solid color-mix(in srgb, var(--feed-category-color), #ffffff 55%);
+    background: color-mix(in srgb, var(--feed-category-color), #ffffff 85%);
+    color: var(--text);
+    white-space: nowrap;
+}
+
+.feed-source-title {
+    color: var(--text-soft);
+    font-size: 0.84rem;
+}
+
+.feed-article-title {
+    margin: 0;
+    font-size: 1.08rem;
+    line-height: 1.35;
+}
+
+.feed-article-title a {
+    color: var(--brand-strong);
+    text-decoration: none;
+}
+
+.feed-article-title a:hover,
+.feed-article-title a:focus-visible {
+    text-decoration: underline;
+}
+
+.feed-article-author {
+    margin: 0;
+    color: var(--text-soft);
+    font-size: 0.88rem;
+}
+
+.feed-article-summary {
+    color: var(--text);
+}
+
+.feed-article-summary :is(p, ul, ol, blockquote) {
+    margin-top: 0;
+    margin-bottom: 0.45rem;
+}
+
+.feed-article-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+}
+
+.feed-category-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 0.4rem;
+}
+
+.feed-category-link.is-muted {
+    opacity: 0.78;
+}
+
+.feed-category-color {
+    width: 0.72rem;
+    height: 0.72rem;
+    border-radius: 999px;
+    border: 0.0625rem solid rgba(24, 35, 56, 0.25);
+    flex: 0 0 0.72rem;
+}
+
+.feed-category-name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.feed-category-count {
+    color: var(--text-soft);
+    margin-left: auto;
+}
+
+.feed-settings-card {
+    padding: 0.9rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+}
+
+.feed-settings-card h4 {
+    margin: 0;
+}
+
+.feed-settings-form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+}
+
+.feed-settings-form label {
+    font-weight: 600;
+    color: var(--text-soft);
+}
+
+.feed-settings-form input[type="url"],
+.feed-settings-form input[type="text"],
+.feed-settings-form input[type="file"] {
+    min-height: 2.25rem;
+    border: 0.0625rem solid var(--line);
+    border-radius: 0.55rem;
+    padding: 0.4rem 0.6rem;
+    background: #ffffff;
+}
+
+.feed-category-settings-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+}
+
+.feed-category-settings-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.7rem;
+    padding: 0.55rem;
+    border: 0.0625rem solid var(--line);
+    border-radius: 0.55rem;
+    background: var(--surface-soft);
+}
+
+.feed-category-settings-labels {
+    display: flex;
+    flex-direction: column;
+    gap: 0.18rem;
+    min-width: 0;
+}
+
+.feed-category-settings-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+}
+
+.feed-category-color-input {
+    width: 2.4rem;
+    height: 2.05rem;
+    border: 0.0625rem solid var(--line);
+    border-radius: 0.4rem;
+    background: #ffffff;
+    padding: 0.12rem;
+}
+
+.feed-subscription-table-wrap {
+    overflow-x: auto;
+}
+
+.feed-subscription-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.feed-subscription-table th,
+.feed-subscription-table td {
+    text-align: left;
+    padding: 0.45rem 0.5rem;
+    border-bottom: 0.0625rem solid var(--line);
+    vertical-align: top;
+}
+
+.feed-subscription-table th {
+    color: var(--text-soft);
+    font-weight: 700;
+}
+
+.feed-subscription-table td a {
+    color: var(--brand-strong);
+    text-decoration: none;
+    word-break: break-all;
+}
+
+.feed-subscription-table td a:hover,
+.feed-subscription-table td a:focus-visible {
+    text-decoration: underline;
+}
+
+.feed-settings-status {
+    min-height: 1.6rem;
+    font-size: 0.95rem;
+    color: var(--text-soft);
+}
+
+.feed-settings-status.is-error {
+    color: var(--danger);
+}
+
+@media screen and (max-width: 42rem) {
+    .feed-article-card {
+        padding: 0.72rem;
+    }
+
+    .feed-article-title {
+        font-size: 1rem;
+    }
+
+    .feed-category-settings-item {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .feed-category-settings-controls {
+        justify-content: flex-end;
+    }
+}
