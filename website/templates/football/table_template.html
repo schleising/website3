@@ -1,10 +1,10 @@
 {% extends "football/football-base.html" %}
 
 {% block football_head %}
-<link rel="stylesheet" href="/css/table.css?v1.6.13">
+<link rel="stylesheet" href="/css/table.css?v1.7.2">
 {% block football_scripts %}
 {% if is_current_season|default(false) %}
-<script defer src="/js/football/table_live.js?v1.6.3"></script>
+<script defer src="/js/football/table_live.js?v1.7.0"></script>
 {% endif %}
 {% endblock %}
 {% block title %}<title>Football - {{ title }}</title>{% endblock %}
@@ -27,71 +27,73 @@
 {% endblock %}
 
 {% block football_content %}
-<div class="table-container" data-team-count="{{ table_list|length }}">
-  <table>
-    <thead class="sticky-header">
-      <tr class="header-row">
-        <th class="header-data data">Pos</th>
-        <th class="header-data data">Team</th>
-        <th class="header-data data centre-align">Pld</th>
-        <th class="header-data data centre-align medium-table">W</th>
-        <th class="header-data data centre-align medium-table">D</th>
-        <th class="header-data data centre-align medium-table">L</th>
-        <th class="header-data data centre-align large-table">F</th>
-        <th class="header-data data centre-align large-table">A</th>
-        <th class="header-data data centre-align">GD</th>
-        <th class="header-data data centre-align">Pts</th>
-        <th class="header-data data centre-align medium-table">Form</th>
-      </tr>
-    </thead>
-    <tbody id="football-live-table-body" data-season-key="{{ selected_season_key|default(current_season_key)|default('') }}">
+<div class="table-container" data-team-count="{{ table_list|length }}" style="--table-row-count: {{ table_list|length }};">
+  <section class="table-grid" role="table" aria-label="{{ title }}">
+    <header class="table-grid-header sticky-header" role="rowgroup">
+      <div class="header-row" role="row">
+        <div class="header-data data table-cell" role="columnheader">Pos</div>
+        <div class="header-data data table-cell" role="columnheader">Team</div>
+        <div class="header-data data table-cell centre-align" role="columnheader">Pld</div>
+        <div class="header-data data table-cell centre-align medium-table" role="columnheader">W</div>
+        <div class="header-data data table-cell centre-align medium-table" role="columnheader">D</div>
+        <div class="header-data data table-cell centre-align medium-table" role="columnheader">L</div>
+        <div class="header-data data table-cell centre-align large-table" role="columnheader">F</div>
+        <div class="header-data data table-cell centre-align large-table" role="columnheader">A</div>
+        <div class="header-data data table-cell centre-align" role="columnheader">GD</div>
+        <div class="header-data data table-cell centre-align" role="columnheader">Pts</div>
+        <div class="header-data data table-cell centre-align medium-table" role="columnheader">Form</div>
+      </div>
+    </header>
+
+    <div id="football-live-table-body" class="table-grid-body" role="rowgroup" data-season-key="{{ selected_season_key|default(current_season_key)|default('') }}">
       {% set relegation_cutoff = table_list|length - 2 %}
       {% for table_item in table_list %}
-      <tr
+      <article
         class="data-row{% if is_current_season|default(false) %}{% if table_item.position <= 5 %} table-zone-ucl{% elif table_item.position == 6 %} table-zone-uel{% elif table_item.position == 7 %} table-zone-uecl{% elif table_item.position >= relegation_cutoff %} table-zone-relegation{% endif %}{% endif %}"
+        role="row"
         data-team-id="{{ table_item.team.id }}"
         data-position="{{ table_item.position }}"
         data-played="{{ table_item.played_games }}"
         data-points="{{ table_item.points }}"
       >
-        <td class="row-data data position">
+        <div class="row-data data table-cell position" role="cell">
           <div class="table-position-value">{{ table_item.position }}</div>
           {% if table_item.has_started %}
           <div class="table-position-delta {{ table_item.css_class }}">
             {{ table_item.score_string }}
           </div>
           {% endif %}
-        </td>
-        <td class="row-data data">
+        </div>
+        <div class="row-data data table-cell" role="cell">
           <div class="team-and-badge">
             <img class="team-badge" src="{{ table_item.team.local_crest }}"></img>
             <a class="team-name" href="/football/matches/team/{{ table_item.team.id }}/?season={{ selected_season_key|default(current_season_key)|default('') }}">{{ table_item.team.short_name }}</a>
           </div>
-        </td>
-        <td class="row-data data right-align table-played">{{ table_item.played_games }}</td>
-        <td class="row-data data medium-table right-align table-won">{{ table_item.won }}</td>
-        <td class="row-data data medium-table right-align table-draw">{{ table_item.draw }}</td>
-        <td class="row-data data medium-table right-align table-lost">{{ table_item.lost }}</td>
-        <td class="row-data data large-table right-align table-goals-for">{{ table_item.goals_for }}</td>
-        <td class="row-data data large-table right-align table-goals-against">{{ table_item.goals_against }}</td>
-        <td class="row-data data right-align table-goal-difference">{{ table_item.goal_difference }}</td>
-        <td class="row-data data right-align table-points">{{ table_item.points }}</td>
-        <td class="row-data data medium-table right-align">
+        </div>
+        <div class="row-data data table-cell right-align table-played" role="cell">{{ table_item.played_games }}</div>
+        <div class="row-data data table-cell medium-table right-align table-won" role="cell">{{ table_item.won }}</div>
+        <div class="row-data data table-cell medium-table right-align table-draw" role="cell">{{ table_item.draw }}</div>
+        <div class="row-data data table-cell medium-table right-align table-lost" role="cell">{{ table_item.lost }}</div>
+        <div class="row-data data table-cell large-table right-align table-goals-for" role="cell">{{ table_item.goals_for }}</div>
+        <div class="row-data data table-cell large-table right-align table-goals-against" role="cell">{{ table_item.goals_against }}</div>
+        <div class="row-data data table-cell right-align table-goal-difference" role="cell">{{ table_item.goal_difference }}</div>
+        <div class="row-data data table-cell right-align table-points" role="cell">{{ table_item.points }}</div>
+        <div class="row-data data table-cell medium-table right-align" role="cell">
           <div class="form-container">
             {% if table_item.form_list|length > 0 %}
               {% for form_item in table_item.form_list|reverse %}
               <div class="form-character {{ form_item.css_class }}">{{ form_item.character }}</div>
-            {% endfor %}
+              {% endfor %}
             {% elif table_item.form %}
             <span>{{ table_item.form }}</span>
             {% else %}
             <span>-</span>
             {% endif %}
           </div>
-        </td>
-      </tr>
+        </div>
+      </article>
       {% endfor %}
-    </tbody>
-  </table>
+    </div>
+  </section>
 </div>
 {% endblock %}

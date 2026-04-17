@@ -169,7 +169,7 @@ function getTableRows() {
         return [];
     }
 
-    return Array.from(tbody.querySelectorAll("tr[data-team-id]"));
+    return Array.from(tbody.querySelectorAll(".data-row[data-team-id]"));
 }
 
 function clearRangeHighlights() {
@@ -307,7 +307,7 @@ function setupRangeInteractions() {
             return;
         }
 
-        const row = event.target.closest("tr[data-team-id]");
+        const row = event.target.closest(".data-row[data-team-id]");
         if (!row || !tbody.contains(row)) {
             return;
         }
@@ -333,7 +333,7 @@ function setupRangeInteractions() {
             return;
         }
 
-        const row = event.target.closest("tr[data-team-id]");
+        const row = event.target.closest(".data-row[data-team-id]");
         if (!row || !tbody.contains(row)) {
             return;
         }
@@ -359,13 +359,14 @@ function patchLiveTable(tableList) {
     const tableContainer = tbody.closest(".table-container");
     if (tableContainer) {
         tableContainer.dataset.teamCount = String(tableList.length);
+        tableContainer.style.setProperty("--table-row-count", String(tableList.length));
     }
 
     const seasonKey = tbody.dataset.seasonKey || "";
 
     tableList.forEach(tableItem => {
         const teamId = String(tableItem.team.id);
-        const row = tbody.querySelector(`tr[data-team-id="${CSS.escape(teamId)}"]`);
+        const row = tbody.querySelector(`.data-row[data-team-id="${CSS.escape(teamId)}"]`);
 
         if (!row) {
             return;
