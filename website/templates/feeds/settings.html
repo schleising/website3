@@ -89,13 +89,14 @@
         <tbody>
           {% for subscription in subscriptions %}
           <tr class="feed-subscription-row" data-subscription-id="{{ subscription.subscription_id }}">
-            <td>{{ subscription.source_title }}</td>
-            <td>
+            <td class="feed-subscription-title-cell" title="{{ subscription.source_title }}">{{ subscription.source_title }}</td>
+            <td class="feed-subscription-url-cell">
               <a
                 href="{{ subscription.source_url }}"
                 target="_blank"
                 rel="noopener"
                 class="feed-subscription-url-link"
+                title="{{ subscription.source_url }}"
               >
                 {{ subscription.source_url }}
               </a>
@@ -106,7 +107,7 @@
                 aria-label="Subscription URL for {{ subscription.source_title }}"
               >
             </td>
-            <td>
+            <td class="feed-subscription-category-cell">
               <span
                 class="feed-category-pill feed-subscription-category-pill"
                 data-category-id="{{ subscription.category_id }}"
@@ -122,12 +123,35 @@
                 {% endfor %}
               </select>
             </td>
-            <td>
+            <td class="feed-subscription-actions-cell">
               <div class="feed-subscription-actions">
-                <button type="button" class="btn btn-primary feed-subscription-edit-button">Edit</button>
+                <button
+                  type="button"
+                  class="btn btn-primary feed-subscription-edit-button feed-subscription-icon-button"
+                  aria-label="Edit subscription {{ subscription.source_title }}"
+                  title="Edit subscription"
+                >
+                  <svg class="feed-action-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                    <path d="M12 20h9"></path>
+                    <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"></path>
+                  </svg>
+                </button>
                 <button type="button" class="btn btn-primary feed-subscription-save-button">Save</button>
                 <button type="button" class="btn feed-subscription-cancel-button">Cancel</button>
-                <button type="button" class="btn btn-danger feed-subscription-delete-button">Delete</button>
+                <button
+                  type="button"
+                  class="btn btn-danger feed-subscription-delete-button feed-subscription-icon-button"
+                  aria-label="Delete subscription {{ subscription.source_title }}"
+                  title="Delete subscription"
+                >
+                  <svg class="feed-action-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                    <path d="M3 6h18"></path>
+                    <path d="M8 6V4h8v2"></path>
+                    <path d="M19 6l-1 14H6L5 6"></path>
+                    <path d="M10 11v6"></path>
+                    <path d="M14 11v6"></path>
+                  </svg>
+                </button>
               </div>
             </td>
           </tr>

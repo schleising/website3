@@ -188,31 +188,49 @@
 .feed-category-link {
     display: inline-flex;
     align-items: center;
-    justify-content: flex-start;
+    justify-content: flex-end;
     gap: 0.4rem;
+}
+
+.right-sidebar .feed-sidebar-link {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    text-align: right;
 }
 
 .feed-category-link.is-muted {
     opacity: 0.78;
 }
 
-.feed-category-color {
-    width: 0.72rem;
-    height: 0.72rem;
-    border-radius: 999px;
-    border: 0.0625rem solid rgba(24, 35, 56, 0.25);
-    flex: 0 0 0.72rem;
-}
-
 .feed-category-name {
     min-width: 0;
+    text-align: right;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
 .feed-category-count {
-    color: var(--text-soft);
-    margin-left: auto;
+    --feed-category-accent: #4d7bb1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.7rem;
+    padding: 0.1rem 0.45rem;
+    border-radius: 999px;
+    border: 0.0625rem solid color-mix(in srgb, var(--feed-category-accent), #142640 55%);
+    background-color: color-mix(in srgb, var(--feed-category-accent), #ffffff 8%);
+    color: #f8fbff;
+    font-size: 0.77rem;
+    font-weight: 700;
+    line-height: 1.15;
+    font-variant-numeric: tabular-nums;
+    flex: 0 0 auto;
+}
+
+.feed-category-unread-pill-all {
+    --feed-category-accent: #4d7bb1;
 }
 
 .feed-settings-card {
@@ -293,6 +311,8 @@
 .feed-subscription-table {
     width: 100%;
     border-collapse: collapse;
+    min-width: 58rem;
+    table-layout: fixed;
 }
 
 .feed-subscription-table th,
@@ -300,7 +320,7 @@
     text-align: left;
     padding: 0.45rem 0.5rem;
     border-bottom: 0.0625rem solid var(--line);
-    vertical-align: top;
+    vertical-align: middle;
 }
 
 .feed-subscription-table th {
@@ -308,10 +328,33 @@
     font-weight: 700;
 }
 
+.feed-subscription-title-cell {
+    width: 25%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.feed-subscription-url-cell {
+    width: 42%;
+}
+
+.feed-subscription-category-cell {
+    width: 16%;
+    white-space: nowrap;
+}
+
+.feed-subscription-actions-cell {
+    width: 17%;
+    white-space: nowrap;
+}
+
 .feed-subscription-table td a {
     color: var(--brand-strong);
     text-decoration: none;
-    word-break: break-all;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .feed-subscription-table td a:hover,
@@ -330,7 +373,7 @@
 }
 
 .feed-subscription-category-select {
-    margin-top: 0.4rem;
+    margin-top: 0;
 }
 
 .feed-subscription-row .feed-subscription-url-input,
@@ -360,8 +403,30 @@
 
 .feed-subscription-actions {
     display: flex;
-    flex-wrap: wrap;
+    justify-content: flex-end;
+    flex-wrap: nowrap;
     gap: 0.4rem;
+}
+
+.feed-subscription-icon-button {
+    width: 2.1rem;
+    min-width: 2.1rem;
+    min-height: 2.1rem;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.feed-action-icon {
+    width: 1.05rem;
+    height: 1.05rem;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    pointer-events: none;
 }
 
 .feed-settings-status {

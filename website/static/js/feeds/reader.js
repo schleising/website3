@@ -645,7 +645,7 @@
         if (allLink) {
             const allCountNode = allLink.querySelector(".feed-category-count");
             if (allCountNode) {
-                allCountNode.textContent = `(${Number(payload.all_unread_count || 0)})`;
+                allCountNode.textContent = String(Number(payload.all_unread_count || 0));
             }
         }
         if (recentlyReadLink) {
@@ -662,13 +662,12 @@
 
             const countNode = link.querySelector(".feed-category-count");
             if (countNode) {
-                countNode.textContent = `(${Number(category.unread_count || 0)})`;
+                countNode.textContent = String(Number(category.unread_count || 0));
             }
 
             link.classList.toggle("is-muted", Boolean(category.muted));
-            const colorNode = link.querySelector(".feed-category-color");
-            if (colorNode instanceof HTMLElement) {
-                colorNode.style.backgroundColor = String(category.color_hex || "#1F6FEB");
+            if (countNode instanceof HTMLElement) {
+                countNode.style.setProperty("--feed-category-accent", String(category.color_hex || "#1F6FEB"));
             }
         });
 

@@ -128,7 +128,7 @@
     }
 
     /**
-     * Update right-sidebar category color chip without reloading.
+     * Update right-sidebar category unread pill color without reloading.
      *
      * @param {string} categoryId
      * @param {string} colorHex
@@ -143,9 +143,9 @@
             return;
         }
 
-        const colorChip = link.querySelector(".feed-category-color");
-        if (colorChip instanceof HTMLElement) {
-            colorChip.style.backgroundColor = colorHex;
+        const countPill = link.querySelector(".feed-category-count");
+        if (countPill instanceof HTMLElement) {
+            countPill.style.setProperty("--feed-category-accent", colorHex);
         }
     }
 
@@ -449,7 +449,12 @@
             return;
         }
 
-        const row = target.closest(".feed-subscription-row");
+        const actionButton = target.closest("button");
+        if (!(actionButton instanceof HTMLButtonElement)) {
+            return;
+        }
+
+        const row = actionButton.closest(".feed-subscription-row");
         if (!(row instanceof HTMLElement)) {
             return;
         }
@@ -459,7 +464,7 @@
             return;
         }
 
-        if (target.classList.contains("feed-subscription-edit-button")) {
+        if (actionButton.classList.contains("feed-subscription-edit-button")) {
             const urlInput = row.querySelector(".feed-subscription-url-input");
             const categorySelect = row.querySelector(".feed-subscription-category-select");
             if (!(urlInput instanceof HTMLInputElement) || !(categorySelect instanceof HTMLSelectElement)) {
@@ -473,7 +478,7 @@
             return;
         }
 
-        if (target.classList.contains("feed-subscription-cancel-button")) {
+        if (actionButton.classList.contains("feed-subscription-cancel-button")) {
             const urlInput = row.querySelector(".feed-subscription-url-input");
             const categorySelect = row.querySelector(".feed-subscription-category-select");
             if (!(urlInput instanceof HTMLInputElement) || !(categorySelect instanceof HTMLSelectElement)) {
@@ -492,7 +497,7 @@
             return;
         }
 
-        if (target.classList.contains("feed-subscription-save-button")) {
+        if (actionButton.classList.contains("feed-subscription-save-button")) {
             const urlInput = row.querySelector(".feed-subscription-url-input");
             const categorySelect = row.querySelector(".feed-subscription-category-select");
             if (!(urlInput instanceof HTMLInputElement) || !(categorySelect instanceof HTMLSelectElement)) {
@@ -543,7 +548,7 @@
             return;
         }
 
-        if (target.classList.contains("feed-subscription-delete-button")) {
+        if (actionButton.classList.contains("feed-subscription-delete-button")) {
             setStatus("Deleting subscription...");
 
             try {
