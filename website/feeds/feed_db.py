@@ -653,9 +653,13 @@ async def get_article_list(
     user_id: str,
     category_filter: str,
     status_filter: str,
-    limit: int = 250,
+    offset: int = 0,
+    limit: int = 10,
 ) -> FeedArticleListResponse:
     """Return filtered article cards for the feed reader view."""
+
+    normalized_offset = max(0, int(offset))
+    normalized_limit = max(1, int(limit))
 
     normalized_status: Literal["unread", "read", "all"]
     if status_filter in {"unread", "read", "all"}:
@@ -677,16 +681,21 @@ async def get_article_list(
     }
 
     if category_filter == "recently-read":
-        articles = await list_recently_read_cards(
+        articles, has_more = await list_recently_read_cards(
             user_id=user_id,
             categories_by_id=categories_by_id,
             feed_to_category=feed_to_category,
-            limit=None,
+            offset=normalized_offset,
+            limit=normalized_limit,
         )
         return FeedArticleListResponse(
             category="recently-read",
             status="read",
             articles=articles,
+            offset=normalized_offset,
+            limit=normalized_limit,
+            has_more=has_more,
+            next_offset=normalized_offset + len(articles),
         )
 
     muted_category_ids = {
@@ -706,7 +715,15 @@ async def get_article_list(
             selected_category = None
 
         if selected_category is None or selected_category in muted_category_ids:
-            return FeedArticleListResponse(category=category_filter, status=normalized_status, articles=[])
+            return FeedArticleListResponse(
+                category=category_filter,
+                status=normalized_status,
+                articles=[],
+                offset=normalized_offset,
+                limit=normalized_limit,
+                has_more=False,
+                next_offset=normalized_offset,
+            )
 
         allowed_category_ids = [selected_category]
 
@@ -717,22 +734,35 @@ async def get_article_list(
     ]
 
     if len(allowed_feed_ids) == 0:
-        return FeedArticleListResponse(category=category_filter, status=normalized_status, articles=[])
+        return FeedArticleListResponse(
+            category=category_filter,
+            status=normalized_status,
+            articles=[],
+            offset=normalized_offset,
+            limit=normalized_limit,
+            has_more=False,
+            next_offset=normalized_offset,
+        )
 
     read_map = await get_user_read_map(user_id)
-    cards = await list_cards_for_feed_ids(
+    cards, has_more = await list_cards_for_feed_ids(
         allowed_feed_ids=allowed_feed_ids,
         categories_by_id=categories_by_id,
         feed_to_category=feed_to_category,
         read_map=read_map,
         status_filter=normalized_status,
-        limit=limit,
+        offset=normalized_offset,
+        limit=normalized_limit,
     )
 
     return FeedArticleListResponse(
         category=category_filter,
         status=normalized_status,
         articles=cards,
+        offset=normalized_offset,
+        limit=normalized_limit,
+        has_more=has_more,
+        next_offset=normalized_offset + len(cards),
     )
 
 
@@ -775,12 +805,13 @@ async def list_cards_for_feed_ids(
     feed_to_category: dict[ObjectId, ObjectId],
     read_map: dict[ObjectId, datetime | None],
     status_filter: str,
+    offset: int,
     limit: int,
-) -> list[FeedArticleCard]:
+) -> tuple[list[FeedArticleCard], bool]:
     """Return article cards for feed IDs with status filtering."""
 
     if feed_articles_collection is None:
-        return []
+        return [], False
 
     source_map = await load_sources_map(set(allowed_feed_ids))
 
@@ -790,12 +821,12 @@ async def list_cards_for_feed_ids(
                 "feed_id": {"$in": allowed_feed_ids},
                 "is_deleted": False,
             }
-        )
-        .sort("published_at", ASCENDING)
-        .limit(max(limit * 3, limit))
+        ).sort("published_at", ASCENDING)
     )
 
     cards: list[FeedArticleCard] = []
+    seen_matching = 0
+    has_more = False
 
     async for article_doc in cursor:
         article_id = article_doc.get("_id")
@@ -820,6 +851,14 @@ async def list_cards_for_feed_ids(
         if status_filter == "unread" and is_read:
             continue
 
+        if seen_matching < offset:
+            seen_matching += 1
+            continue
+
+        if len(cards) >= limit:
+            has_more = True
+            break
+
         source_doc = source_map.get(feed_id, {})
         source_title = str(source_doc.get("title", source_doc.get("normalized_url", "Feed")))
 
@@ -843,22 +882,22 @@ async def list_cards_for_feed_ids(
             )
         )
 
-        if len(cards) >= limit:
-            break
+        seen_matching += 1
 
-    return cards
+    return cards, has_more
 
 
 async def list_recently_read_cards(
     user_id: str,
     categories_by_id: dict[ObjectId, FeedCategoryDocument],
     feed_to_category: dict[ObjectId, ObjectId],
-    limit: int | None,
-) -> list[FeedArticleCard]:
+    offset: int,
+    limit: int,
+) -> tuple[list[FeedArticleCard], bool]:
     """Return recently-read article cards from the last seven days."""
 
     if user_article_states_collection is None or feed_articles_collection is None:
-        return []
+        return [], False
 
     muted_category_ids = {
         category_id
@@ -876,12 +915,9 @@ async def list_recently_read_cards(
         {"article_id": 1, "read_at": 1},
     ).sort("read_at", DESCENDING)
 
-    if isinstance(limit, int) and limit > 0:
-        state_cursor = state_cursor.limit(max(limit * 2, limit))
-
     state_rows = [doc async for doc in state_cursor]
     if len(state_rows) == 0:
-        return []
+        return [], False
 
     read_map: dict[ObjectId, datetime | None] = {}
     article_ids: list[ObjectId] = []
@@ -894,7 +930,7 @@ async def list_recently_read_cards(
         read_map[article_id] = row.get("read_at")
 
     if len(article_ids) == 0:
-        return []
+        return [], False
 
     article_cursor = feed_articles_collection.find(
         {
@@ -956,17 +992,13 @@ async def list_recently_read_cards(
             )
         )
 
-        if isinstance(limit, int) and limit > 0 and len(ordered_cards) >= limit:
-            break
-
     ordered_cards.sort(
         key=lambda card: card.read_at or datetime.fromtimestamp(0, tz=UTC), reverse=True
     )
 
-    if isinstance(limit, int) and limit > 0:
-        return ordered_cards[:limit]
-
-    return ordered_cards
+    paged_cards = ordered_cards[offset:offset + limit]
+    has_more = (offset + len(paged_cards)) < len(ordered_cards)
+    return paged_cards, has_more
 
 
 async def mark_article_read(user_id: str, article_id: str) -> bool:
@@ -1239,7 +1271,13 @@ async def get_feed_reader_context(user_id: str, category_filter: str, status_fil
     """Build template context payload for the feed reader page."""
 
     categories_payload = await get_categories_with_counts(user_id)
-    article_payload = await get_article_list(user_id, category_filter, status_filter)
+    article_payload = await get_article_list(
+        user_id,
+        category_filter,
+        status_filter,
+        offset=0,
+        limit=10,
+    )
 
     return {
         "categories": categories_payload.categories,
@@ -1248,6 +1286,9 @@ async def get_feed_reader_context(user_id: str, category_filter: str, status_fil
         "articles": article_payload.articles,
         "selected_category": category_filter,
         "selected_status": article_payload.status,
+        "article_has_more": article_payload.has_more,
+        "article_next_offset": article_payload.next_offset,
+        "article_page_size": article_payload.limit,
     }
 
 

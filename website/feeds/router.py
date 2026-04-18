@@ -155,11 +155,19 @@ async def get_articles(
     request: Request,
     category: str = "all",
     status_filter: Literal["unread", "read", "all"] = "unread",
+    offset: int = 0,
+    limit: int = 10,
 ) -> FeedArticleListResponse:
     """Return feed article cards filtered by category and status."""
 
     username = _require_logged_in_user(request)
-    return await get_article_list(username, category, status_filter)
+    return await get_article_list(
+        username,
+        category,
+        status_filter,
+        offset=max(0, int(offset)),
+        limit=max(1, min(100, int(limit))),
+    )
 
 
 @feeds_router.post(

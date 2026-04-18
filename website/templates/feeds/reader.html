@@ -12,6 +12,9 @@
   data-categories-endpoint="/feeds/api/categories/"
   data-mark-read-endpoint-template="/feeds/api/articles/__ARTICLE_ID__/read/"
   data-mark-unread-endpoint-template="/feeds/api/articles/__ARTICLE_ID__/unread/"
+  data-page-size="{{ article_page_size|default(10) }}"
+  data-next-offset="{{ article_next_offset|default(0) }}"
+  data-has-more="{{ 'true' if article_has_more else 'false' }}"
   data-csrf-token="{{ request.state.csrf_token|default('') }}"
 >
   <div id="feeds-article-list" class="feeds-article-list{% if articles|length == 0 %} is-empty{% endif %}">

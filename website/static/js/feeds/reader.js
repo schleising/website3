@@ -18,6 +18,12 @@
 
     /** @type {HTMLElement} */
     const scrollContainer = /** @type {HTMLElement} */ (document.getElementById("content") || document.documentElement);
+    /** @type {boolean} */
+    const useElementScrollContainer = (
+        scrollContainer instanceof HTMLElement
+        && scrollContainer !== document.documentElement
+        && scrollContainer !== document.body
+    );
 
     /** @type {string} */
     const categoryFromUrl = new URLSearchParams(window.location.search).get("category");
@@ -34,6 +40,18 @@
     const markReadEndpointTemplate = root.dataset.markReadEndpointTemplate || "";
     /** @type {string} */
     const markUnreadEndpointTemplate = root.dataset.markUnreadEndpointTemplate || "";
+    /** @type {number} */
+    const pageSize = Math.max(1, Number(root.dataset.pageSize || 10));
+    /** @type {number} */
+    let nextOffset = Math.max(0, Number(root.dataset.nextOffset || 0));
+    /** @type {boolean} */
+    let hasMorePages = String(root.dataset.hasMore || "false").toLowerCase() === "true";
+    /** @type {number} */
+    const prefetchRemainingThreshold = 3;
+    /** @type {boolean} */
+    let pageLoadInFlight = false;
+    /** @type {boolean} */
+    let pagePrefetchScheduled = false;
     /** @type {string} */
     const csrfToken = root.dataset.csrfToken || "";
 
@@ -149,10 +167,12 @@
      *
      * @returns {string}
      */
-    function buildArticlesUrl() {
+    function buildArticlesUrl(offset = 0, limitOverride = pageSize) {
         const params = new URLSearchParams();
         params.set("category", selectedCategory);
         params.set("status_filter", selectedStatus);
+        params.set("offset", String(Math.max(0, Number(offset))));
+        params.set("limit", String(Math.max(1, Number(limitOverride))));
         return `${articlesEndpoint}?${params.toString()}`;
     }
 
@@ -1032,6 +1052,151 @@
     }
 
     /**
+     * Return count of cards positioned below current viewport.
+     *
+     * @returns {number}
+     */
+    function countCardsBelowViewport() {
+        if (useElementScrollContainer) {
+            const containerRect = scrollContainer.getBoundingClientRect();
+            const containerBottom = containerRect.bottom;
+            return getCards().filter(card => card.getBoundingClientRect().top > containerBottom).length;
+        }
+
+        const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+        return getCards().filter(card => card.getBoundingClientRect().top > viewportHeight).length;
+    }
+
+    /**
+     * Append one fetched page of article cards without replacing existing list state.
+     *
+     * @param {{ articles?: Array<Record<string, any>>, has_more?: boolean, next_offset?: number }} payload
+     */
+    function appendArticlePage(payload) {
+        const incomingArticles = Array.isArray(payload.articles) ? payload.articles : [];
+
+        if (incomingArticles.length === 0) {
+            hasMorePages = Boolean(payload.has_more);
+            if (typeof payload.next_offset === "number") {
+                nextOffset = Math.max(0, payload.next_offset);
+            }
+            return;
+        }
+
+        const fragment = document.createDocumentFragment();
+
+        incomingArticles.forEach(article => {
+            const articleId = String(article.article_id || "").trim();
+            if (articleId === "") {
+                return;
+            }
+
+            if (articleList.querySelector(`.feed-article-card[data-article-id="${CSS.escape(articleId)}"]`)) {
+                return;
+            }
+
+            const card = renderArticleCard(article);
+            const isRead = sessionReadArticleIds.has(articleId) || Boolean(article.is_read);
+
+            if (
+                selectedStatus === "unread" &&
+                !knownArticleIds.has(articleId) &&
+                hadKnownArticleHistory
+            ) {
+                newUnreadArticleIds.add(articleId);
+            }
+
+            if (isRead) {
+                newUnreadArticleIds.delete(articleId);
+            }
+
+            knownArticleIds.add(articleId);
+            setCardReadAppearance(card, isRead);
+            setCardNewBadge(card, !isRead && newUnreadArticleIds.has(articleId));
+            fragment.appendChild(card);
+        });
+
+        if (fragment.childNodes.length > 0) {
+            articleList.classList.remove("is-empty");
+            const emptyHint = articleList.querySelector("#feeds-empty-hint");
+            if (emptyHint) {
+                emptyHint.remove();
+            }
+            articleList.appendChild(fragment);
+        }
+
+        persistArticleIdState();
+
+        hasMorePages = Boolean(payload.has_more);
+        if (typeof payload.next_offset === "number") {
+            nextOffset = Math.max(0, payload.next_offset);
+        } else {
+            nextOffset += incomingArticles.length;
+        }
+    }
+
+    /**
+     * Load and append the next article page.
+     *
+     * @returns {Promise<void>}
+     */
+    async function loadNextPage() {
+        if (!hasMorePages || pageLoadInFlight) {
+            return;
+        }
+
+        pageLoadInFlight = true;
+
+        try {
+            const response = await fetch(buildArticlesUrl(nextOffset, pageSize), { method: "GET" });
+            if (!response.ok) {
+                return;
+            }
+
+            const payload = await response.json();
+            appendArticlePage(payload);
+            scheduleTouchScrollReadCheck();
+            schedulePagePrefetchCheck();
+        } catch (_error) {
+            // Keep current list if paging request fails.
+        } finally {
+            pageLoadInFlight = false;
+        }
+    }
+
+    /**
+     * Prefetch next page when only a small number of unseen cards remain.
+     *
+     * @returns {Promise<void>}
+     */
+    async function maybePrefetchNextPage() {
+        if (!hasMorePages || pageLoadInFlight) {
+            return;
+        }
+
+        if (countCardsBelowViewport() > prefetchRemainingThreshold) {
+            return;
+        }
+
+        await loadNextPage();
+    }
+
+    /**
+     * Queue a prefetch check on next animation frame.
+     */
+    function schedulePagePrefetchCheck() {
+        if (pagePrefetchScheduled) {
+            return;
+        }
+
+        pagePrefetchScheduled = true;
+        window.requestAnimationFrame(async () => {
+            pagePrefetchScheduled = false;
+            await maybePrefetchNextPage();
+        });
+    }
+
+    /**
      * Initialize known/new article badge state from SSR-rendered cards.
      */
     function initializeArticleBadgeStateFromSsr() {
@@ -1157,7 +1322,7 @@
         try {
             const [categoryResponse, articleResponse] = await Promise.all([
                 fetch(categoriesEndpoint, { method: "GET" }),
-                fetch(buildArticlesUrl(), { method: "GET" }),
+                fetch(buildArticlesUrl(0, Math.max(getCards().length, pageSize)), { method: "GET" }),
             ]);
 
             if (!categoryResponse.ok || !articleResponse.ok) {
@@ -1262,6 +1427,12 @@
         }
     });
 
+    if (useElementScrollContainer) {
+        scrollContainer.addEventListener("scroll", schedulePagePrefetchCheck, { passive: true });
+    }
+    window.addEventListener("scroll", schedulePagePrefetchCheck, { passive: true });
+    window.addEventListener("resize", schedulePagePrefetchCheck, { passive: true });
+
     document.addEventListener("keydown", onKeyDown);
 
     if (isTouchOnlyDevice) {
@@ -1276,6 +1447,7 @@
 
     clearCardSelection();
     scheduleTouchScrollReadCheck();
+    schedulePagePrefetchCheck();
 
-    window.setInterval(refreshFeedData, 2000);
+    window.setInterval(refreshSidebarCounts, 2000);
 })();

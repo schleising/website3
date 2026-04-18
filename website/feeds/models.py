@@ -135,6 +135,10 @@ class FeedArticleListResponse(BaseModel):
     category: str
     status: Literal["unread", "read", "all"]
     articles: list[FeedArticleCard]
+    offset: int = 0
+    limit: int = 0
+    has_more: bool = False
+    next_offset: int = 0
 
 
 class FeedSubscriptionCreateRequest(BaseModel):
