@@ -1,10 +1,10 @@
 {% extends "football/football-base.html" %}
 
 {% block football_head %}
-<link rel="stylesheet" href="/css/table.css?v1.7.7">
+<link rel="stylesheet" href="/css/table.css?v1.8.0">
 {% block football_scripts %}
 {% if is_current_season|default(false) %}
-<script defer src="/js/football/table_live.js?v1.7.5"></script>
+<script defer src="/js/football/table_live.js?v1.8.0"></script>
 {% endif %}
 {% endblock %}
 {% block title %}<title>Football - {{ title }}</title>{% endblock %}
