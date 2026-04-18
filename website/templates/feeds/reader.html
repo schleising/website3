@@ -11,11 +11,18 @@
   data-articles-endpoint="/feeds/api/articles/"
   data-categories-endpoint="/feeds/api/categories/"
   data-mark-read-endpoint-template="/feeds/api/articles/__ARTICLE_ID__/read/"
+  data-mark-unread-endpoint-template="/feeds/api/articles/__ARTICLE_ID__/unread/"
   data-csrf-token="{{ request.state.csrf_token|default('') }}"
 >
   <div id="feeds-article-list" class="feeds-article-list">
     {% if articles|length == 0 %}
-    <p class="feeds-empty-hint" id="feeds-empty-hint">No unread articles in this view.</p>
+    <p class="feeds-empty-hint" id="feeds-empty-hint">
+      {% if selected_category == 'recently-read' %}
+      No recently read articles in the last 7 days.
+      {% else %}
+      No unread articles in this view.
+      {% endif %}
+    </p>
     {% else %}
     {% for article in articles %}
     <article

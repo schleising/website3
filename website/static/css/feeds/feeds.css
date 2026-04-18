@@ -107,8 +107,39 @@
 }
 
 .feed-article-meta-right {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.4rem;
+    margin-left: auto;
+    flex: 0 0 auto;
+    white-space: nowrap;
     color: var(--text-soft);
     font-size: 0.85rem;
+}
+
+.feed-article-unread-button {
+    width: 2rem;
+    min-width: 2rem;
+    min-height: 2rem;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 0.0625rem solid color-mix(in srgb, var(--line), #d5e3f6 55%);
+    background: #e8f1fc;
+    color: var(--brand-strong);
+}
+
+.feed-article-unread-button:hover,
+.feed-article-unread-button:focus-visible {
+    background: #d5e6fb;
+    border-color: color-mix(in srgb, var(--brand-strong), #ffffff 45%);
+}
+
+.feed-article-unread-button:disabled {
+    opacity: 0.55;
+    cursor: default;
 }
 
 .feed-category-pill {
@@ -628,14 +659,18 @@ body.feed-subscription-popup-open {
     }
 
     .feed-article-card-header {
-        flex-direction: column;
-        align-items: flex-start;
+        flex-direction: row;
+        align-items: center;
         gap: 0.35rem;
     }
 
+    .feed-article-meta-left {
+        flex: 1 1 auto;
+        min-width: 0;
+    }
+
     .feed-article-meta-right {
-        width: 100%;
-        text-align: left;
+        margin-left: auto;
     }
 
     .feed-article-title {

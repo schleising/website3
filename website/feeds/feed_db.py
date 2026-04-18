@@ -999,6 +999,39 @@ async def mark_article_read(user_id: str, article_id: str) -> bool:
     return True
 
 
+async def mark_article_unread(user_id: str, article_id: str) -> bool:
+    """Mark an article as unread for a user."""
+
+    if user_article_states_collection is None:
+        return False
+
+    try:
+        article_object_id = ObjectId(article_id)
+    except Exception:
+        return False
+
+    now = utc_now()
+
+    await user_article_states_collection.update_one(
+        {"user_id": user_id, "article_id": article_object_id},
+        {
+            "$set": {
+                "is_read": False,
+                "updated_at": now,
+            },
+            "$unset": {
+                "read_at": "",
+            },
+            "$setOnInsert": {
+                "created_at": now,
+            },
+        },
+        upsert=True,
+    )
+
+    return True
+
+
 async def set_category_muted(user_id: str, category_id: str, muted: bool) -> FeedCategoryDocument | None:
     """Update category mute state for a user-owned category."""
 

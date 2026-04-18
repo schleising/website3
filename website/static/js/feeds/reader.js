@@ -33,6 +33,8 @@
     /** @type {string} */
     const markReadEndpointTemplate = root.dataset.markReadEndpointTemplate || "";
     /** @type {string} */
+    const markUnreadEndpointTemplate = root.dataset.markUnreadEndpointTemplate || "";
+    /** @type {string} */
     const csrfToken = root.dataset.csrfToken || "";
 
     /** @type {string} */
@@ -54,6 +56,8 @@
 
     /** @type {Set<string>} */
     const pendingReadIds = new Set();
+    /** @type {Set<string>} */
+    const pendingUnreadIds = new Set();
 
     /** @type {boolean} */
     const isTouchOnlyDevice = (() => {
@@ -250,14 +254,88 @@
     }
 
     /**
+     * Create the mark-as-unread icon button for a card.
+     *
+     * @returns {HTMLButtonElement}
+     */
+    function createUnreadButton() {
+        const unreadButton = document.createElement("button");
+        unreadButton.type = "button";
+        unreadButton.className = "btn feed-article-unread-button";
+        unreadButton.setAttribute("aria-label", "Mark article as unread");
+        unreadButton.title = "Mark as unread";
+        unreadButton.innerHTML = `
+            <svg class="feed-action-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path d="M3.5 6.25h17v11.5h-17z"></path>
+                <path d="M3.5 7l8.5 6 8.5-6"></path>
+                <circle cx="18" cy="6" r="2.25"></circle>
+            </svg>
+        `;
+
+        unreadButton.addEventListener("click", async event => {
+            event.preventDefault();
+            event.stopPropagation();
+
+            const card = unreadButton.closest(".feed-article-card");
+            if (!(card instanceof HTMLElement)) {
+                return;
+            }
+
+            await markCardUnread(card);
+        });
+
+        return unreadButton;
+    }
+
+    /**
+     * Ensure mark-as-unread button visibility/state matches card read state.
+     *
+     * @param {HTMLElement} card
+     */
+    function syncCardUnreadAction(card) {
+        const rightMeta = card.querySelector(".feed-article-meta-right");
+        if (!(rightMeta instanceof HTMLElement)) {
+            return;
+        }
+
+        const articleId = getCardArticleId(card);
+        const isRead = isCardMarkedRead(card);
+        let unreadButton = rightMeta.querySelector(".feed-article-unread-button");
+
+        if (!isRead) {
+            if (unreadButton instanceof HTMLButtonElement) {
+                unreadButton.remove();
+            }
+            return;
+        }
+
+        if (!(unreadButton instanceof HTMLButtonElement)) {
+            unreadButton = createUnreadButton();
+            rightMeta.prepend(unreadButton);
+        }
+
+        unreadButton.disabled = pendingReadIds.has(articleId) || pendingUnreadIds.has(articleId);
+    }
+
+    /**
      * Apply read styling state for a card.
      *
      * @param {HTMLElement} card
      * @param {boolean} isRead
      */
     function setCardReadAppearance(card, isRead) {
+        const wasRead = isCardMarkedRead(card);
+        const hasUnreadButton = card.querySelector(".feed-article-unread-button") instanceof HTMLButtonElement;
         card.dataset.isRead = isRead ? "true" : "false";
         card.classList.toggle("is-read-article", isRead);
+
+        // Avoid re-running unread action syncing when state is unchanged and UI already matches.
+        const unreadActionAlreadyMatches = isRead ? hasUnreadButton : !hasUnreadButton;
+        if (wasRead === isRead && unreadActionAlreadyMatches) {
+            return;
+        }
+
+        syncCardUnreadAction(card);
     }
 
     /**
@@ -367,6 +445,16 @@
     }
 
     /**
+     * Build mark-unread endpoint from a card article ID.
+     *
+     * @param {string} articleId
+     * @returns {string}
+     */
+    function buildMarkUnreadUrl(articleId) {
+        return markUnreadEndpointTemplate.replace("__ARTICLE_ID__", encodeURIComponent(articleId));
+    }
+
+    /**
      * Open a URL in a new tab while preserving reader focus where the browser allows it.
      *
      * @param {string} link
@@ -453,11 +541,12 @@
             return;
         }
 
-        if (pendingReadIds.has(articleId)) {
+        if (pendingReadIds.has(articleId) || pendingUnreadIds.has(articleId)) {
             return;
         }
 
         pendingReadIds.add(articleId);
+        syncCardUnreadAction(card);
 
         try {
             const response = await fetch(buildMarkReadUrl(articleId), {
@@ -480,6 +569,81 @@
             await refreshSidebarCounts();
         } finally {
             pendingReadIds.delete(articleId);
+            syncCardUnreadAction(card);
+        }
+    }
+
+    /**
+     * Mark a card as unread through the API and update card/sidebar state.
+     *
+     * @param {HTMLElement} card
+     * @returns {Promise<void>}
+     */
+    async function markCardUnread(card) {
+        const articleId = card.dataset.articleId || "";
+        if (articleId === "" || !isCardMarkedRead(card)) {
+            return;
+        }
+
+        if (pendingUnreadIds.has(articleId) || pendingReadIds.has(articleId)) {
+            return;
+        }
+
+        pendingUnreadIds.add(articleId);
+        syncCardUnreadAction(card);
+
+        try {
+            const response = await fetch(buildMarkUnreadUrl(articleId), {
+                method: "POST",
+                headers: {
+                    "X-CSRF-Token": csrfToken,
+                },
+            });
+
+            if (!response.ok) {
+                return;
+            }
+
+            sessionReadArticleIds.delete(articleId);
+            newUnreadArticleIds.delete(articleId);
+            persistArticleIdState();
+
+            if (selectedCategory === "recently-read") {
+                const cards = getCards();
+                const removedIndex = cards.indexOf(card);
+                card.remove();
+
+                await refreshSidebarCounts();
+
+                const remainingCards = getCards();
+                if (remainingCards.length === 0) {
+                    renderInlineEmptyHint();
+                    clearCardSelection();
+                    return;
+                }
+
+                const nextIndex = Math.max(0, Math.min(removedIndex, remainingCards.length - 1));
+                setSelectedIndex(nextIndex, { scrollIntoView: false });
+                return;
+            }
+
+            setCardReadAppearance(card, false);
+            setCardNewBadge(card, false);
+
+            // Leave the card unselected after explicit mark-as-unread to avoid immediate reselection flows.
+            if (selectedIndex >= 0) {
+                const cards = getCards();
+                if (cards[selectedIndex] === card) {
+                    clearCardSelection();
+                }
+            }
+
+            await refreshSidebarCounts();
+        } finally {
+            pendingUnreadIds.delete(articleId);
+            if (document.contains(card)) {
+                syncCardUnreadAction(card);
+            }
         }
     }
 
@@ -663,19 +827,9 @@
             incomingIdsInOrder.push(articleId);
         });
 
-        if (selectedStatus === "unread") {
-            previousIdsInOrder
-                .filter(articleId => !incomingById.has(articleId))
-                .forEach(articleId => {
-                    sessionReadArticleIds.add(articleId);
-                    newUnreadArticleIds.delete(articleId);
-                });
-        }
-
         const finalIds = previousIdsInOrder
             .filter(articleId => (
                 incomingById.has(articleId)
-                || selectedStatus === "unread"
                 || (retainSessionReadCards && sessionReadArticleIds.has(articleId))
             ))
             .concat(incomingIdsInOrder.filter(articleId => !previousCardMap.has(articleId)));
@@ -939,6 +1093,11 @@
     articleList.addEventListener("click", event => {
         const target = /** @type {HTMLElement | null} */ (event.target instanceof HTMLElement ? event.target : null);
         if (!target) {
+            return;
+        }
+
+        // Do not treat unread-button clicks as card selection/read actions.
+        if (target.closest(".feed-article-unread-button")) {
             return;
         }
 
