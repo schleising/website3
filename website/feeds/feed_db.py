@@ -825,14 +825,16 @@ async def get_article_list(
             next_offset=normalized_offset,
         )
 
-    read_map = await get_user_read_map(user_id)
-    saved_map = await get_user_saved_map(user_id)
+    read_state_ids: set[ObjectId] = set()
+    if normalized_status in {"read", "unread"}:
+        read_state_ids = await get_read_article_id_set(user_id)
+
     cards, has_more = await list_cards_for_feed_ids(
+        user_id=user_id,
         allowed_feed_ids=allowed_feed_ids,
         categories_by_id=categories_by_id,
         feed_to_category=feed_to_category,
-        read_map=read_map,
-        saved_map=saved_map,
+        read_state_ids=read_state_ids,
         status_filter=normalized_status,
         offset=normalized_offset,
         limit=normalized_limit,
@@ -901,6 +903,48 @@ async def get_user_saved_map(user_id: str) -> dict[ObjectId, datetime | None]:
         saved_map[article_id] = doc.get("saved_at")
 
     return saved_map
+
+
+async def get_user_state_maps_for_article_ids(
+    user_id: str,
+    article_ids: list[ObjectId],
+) -> tuple[dict[ObjectId, datetime | None], dict[ObjectId, datetime | None]]:
+    """Return read/saved timestamp maps scoped to explicit article IDs."""
+
+    if user_article_states_collection is None or len(article_ids) == 0:
+        return {}, {}
+
+    unique_article_ids = list(dict.fromkeys(article_ids))
+
+    cursor = user_article_states_collection.find(
+        {
+            "user_id": user_id,
+            "article_id": {"$in": unique_article_ids},
+        },
+        {
+            "article_id": 1,
+            "is_read": 1,
+            "read_at": 1,
+            "is_saved": 1,
+            "saved_at": 1,
+        },
+    )
+
+    read_map: dict[ObjectId, datetime | None] = {}
+    saved_map: dict[ObjectId, datetime | None] = {}
+
+    async for doc in cursor:
+        article_id = doc.get("article_id")
+        if not isinstance(article_id, ObjectId):
+            continue
+
+        if bool(doc.get("is_read")):
+            read_map[article_id] = doc.get("read_at")
+
+        if bool(doc.get("is_saved")):
+            saved_map[article_id] = doc.get("saved_at")
+
+    return read_map, saved_map
 
 
 async def get_article_read_statuses(
@@ -996,119 +1040,141 @@ async def get_article_read_statuses(
 
 
 async def list_cards_for_feed_ids(
+    user_id: str,
     allowed_feed_ids: list[ObjectId],
     categories_by_id: dict[ObjectId, FeedCategoryDocument],
     feed_to_category: dict[ObjectId, ObjectId],
-    read_map: dict[ObjectId, datetime | None],
-    saved_map: dict[ObjectId, datetime | None],
+    read_state_ids: set[ObjectId],
     status_filter: str,
     offset: int,
     limit: int,
 ) -> tuple[list[FeedArticleCard], bool]:
     """Return article cards for feed IDs with status filtering."""
 
-    if feed_articles_collection is None:
+    if feed_articles_collection is None or len(allowed_feed_ids) == 0:
         return [], False
-
-    source_map = await load_sources_map(set(allowed_feed_ids))
 
     base_query = {
         "feed_id": {"$in": allowed_feed_ids},
         "is_deleted": False,
     }
 
+    if status_filter == "read":
+        if len(read_state_ids) == 0:
+            return [], False
+        base_query["_id"] = {"$in": list(read_state_ids)}
+    elif status_filter == "unread" and len(read_state_ids) > 0:
+        base_query["_id"] = {"$nin": list(read_state_ids)}
+
     # Match frontend ordering: publication date ascending, with undated articles
     # treated as "infinite" and therefore placed at the end.
-    dated_cursor = feed_articles_collection.find(
-        {
-            **base_query,
-            "published_at": {"$type": "date"},
-        }
-    ).sort([
-        ("published_at", ASCENDING),
-        ("_id", ASCENDING),
-    ])
 
-    undated_cursor = feed_articles_collection.find(
-        {
-            **base_query,
-            "$or": [
-                {"published_at": None},
-                {"published_at": {"$exists": False}},
-            ],
-        }
-    ).sort("_id", ASCENDING)
+    dated_query = {
+        **base_query,
+        "published_at": {"$type": "date"},
+    }
+    undated_query = {
+        **base_query,
+        "$or": [
+            {"published_at": None},
+            {"published_at": {"$exists": False}},
+        ],
+    }
+
+    dated_total = await feed_articles_collection.count_documents(dated_query)
+    dated_skip = min(offset, dated_total)
+    undated_skip = max(0, offset - dated_total)
+
+    dated_docs = [
+        doc
+        async for doc in feed_articles_collection.find(dated_query)
+        .sort([("published_at", ASCENDING), ("_id", ASCENDING)])
+        .skip(dated_skip)
+        .limit(limit + 1)
+    ]
+
+    selected_docs: list[Any] = list(dated_docs[:limit])
+    has_more = len(dated_docs) > limit
+
+    if not has_more and len(selected_docs) < limit:
+        remaining_limit = limit - len(selected_docs)
+        undated_docs = [
+            doc
+            async for doc in feed_articles_collection.find(undated_query)
+            .sort("_id", ASCENDING)
+            .skip(undated_skip)
+            .limit(remaining_limit + 1)
+        ]
+
+        selected_docs.extend(undated_docs[:remaining_limit])
+        has_more = len(undated_docs) > remaining_limit
+
+    if len(selected_docs) == 0:
+        return [], has_more
+
+    source_ids: set[ObjectId] = {
+        feed_id
+        for feed_id in [doc.get("feed_id") for doc in selected_docs]
+        if isinstance(feed_id, ObjectId)
+    }
+    source_map = await load_sources_map(source_ids)
+
+    article_ids: list[ObjectId] = [
+        article_id
+        for article_id in [doc.get("_id") for doc in selected_docs]
+        if isinstance(article_id, ObjectId)
+    ]
+    read_map, saved_map = await get_user_state_maps_for_article_ids(user_id, article_ids)
 
     cards: list[FeedArticleCard] = []
-    seen_matching = 0
-    has_more = False
 
-    for cursor in (dated_cursor, undated_cursor):
-        async for article_doc in cursor:
-            article_id = article_doc.get("_id")
-            feed_id = article_doc.get("feed_id")
+    for article_doc in selected_docs:
+        article_id = article_doc.get("_id")
+        feed_id = article_doc.get("feed_id")
 
-            if not isinstance(article_id, ObjectId) or not isinstance(feed_id, ObjectId):
-                continue
+        if not isinstance(article_id, ObjectId) or not isinstance(feed_id, ObjectId):
+            continue
 
-            category_id = feed_to_category.get(feed_id)
-            if category_id is None:
-                continue
+        category_id = feed_to_category.get(feed_id)
+        if category_id is None:
+            continue
 
-            category = categories_by_id.get(category_id)
-            if category is None or category.id is None:
-                continue
+        category = categories_by_id.get(category_id)
+        if category is None or category.id is None:
+            continue
 
-            read_at = read_map.get(article_id)
-            is_read = article_id in read_map
-            saved_at = saved_map.get(article_id)
-            is_saved = article_id in saved_map
+        source_doc = source_map.get(feed_id, {})
+        source_title = str(source_doc.get("title", source_doc.get("normalized_url", "Feed")))
 
-            if status_filter == "read" and not is_read:
-                continue
-            if status_filter == "unread" and is_read:
-                continue
+        is_read = article_id in read_map
+        read_at = read_map.get(article_id)
+        is_saved = article_id in saved_map
+        saved_at = saved_map.get(article_id)
 
-            if seen_matching < offset:
-                seen_matching += 1
-                continue
-
-            if len(cards) >= limit:
-                has_more = True
-                break
-
-            source_doc = source_map.get(feed_id, {})
-            source_title = str(source_doc.get("title", source_doc.get("normalized_url", "Feed")))
-
-            cards.append(
-                FeedArticleCard(
-                    article_id=str(article_id),
-                    title=str(article_doc.get("title", "Untitled")),
-                    link=normalize_article_link(article_doc.get("link")),
-                    author=str(article_doc.get("author", "")).strip() or None,
-                    summary_html=sanitize_html(
-                        str(article_doc.get("summary_html", "")),
-                        allow_inline_styles=True,
-                    )
-                    if article_doc.get("summary_html")
-                    else None,
-                    media_image_url=normalize_article_link(article_doc.get("media_image_url")) or None,
-                    published_at=article_doc.get("published_at"),
-                    feed_title=source_title,
-                    category_id=str(category.id),
-                    category_name=category.name,
-                    category_color_hex=category.color_hex,
-                    is_read=is_read,
-                    read_at=read_at,
-                    is_saved=is_saved,
-                    saved_at=saved_at,
+        cards.append(
+            FeedArticleCard(
+                article_id=str(article_id),
+                title=str(article_doc.get("title", "Untitled")),
+                link=normalize_article_link(article_doc.get("link")),
+                author=str(article_doc.get("author", "")).strip() or None,
+                summary_html=sanitize_html(
+                    str(article_doc.get("summary_html", "")),
+                    allow_inline_styles=True,
                 )
+                if article_doc.get("summary_html")
+                else None,
+                media_image_url=normalize_article_link(article_doc.get("media_image_url")) or None,
+                published_at=article_doc.get("published_at"),
+                feed_title=source_title,
+                category_id=str(category.id),
+                category_name=category.name,
+                category_color_hex=category.color_hex,
+                is_read=is_read,
+                read_at=read_at,
+                is_saved=is_saved,
+                saved_at=saved_at,
             )
-
-            seen_matching += 1
-
-        if has_more:
-            break
+        )
 
     return cards, has_more
 
@@ -1131,65 +1197,90 @@ async def list_recently_read_cards(
         if category.muted
     }
 
-    threshold = utc_now() - timedelta(days=7)
-    state_cursor = user_article_states_collection.find(
-        {
-            "user_id": user_id,
-            "is_read": True,
-            "read_at": {"$gte": threshold},
-        },
-        {"article_id": 1, "read_at": 1},
-    ).sort("read_at", DESCENDING)
+    eligible_feed_ids = [
+        feed_id
+        for feed_id, category_id in feed_to_category.items()
+        if category_id in categories_by_id and category_id not in muted_category_ids
+    ]
+    if len(eligible_feed_ids) == 0:
+        return [], False
 
-    state_rows = [doc async for doc in state_cursor]
+    threshold = utc_now() - timedelta(days=7)
+    pipeline: list[dict[str, Any]] = [
+        {
+            "$match": {
+                "user_id": user_id,
+                "is_read": True,
+                "read_at": {"$gte": threshold},
+            }
+        },
+        {"$sort": {"read_at": DESCENDING, "_id": DESCENDING}},
+        {
+            "$lookup": {
+                "from": feed_articles_collection.name,
+                "let": {"article_id": "$article_id"},
+                "pipeline": [
+                    {"$match": {"$expr": {"$eq": ["$_id", "$$article_id"]}}},
+                    {
+                        "$match": {
+                            "is_deleted": False,
+                            "feed_id": {"$in": eligible_feed_ids},
+                        }
+                    },
+                ],
+                "as": "article_docs",
+            }
+        },
+        {"$unwind": "$article_docs"},
+        {"$skip": offset},
+        {"$limit": limit + 1},
+        {
+            "$project": {
+                "article": "$article_docs",
+                "read_at": 1,
+            }
+        },
+    ]
+
+    state_rows = [doc async for doc in user_article_states_collection.aggregate(pipeline)]
     if len(state_rows) == 0:
         return [], False
 
-    read_map: dict[ObjectId, datetime | None] = {}
+    has_more = len(state_rows) > limit
+    paged_rows = state_rows[:limit]
+
     article_ids: list[ObjectId] = []
-
-    for row in state_rows:
-        article_id = row.get("article_id")
-        if not isinstance(article_id, ObjectId):
+    source_ids: set[ObjectId] = set()
+    for row in paged_rows:
+        article_doc = row.get("article")
+        if not isinstance(article_doc, dict):
             continue
-        article_ids.append(article_id)
-        read_map[article_id] = row.get("read_at")
 
-    if len(article_ids) == 0:
-        return [], False
-
-    article_cursor = feed_articles_collection.find(
-        {
-            "_id": {"$in": article_ids},
-        }
-    )
-    article_map = {doc["_id"]: doc async for doc in article_cursor if "_id" in doc}
-
-    source_ids: set[ObjectId] = {
-        feed_id
-        for doc in article_map.values()
-        for feed_id in [doc.get("feed_id")]
-        if isinstance(feed_id, ObjectId)
-    }
-    source_map = await load_sources_map(source_ids)
-    saved_map = await get_user_saved_map(user_id)
-
-    ordered_cards: list[FeedArticleCard] = []
-
-    for article_id in article_ids:
-        article_doc = article_map.get(article_id)
-        if article_doc is None:
-            continue
+        article_id = article_doc.get("_id")
+        if isinstance(article_id, ObjectId):
+            article_ids.append(article_id)
 
         feed_id = article_doc.get("feed_id")
-        if not isinstance(feed_id, ObjectId):
+        if isinstance(feed_id, ObjectId):
+            source_ids.add(feed_id)
+
+    source_map = await load_sources_map(source_ids)
+    _, saved_map = await get_user_state_maps_for_article_ids(user_id, article_ids)
+
+    cards: list[FeedArticleCard] = []
+
+    for row in paged_rows:
+        article_doc = row.get("article")
+        if not isinstance(article_doc, dict):
+            continue
+
+        article_id = article_doc.get("_id")
+        feed_id = article_doc.get("feed_id")
+        if not isinstance(article_id, ObjectId) or not isinstance(feed_id, ObjectId):
             continue
 
         category_id = feed_to_category.get(feed_id)
-        if category_id is None:
-            continue
-
-        if category_id in muted_category_ids:
+        if category_id is None or category_id in muted_category_ids:
             continue
 
         category = categories_by_id.get(category_id)
@@ -1199,7 +1290,10 @@ async def list_recently_read_cards(
         source_doc = source_map.get(feed_id, {})
         source_title = str(source_doc.get("title", source_doc.get("normalized_url", "Feed")))
 
-        ordered_cards.append(
+        read_at_value = row.get("read_at")
+        read_at = read_at_value if isinstance(read_at_value, datetime) else None
+
+        cards.append(
             FeedArticleCard(
                 article_id=str(article_id),
                 title=str(article_doc.get("title", "Untitled")),
@@ -1218,19 +1312,13 @@ async def list_recently_read_cards(
                 category_name=category.name,
                 category_color_hex=category.color_hex,
                 is_read=True,
-                read_at=read_map.get(article_id),
+                read_at=read_at,
                 is_saved=article_id in saved_map,
                 saved_at=saved_map.get(article_id),
             )
         )
 
-    ordered_cards.sort(
-        key=lambda card: card.read_at or datetime.fromtimestamp(0, tz=UTC), reverse=True
-    )
-
-    paged_cards = ordered_cards[offset:offset + limit]
-    has_more = (offset + len(paged_cards)) < len(ordered_cards)
-    return paged_cards, has_more
+    return cards, has_more
 
 
 async def list_saved_cards(
@@ -1245,57 +1333,84 @@ async def list_saved_cards(
     if user_article_states_collection is None or feed_articles_collection is None:
         return [], False
 
-    state_cursor = user_article_states_collection.find(
-        {
-            "user_id": user_id,
-            "is_saved": True,
-        },
-        {"article_id": 1, "saved_at": 1},
-    ).sort("saved_at", DESCENDING)
+    eligible_feed_ids = [
+        feed_id
+        for feed_id, category_id in feed_to_category.items()
+        if category_id in categories_by_id
+    ]
+    if len(eligible_feed_ids) == 0:
+        return [], False
 
-    state_rows = [doc async for doc in state_cursor]
+    pipeline: list[dict[str, Any]] = [
+        {
+            "$match": {
+                "user_id": user_id,
+                "is_saved": True,
+            }
+        },
+        {"$sort": {"saved_at": DESCENDING, "_id": DESCENDING}},
+        {
+            "$lookup": {
+                "from": feed_articles_collection.name,
+                "let": {"article_id": "$article_id"},
+                "pipeline": [
+                    {"$match": {"$expr": {"$eq": ["$_id", "$$article_id"]}}},
+                    {
+                        "$match": {
+                            "is_deleted": False,
+                            "feed_id": {"$in": eligible_feed_ids},
+                        }
+                    },
+                ],
+                "as": "article_docs",
+            }
+        },
+        {"$unwind": "$article_docs"},
+        {"$skip": offset},
+        {"$limit": limit + 1},
+        {
+            "$project": {
+                "article": "$article_docs",
+                "saved_at": 1,
+            }
+        },
+    ]
+
+    state_rows = [doc async for doc in user_article_states_collection.aggregate(pipeline)]
     if len(state_rows) == 0:
         return [], False
 
-    read_map = await get_user_read_map(user_id)
+    has_more = len(state_rows) > limit
+    paged_rows = state_rows[:limit]
 
-    ordered_article_ids: list[ObjectId] = []
-    saved_map: dict[ObjectId, datetime | None] = {}
-    for row in state_rows:
-        article_id = row.get("article_id")
-        if not isinstance(article_id, ObjectId):
+    article_ids: list[ObjectId] = []
+    source_ids: set[ObjectId] = set()
+    for row in paged_rows:
+        article_doc = row.get("article")
+        if not isinstance(article_doc, dict):
             continue
-        ordered_article_ids.append(article_id)
-        saved_map[article_id] = row.get("saved_at")
 
-    if len(ordered_article_ids) == 0:
-        return [], False
-
-    article_cursor = feed_articles_collection.find(
-        {
-            "_id": {"$in": ordered_article_ids},
-            "is_deleted": False,
-        }
-    )
-    article_map = {doc["_id"]: doc async for doc in article_cursor if "_id" in doc}
-
-    source_ids: set[ObjectId] = {
-        feed_id
-        for doc in article_map.values()
-        for feed_id in [doc.get("feed_id")]
-        if isinstance(feed_id, ObjectId)
-    }
-    source_map = await load_sources_map(source_ids)
-
-    ordered_cards: list[FeedArticleCard] = []
-
-    for article_id in ordered_article_ids:
-        article_doc = article_map.get(article_id)
-        if article_doc is None:
-            continue
+        article_id = article_doc.get("_id")
+        if isinstance(article_id, ObjectId):
+            article_ids.append(article_id)
 
         feed_id = article_doc.get("feed_id")
-        if not isinstance(feed_id, ObjectId):
+        if isinstance(feed_id, ObjectId):
+            source_ids.add(feed_id)
+
+    source_map = await load_sources_map(source_ids)
+    read_map, _ = await get_user_state_maps_for_article_ids(user_id, article_ids)
+
+    cards: list[FeedArticleCard] = []
+
+    for row in paged_rows:
+        article_doc = row.get("article")
+        if not isinstance(article_doc, dict):
+            continue
+
+        article_id = article_doc.get("_id")
+        feed_id = article_doc.get("feed_id")
+        if not isinstance(article_id, ObjectId) or not isinstance(feed_id, ObjectId):
             continue
 
         category_id = feed_to_category.get(feed_id)
@@ -1309,7 +1424,10 @@ async def list_saved_cards(
         source_doc = source_map.get(feed_id, {})
         source_title = str(source_doc.get("title", source_doc.get("normalized_url", "Feed")))
 
-        ordered_cards.append(
+        saved_at_value = row.get("saved_at")
+        saved_at = saved_at_value if isinstance(saved_at_value, datetime) else None
+
+        cards.append(
             FeedArticleCard(
                 article_id=str(article_id),
                 title=str(article_doc.get("title", "Untitled")),
@@ -1330,13 +1448,11 @@ async def list_saved_cards(
                 is_read=article_id in read_map,
                 read_at=read_map.get(article_id),
                 is_saved=True,
-                saved_at=saved_map.get(article_id),
+                saved_at=saved_at,
             )
         )
 
-    paged_cards = ordered_cards[offset:offset + limit]
-    has_more = (offset + len(paged_cards)) < len(ordered_cards)
-    return paged_cards, has_more
+    return cards, has_more
 
 
 async def mark_article_read(user_id: str, article_id: str) -> bool:
