@@ -79,7 +79,7 @@ class UserFeedSubscriptionDocument(BaseModel):
 
 
 class UserArticleStateDocument(BaseModel):
-    """Stores user read-state for an article."""
+    """Stores user read/save state for an article."""
 
     model_config = ConfigDict(populate_by_name=True)
 
@@ -88,6 +88,8 @@ class UserArticleStateDocument(BaseModel):
     article_id: PyObjectId
     is_read: bool = False
     read_at: datetime | None = None
+    is_saved: bool = False
+    saved_at: datetime | None = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
@@ -108,6 +110,7 @@ class FeedCategoryListResponse(BaseModel):
 
     all_unread_count: int
     recently_read_count: int
+    saved_count: int
     categories: list[FeedCategorySummary]
 
 
@@ -127,6 +130,8 @@ class FeedArticleCard(BaseModel):
     category_color_hex: str
     is_read: bool = False
     read_at: datetime | None = None
+    is_saved: bool = False
+    saved_at: datetime | None = None
 
 
 class FeedArticleListResponse(BaseModel):
@@ -152,6 +157,7 @@ class FeedArticleStatusItem(BaseModel):
 
     article_id: str
     is_read: bool
+    is_saved: bool
 
 
 class FeedArticleStatusResponse(BaseModel):

@@ -19,7 +19,9 @@ from .feed_db import (
     get_feed_settings_context,
     import_opml,
     mark_article_read,
+    mark_article_saved,
     mark_article_unread,
+    mark_article_unsaved,
     normalize_color_hex,
     set_category_color,
     set_category_muted,
@@ -185,7 +187,7 @@ async def get_article_statuses(
     request: Request,
     payload: FeedArticleStatusRequest,
 ) -> FeedArticleStatusResponse:
-    """Return read-state for explicit article IDs visible to the authenticated user."""
+    """Return read/save-state for explicit article IDs visible to the authenticated user."""
 
     username = _require_logged_in_user(request)
     statuses = await get_article_read_statuses(username, payload.article_ids)
@@ -349,6 +351,48 @@ async def mark_article_as_unread(
         )
 
     return {"article_id": article_id, "is_read": False}
+
+
+@feeds_router.post("/api/articles/{article_id}/save")
+@feeds_router.post("/api/articles/{article_id}/save/")
+async def mark_article_as_saved(
+    request: Request,
+    article_id: str,
+    _: None = Depends(validate_csrf),
+) -> dict[str, str | bool]:
+    """Mark an article as saved for the authenticated user."""
+
+    username = _require_logged_in_user(request)
+    success = await mark_article_saved(username, article_id)
+
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid article ID.",
+        )
+
+    return {"article_id": article_id, "is_saved": True}
+
+
+@feeds_router.post("/api/articles/{article_id}/unsave")
+@feeds_router.post("/api/articles/{article_id}/unsave/")
+async def mark_article_as_unsaved(
+    request: Request,
+    article_id: str,
+    _: None = Depends(validate_csrf),
+) -> dict[str, str | bool]:
+    """Mark an article as unsaved for the authenticated user."""
+
+    username = _require_logged_in_user(request)
+    success = await mark_article_unsaved(username, article_id)
+
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid article ID.",
+        )
+
+    return {"article_id": article_id, "is_saved": False}
 
 
 @feeds_router.post(

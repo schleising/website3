@@ -143,6 +143,42 @@
     background: #e8f1fc;
     color: var(--brand-strong);
 }
+.feed-article-save-button {
+    width: 2rem;
+    min-width: 2rem;
+    min-height: 2rem;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 0.0625rem solid color-mix(in srgb, var(--line), #d5e3f6 55%);
+    background: #f7fbff;
+    color: color-mix(in srgb, var(--brand-strong), #ffffff 18%);
+}
+.feed-article-save-button .feed-action-icon path {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linejoin: round;
+}
+.feed-article-save-button.is-saved {
+    background: #dceafc;
+    border-color: color-mix(in srgb, var(--brand-strong), #ffffff 40%);
+    color: var(--brand-strong);
+}
+.feed-article-save-button.is-saved .feed-action-icon path {
+    fill: currentColor;
+    stroke: currentColor;
+}
+.feed-article-save-button:hover,
+.feed-article-save-button:focus-visible {
+    background: #e7f2ff;
+    border-color: color-mix(in srgb, var(--brand-strong), #ffffff 45%);
+}
+.feed-article-save-button:disabled {
+    opacity: 0.62;
+    cursor: progress;
+}
 
 .feed-article-unread-button:hover,
 .feed-article-unread-button:focus-visible {

@@ -8,12 +8,12 @@
 {% endblock %}
 
 {% block head %}
-<link rel="stylesheet" href="/css/feeds/feeds.css?v1.0.32">
+<link rel="stylesheet" href="/css/feeds/feeds.css?v1.0.33">
 {% endblock %}
 
 {% block scripts %}
 {% if feed_page_mode == "reader" %}
-    <script defer src="/js/feeds/reader.js?v1.0.28"></script>
+  <script defer src="/js/feeds/reader.js?v1.0.30"></script>
 {% elif feed_page_mode == "settings" %}
 <script defer src="/js/feeds/settings.js?v1.0.14"></script>
 {% endif %}
@@ -51,6 +51,15 @@
   data-category-shortcut="recently-read"
 >
   <span class="feed-category-name">Recently Read</span>
+</a>
+<a
+  href="/feeds/?category=saved"
+  class="sub-level-nav feed-sidebar-link feed-category-link feed-category-shortcut{% if selected_category == 'saved' %} is-current{% endif %}"
+  {% if selected_category == 'saved' %}aria-current="page"{% endif %}
+  data-category-shortcut="saved"
+>
+  <span class="feed-category-count feed-category-unread-pill feed-category-unread-pill-all">{{ saved_count }}</span>
+  <span class="feed-category-name">Saved</span>
 </a>
 <a href="/feeds/settings/" class="sub-level-nav feed-sidebar-link{% if feed_page_mode == 'settings' %} is-current{% endif %}" {% if feed_page_mode == 'settings' %}aria-current="page"{% endif %}>Settings</a>
 {% endblock %}

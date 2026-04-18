@@ -42,6 +42,10 @@
     const markReadEndpointTemplate = root.dataset.markReadEndpointTemplate || "";
     /** @type {string} */
     const markUnreadEndpointTemplate = root.dataset.markUnreadEndpointTemplate || "";
+    /** @type {string} */
+    const markSaveEndpointTemplate = root.dataset.markSaveEndpointTemplate || "";
+    /** @type {string} */
+    const markUnsaveEndpointTemplate = root.dataset.markUnsaveEndpointTemplate || "";
     /** @type {number} */
     const pageSize = Math.max(1, Number(root.dataset.pageSize || 10));
     /** @type {number} */
@@ -66,7 +70,9 @@
     /** @type {string} */
     const emptyHintMessage = selectedCategory === "recently-read"
         ? "No recently read articles in the last 7 days."
-        : "No unread articles in this view.";
+        : (selectedCategory === "saved"
+            ? "No saved articles yet."
+            : "No unread articles in this view.");
 
     /** @type {number} */
     let selectedIndex = -1;
@@ -78,6 +84,10 @@
     const pendingReadIds = new Set();
     /** @type {Set<string>} */
     const pendingUnreadIds = new Set();
+    /** @type {Set<string>} */
+    const pendingSaveIds = new Set();
+    /** @type {Set<string>} */
+    const pendingUnsaveIds = new Set();
 
     /** @type {boolean} */
     const isTouchOnlyDevice = (() => {
@@ -369,6 +379,16 @@
     }
 
     /**
+     * Return whether a card is currently marked saved in UI state.
+     *
+     * @param {HTMLElement} card
+     * @returns {boolean}
+     */
+    function isCardSaved(card) {
+        return card.dataset.isSaved === "true";
+    }
+
+    /**
      * Create the mark-as-unread icon button for a card.
      *
      * @returns {HTMLButtonElement}
@@ -433,6 +453,69 @@
     }
 
     /**
+     * Create the save-for-later toggle button for a card.
+     *
+     * @returns {HTMLButtonElement}
+     */
+    function createSaveButton() {
+        const saveButton = document.createElement("button");
+        saveButton.type = "button";
+        saveButton.className = "btn feed-article-save-button";
+        saveButton.setAttribute("aria-label", "Save article for later");
+        saveButton.title = "Save for later";
+
+        saveButton.addEventListener("click", async event => {
+            event.preventDefault();
+            event.stopPropagation();
+
+            const card = saveButton.closest(".feed-article-card");
+            if (!(card instanceof HTMLElement)) {
+                return;
+            }
+
+            if (isCardSaved(card)) {
+                await markCardUnsaved(card);
+            } else {
+                await markCardSaved(card);
+            }
+        });
+
+        return saveButton;
+    }
+
+    /**
+     * Ensure save button exists and reflects saved state.
+     *
+     * @param {HTMLElement} card
+     */
+    function syncCardSaveAction(card) {
+        const rightMeta = card.querySelector(".feed-article-meta-right");
+        if (!(rightMeta instanceof HTMLElement)) {
+            return;
+        }
+
+        const articleId = getCardArticleId(card);
+        const isSaved = isCardSaved(card);
+        let saveButton = rightMeta.querySelector(".feed-article-save-button");
+
+        if (!(saveButton instanceof HTMLButtonElement)) {
+            saveButton = createSaveButton();
+            rightMeta.prepend(saveButton);
+        }
+
+        saveButton.classList.toggle("is-saved", isSaved);
+        saveButton.setAttribute("aria-pressed", isSaved ? "true" : "false");
+        saveButton.setAttribute("aria-label", isSaved ? "Remove from saved" : "Save article for later");
+        saveButton.title = isSaved ? "Remove from saved" : "Save for later";
+        saveButton.innerHTML = `
+            <svg class="feed-action-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path d="M7 3.75h10a1 1 0 0 1 1 1V21l-6-3.75L6 21V4.75a1 1 0 0 1 1-1z"></path>
+            </svg>
+        `;
+        saveButton.disabled = pendingSaveIds.has(articleId) || pendingUnsaveIds.has(articleId);
+    }
+
+    /**
      * Apply read styling state for a card.
      *
      * @param {HTMLElement} card
@@ -451,6 +534,18 @@
         }
 
         syncCardUnreadAction(card);
+    }
+
+    /**
+     * Apply saved styling state for a card.
+     *
+     * @param {HTMLElement} card
+     * @param {boolean} isSaved
+     */
+    function setCardSavedAppearance(card, isSaved) {
+        card.dataset.isSaved = isSaved ? "true" : "false";
+        card.classList.toggle("is-saved-article", isSaved);
+        syncCardSaveAction(card);
     }
 
     /**
@@ -567,6 +662,26 @@
      */
     function buildMarkUnreadUrl(articleId) {
         return markUnreadEndpointTemplate.replace("__ARTICLE_ID__", encodeURIComponent(articleId));
+    }
+
+    /**
+     * Build save endpoint from a card article ID.
+     *
+     * @param {string} articleId
+     * @returns {string}
+     */
+    function buildMarkSaveUrl(articleId) {
+        return markSaveEndpointTemplate.replace("__ARTICLE_ID__", encodeURIComponent(articleId));
+    }
+
+    /**
+     * Build unsave endpoint from a card article ID.
+     *
+     * @param {string} articleId
+     * @returns {string}
+     */
+    function buildMarkUnsaveUrl(articleId) {
+        return markUnsaveEndpointTemplate.replace("__ARTICLE_ID__", encodeURIComponent(articleId));
     }
 
     /**
@@ -768,6 +883,87 @@
     }
 
     /**
+     * Save a card for later through the API and update card/sidebar state.
+     *
+     * @param {HTMLElement} card
+     * @returns {Promise<void>}
+     */
+    async function markCardSaved(card) {
+        const articleId = card.dataset.articleId || "";
+        if (articleId === "" || isCardSaved(card)) {
+            return;
+        }
+
+        if (pendingSaveIds.has(articleId) || pendingUnsaveIds.has(articleId)) {
+            return;
+        }
+
+        pendingSaveIds.add(articleId);
+        syncCardSaveAction(card);
+
+        try {
+            const response = await fetch(buildMarkSaveUrl(articleId), {
+                method: "POST",
+                headers: {
+                    "X-CSRF-Token": csrfToken,
+                },
+            });
+
+            if (!response.ok) {
+                return;
+            }
+
+            setCardSavedAppearance(card, true);
+            await refreshSidebarCounts();
+        } finally {
+            pendingSaveIds.delete(articleId);
+            if (document.contains(card)) {
+                syncCardSaveAction(card);
+            }
+        }
+    }
+
+    /**
+     * Remove a card from saved list through the API and update card/sidebar state.
+     *
+     * @param {HTMLElement} card
+     * @returns {Promise<void>}
+     */
+    async function markCardUnsaved(card) {
+        const articleId = card.dataset.articleId || "";
+        if (articleId === "" || !isCardSaved(card)) {
+            return;
+        }
+
+        if (pendingUnsaveIds.has(articleId) || pendingSaveIds.has(articleId)) {
+            return;
+        }
+
+        pendingUnsaveIds.add(articleId);
+        syncCardSaveAction(card);
+
+        try {
+            const response = await fetch(buildMarkUnsaveUrl(articleId), {
+                method: "POST",
+                headers: {
+                    "X-CSRF-Token": csrfToken,
+                },
+            });
+
+            if (!response.ok) {
+                return;
+            }
+            setCardSavedAppearance(card, false);
+            await refreshSidebarCounts();
+        } finally {
+            pendingUnsaveIds.delete(articleId);
+            if (document.contains(card)) {
+                syncCardSaveAction(card);
+            }
+        }
+    }
+
+    /**
      * Return whether touch-scroll read automation should run.
      *
      * @returns {boolean}
@@ -826,6 +1022,7 @@
         card.dataset.articleId = String(article.article_id || "");
         card.dataset.articleLink = normalizeArticleLink(article.link);
         card.dataset.isRead = Boolean(article.is_read) ? "true" : "false";
+        card.dataset.isSaved = Boolean(article.is_saved) ? "true" : "false";
         card.tabIndex = 0;
 
         const header = document.createElement("header");
@@ -909,6 +1106,7 @@
         }
 
         setCardReadAppearance(card, Boolean(article.is_read));
+        setCardSavedAppearance(card, Boolean(article.is_saved));
 
         return card;
     }
@@ -1023,6 +1221,10 @@
             }
 
             setCardReadAppearance(card, isRead);
+            const isSaved = article
+                ? Boolean(article.is_saved)
+                : isCardSaved(card);
+            setCardSavedAppearance(card, isSaved);
             setCardNewBadge(card, !isRead && newUnreadArticleIds.has(articleId));
             fragment.appendChild(card);
         });
@@ -1103,6 +1305,7 @@
 
             const card = renderArticleCard(article);
             const isRead = Boolean(article.is_read);
+            const isSaved = Boolean(article.is_saved);
 
             if (
                 selectedStatus === "unread" &&
@@ -1120,6 +1323,7 @@
 
             knownArticleIds.add(articleId);
             setCardReadAppearance(card, isRead);
+            setCardSavedAppearance(card, isSaved);
             setCardNewBadge(card, !isRead && newUnreadArticleIds.has(articleId));
             fragment.appendChild(card);
         });
@@ -1216,6 +1420,7 @@
             }
 
             const isRead = isCardMarkedRead(card);
+            const isSaved = isCardSaved(card);
 
             if (!isRead && selectedStatus === "unread" && !knownArticleIds.has(articleId) && hadKnownArticleHistory) {
                 newUnreadArticleIds.add(articleId);
@@ -1227,6 +1432,7 @@
 
             knownArticleIds.add(articleId);
             setCardReadAppearance(card, isRead);
+            setCardSavedAppearance(card, isSaved);
             setCardNewBadge(card, !isRead && newUnreadArticleIds.has(articleId));
         });
 
@@ -1264,11 +1470,12 @@
     /**
      * Update right-sidebar category count labels.
      *
-     * @param {{ all_unread_count?: number, recently_read_count?: number, categories?: Array<Record<string, any>> }} payload
+      * @param {{ all_unread_count?: number, recently_read_count?: number, saved_count?: number, categories?: Array<Record<string, any>> }} payload
      */
     function updateSidebarCounts(payload) {
         const allLink = document.querySelector('.feed-category-shortcut[data-category-shortcut="all"]');
         const recentlyReadLink = document.querySelector('.feed-category-shortcut[data-category-shortcut="recently-read"]');
+          const savedLink = document.querySelector('.feed-category-shortcut[data-category-shortcut="saved"]');
 
         if (allLink) {
             const allCountNode = allLink.querySelector(".feed-category-count");
@@ -1278,6 +1485,12 @@
         }
         if (recentlyReadLink) {
             // Recently Read intentionally has no unread-count badge.
+        }
+        if (savedLink) {
+            const savedCountNode = savedLink.querySelector(".feed-category-count");
+            if (savedCountNode) {
+                savedCountNode.textContent = String(Number(payload.saved_count || 0));
+            }
         }
 
         const categories = Array.isArray(payload.categories) ? payload.categories : [];
@@ -1384,7 +1597,13 @@
             const incomingStatuses = Array.isArray(payload.statuses) ? payload.statuses : [];
             const statusById = new Map(
                 incomingStatuses
-                    .map(status => [String(status.article_id || "").trim(), Boolean(status.is_read)])
+                    .map(status => [
+                        String(status.article_id || "").trim(),
+                        {
+                            isRead: Boolean(status.is_read),
+                            isSaved: Boolean(status.is_saved),
+                        },
+                    ])
                     .filter(([articleId]) => articleId !== "")
             );
 
@@ -1394,7 +1613,12 @@
                     return;
                 }
 
-                if (pendingReadIds.has(articleId) || pendingUnreadIds.has(articleId)) {
+                if (
+                    pendingReadIds.has(articleId)
+                    || pendingUnreadIds.has(articleId)
+                    || pendingSaveIds.has(articleId)
+                    || pendingUnsaveIds.has(articleId)
+                ) {
                     return;
                 }
 
@@ -1402,12 +1626,19 @@
                     return;
                 }
 
-                const isRead = Boolean(statusById.get(articleId));
+                const status = statusById.get(articleId);
+                if (!status || typeof status !== "object") {
+                    return;
+                }
+
+                const isRead = Boolean(status.isRead);
+                const isSaved = Boolean(status.isSaved);
                 if (!isRead) {
                     sessionReadArticleIds.delete(articleId);
                 }
 
                 setCardReadAppearance(card, isRead);
+                setCardSavedAppearance(card, isSaved);
                 setCardNewBadge(card, !isRead && newUnreadArticleIds.has(articleId));
             });
         } catch (_error) {
@@ -1478,7 +1709,7 @@
         }
 
         // Do not treat unread-button clicks as card selection/read actions.
-        if (target.closest(".feed-article-unread-button")) {
+        if (target.closest(".feed-article-unread-button") || target.closest(".feed-article-save-button")) {
             return;
         }
 

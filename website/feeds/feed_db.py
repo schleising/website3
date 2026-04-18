@@ -520,7 +520,12 @@ async def get_categories_with_counts(user_id: str) -> FeedCategoryListResponse:
     categories = await list_category_documents(user_id)
 
     if user_feed_subscriptions_collection is None:
-        return FeedCategoryListResponse(all_unread_count=0, recently_read_count=0, categories=[])
+        return FeedCategoryListResponse(
+            all_unread_count=0,
+            recently_read_count=0,
+            saved_count=0,
+            categories=[],
+        )
 
     subscriptions = [
         dict(doc)
@@ -561,10 +566,12 @@ async def get_categories_with_counts(user_id: str) -> FeedCategoryListResponse:
         )
 
     recently_read_count = await count_recently_read(user_id, feed_to_category, categories)
+    saved_count = await count_saved_articles(user_id, feed_to_category)
 
     return FeedCategoryListResponse(
         all_unread_count=all_unread_count,
         recently_read_count=recently_read_count,
+        saved_count=saved_count,
         categories=category_summaries,
     )
 
@@ -579,6 +586,44 @@ async def get_read_article_id_set(user_id: str) -> set[ObjectId]:
         {"user_id": user_id, "is_read": True}, {"article_id": 1}
     )
     return {doc["article_id"] async for doc in cursor if "article_id" in doc}
+
+
+async def get_saved_article_id_set(user_id: str) -> set[ObjectId]:
+    """Return article IDs that are marked as saved for the user."""
+
+    if user_article_states_collection is None:
+        return set()
+
+    cursor = user_article_states_collection.find(
+        {"user_id": user_id, "is_saved": True}, {"article_id": 1}
+    )
+    return {doc["article_id"] async for doc in cursor if "article_id" in doc}
+
+
+async def count_saved_articles(
+    user_id: str,
+    feed_to_category: dict[ObjectId, ObjectId],
+) -> int:
+    """Count saved articles for feeds the user is subscribed to."""
+
+    if feed_articles_collection is None:
+        return 0
+
+    feed_ids = list(feed_to_category.keys())
+    if len(feed_ids) == 0:
+        return 0
+
+    saved_article_ids = await get_saved_article_id_set(user_id)
+    if len(saved_article_ids) == 0:
+        return 0
+
+    return await feed_articles_collection.count_documents(
+        {
+            "_id": {"$in": list(saved_article_ids)},
+            "feed_id": {"$in": feed_ids},
+            "is_deleted": False,
+        }
+    )
 
 
 async def count_unread_articles_for_feed_ids(
@@ -699,6 +744,24 @@ async def get_article_list(
             next_offset=normalized_offset + len(articles),
         )
 
+    if category_filter == "saved":
+        articles, has_more = await list_saved_cards(
+            user_id=user_id,
+            categories_by_id=categories_by_id,
+            feed_to_category=feed_to_category,
+            offset=normalized_offset,
+            limit=normalized_limit,
+        )
+        return FeedArticleListResponse(
+            category="saved",
+            status="all",
+            articles=articles,
+            offset=normalized_offset,
+            limit=normalized_limit,
+            has_more=has_more,
+            next_offset=normalized_offset + len(articles),
+        )
+
     muted_category_ids = {
         category.id for category in categories if category.id is not None and category.muted
     }
@@ -746,11 +809,13 @@ async def get_article_list(
         )
 
     read_map = await get_user_read_map(user_id)
+    saved_map = await get_user_saved_map(user_id)
     cards, has_more = await list_cards_for_feed_ids(
         allowed_feed_ids=allowed_feed_ids,
         categories_by_id=categories_by_id,
         feed_to_category=feed_to_category,
         read_map=read_map,
+        saved_map=saved_map,
         status_filter=normalized_status,
         offset=normalized_offset,
         limit=normalized_limit,
@@ -800,11 +865,32 @@ async def get_user_read_map(user_id: str) -> dict[ObjectId, datetime | None]:
     return read_map
 
 
+async def get_user_saved_map(user_id: str) -> dict[ObjectId, datetime | None]:
+    """Return article saved timestamps keyed by article ID."""
+
+    if user_article_states_collection is None:
+        return {}
+
+    cursor = user_article_states_collection.find(
+        {"user_id": user_id, "is_saved": True},
+        {"article_id": 1, "saved_at": 1},
+    )
+
+    saved_map: dict[ObjectId, datetime | None] = {}
+    async for doc in cursor:
+        article_id = doc.get("article_id")
+        if not isinstance(article_id, ObjectId):
+            continue
+        saved_map[article_id] = doc.get("saved_at")
+
+    return saved_map
+
+
 async def get_article_read_statuses(
     user_id: str,
     article_ids: list[str],
 ) -> list[FeedArticleStatusItem]:
-    """Return read-state for explicit article IDs visible to the user."""
+    """Return read/save-state for explicit article IDs visible to the user."""
 
     if (
         user_feed_subscriptions_collection is None
@@ -867,19 +953,26 @@ async def get_article_read_statuses(
     read_state_cursor = user_article_states_collection.find(
         {
             "user_id": user_id,
-            "is_read": True,
             "article_id": {"$in": list(visible_article_ids)},
         },
-        {"article_id": 1},
+        {"article_id": 1, "is_read": 1, "is_saved": 1},
     )
-    read_ids = {
-        state_doc.get("article_id")
-        async for state_doc in read_state_cursor
-        if isinstance(state_doc.get("article_id"), ObjectId)
-    }
+    state_flags: dict[ObjectId, tuple[bool, bool]] = {}
+    async for state_doc in read_state_cursor:
+        article_id = state_doc.get("article_id")
+        if not isinstance(article_id, ObjectId):
+            continue
+        state_flags[article_id] = (
+            bool(state_doc.get("is_read")),
+            bool(state_doc.get("is_saved")),
+        )
 
     return [
-        FeedArticleStatusItem(article_id=str(article_id), is_read=article_id in read_ids)
+        FeedArticleStatusItem(
+            article_id=str(article_id),
+            is_read=state_flags.get(article_id, (False, False))[0],
+            is_saved=state_flags.get(article_id, (False, False))[1],
+        )
         for article_id in ordered_unique_ids
         if article_id in visible_article_ids
     ]
@@ -890,6 +983,7 @@ async def list_cards_for_feed_ids(
     categories_by_id: dict[ObjectId, FeedCategoryDocument],
     feed_to_category: dict[ObjectId, ObjectId],
     read_map: dict[ObjectId, datetime | None],
+    saved_map: dict[ObjectId, datetime | None],
     status_filter: str,
     offset: int,
     limit: int,
@@ -950,6 +1044,8 @@ async def list_cards_for_feed_ids(
 
             read_at = read_map.get(article_id)
             is_read = article_id in read_map
+            saved_at = saved_map.get(article_id)
+            is_saved = article_id in saved_map
 
             if status_filter == "read" and not is_read:
                 continue
@@ -984,6 +1080,8 @@ async def list_cards_for_feed_ids(
                     category_color_hex=category.color_hex,
                     is_read=is_read,
                     read_at=read_at,
+                    is_saved=is_saved,
+                    saved_at=saved_at,
                 )
             )
 
@@ -1054,6 +1152,7 @@ async def list_recently_read_cards(
         if isinstance(feed_id, ObjectId)
     }
     source_map = await load_sources_map(source_ids)
+    saved_map = await get_user_saved_map(user_id)
 
     ordered_cards: list[FeedArticleCard] = []
 
@@ -1097,12 +1196,117 @@ async def list_recently_read_cards(
                 category_color_hex=category.color_hex,
                 is_read=True,
                 read_at=read_map.get(article_id),
+                is_saved=article_id in saved_map,
+                saved_at=saved_map.get(article_id),
             )
         )
 
     ordered_cards.sort(
         key=lambda card: card.read_at or datetime.fromtimestamp(0, tz=UTC), reverse=True
     )
+
+    paged_cards = ordered_cards[offset:offset + limit]
+    has_more = (offset + len(paged_cards)) < len(ordered_cards)
+    return paged_cards, has_more
+
+
+async def list_saved_cards(
+    user_id: str,
+    categories_by_id: dict[ObjectId, FeedCategoryDocument],
+    feed_to_category: dict[ObjectId, ObjectId],
+    offset: int,
+    limit: int,
+) -> tuple[list[FeedArticleCard], bool]:
+    """Return user-saved article cards, newest-saved first."""
+
+    if user_article_states_collection is None or feed_articles_collection is None:
+        return [], False
+
+    state_cursor = user_article_states_collection.find(
+        {
+            "user_id": user_id,
+            "is_saved": True,
+        },
+        {"article_id": 1, "saved_at": 1},
+    ).sort("saved_at", DESCENDING)
+
+    state_rows = [doc async for doc in state_cursor]
+    if len(state_rows) == 0:
+        return [], False
+
+    read_map = await get_user_read_map(user_id)
+
+    ordered_article_ids: list[ObjectId] = []
+    saved_map: dict[ObjectId, datetime | None] = {}
+    for row in state_rows:
+        article_id = row.get("article_id")
+        if not isinstance(article_id, ObjectId):
+            continue
+        ordered_article_ids.append(article_id)
+        saved_map[article_id] = row.get("saved_at")
+
+    if len(ordered_article_ids) == 0:
+        return [], False
+
+    article_cursor = feed_articles_collection.find(
+        {
+            "_id": {"$in": ordered_article_ids},
+            "is_deleted": False,
+        }
+    )
+    article_map = {doc["_id"]: doc async for doc in article_cursor if "_id" in doc}
+
+    source_ids: set[ObjectId] = {
+        feed_id
+        for doc in article_map.values()
+        for feed_id in [doc.get("feed_id")]
+        if isinstance(feed_id, ObjectId)
+    }
+    source_map = await load_sources_map(source_ids)
+
+    ordered_cards: list[FeedArticleCard] = []
+
+    for article_id in ordered_article_ids:
+        article_doc = article_map.get(article_id)
+        if article_doc is None:
+            continue
+
+        feed_id = article_doc.get("feed_id")
+        if not isinstance(feed_id, ObjectId):
+            continue
+
+        category_id = feed_to_category.get(feed_id)
+        if category_id is None:
+            continue
+
+        category = categories_by_id.get(category_id)
+        if category is None or category.id is None:
+            continue
+
+        source_doc = source_map.get(feed_id, {})
+        source_title = str(source_doc.get("title", source_doc.get("normalized_url", "Feed")))
+
+        ordered_cards.append(
+            FeedArticleCard(
+                article_id=str(article_id),
+                title=str(article_doc.get("title", "Untitled")),
+                link=normalize_article_link(article_doc.get("link")),
+                author=str(article_doc.get("author", "")).strip() or None,
+                summary_html=sanitize_html(str(article_doc.get("summary_html", "")))
+                if article_doc.get("summary_html")
+                else None,
+                media_image_url=normalize_article_link(article_doc.get("media_image_url")) or None,
+                published_at=article_doc.get("published_at"),
+                feed_title=source_title,
+                category_id=str(category.id),
+                category_name=category.name,
+                category_color_hex=category.color_hex,
+                is_read=article_id in read_map,
+                read_at=read_map.get(article_id),
+                is_saved=True,
+                saved_at=saved_map.get(article_id),
+            )
+        )
 
     paged_cards = ordered_cards[offset:offset + limit]
     has_more = (offset + len(paged_cards)) < len(ordered_cards)
@@ -1176,6 +1380,72 @@ async def mark_article_unread(user_id: str, article_id: str) -> bool:
                 "read_at": "",
             },
             "$setOnInsert": {
+                "created_at": now,
+            },
+        },
+        upsert=True,
+    )
+
+    return True
+
+
+async def mark_article_saved(user_id: str, article_id: str) -> bool:
+    """Mark an article as saved for a user."""
+
+    if user_article_states_collection is None:
+        return False
+
+    try:
+        article_object_id = ObjectId(article_id)
+    except Exception:
+        return False
+
+    now = utc_now()
+
+    await user_article_states_collection.update_one(
+        {"user_id": user_id, "article_id": article_object_id},
+        {
+            "$set": {
+                "is_saved": True,
+                "saved_at": now,
+                "updated_at": now,
+            },
+            "$setOnInsert": {
+                "is_read": False,
+                "created_at": now,
+            },
+        },
+        upsert=True,
+    )
+
+    return True
+
+
+async def mark_article_unsaved(user_id: str, article_id: str) -> bool:
+    """Mark an article as not saved for a user."""
+
+    if user_article_states_collection is None:
+        return False
+
+    try:
+        article_object_id = ObjectId(article_id)
+    except Exception:
+        return False
+
+    now = utc_now()
+
+    await user_article_states_collection.update_one(
+        {"user_id": user_id, "article_id": article_object_id},
+        {
+            "$set": {
+                "is_saved": False,
+                "updated_at": now,
+            },
+            "$unset": {
+                "saved_at": "",
+            },
+            "$setOnInsert": {
+                "is_read": False,
                 "created_at": now,
             },
         },
@@ -1391,6 +1661,7 @@ async def get_feed_reader_context(user_id: str, category_filter: str, status_fil
         "categories": categories_payload.categories,
         "all_unread_count": categories_payload.all_unread_count,
         "recently_read_count": categories_payload.recently_read_count,
+        "saved_count": categories_payload.saved_count,
         "articles": article_payload.articles,
         "selected_category": category_filter,
         "selected_status": article_payload.status,
@@ -1411,6 +1682,7 @@ async def get_feed_settings_context(user_id: str) -> dict[str, Any]:
         "subscriptions": subscription_rows,
         "all_unread_count": category_payload.all_unread_count,
         "recently_read_count": category_payload.recently_read_count,
+        "saved_count": category_payload.saved_count,
     }
 
 
