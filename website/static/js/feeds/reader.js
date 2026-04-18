@@ -704,66 +704,18 @@
     }
 
     /**
-     * Open a URL in a new tab while preserving reader focus where the browser allows it.
+     * Open a URL in a new tab using normal browser behavior.
      *
      * @param {string} link
      * @returns {void}
      */
-    function openInBackgroundTab(link) {
+    function openInNewTab(link) {
         const normalizedLink = normalizeArticleLink(link);
         if (normalizedLink === "") {
             return;
         }
 
-        const previouslyFocused = document.activeElement instanceof HTMLElement
-            ? document.activeElement
-            : null;
-
-        const openLink = document.createElement("a");
-        openLink.href = normalizedLink;
-        openLink.target = "_blank";
-        openLink.rel = "noopener noreferrer";
-        openLink.style.position = "fixed";
-        openLink.style.left = "-9999px";
-        openLink.style.width = "1px";
-        openLink.style.height = "1px";
-        openLink.style.opacity = "0";
-        document.body.appendChild(openLink);
-
-        const openEvent = new MouseEvent("click", {
-            bubbles: true,
-            cancelable: true,
-            view: window,
-            button: 0,
-            buttons: 1,
-            ctrlKey: false,
-            metaKey: false,
-            shiftKey: false,
-            altKey: false,
-        });
-        openLink.dispatchEvent(openEvent);
-        openLink.remove();
-
-        const restoreReaderFocus = () => {
-            window.focus();
-            if (previouslyFocused instanceof HTMLElement && document.contains(previouslyFocused)) {
-                previouslyFocused.focus({ preventScroll: true });
-            }
-        };
-
-        restoreReaderFocus();
-
-        window.setTimeout(() => {
-            restoreReaderFocus();
-        }, 0);
-
-        window.setTimeout(() => {
-            restoreReaderFocus();
-        }, 75);
-
-        window.setTimeout(() => {
-            restoreReaderFocus();
-        }, 180);
+        window.open(normalizedLink, "_blank", "noopener,noreferrer");
     }
 
     /**
@@ -774,7 +726,7 @@
      */
     async function openAndMarkCard(card) {
         const link = card.dataset.articleLink || "";
-        openInBackgroundTab(link);
+        openInNewTab(link);
 
         await markCardRead(card);
     }
