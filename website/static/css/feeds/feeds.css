@@ -436,6 +436,81 @@
     text-decoration-color: color-mix(in srgb, var(--text-soft), var(--brand-soft) 26%);
 }
 
+.feed-article-summary table {
+    width: 100%;
+    margin: 0.2rem 0 0.72rem;
+    border-collapse: separate;
+    border-spacing: 0;
+    border: 0.0625rem solid color-mix(in srgb, var(--line), #ffffff 20%);
+    border-radius: 0.62rem;
+    overflow: hidden;
+    background: linear-gradient(
+        180deg,
+        color-mix(in srgb, var(--surface), #ffffff 44%) 0%,
+        color-mix(in srgb, var(--surface-soft), #ffffff 18%) 100%
+    );
+    box-shadow:
+        0 0.26rem 0.72rem rgba(18, 37, 61, 0.08),
+        inset 0 0.06rem 0 rgba(255, 255, 255, 0.35);
+}
+
+.feed-article-summary caption {
+    caption-side: top;
+    text-align: left;
+    margin-bottom: 0.35rem;
+    color: color-mix(in srgb, var(--text-soft), var(--brand-strong) 22%);
+    font-size: 0.82rem;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+}
+
+.feed-article-summary table :is(th, td) {
+    padding: 0.48rem 0.62rem;
+    border-right: 0.0625rem solid color-mix(in srgb, var(--line), #ffffff 32%);
+    border-bottom: 0.0625rem solid color-mix(in srgb, var(--line), #ffffff 26%);
+    vertical-align: top;
+    text-align: left;
+}
+
+.feed-article-summary table :is(th, td):last-child {
+    border-right: 0;
+}
+
+.feed-article-summary table thead th {
+    color: color-mix(in srgb, var(--brand-strong), #213f61 12%);
+    font-weight: 700;
+    background: linear-gradient(
+        180deg,
+        color-mix(in srgb, var(--brand-soft), #ffffff 66%) 0%,
+        color-mix(in srgb, var(--brand-soft), #ffffff 76%) 100%
+    );
+}
+
+.feed-article-summary table tbody tr:nth-child(even) td {
+    background: color-mix(in srgb, var(--surface-soft), #ffffff 24%);
+}
+
+.feed-article-summary table tbody tr:hover td {
+    background: color-mix(in srgb, var(--brand-soft), #ffffff 78%);
+}
+
+.feed-article-summary table tr:last-child :is(th, td) {
+    border-bottom: 0;
+}
+
+.feed-article-card.is-read-article .feed-article-summary table {
+    border-color: color-mix(in srgb, var(--line), #ffffff 30%);
+    background: linear-gradient(
+        180deg,
+        color-mix(in srgb, var(--surface-soft), #ffffff 16%) 0%,
+        color-mix(in srgb, var(--surface-soft), #ffffff 8%) 100%
+    );
+}
+
+.feed-article-card.is-read-article .feed-article-summary table thead th {
+    color: color-mix(in srgb, var(--text-soft), var(--brand-strong) 28%);
+}
+
 .feed-article-summary :is(p, ul, ol, blockquote) {
     margin-top: 0;
     margin-bottom: 0.45rem;
@@ -1190,6 +1265,17 @@ body.feed-category-color-popup-open {
     .feed-article-meta-right time {
         padding: 0.1rem 0.38rem;
         font-size: 0.78rem;
+    }
+
+    .feed-article-summary table {
+        display: block;
+        max-width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .feed-article-summary table :is(th, td) {
+        white-space: nowrap;
     }
 
     .feed-category-settings-item {
