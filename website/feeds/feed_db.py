@@ -8,6 +8,7 @@ import xml.etree.ElementTree as ET
 import aiohttp
 from bson import ObjectId
 from pymongo import ASCENDING, DESCENDING
+from pymongo.errors import DuplicateKeyError
 
 from ..utils.html_sanitizer import sanitize_html
 from . import feed_utils
@@ -111,6 +112,12 @@ async def validate_feed_url(feed_url: str) -> tuple[str, str]:
                 if response.status >= 400:
                     raise ValueError(f"Feed URL returned HTTP {response.status}.")
 
+                # Follow upstream redirects and canonicalize the final URL so
+                # equivalent inputs (e.g. http -> https) dedupe to one source.
+                final_url = str(response.url).strip()
+                if final_url != "":
+                    normalized_url = normalize_feed_url(final_url)
+
                 payload = await response.read()
     except aiohttp.ClientError as exc:
         raise ValueError(f"Unable to fetch feed URL: {exc}") from exc
@@ -151,6 +158,304 @@ def extract_feed_title(root: ET.Element) -> str:
                 return value
 
     return ""
+
+
+def _as_utc_datetime(value: Any) -> datetime | None:
+    """Return a timezone-aware UTC datetime or None."""
+
+    if not isinstance(value, datetime):
+        return None
+
+    if value.tzinfo is None:
+        return value.replace(tzinfo=UTC)
+
+    return value.astimezone(UTC)
+
+
+def _latest_datetime(left: datetime | None, right: datetime | None) -> datetime | None:
+    """Return whichever datetime is later, handling None values."""
+
+    if left is None:
+        return right
+    if right is None:
+        return left
+    return left if left >= right else right
+
+
+def _updated_timestamp(value: Any) -> datetime:
+    """Return a sortable updated_at value fallback."""
+
+    return _as_utc_datetime(value) or datetime.min.replace(tzinfo=UTC)
+
+
+async def _merge_user_article_state(
+    target_article_id: ObjectId,
+    source_article_id: ObjectId,
+) -> None:
+    """Merge per-user state from source article into target article."""
+
+    if (
+        user_article_states_collection is None
+        or target_article_id == source_article_id
+    ):
+        return
+
+    cursor = user_article_states_collection.find({"article_id": source_article_id})
+    now = utc_now()
+
+    async for source_state in cursor:
+        source_state_id = source_state.get("_id")
+        user_id = source_state.get("user_id")
+
+        if not isinstance(source_state_id, ObjectId) or not isinstance(user_id, str):
+            continue
+
+        target_state = await user_article_states_collection.find_one(
+            {
+                "user_id": user_id,
+                "article_id": target_article_id,
+            }
+        )
+
+        if target_state is None:
+            await user_article_states_collection.update_one(
+                {"_id": source_state_id},
+                {
+                    "$set": {
+                        "article_id": target_article_id,
+                        "updated_at": now,
+                    }
+                },
+            )
+            continue
+
+        source_is_read = bool(source_state.get("is_read"))
+        source_is_saved = bool(source_state.get("is_saved"))
+        target_is_read = bool(target_state.get("is_read"))
+        target_is_saved = bool(target_state.get("is_saved"))
+
+        source_read_at = _as_utc_datetime(source_state.get("read_at"))
+        target_read_at = _as_utc_datetime(target_state.get("read_at"))
+        source_saved_at = _as_utc_datetime(source_state.get("saved_at"))
+        target_saved_at = _as_utc_datetime(target_state.get("saved_at"))
+
+        merged_is_read = target_is_read or source_is_read
+        merged_is_saved = target_is_saved or source_is_saved
+        merged_read_at = _latest_datetime(target_read_at, source_read_at) if merged_is_read else None
+        merged_saved_at = _latest_datetime(target_saved_at, source_saved_at) if merged_is_saved else None
+
+        await user_article_states_collection.update_one(
+            {"_id": target_state["_id"]},
+            {
+                "$set": {
+                    "is_read": merged_is_read,
+                    "read_at": merged_read_at,
+                    "is_saved": merged_is_saved,
+                    "saved_at": merged_saved_at,
+                    "updated_at": now,
+                }
+            },
+        )
+        await user_article_states_collection.delete_one({"_id": source_state_id})
+
+
+async def _merge_duplicate_feed_articles(
+    canonical_feed_id: ObjectId,
+    duplicate_feed_ids: list[ObjectId],
+) -> None:
+    """Move duplicate-source articles into canonical feed and merge states."""
+
+    if feed_articles_collection is None or len(duplicate_feed_ids) == 0:
+        return
+
+    cursor = feed_articles_collection.find({"feed_id": {"$in": duplicate_feed_ids}})
+
+    async for article_doc in cursor:
+        source_article_id = article_doc.get("_id")
+        dedupe_key = str(article_doc.get("dedupe_key", "")).strip()
+
+        if not isinstance(source_article_id, ObjectId):
+            continue
+
+        if dedupe_key == "":
+            # No stable key; keep historical row to avoid unsafe merges.
+            continue
+
+        target_article = await feed_articles_collection.find_one(
+            {
+                "feed_id": canonical_feed_id,
+                "dedupe_key": dedupe_key,
+            },
+            {"_id": 1},
+        )
+
+        if target_article is None:
+            cloned_article = dict(article_doc)
+            cloned_article.pop("_id", None)
+            cloned_article["feed_id"] = canonical_feed_id
+
+            try:
+                insert_result = await feed_articles_collection.insert_one(cloned_article)
+                target_article_id = insert_result.inserted_id
+            except DuplicateKeyError:
+                existing_target = await feed_articles_collection.find_one(
+                    {
+                        "feed_id": canonical_feed_id,
+                        "dedupe_key": dedupe_key,
+                    },
+                    {"_id": 1},
+                )
+                target_article_id = (
+                    existing_target.get("_id")
+                    if isinstance(existing_target, dict)
+                    else None
+                )
+        else:
+            target_article_id = target_article.get("_id")
+
+        if isinstance(target_article_id, ObjectId):
+            await _merge_user_article_state(target_article_id, source_article_id)
+
+        await feed_articles_collection.delete_one({"_id": source_article_id})
+
+
+async def _merge_duplicate_subscriptions(
+    canonical_feed_id: ObjectId,
+    duplicate_feed_ids: list[ObjectId],
+) -> None:
+    """Repoint duplicate feed subscriptions to canonical feed, user-safe."""
+
+    if user_feed_subscriptions_collection is None or len(duplicate_feed_ids) == 0:
+        return
+
+    now = utc_now()
+    cursor = user_feed_subscriptions_collection.find(
+        {"feed_id": {"$in": duplicate_feed_ids}}
+    ).sort([("updated_at", DESCENDING), ("_id", ASCENDING)])
+
+    async for sub_doc in cursor:
+        sub_id = sub_doc.get("_id")
+        user_id = sub_doc.get("user_id")
+        category_id = sub_doc.get("category_id")
+
+        if not isinstance(sub_id, ObjectId) or not isinstance(user_id, str):
+            continue
+
+        canonical_sub = await user_feed_subscriptions_collection.find_one(
+            {
+                "user_id": user_id,
+                "feed_id": canonical_feed_id,
+            }
+        )
+
+        if canonical_sub is None:
+            await user_feed_subscriptions_collection.update_one(
+                {"_id": sub_id},
+                {
+                    "$set": {
+                        "feed_id": canonical_feed_id,
+                        "updated_at": now,
+                    }
+                },
+            )
+            continue
+
+        incoming_updated = _updated_timestamp(sub_doc.get("updated_at"))
+        canonical_updated = _updated_timestamp(canonical_sub.get("updated_at"))
+
+        if (
+            isinstance(category_id, ObjectId)
+            and incoming_updated > canonical_updated
+            and canonical_sub.get("category_id") != category_id
+        ):
+            await user_feed_subscriptions_collection.update_one(
+                {"_id": canonical_sub["_id"]},
+                {
+                    "$set": {
+                        "category_id": category_id,
+                        "updated_at": now,
+                    }
+                },
+            )
+
+        await user_feed_subscriptions_collection.delete_one({"_id": sub_id})
+
+
+async def consolidate_duplicate_feed_sources(normalized_url: str) -> dict[str, Any] | None:
+    """Merge duplicate source docs for one normalized URL into a canonical source."""
+
+    if feed_sources_collection is None:
+        return None
+
+    source_docs = [
+        dict(doc)
+        async for doc in feed_sources_collection.find(
+            {"normalized_url": normalized_url}
+        ).sort([("created_at", ASCENDING), ("_id", ASCENDING)])
+    ]
+
+    if len(source_docs) == 0:
+        return None
+
+    canonical_source = source_docs[0]
+    canonical_source_id = canonical_source.get("_id")
+
+    if not isinstance(canonical_source_id, ObjectId):
+        return canonical_source
+
+    if len(source_docs) == 1:
+        return canonical_source
+
+    duplicate_source_ids: list[ObjectId] = []
+    for source in source_docs[1:]:
+        source_id = source.get("_id")
+        if isinstance(source_id, ObjectId):
+            duplicate_source_ids.append(source_id)
+
+    if len(duplicate_source_ids) == 0:
+        return canonical_source
+
+    await _merge_duplicate_subscriptions(canonical_source_id, duplicate_source_ids)
+    await _merge_duplicate_feed_articles(canonical_source_id, duplicate_source_ids)
+
+    await feed_sources_collection.delete_many({"_id": {"$in": duplicate_source_ids}})
+
+    refreshed = await feed_sources_collection.find_one({"_id": canonical_source_id})
+    return dict(refreshed) if refreshed is not None else canonical_source
+
+
+async def opportunistic_consolidate_duplicate_sources(max_urls: int = 2) -> None:
+    """Consolidate a small batch of duplicate normalized URLs.
+
+    This is intentionally bounded so request-path healing remains lightweight.
+    """
+
+    if feed_sources_collection is None or max_urls <= 0:
+        return
+
+    pipeline: list[dict[str, Any]] = [
+        {
+            "$group": {
+                "_id": "$normalized_url",
+                "count": {"$sum": 1},
+            }
+        },
+        {
+            "$match": {
+                "_id": {"$type": "string"},
+                "count": {"$gt": 1},
+            }
+        },
+        {"$limit": int(max_urls)},
+    ]
+
+    duplicate_rows = [doc async for doc in feed_sources_collection.aggregate(pipeline)]
+
+    for row in duplicate_rows:
+        normalized_url = row.get("_id")
+        if not isinstance(normalized_url, str) or normalized_url.strip() == "":
+            continue
+        await consolidate_duplicate_feed_sources(normalized_url.strip())
 
 
 async def ensure_category(user_id: str, category_name: str) -> tuple[FeedCategoryDocument, bool]:
@@ -197,7 +502,7 @@ async def ensure_feed_source(normalized_url: str, source_title: str) -> dict[str
     if feed_sources_collection is None:
         raise RuntimeError("Feed sources collection is not available.")
 
-    existing_doc = await feed_sources_collection.find_one({"normalized_url": normalized_url})
+    existing_doc = await consolidate_duplicate_feed_sources(normalized_url)
     if existing_doc is not None:
         existing = dict(existing_doc)
 
@@ -231,9 +536,31 @@ async def ensure_feed_source(normalized_url: str, source_title: str) -> dict[str
         "created_at": utc_now(),
         "updated_at": utc_now(),
     }
-    result = await feed_sources_collection.insert_one(new_source)
-    new_source["_id"] = result.inserted_id
-    return new_source
+    try:
+        result = await feed_sources_collection.insert_one(new_source)
+        new_source["_id"] = result.inserted_id
+    except DuplicateKeyError:
+        pass
+
+    existing_after_insert = await consolidate_duplicate_feed_sources(normalized_url)
+    if existing_after_insert is not None:
+        existing = dict(existing_after_insert)
+
+        if source_title.strip() != "" and existing.get("title", "") != source_title.strip():
+            await feed_sources_collection.update_one(
+                {"_id": existing["_id"]},
+                {
+                    "$set": {
+                        "title": source_title.strip(),
+                        "updated_at": utc_now(),
+                    }
+                },
+            )
+            existing = {**existing, "title": source_title.strip()}
+
+        return existing
+
+    raise RuntimeError("Unable to ensure feed source document.")
 
 
 async def request_immediate_feed_refresh(feed_ids: set[ObjectId]) -> None:
@@ -1845,6 +2172,11 @@ async def export_opml(user_id: str) -> str:
 
 async def get_feed_reader_context(user_id: str, category_filter: str, status_filter: str) -> dict[str, Any]:
     """Build template context payload for the feed reader page."""
+
+    try:
+        await opportunistic_consolidate_duplicate_sources()
+    except Exception as exc:
+        logging.warning(f"Feed source dedupe pass failed: {exc}")
 
     categories_payload = await get_categories_with_counts(user_id)
     article_payload = await get_article_list(
