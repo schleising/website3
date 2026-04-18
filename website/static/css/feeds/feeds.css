@@ -242,8 +242,12 @@
 }
 
 @media screen and (min-width: 68rem) {
-    .feed-article-card {
-        padding-inline: clamp(1.8rem, 3.6vw, 3.6rem);
+    .feed-article-card > :not(.feed-article-media) {
+        padding-inline: clamp(3.6rem, 7.2vw, 7.2rem);
+    }
+
+    .feed-article-media {
+        margin-inline: clamp(3.6rem, 7.2vw, 7.2rem);
     }
 }
 
