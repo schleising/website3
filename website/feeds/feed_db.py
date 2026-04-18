@@ -63,6 +63,19 @@ def deterministic_category_color(category_name: str) -> str:
     return feed_utils.deterministic_category_color(category_name)
 
 
+def normalize_article_link(value: Any) -> str:
+    """Return a safe outbound article link, or empty string when unavailable."""
+
+    if not isinstance(value, str):
+        return ""
+
+    normalized = value.strip()
+    if normalized == "" or normalized.lower() in {"none", "null", "undefined"}:
+        return ""
+
+    return normalized
+
+
 async def validate_feed_url(feed_url: str) -> tuple[str, str]:
     """Validate a feed URL by fetching and parsing minimal XML metadata.
 
@@ -814,12 +827,12 @@ async def list_cards_for_feed_ids(
             FeedArticleCard(
                 article_id=str(article_id),
                 title=str(article_doc.get("title", "Untitled")),
-                link=str(article_doc.get("link", "")),
+                link=normalize_article_link(article_doc.get("link")),
                 author=str(article_doc.get("author", "")).strip() or None,
                 summary_html=sanitize_html(str(article_doc.get("summary_html", "")))
                 if article_doc.get("summary_html")
                 else None,
-                media_image_url=str(article_doc.get("media_image_url", "")).strip() or None,
+                media_image_url=normalize_article_link(article_doc.get("media_image_url")) or None,
                 published_at=article_doc.get("published_at"),
                 feed_title=source_title,
                 category_id=str(category.id),
@@ -927,12 +940,12 @@ async def list_recently_read_cards(
             FeedArticleCard(
                 article_id=str(article_id),
                 title=str(article_doc.get("title", "Untitled")),
-                link=str(article_doc.get("link", "")),
+                link=normalize_article_link(article_doc.get("link")),
                 author=str(article_doc.get("author", "")).strip() or None,
                 summary_html=sanitize_html(str(article_doc.get("summary_html", "")))
                 if article_doc.get("summary_html")
                 else None,
-                media_image_url=str(article_doc.get("media_image_url", "")).strip() or None,
+                media_image_url=normalize_article_link(article_doc.get("media_image_url")) or None,
                 published_at=article_doc.get("published_at"),
                 feed_title=source_title,
                 category_id=str(category.id),

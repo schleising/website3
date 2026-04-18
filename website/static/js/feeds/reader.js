@@ -302,6 +302,30 @@
     }
 
     /**
+     * Return safe article link text, filtering null-like placeholders.
+     *
+     * @param {unknown} value
+     * @returns {string}
+     */
+    function normalizeArticleLink(value) {
+        if (typeof value !== "string") {
+            return "";
+        }
+
+        const normalized = value.trim();
+        if (normalized === "") {
+            return "";
+        }
+
+        const lowered = normalized.toLowerCase();
+        if (lowered === "none" || lowered === "null" || lowered === "undefined") {
+            return "";
+        }
+
+        return normalized;
+    }
+
+    /**
      * Return whether a card is already marked read in current UI state.
      *
      * @param {HTMLElement} card
@@ -519,7 +543,8 @@
      * @returns {void}
      */
     function openInBackgroundTab(link) {
-        if (link === "") {
+        const normalizedLink = normalizeArticleLink(link);
+        if (normalizedLink === "") {
             return;
         }
 
@@ -528,7 +553,7 @@
             : null;
 
         const openLink = document.createElement("a");
-        openLink.href = link;
+        openLink.href = normalizedLink;
         openLink.target = "_blank";
         openLink.rel = "noopener noreferrer";
         openLink.style.position = "fixed";
@@ -766,7 +791,7 @@
         const card = document.createElement("article");
         card.className = "feed-article-card site-card";
         card.dataset.articleId = String(article.article_id || "");
-        card.dataset.articleLink = String(article.link || "");
+        card.dataset.articleLink = normalizeArticleLink(article.link);
         card.dataset.isRead = Boolean(article.is_read) ? "true" : "false";
         card.tabIndex = 0;
 
@@ -807,7 +832,7 @@
         title.className = "feed-article-title";
 
         const titleLink = document.createElement("a");
-        titleLink.href = String(article.link || "#");
+        titleLink.href = normalizeArticleLink(article.link) || "#";
         titleLink.target = "_blank";
         titleLink.rel = "noopener";
         titleLink.textContent = String(article.title || "Untitled");
@@ -816,12 +841,13 @@
         card.appendChild(header);
         card.appendChild(title);
 
-        if (article.media_image_url) {
+        const mediaImageUrl = normalizeArticleLink(article.media_image_url);
+        if (mediaImageUrl !== "") {
             const media = document.createElement("figure");
             media.className = "feed-article-media";
 
             const mediaImage = document.createElement("img");
-            mediaImage.src = String(article.media_image_url);
+            mediaImage.src = mediaImageUrl;
             mediaImage.alt = "";
             mediaImage.loading = "lazy";
             mediaImage.decoding = "async";
