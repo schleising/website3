@@ -36,6 +36,26 @@
     const subscriptionEditCloseButton = document.getElementById("feed-subscription-edit-close");
     /** @type {HTMLButtonElement | null} */
     const subscriptionEditCancelButton = document.getElementById("feed-subscription-edit-cancel");
+    /** @type {HTMLElement | null} */
+    const categoryColorPopup = document.getElementById("feed-category-color-popup");
+    /** @type {HTMLElement | null} */
+    const categoryColorBackdrop = document.getElementById("feed-category-color-backdrop");
+    /** @type {HTMLElement | null} */
+    const categoryColorTitle = document.getElementById("feed-category-color-title");
+    /** @type {HTMLElement | null} */
+    const categoryColorSwatchGrid = document.getElementById("feed-category-color-swatch-grid");
+    /** @type {HTMLInputElement | null} */
+    const categoryColorPickerInput = document.getElementById("feed-category-color-picker-input");
+    /** @type {HTMLButtonElement | null} */
+    const categoryColorCloseButton = document.getElementById("feed-category-color-close");
+    /** @type {HTMLButtonElement | null} */
+    const categoryColorSuggestedTab = document.getElementById("feed-category-color-tab-suggested");
+    /** @type {HTMLButtonElement | null} */
+    const categoryColorPickerTab = document.getElementById("feed-category-color-tab-picker");
+    /** @type {HTMLElement | null} */
+    const categoryColorSuggestedPanel = document.getElementById("feed-category-color-panel-suggested");
+    /** @type {HTMLElement | null} */
+    const categoryColorPickerPanel = document.getElementById("feed-category-color-panel-picker");
 
     /** @type {string} */
     const categoriesEndpoint = root.dataset.categoriesEndpoint || "/feeds/api/categories/";
@@ -58,6 +78,26 @@
     /** @type {string} */
     const csrfToken = root.dataset.csrfToken || "";
 
+    /** @type {string[]} */
+    const categorySuggestedPalette = [
+        "#3B82F6",
+        "#0EA5E9",
+        "#14B8A6",
+        "#22C55E",
+        "#84CC16",
+        "#F59E0B",
+        "#F97316",
+        "#EF4444",
+        "#EC4899",
+        "#A855F7",
+        "#6366F1",
+        "#06B6D4",
+        "#10B981",
+        "#EAB308",
+        "#F43F5E",
+        "#8B5CF6",
+    ];
+
     /** @type {HTMLElement | null} */
     let activeSubscriptionRow = null;
     /** @type {HTMLButtonElement | null} */
@@ -72,6 +112,16 @@
     let categoryReorderAppliedRevision = 0;
     /** @type {string} */
     let dragStartCategoryOrderSignature = "";
+    /** @type {HTMLElement | null} */
+    let activeCategoryColorItem = null;
+    /** @type {HTMLButtonElement | null} */
+    let activeCategoryColorTrigger = null;
+    /** @type {string} */
+    let activeCategoryColorId = "";
+    /** @type {string} */
+    let activeCategoryColorValue = "";
+    /** @type {"suggested" | "picker"} */
+    let categoryColorDialogMode = "suggested";
 
     /**
      * Set user-facing status text.
@@ -334,6 +384,273 @@
     }
 
     /**
+     * Return uppercase normalized hex color or empty string when invalid.
+     *
+     * @param {string} value
+     * @returns {string}
+     */
+    function normalizeHexColor(value) {
+        const trimmed = String(value || "").trim().toUpperCase();
+        if (!/^#[0-9A-F]{6}$/.test(trimmed)) {
+            return "";
+        }
+
+        return trimmed;
+    }
+
+    /**
+     * Pick a deterministic stylish fallback color for a category.
+     *
+     * @param {string} categoryId
+     * @returns {string}
+     */
+    function suggestedColorForCategory(categoryId) {
+        const normalizedId = String(categoryId || "").trim();
+        if (normalizedId === "") {
+            return categorySuggestedPalette[0];
+        }
+
+        let checksum = 0;
+        for (let index = 0; index < normalizedId.length; index += 1) {
+            checksum = (checksum + normalizedId.charCodeAt(index)) % 65536;
+        }
+
+        return categorySuggestedPalette[checksum % categorySuggestedPalette.length];
+    }
+
+    /**
+     * Keep picker values mobile-safe (avoid black/white and invalid states).
+     *
+     * @param {string} categoryId
+     * @param {string} rawColor
+     * @returns {string}
+     */
+    function normalizePickerColor(categoryId, rawColor) {
+        const normalized = normalizeHexColor(rawColor);
+        if (normalized === "" || normalized === "#000000" || normalized === "#FFFFFF") {
+            return suggestedColorForCategory(categoryId);
+        }
+
+        return normalized;
+    }
+
+    /**
+     * Render popup swatches from the shared suggested palette.
+     */
+    function renderCategoryColorDialogSwatches() {
+        if (!(categoryColorSwatchGrid instanceof HTMLElement)) {
+            return;
+        }
+
+        categoryColorSwatchGrid.innerHTML = "";
+
+        categorySuggestedPalette.forEach(colorHex => {
+            const swatch = document.createElement("button");
+            swatch.type = "button";
+            swatch.className = "btn feed-category-dialog-swatch";
+            swatch.dataset.colorHex = colorHex;
+            swatch.style.setProperty("--feed-swatch-color", colorHex);
+            swatch.setAttribute("aria-label", `Use suggested colour ${colorHex}`);
+            swatch.setAttribute("aria-pressed", "false");
+            categoryColorSwatchGrid.appendChild(swatch);
+        });
+    }
+
+    /**
+     * Sync popup suggested/picker selection visuals.
+     *
+     * @param {string} colorHex
+     */
+    function syncCategoryColorDialogSelection(colorHex) {
+        const normalizedColor = normalizeHexColor(colorHex);
+
+        if (categoryColorPickerInput instanceof HTMLInputElement && normalizedColor !== "") {
+            categoryColorPickerInput.value = normalizedColor;
+        }
+
+        if (!(categoryColorSwatchGrid instanceof HTMLElement)) {
+            return;
+        }
+
+        const swatches = categoryColorSwatchGrid.querySelectorAll(".feed-category-dialog-swatch");
+        swatches.forEach(swatch => {
+            if (!(swatch instanceof HTMLButtonElement)) {
+                return;
+            }
+
+            const candidate = normalizeHexColor(String(swatch.dataset.colorHex || ""));
+            const isSelected = normalizedColor !== "" && candidate === normalizedColor;
+            swatch.classList.toggle("is-selected", isSelected);
+            swatch.setAttribute("aria-pressed", isSelected ? "true" : "false");
+        });
+    }
+
+    /**
+     * Toggle category color popup visibility.
+     *
+     * @param {boolean} isOpen
+     */
+    function setCategoryColorPopupVisibility(isOpen) {
+        if (!(categoryColorPopup instanceof HTMLElement) || !(categoryColorBackdrop instanceof HTMLElement)) {
+            return;
+        }
+
+        categoryColorPopup.classList.toggle("hidden", !isOpen);
+        categoryColorBackdrop.classList.toggle("hidden", !isOpen);
+        categoryColorBackdrop.setAttribute("aria-hidden", isOpen ? "false" : "true");
+        document.body.classList.toggle("feed-category-color-popup-open", isOpen);
+    }
+
+    /**
+     * Switch category color popup between suggested and picker tabs.
+     *
+     * @param {"suggested" | "picker"} mode
+     */
+    function setCategoryColorDialogMode(mode) {
+        const nextMode = mode === "picker" ? "picker" : "suggested";
+        categoryColorDialogMode = nextMode;
+        const showSuggested = nextMode === "suggested";
+
+        if (categoryColorSuggestedTab instanceof HTMLButtonElement) {
+            categoryColorSuggestedTab.classList.toggle("is-active", showSuggested);
+            categoryColorSuggestedTab.setAttribute("aria-selected", showSuggested ? "true" : "false");
+        }
+
+        if (categoryColorPickerTab instanceof HTMLButtonElement) {
+            categoryColorPickerTab.classList.toggle("is-active", !showSuggested);
+            categoryColorPickerTab.setAttribute("aria-selected", showSuggested ? "false" : "true");
+        }
+
+        if (categoryColorSuggestedPanel instanceof HTMLElement) {
+            categoryColorSuggestedPanel.classList.toggle("hidden", !showSuggested);
+        }
+
+        if (categoryColorPickerPanel instanceof HTMLElement) {
+            categoryColorPickerPanel.classList.toggle("hidden", showSuggested);
+        }
+    }
+
+    /**
+     * Close category color popup and restore trigger focus.
+     */
+    function closeCategoryColorPopup() {
+        setCategoryColorPopupVisibility(false);
+
+        if (activeCategoryColorTrigger instanceof HTMLButtonElement) {
+            activeCategoryColorTrigger.focus();
+        }
+
+        activeCategoryColorItem = null;
+        activeCategoryColorTrigger = null;
+        activeCategoryColorId = "";
+        activeCategoryColorValue = "";
+    }
+
+    /**
+     * Open category color popup for a specific category row.
+     *
+     * @param {HTMLElement} item
+     * @param {HTMLButtonElement} triggerButton
+     * @param {string} categoryId
+     * @param {string} categoryName
+     */
+    function openCategoryColorPopup(item, triggerButton, categoryId, categoryName) {
+        if (!(categoryColorPopup instanceof HTMLElement)) {
+            return;
+        }
+
+        activeCategoryColorItem = item;
+        activeCategoryColorTrigger = triggerButton;
+        activeCategoryColorId = categoryId;
+
+        const rowColor = String(item.dataset.categoryColor || "").trim();
+        activeCategoryColorValue = normalizePickerColor(categoryId, rowColor);
+
+        if (categoryColorTitle instanceof HTMLElement) {
+            categoryColorTitle.textContent = categoryName !== ""
+                ? `Select Colour: ${categoryName}`
+                : "Select Colour";
+        }
+
+        syncCategoryColorDialogSelection(activeCategoryColorValue);
+        setCategoryColorDialogMode(categoryColorDialogMode);
+        setCategoryColorPopupVisibility(true);
+    }
+
+    /**
+     * Persist active popup color selection.
+     *
+     * @param {string} nextColorHex
+     */
+    async function persistActiveCategoryPopupColor(nextColorHex) {
+        if (!(activeCategoryColorItem instanceof HTMLElement) || activeCategoryColorId === "") {
+            return;
+        }
+
+        const normalized = normalizePickerColor(activeCategoryColorId, nextColorHex);
+        activeCategoryColorValue = normalized;
+        syncCategoryColorDialogSelection(normalized);
+        await persistCategoryColor(activeCategoryColorItem, activeCategoryColorId, normalized);
+
+        const updatedColor = normalizePickerColor(
+            activeCategoryColorId,
+            String(activeCategoryColorItem.dataset.categoryColor || normalized)
+        );
+        activeCategoryColorValue = updatedColor;
+        syncCategoryColorDialogSelection(updatedColor);
+    }
+
+    /**
+     * Apply category color in local UI (input, sidebar, chips, and swatches).
+     *
+     * @param {HTMLElement} item
+     * @param {string} categoryId
+     * @param {string} colorHex
+     */
+    function applyCategoryColorLocally(item, categoryId, colorHex) {
+        const normalizedColor = normalizePickerColor(categoryId, colorHex);
+
+        item.dataset.categoryColor = normalizedColor;
+
+        const colorButton = item.querySelector(".feed-category-color-button");
+        if (colorButton instanceof HTMLButtonElement) {
+            colorButton.dataset.colorHex = normalizedColor;
+            colorButton.style.setProperty("--feed-category-color", normalizedColor);
+        }
+
+        updateSidebarCategoryColor(categoryId, normalizedColor);
+        updateSubscriptionCategoryColor(categoryId, normalizedColor);
+
+        if (activeCategoryColorItem === item) {
+            syncCategoryColorDialogSelection(normalizedColor);
+        }
+    }
+
+    /**
+     * Persist a category color and re-sync local UI from response payload.
+     *
+     * @param {HTMLElement} item
+     * @param {string} categoryId
+     * @param {string} nextColorHex
+     */
+    async function persistCategoryColor(item, categoryId, nextColorHex) {
+        const endpoint = categoryEndpoint(categoryColorTemplate, categoryId);
+        const candidateColor = normalizePickerColor(categoryId, nextColorHex);
+
+        setStatus("Updating category color...");
+
+        try {
+            const payload = await requestJson(endpoint, "POST", { color_hex: candidateColor });
+            const normalizedColor = normalizePickerColor(categoryId, String(payload.color_hex || candidateColor));
+            applyCategoryColorLocally(item, categoryId, normalizedColor);
+            setStatus("Category color updated.");
+            await refreshSidebarCounts();
+        } catch (error) {
+            setStatus(error instanceof Error ? error.message : "Unable to update category color.", true);
+        }
+    }
+
+    /**
      * Update category option labels across all category select controls.
      *
      * @param {string} categoryId
@@ -366,12 +683,13 @@
     function createCategorySettingsItem(category) {
         const categoryId = String(category.category_id || "").trim();
         const categoryName = String(category.name || "Category").trim() || "Category";
-        const colorHex = String(category.color_hex || "#1F6FEB").trim() || "#1F6FEB";
+        const colorHex = normalizePickerColor(categoryId, String(category.color_hex || "#1F6FEB"));
         const muted = Boolean(category.muted);
 
         const item = document.createElement("div");
         item.className = "feed-category-settings-item";
         item.dataset.categoryId = categoryId;
+        item.dataset.categoryColor = colorHex;
         item.setAttribute("draggable", "true");
 
         const dragHandle = document.createElement("span");
@@ -396,11 +714,13 @@
         const controls = document.createElement("div");
         controls.className = "feed-category-settings-controls";
 
-        const colorInput = document.createElement("input");
-        colorInput.type = "color";
-        colorInput.className = "feed-category-color-input";
-        colorInput.value = colorHex;
-        colorInput.setAttribute("aria-label", `Select category color for ${categoryName}`);
+        const colorButton = document.createElement("button");
+        colorButton.type = "button";
+        colorButton.className = "btn feed-category-color-button";
+        colorButton.dataset.colorHex = colorHex;
+        colorButton.style.setProperty("--feed-category-color", colorHex);
+        colorButton.setAttribute("aria-label", `Select color for ${categoryName}`);
+        colorButton.title = "Select colour";
 
         const muteButton = document.createElement("button");
         muteButton.type = "button";
@@ -414,7 +734,7 @@
         `;
         applyMuteButtonState(muteButton, muted, categoryName);
 
-        controls.appendChild(colorInput);
+        controls.appendChild(colorButton);
         controls.appendChild(muteButton);
 
         item.appendChild(dragHandle);
@@ -434,10 +754,10 @@
             return;
         }
 
-        const activeElement = document.activeElement;
         if (
-            activeElement instanceof HTMLInputElement
-            && activeElement.classList.contains("feed-category-color-input")
+            activeCategoryColorItem instanceof HTMLElement
+            && categoryColorPopup instanceof HTMLElement
+            && !categoryColorPopup.classList.contains("hidden")
         ) {
             return;
         }
@@ -465,7 +785,7 @@
 
             seenIds.add(categoryId);
             const categoryName = String(category.name || "Category").trim() || "Category";
-            const colorHex = String(category.color_hex || "#1F6FEB").trim() || "#1F6FEB";
+            const colorHex = normalizePickerColor(categoryId, String(category.color_hex || "#1F6FEB"));
             const muted = Boolean(category.muted);
 
             let item = existingById.get(categoryId);
@@ -479,12 +799,11 @@
                 nameNode.textContent = categoryName;
             }
 
-            const colorInput = item.querySelector(".feed-category-color-input");
-            if (colorInput instanceof HTMLInputElement && colorInput.value !== colorHex) {
-                colorInput.value = colorHex;
-            }
-            if (colorInput instanceof HTMLInputElement) {
-                colorInput.setAttribute("aria-label", `Select category color for ${categoryName}`);
+            applyCategoryColorLocally(item, categoryId, colorHex);
+
+            const colorButton = item.querySelector(".feed-category-color-button");
+            if (colorButton instanceof HTMLButtonElement) {
+                colorButton.setAttribute("aria-label", `Select color for ${categoryName}`);
             }
 
             const muteButton = item.querySelector(".feed-category-mute-button");
@@ -492,7 +811,6 @@
                 applyMuteButtonState(muteButton, muted, categoryName);
             }
 
-            updateSubscriptionCategoryColor(categoryId, colorHex);
             updateCategoryOptionLabels(categoryId, categoryName);
 
             categoryList.appendChild(item);
@@ -610,9 +928,9 @@
             return "#1F6FEB";
         }
 
-        const colorInput = categoryItem.querySelector(".feed-category-color-input");
-        if (colorInput instanceof HTMLInputElement && colorInput.value.trim() !== "") {
-            return colorInput.value;
+        const rowColor = normalizeHexColor(String(categoryItem.dataset.categoryColor || ""));
+        if (rowColor !== "") {
+            return rowColor;
         }
 
         return "#1F6FEB";
@@ -1091,13 +1409,34 @@
     }
 
     /**
-     * Handle mute/unmute actions for category buttons.
+     * Handle category color popup and mute/unmute actions.
      *
      * @param {MouseEvent} event
      */
     async function onCategoryButtonClick(event) {
         const target = /** @type {HTMLElement | null} */ (event.target instanceof HTMLElement ? event.target : null);
         if (!target) {
+            return;
+        }
+
+        const colorButton = target.closest(".feed-category-color-button");
+        if (colorButton instanceof HTMLButtonElement) {
+            const item = colorButton.closest(".feed-category-settings-item");
+            if (!(item instanceof HTMLElement)) {
+                return;
+            }
+
+            const categoryId = String(item.dataset.categoryId || "").trim();
+            if (categoryId === "") {
+                return;
+            }
+
+            const categoryNameNode = item.querySelector(".feed-category-settings-name");
+            const categoryName = categoryNameNode instanceof HTMLElement
+                ? String(categoryNameNode.textContent || "").trim()
+                : "";
+
+            openCategoryColorPopup(item, colorButton, categoryId, categoryName);
             return;
         }
 
@@ -1140,41 +1479,50 @@
     }
 
     /**
-     * Handle category color updates.
+     * Handle clicks within the category color popup.
+     *
+     * @param {MouseEvent} event
+     */
+    async function onCategoryColorPopupClick(event) {
+        const target = /** @type {HTMLElement | null} */ (event.target instanceof HTMLElement ? event.target : null);
+        if (!target) {
+            return;
+        }
+
+        const suggestedTab = target.closest("#feed-category-color-tab-suggested");
+        if (suggestedTab instanceof HTMLButtonElement) {
+            setCategoryColorDialogMode("suggested");
+            return;
+        }
+
+        const pickerTab = target.closest("#feed-category-color-tab-picker");
+        if (pickerTab instanceof HTMLButtonElement) {
+            setCategoryColorDialogMode("picker");
+            return;
+        }
+
+        const swatch = target.closest(".feed-category-dialog-swatch");
+        if (!(swatch instanceof HTMLButtonElement)) {
+            return;
+        }
+
+        const selectedColor = normalizePickerColor(activeCategoryColorId, String(swatch.dataset.colorHex || ""));
+        await persistActiveCategoryPopupColor(selectedColor);
+    }
+
+    /**
+     * Handle native color picker changes in popup picker mode.
      *
      * @param {Event} event
      */
-    async function onCategoryColorChange(event) {
+    async function onCategoryColorPickerInputChange(event) {
         const target = /** @type {HTMLInputElement | null} */ (event.target instanceof HTMLInputElement ? event.target : null);
-        if (!target || !target.classList.contains("feed-category-color-input")) {
+        if (!(target instanceof HTMLInputElement)) {
             return;
         }
 
-        const item = target.closest(".feed-category-settings-item");
-        if (!(item instanceof HTMLElement)) {
-            return;
-        }
-
-        const categoryId = item.dataset.categoryId || "";
-        if (categoryId === "") {
-            return;
-        }
-
-        const endpoint = categoryEndpoint(categoryColorTemplate, categoryId);
-
-        setStatus("Updating category color...");
-
-        try {
-            const payload = await requestJson(endpoint, "POST", { color_hex: target.value });
-            const normalizedColor = String(payload.color_hex || target.value);
-            target.value = normalizedColor;
-            updateSidebarCategoryColor(categoryId, normalizedColor);
-            updateSubscriptionCategoryColor(categoryId, normalizedColor);
-            setStatus("Category color updated.");
-            await refreshSidebarCounts();
-        } catch (error) {
-            setStatus(error instanceof Error ? error.message : "Unable to update category color.", true);
-        }
+        const selectedColor = normalizePickerColor(activeCategoryColorId, target.value);
+        await persistActiveCategoryPopupColor(selectedColor);
     }
 
     /**
@@ -1269,6 +1617,51 @@
         });
     }
 
+    /**
+     * Initialize popup interactions for category color selection.
+     */
+    function initializeCategoryColorPopup() {
+        if (!(categoryColorPopup instanceof HTMLElement) || !(categoryColorBackdrop instanceof HTMLElement)) {
+            return;
+        }
+
+        if (categoryColorPopup.parentElement !== document.body) {
+            document.body.appendChild(categoryColorPopup);
+        }
+
+        if (categoryColorBackdrop.parentElement !== document.body) {
+            document.body.appendChild(categoryColorBackdrop);
+        }
+
+        renderCategoryColorDialogSwatches();
+
+        if (categoryColorCloseButton instanceof HTMLButtonElement) {
+            categoryColorCloseButton.addEventListener("click", closeCategoryColorPopup);
+        }
+
+        categoryColorBackdrop.addEventListener("click", closeCategoryColorPopup);
+
+        if (categoryColorPopup instanceof HTMLElement) {
+            categoryColorPopup.addEventListener("click", event => {
+                void onCategoryColorPopupClick(event);
+            });
+        }
+
+        if (categoryColorPickerInput instanceof HTMLInputElement) {
+            categoryColorPickerInput.addEventListener("change", event => {
+                void onCategoryColorPickerInputChange(event);
+            });
+        }
+
+        document.addEventListener("keydown", event => {
+            if (event.key !== "Escape" || categoryColorPopup.classList.contains("hidden")) {
+                return;
+            }
+
+            closeCategoryColorPopup();
+        });
+    }
+
     if (addForm) {
         addForm.addEventListener("submit", onAddSubscription);
     }
@@ -1279,7 +1672,26 @@
 
     if (categoryList) {
         categoryList.addEventListener("click", onCategoryButtonClick);
-        categoryList.addEventListener("change", onCategoryColorChange);
+
+        const initialRows = categoryList.querySelectorAll(".feed-category-settings-item");
+        initialRows.forEach(row => {
+            if (!(row instanceof HTMLElement)) {
+                return;
+            }
+
+            const categoryId = String(row.dataset.categoryId || "").trim();
+            if (categoryId === "") {
+                return;
+            }
+
+            const colorButton = row.querySelector(".feed-category-color-button");
+            const initialColor = colorButton instanceof HTMLButtonElement
+                ? normalizePickerColor(categoryId, String(colorButton.dataset.colorHex || ""))
+                : suggestedColorForCategory(categoryId);
+
+            applyCategoryColorLocally(row, categoryId, initialColor);
+        });
+
         initializeCategoryDragAndDrop();
 
         const initialCategoryOrder = getSettingsCategoryIdsInOrder();
@@ -1292,6 +1704,7 @@
         initializeSubscriptionRows();
     }
 
+    initializeCategoryColorPopup();
     initializeSubscriptionEditPopup();
 
     // Validate category endpoint wiring once at startup.

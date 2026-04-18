@@ -35,7 +35,16 @@
     <h4>Category Preferences</h4>
     <div id="feed-category-settings-list" class="feed-category-settings-list">
       {% for category_item in categories %}
-      <div class="feed-category-settings-item" data-category-id="{{ category_item.category_id }}" draggable="true">
+      {% set category_picker_color = (category_item.color_hex or '#3B82F6') %}
+      {% if category_picker_color|upper in ['#000000', '#FFFFFF'] %}
+      {% set category_picker_color = '#3B82F6' %}
+      {% endif %}
+      <div
+        class="feed-category-settings-item"
+        data-category-id="{{ category_item.category_id }}"
+        data-category-color="{{ category_picker_color }}"
+        draggable="true"
+      >
         <span class="feed-category-drag-handle" aria-hidden="true" title="Drag to reorder">
           <svg class="feed-action-icon" viewBox="0 0 24 24" focusable="false">
             <path d="M9 6h.01"></path>
@@ -48,12 +57,14 @@
         </span>
         <span class="feed-category-settings-name">{{ category_item.name }}</span>
         <div class="feed-category-settings-controls">
-          <input
-            type="color"
-            class="feed-category-color-input"
-            value="{{ category_item.color_hex }}"
-            aria-label="Select category color for {{ category_item.name }}"
-          >
+          <button
+            type="button"
+            class="btn feed-category-color-button"
+            data-color-hex="{{ category_picker_color }}"
+            style="--feed-category-color: {{ category_picker_color }};"
+            aria-label="Select color for {{ category_item.name }}"
+            title="Select colour"
+          ></button>
           <button
             type="button"
             class="btn feed-category-mute-button feed-category-mute-icon-button{% if category_item.muted %} is-muted{% endif %}"
@@ -215,6 +226,57 @@
         <button type="submit" class="btn btn-primary">Save</button>
       </div>
     </form>
+  </section>
+
+  <div id="feed-category-color-backdrop" class="feed-category-color-backdrop hidden" aria-hidden="true"></div>
+  <section
+    id="feed-category-color-popup"
+    class="feed-category-color-popup site-card hidden"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="feed-category-color-title"
+  >
+    <div class="feed-category-color-header">
+      <h4 id="feed-category-color-title">Select Colour</h4>
+      <button
+        type="button"
+        id="feed-category-color-close"
+        class="btn feed-category-color-close"
+        aria-label="Close colour selector"
+      >
+        x
+      </button>
+    </div>
+
+    <div class="feed-category-color-tabs" role="tablist" aria-label="Colour selection mode">
+      <button
+        type="button"
+        id="feed-category-color-tab-suggested"
+        class="btn feed-category-color-tab is-active"
+        role="tab"
+        aria-selected="true"
+      >
+        Suggested
+      </button>
+      <button
+        type="button"
+        id="feed-category-color-tab-picker"
+        class="btn feed-category-color-tab"
+        role="tab"
+        aria-selected="false"
+      >
+        Picker
+      </button>
+    </div>
+
+    <section id="feed-category-color-panel-suggested" class="feed-category-color-panel">
+      <div id="feed-category-color-swatch-grid" class="feed-category-color-swatch-grid"></div>
+    </section>
+
+    <section id="feed-category-color-panel-picker" class="feed-category-color-panel hidden">
+      <label for="feed-category-color-picker-input">Custom colour</label>
+      <input id="feed-category-color-picker-input" class="feed-category-color-picker-input" type="color" value="#3B82F6">
+    </section>
   </section>
 
   <div id="feed-settings-status" class="feed-settings-status" role="status" aria-live="polite"></div>
