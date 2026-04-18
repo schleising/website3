@@ -47,7 +47,8 @@
       </figure>
       {% endif %}
 
-      {% set author_display = article.author or article.feed_title %}
+      {% set author_raw = (article.author or '') | trim %}
+      {% set author_display = author_raw if author_raw and (author_raw | lower) != 'none' else article.feed_title %}
       {% if author_display %}
       <p class="feed-article-author">By {{ author_display }}</p>
       {% endif %}

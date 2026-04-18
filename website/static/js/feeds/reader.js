@@ -605,7 +605,10 @@
             card.appendChild(media);
         }
 
-        const authorName = String(article.author || "").trim() || String(article.feed_title || "").trim();
+        const rawAuthorName = String(article.author || "").trim();
+        const authorName = (rawAuthorName !== "" && rawAuthorName.toLowerCase() !== "none")
+            ? rawAuthorName
+            : String(article.feed_title || "").trim();
         if (authorName !== "") {
             const author = document.createElement("p");
             author.className = "feed-article-author";
