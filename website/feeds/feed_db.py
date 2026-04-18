@@ -815,74 +815,96 @@ async def list_cards_for_feed_ids(
 
     source_map = await load_sources_map(set(allowed_feed_ids))
 
-    cursor = (
-        feed_articles_collection.find(
-            {
-                "feed_id": {"$in": allowed_feed_ids},
-                "is_deleted": False,
-            }
-        ).sort("published_at", ASCENDING)
-    )
+    base_query = {
+        "feed_id": {"$in": allowed_feed_ids},
+        "is_deleted": False,
+    }
+
+    # Match frontend ordering: publication date ascending, with undated articles
+    # treated as "infinite" and therefore placed at the end.
+    dated_cursor = feed_articles_collection.find(
+        {
+            **base_query,
+            "published_at": {"$type": "date"},
+        }
+    ).sort([
+        ("published_at", ASCENDING),
+        ("_id", ASCENDING),
+    ])
+
+    undated_cursor = feed_articles_collection.find(
+        {
+            **base_query,
+            "$or": [
+                {"published_at": None},
+                {"published_at": {"$exists": False}},
+            ],
+        }
+    ).sort("_id", ASCENDING)
 
     cards: list[FeedArticleCard] = []
     seen_matching = 0
     has_more = False
 
-    async for article_doc in cursor:
-        article_id = article_doc.get("_id")
-        feed_id = article_doc.get("feed_id")
+    for cursor in (dated_cursor, undated_cursor):
+        async for article_doc in cursor:
+            article_id = article_doc.get("_id")
+            feed_id = article_doc.get("feed_id")
 
-        if not isinstance(article_id, ObjectId) or not isinstance(feed_id, ObjectId):
-            continue
+            if not isinstance(article_id, ObjectId) or not isinstance(feed_id, ObjectId):
+                continue
 
-        category_id = feed_to_category.get(feed_id)
-        if category_id is None:
-            continue
+            category_id = feed_to_category.get(feed_id)
+            if category_id is None:
+                continue
 
-        category = categories_by_id.get(category_id)
-        if category is None or category.id is None:
-            continue
+            category = categories_by_id.get(category_id)
+            if category is None or category.id is None:
+                continue
 
-        read_at = read_map.get(article_id)
-        is_read = article_id in read_map
+            read_at = read_map.get(article_id)
+            is_read = article_id in read_map
 
-        if status_filter == "read" and not is_read:
-            continue
-        if status_filter == "unread" and is_read:
-            continue
+            if status_filter == "read" and not is_read:
+                continue
+            if status_filter == "unread" and is_read:
+                continue
 
-        if seen_matching < offset:
-            seen_matching += 1
-            continue
+            if seen_matching < offset:
+                seen_matching += 1
+                continue
 
-        if len(cards) >= limit:
-            has_more = True
-            break
+            if len(cards) >= limit:
+                has_more = True
+                break
 
-        source_doc = source_map.get(feed_id, {})
-        source_title = str(source_doc.get("title", source_doc.get("normalized_url", "Feed")))
+            source_doc = source_map.get(feed_id, {})
+            source_title = str(source_doc.get("title", source_doc.get("normalized_url", "Feed")))
 
-        cards.append(
-            FeedArticleCard(
-                article_id=str(article_id),
-                title=str(article_doc.get("title", "Untitled")),
-                link=normalize_article_link(article_doc.get("link")),
-                author=str(article_doc.get("author", "")).strip() or None,
-                summary_html=sanitize_html(str(article_doc.get("summary_html", "")))
-                if article_doc.get("summary_html")
-                else None,
-                media_image_url=normalize_article_link(article_doc.get("media_image_url")) or None,
-                published_at=article_doc.get("published_at"),
-                feed_title=source_title,
-                category_id=str(category.id),
-                category_name=category.name,
-                category_color_hex=category.color_hex,
-                is_read=is_read,
-                read_at=read_at,
+            cards.append(
+                FeedArticleCard(
+                    article_id=str(article_id),
+                    title=str(article_doc.get("title", "Untitled")),
+                    link=normalize_article_link(article_doc.get("link")),
+                    author=str(article_doc.get("author", "")).strip() or None,
+                    summary_html=sanitize_html(str(article_doc.get("summary_html", "")))
+                    if article_doc.get("summary_html")
+                    else None,
+                    media_image_url=normalize_article_link(article_doc.get("media_image_url")) or None,
+                    published_at=article_doc.get("published_at"),
+                    feed_title=source_title,
+                    category_id=str(category.id),
+                    category_name=category.name,
+                    category_color_hex=category.color_hex,
+                    is_read=is_read,
+                    read_at=read_at,
+                )
             )
-        )
 
-        seen_matching += 1
+            seen_matching += 1
+
+        if has_more:
+            break
 
     return cards, has_more
 
