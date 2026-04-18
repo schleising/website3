@@ -255,7 +255,7 @@
 }
 
 .table-container .table-position-delta.drawing {
-    color: #1c2432;
+    color: #f8fbff;
     background-color: color-mix(in srgb, var(--warning), #f7fbff 20%);
     box-shadow: inset 0 0 0 0.05rem rgba(28, 36, 50, 0.2);
 }
