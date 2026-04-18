@@ -2,13 +2,18 @@
 
 {% block title %}<title>{{ title }}</title>{% endblock %}
 
+{% block favicons %}
+<link rel="icon" type="image/svg+xml" sizes="any" href="/icons/feeds-favicon.svg?v1.0.0" />
+<link rel="shortcut icon" type="image/svg+xml" href="/icons/feeds-favicon.svg?v1.0.0" />
+{% endblock %}
+
 {% block head %}
-<link rel="stylesheet" href="/css/feeds/feeds.css?v1.0.27">
+<link rel="stylesheet" href="/css/feeds/feeds.css?v1.0.30">
 {% endblock %}
 
 {% block scripts %}
 {% if feed_page_mode == "reader" %}
-<script defer src="/js/feeds/reader.js?v1.0.23"></script>
+<script defer src="/js/feeds/reader.js?v1.0.24"></script>
 {% elif feed_page_mode == "settings" %}
 <script defer src="/js/feeds/settings.js?v1.0.14"></script>
 {% endif %}

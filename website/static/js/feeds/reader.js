@@ -170,10 +170,21 @@
      */
     function renderInlineEmptyHint() {
         articleList.innerHTML = "";
-        const hint = document.createElement("p");
-        hint.className = "feeds-empty-hint";
+        articleList.classList.add("is-empty");
+
+        const hint = document.createElement("div");
+        hint.className = "feeds-empty-state";
         hint.id = "feeds-empty-hint";
-        hint.textContent = emptyHintMessage;
+        hint.setAttribute("role", "status");
+        hint.setAttribute("aria-live", "polite");
+        hint.innerHTML = `
+            <svg class="feeds-empty-state-icon" viewBox="0 0 96 96" aria-hidden="true" focusable="false">
+                <rect x="18" y="20" width="60" height="42" rx="8"></rect>
+                <path d="M18 28l30 20 30-20"></path>
+                <circle cx="71" cy="24" r="8"></circle>
+            </svg>
+            <p class="feeds-empty-state-text">${emptyHintMessage}</p>
+        `;
         articleList.appendChild(hint);
     }
 
@@ -998,6 +1009,7 @@
             return;
         }
 
+        articleList.classList.remove("is-empty");
         articleList.replaceChildren(fragment);
 
         if (previousSelectedId !== "") {
