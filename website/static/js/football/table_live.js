@@ -365,17 +365,41 @@ function patchLiveTable(tableList) {
 
     const seasonKey = tbody.dataset.seasonKey || "";
 
+    const currentRows = getTableRows();
+    const rowsByTeamId = new Map();
+    currentRows.forEach(row => {
+        const teamId = row.dataset.teamId;
+        if (teamId) {
+            rowsByTeamId.set(teamId, row);
+        }
+    });
+
+    const desiredRows = [];
+    let hasPositionChange = false;
+
     tableList.forEach(tableItem => {
         const teamId = String(tableItem.team.id);
-        const row = tbody.querySelector(`.data-row[data-team-id="${CSS.escape(teamId)}"]`);
+        const row = rowsByTeamId.get(teamId);
 
         if (!row) {
             return;
         }
 
+        if (row.dataset.position !== String(tableItem.position)) {
+            hasPositionChange = true;
+        }
+
         updateTableRow(row, tableItem, seasonKey, tableList.length);
-        tbody.appendChild(row);
+        desiredRows.push(row);
     });
+
+    const hasOrderMismatch = desiredRows.some((row, index) => currentRows[index] !== row);
+
+    if (hasPositionChange || hasOrderMismatch) {
+        const fragment = document.createDocumentFragment();
+        desiredRows.forEach(row => fragment.appendChild(row));
+        tbody.appendChild(fragment);
+    }
 
     syncSelectedHighlight();
 }
