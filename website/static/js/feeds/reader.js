@@ -70,6 +70,12 @@
     let lastTailRefreshAtMs = 0;
     /** @type {number} */
     const tailRefreshMinIntervalMs = 1200;
+    /** @type {boolean} */
+    let headRefreshProbeInFlight = false;
+    /** @type {number} */
+    let lastHeadRefreshProbeAtMs = 0;
+    /** @type {number} */
+    const headRefreshProbeMinIntervalMs = 6000;
     /** @type {number | null} */
     let pageLoadRetryTimerId = null;
     /** @type {number | null} */
@@ -1134,7 +1140,18 @@
 
         const retainedReadIds = retainSessionReadCards
             ? previousIdsInOrder.filter(
-                articleId => !incomingById.has(articleId) && sessionReadArticleIds.has(articleId)
+                articleId => {
+                    if (incomingById.has(articleId)) {
+                        return false;
+                    }
+
+                    if (sessionReadArticleIds.has(articleId)) {
+                        return true;
+                    }
+
+                    const existingCard = previousCardMap.get(articleId);
+                    return existingCard instanceof HTMLElement && isCardMarkedRead(existingCard);
+                }
             )
             : [];
 
@@ -1263,6 +1280,33 @@
     }
 
     /**
+     * Return whether a card currently matches the active server-side filter.
+     *
+     * @param {HTMLElement} card
+     * @returns {boolean}
+     */
+    function isCardIncludedByCurrentFilter(card) {
+        const articleId = getCardArticleId(card);
+        if (articleId === "") {
+            return false;
+        }
+
+        if (selectedCategory === "saved") {
+            return isCardSaved(card) && !pendingUnsaveIds.has(articleId);
+        }
+
+        if (selectedCategory === "recently-read" || selectedStatus === "read") {
+            return isCardMarkedRead(card) && !pendingUnreadIds.has(articleId);
+        }
+
+        if (selectedStatus === "unread") {
+            return !isCardMarkedRead(card) && !pendingReadIds.has(articleId);
+        }
+
+        return true;
+    }
+
+    /**
      * Compute the safest offset for the next paging request based on cards that
      * still match the active server-side filter. This avoids skipping pages when
      * local read/save toggles mutate what the backend would include.
@@ -1270,33 +1314,7 @@
      * @returns {number}
      */
     function getPagingRequestOffset() {
-        const cards = getCards();
-        if (cards.length === 0) {
-            return 0;
-        }
-
-        if (selectedCategory === "saved") {
-            return cards.filter(card => {
-                const articleId = getCardArticleId(card);
-                return isCardSaved(card) && !pendingUnsaveIds.has(articleId);
-            }).length;
-        }
-
-        if (selectedCategory === "recently-read" || selectedStatus === "read") {
-            return cards.filter(card => {
-                const articleId = getCardArticleId(card);
-                return isCardMarkedRead(card) && !pendingUnreadIds.has(articleId);
-            }).length;
-        }
-
-        if (selectedStatus === "unread") {
-            return cards.filter(card => {
-                const articleId = getCardArticleId(card);
-                return !isCardMarkedRead(card) && !pendingReadIds.has(articleId);
-            }).length;
-        }
-
-        return cards.length;
+        return getCards().filter(isCardIncludedByCurrentFilter).length;
     }
 
     /**
@@ -1395,6 +1413,7 @@
      *
      * @param {{ articles?: Array<Record<string, any>>, has_more?: boolean, next_offset?: number }} payload
      * @param {number} requestOffset
+     * @returns {number}
      */
     function appendArticlePage(payload, requestOffset) {
         const incomingArticles = Array.isArray(payload.articles) ? payload.articles : [];
@@ -1406,7 +1425,7 @@
             } else {
                 nextOffset = Math.max(0, requestOffset);
             }
-            return;
+            return 0;
         }
 
         const fragment = document.createDocumentFragment();
@@ -1455,6 +1474,8 @@
             articleList.appendChild(fragment);
         }
 
+        const appendedCount = fragment.childNodes.length;
+
         persistArticleIdState();
 
         hasMorePages = Boolean(payload.has_more);
@@ -1465,6 +1486,7 @@
         }
 
         refreshPagingSentinelObserver();
+        return appendedCount;
     }
 
     /**
@@ -1696,6 +1718,76 @@
     }
 
     /**
+     * Probe the currently-visible server-filtered article window and refresh when
+     * a new eligible item appears at any position (top, middle, or bottom).
+     *
+     * @returns {Promise<void>}
+     */
+    async function refreshHeadArticlesIfNeeded() {
+        if (headRefreshProbeInFlight) {
+            return;
+        }
+
+        const cards = getCards();
+        if (cards.length === 0) {
+            return;
+        }
+
+        const visibleFilteredIds = cards
+            .filter(isCardIncludedByCurrentFilter)
+            .map(getCardArticleId)
+            .filter(articleId => articleId !== "");
+
+        const nowMs = Date.now();
+        if (nowMs - lastHeadRefreshProbeAtMs < headRefreshProbeMinIntervalMs) {
+            return;
+        }
+
+        headRefreshProbeInFlight = true;
+        lastHeadRefreshProbeAtMs = nowMs;
+
+        try {
+            const refreshLimit = Math.max(visibleFilteredIds.length, pageSize);
+            const probeResponse = await fetch(buildArticlesUrl(0, refreshLimit), { method: "GET" });
+            if (!probeResponse.ok) {
+                return;
+            }
+
+            const probePayload = await probeResponse.json();
+            const probeArticles = Array.isArray(probePayload.articles) ? probePayload.articles : [];
+            const probeIds = probeArticles
+                .map(article => String(article.article_id || "").trim())
+                .filter(articleId => articleId !== "");
+
+            if (
+                probeIds.length === visibleFilteredIds.length
+                && probeIds.every((articleId, index) => articleId === visibleFilteredIds[index])
+            ) {
+                return;
+            }
+
+            renderArticles(probePayload);
+
+            if (typeof probePayload.has_more === "boolean") {
+                hasMorePages = probePayload.has_more;
+            }
+            if (typeof probePayload.next_offset === "number") {
+                nextOffset = Math.max(0, probePayload.next_offset);
+            } else {
+                nextOffset = Math.max(0, getPagingRequestOffset());
+            }
+
+            refreshPagingSentinelObserver();
+            scheduleTouchScrollReadCheck();
+            schedulePagePrefetchCheck();
+        } catch (_error) {
+            // Keep current list if top-of-list probe fails.
+        } finally {
+            headRefreshProbeInFlight = false;
+        }
+    }
+
+    /**
      * Sync read/unread state for currently rendered cards without replacing/removing cards.
      *
      * @returns {Promise<void>}
@@ -1766,7 +1858,9 @@
 
                 const isRead = Boolean(status.isRead);
                 const isSaved = Boolean(status.isSaved);
-                if (!isRead) {
+                if (retainSessionReadCards && isRead) {
+                    sessionReadArticleIds.add(articleId);
+                } else if (!isRead) {
                     sessionReadArticleIds.delete(articleId);
                 }
 
@@ -1817,11 +1911,16 @@
 
                 if (hasMorePages) {
                     schedulePagePrefetchCheck();
+                } else {
+                    await refreshHeadArticlesIfNeeded();
                 }
                 return;
             }
 
-            appendArticlePage(payload, requestOffset);
+            const appendedCount = appendArticlePage(payload, requestOffset);
+            if (appendedCount === 0) {
+                await refreshHeadArticlesIfNeeded();
+            }
             scheduleTouchScrollReadCheck();
             schedulePagePrefetchCheck();
         } catch (_error) {
