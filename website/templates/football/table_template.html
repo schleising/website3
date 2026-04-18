@@ -1,10 +1,10 @@
 {% extends "football/football-base.html" %}
 
 {% block football_head %}
-<link rel="stylesheet" href="/css/table.css?v1.7.3">
+<link rel="stylesheet" href="/css/table.css?v1.7.7">
 {% block football_scripts %}
 {% if is_current_season|default(false) %}
-<script defer src="/js/football/table_live.js?v1.7.0"></script>
+<script defer src="/js/football/table_live.js?v1.7.4"></script>
 {% endif %}
 {% endblock %}
 {% block title %}<title>Football - {{ title }}</title>{% endblock %}
@@ -31,7 +31,7 @@
   <section class="table-grid" role="table" aria-label="{{ title }}">
     <header class="table-grid-header sticky-header" role="rowgroup">
       <div class="header-row" role="row">
-        <div class="header-data data table-cell" role="columnheader">Pos</div>
+        <div class="header-data data table-cell table-col-pos" role="columnheader">Pos</div>
         <div class="header-data data table-cell" role="columnheader">Team</div>
         <div class="header-data data table-cell centre-align" role="columnheader">Pld</div>
         <div class="header-data data table-cell centre-align medium-table" role="columnheader">W</div>
@@ -58,9 +58,11 @@
       >
         <div class="row-data data table-cell position" role="cell">
           <div class="table-position-value">{{ table_item.position }}</div>
+        </div>
+        <div class="row-data data table-cell position-delta-cell" role="cell">
           {% if table_item.has_started %}
           <div class="table-position-delta {{ table_item.css_class }}">
-            {{ table_item.score_string }}
+            {{ table_item.score_string|replace(' ', '') }}
           </div>
           {% endif %}
         </div>

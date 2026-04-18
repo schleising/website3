@@ -21,6 +21,11 @@
     --table-live-pill-py: 0.03rem;
     --table-live-pill-px: 0.16rem;
     --table-live-pill-ml: 0.35rem;
+    --table-live-pill-gap: 0.2rem;
+    --table-live-pill-width: 2.15rem;
+    --table-live-pill-radius: 0.42rem;
+    --table-live-chip-column-width: 0rem;
+    --table-position-value-width: 1.2rem;
     --table-form-font: 0.54rem;
     --table-form-margin: 0.06rem;
     --table-form-size: 0.88rem;
@@ -36,8 +41,9 @@
     --range-low-bg: rgba(149, 89, 102, 0.16);
     --range-low-boundary-bg: rgba(149, 89, 102, 0.24);
     --table-grid-columns:
-        minmax(3.4rem, 0.9fr)
-        minmax(11rem, 2.7fr)
+        minmax(1.55rem, 0.42fr)
+        minmax(0, var(--table-live-chip-column-width))
+        minmax(10.8rem, 2.52fr)
         minmax(2.7rem, 0.76fr)
         minmax(2.4rem, 0.64fr)
         minmax(2.4rem, 0.64fr)
@@ -61,6 +67,9 @@
     --table-live-pill-py: 0.04rem;
     --table-live-pill-px: 0.18rem;
     --table-live-pill-ml: 0.42rem;
+    --table-live-pill-gap: 0.24rem;
+    --table-live-pill-width: 2.28rem;
+    --table-position-value-width: 1.24rem;
     --table-form-font: 0.58rem;
     --table-form-margin: 0.08rem;
     --table-form-size: 0.94rem;
@@ -68,6 +77,10 @@
 
 .table-container[data-team-count="12"] {
     --table-row-max-height: 1.9rem;
+}
+
+.table-container:has(.table-grid-body .table-position-delta) {
+    --table-live-chip-column-width: var(--table-live-pill-width);
 }
 
 .table-grid {
@@ -160,11 +173,67 @@
 }
 
 .table-container .position {
-    justify-content: space-between;
+    justify-content: center;
+    overflow: visible;
+}
+
+.data-row > .position {
+    grid-column: 1;
 }
 
 .table-position-value {
     font-variant-numeric: tabular-nums;
+    min-width: 0;
+}
+
+.table-container .table-col-pos {
+    grid-column: span 2;
+}
+
+.table-container .position-delta-cell {
+    justify-content: center;
+    overflow: visible;
+    padding-left: 0;
+    padding-right: 0;
+}
+
+.data-row > .position-delta-cell {
+    grid-column: 2;
+}
+
+.table-container .table-position-delta {
+    justify-self: end;
+    width: var(--table-live-pill-width);
+    min-height: calc(var(--table-live-pill-font) + (2 * var(--table-live-pill-py)) + 0.22rem);
+    margin-left: 0;
+    padding: var(--table-live-pill-py) var(--table-live-pill-px);
+    border-radius: var(--table-live-pill-radius);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--table-live-pill-font);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+    color: #f8fbff;
+    background-color: color-mix(in srgb, var(--brand-soft), #4b5b71 28%);
+    box-shadow: inset 0 0 0 0.05rem rgba(248, 251, 255, 0.32);
+}
+
+.table-container .table-position-delta.winning {
+    background-color: color-mix(in srgb, var(--success), #0e7f66 14%);
+}
+
+.table-container .table-position-delta.drawing {
+    color: #1c2432;
+    background-color: color-mix(in srgb, var(--warning), #f7fbff 20%);
+    box-shadow: inset 0 0 0 0.05rem rgba(28, 36, 50, 0.2);
+}
+
+.table-container .table-position-delta.losing {
+    background-color: color-mix(in srgb, var(--danger), #9e3146 16%);
 }
 
 .data-row.table-zone-ucl > .position {
@@ -224,7 +293,7 @@
 .table-container .live-position {
     font-size: var(--table-live-pill-font);
     padding: var(--table-live-pill-py) var(--table-live-pill-px);
-    margin-left: var(--table-live-pill-ml);
+    margin-left: 0;
 }
 
 .table-container .form-container {
@@ -254,8 +323,9 @@
         --table-cell-py: 0.1rem;
         --table-cell-px: 0.68rem;
         --table-grid-columns:
-            minmax(3.2rem, 0.9fr)
-            minmax(9.6rem, 2.6fr)
+            minmax(1.45rem, 0.46fr)
+            minmax(0, var(--table-live-chip-column-width))
+            minmax(9.3rem, 2.38fr)
             minmax(2.5rem, 0.74fr)
             minmax(2.3rem, 0.62fr)
             minmax(2.3rem, 0.62fr)
@@ -290,11 +360,12 @@
         --table-form-margin: 0.04rem;
         --table-form-size: 0.78rem;
         --table-grid-columns:
-            minmax(3rem, 0.95fr)
-            minmax(9rem, 3.2fr)
-            minmax(2.4rem, 0.8fr)
-            minmax(2.6rem, 0.9fr)
-            minmax(2.6rem, 0.9fr);
+            minmax(1.42rem, 0.52fr)
+            minmax(0, var(--table-live-chip-column-width))
+            minmax(8.28rem, 2.74fr)
+            minmax(2.24rem, 0.8fr)
+            minmax(2.36rem, 0.86fr)
+            minmax(2.36rem, 0.86fr);
     }
 
     .table-container[data-team-count="22"] {
@@ -306,6 +377,9 @@
         --table-live-pill-py: 0.02rem;
         --table-live-pill-px: 0.14rem;
         --table-live-pill-ml: 0.27rem;
+        --table-live-pill-gap: 0.16rem;
+        --table-live-pill-width: 2.02rem;
+        --table-position-value-width: 1.12rem;
         --table-form-margin: 0.03rem;
         --table-form-size: 0.74rem;
     }
@@ -314,6 +388,9 @@
         --table-cell-py: 0.08rem;
         --table-cell-px: 0.56rem;
         --table-badge-size: 1rem;
+        --table-live-pill-gap: 0.2rem;
+        --table-live-pill-width: 2.14rem;
+        --table-position-value-width: 1.2rem;
         --table-form-margin: 0.05rem;
         --table-form-size: 0.84rem;
     }

@@ -53,22 +53,23 @@ function updateTextIfChanged(element, value) {
 }
 
 function updatePositionDelta(row, tableItem) {
-    const positionCell = row.querySelector(".position");
-    if (!positionCell) {
+    const deltaCell = row.querySelector(".position-delta-cell");
+    if (!deltaCell) {
         return;
     }
 
-    let deltaElement = positionCell.querySelector(".table-position-delta");
+    let deltaElement = deltaCell.querySelector(".table-position-delta");
 
     if (tableItem.has_started) {
         if (!deltaElement) {
             deltaElement = document.createElement("div");
             deltaElement.classList.add("table-position-delta");
-            positionCell.appendChild(deltaElement);
+            deltaCell.appendChild(deltaElement);
         }
 
         deltaElement.className = `table-position-delta ${tableItem.css_class || ""}`.trim();
-        updateTextIfChanged(deltaElement, tableItem.score_string || "");
+        const compactScore = String(tableItem.score_string || "").replaceAll(" ", "");
+        updateTextIfChanged(deltaElement, compactScore);
         return;
     }
 
