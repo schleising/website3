@@ -71,6 +71,12 @@
     /** @type {boolean} */
     let touchScrollReadScheduled = false;
 
+    /** @type {Intl.DateTimeFormat} */
+    const articleTimeFormatter = new Intl.DateTimeFormat(undefined, {
+        dateStyle: "medium",
+        timeStyle: "short",
+    });
+
     /** @type {Set<string>} */
     const sessionReadArticleIds = new Set();
 
@@ -179,6 +185,32 @@
     }
 
     /**
+     * Convert datetime strings to current-client-locale text.
+     *
+     * @param {ParentNode} scope
+     */
+    function localizeTimeNodes(scope) {
+        const timeNodes = scope.querySelectorAll("time[datetime]");
+        timeNodes.forEach(timeNode => {
+            if (!(timeNode instanceof HTMLTimeElement)) {
+                return;
+            }
+
+            const rawDatetime = String(timeNode.dateTime || "").trim();
+            if (rawDatetime === "") {
+                return;
+            }
+
+            const parsedDate = new Date(rawDatetime);
+            if (Number.isNaN(parsedDate.getTime())) {
+                return;
+            }
+
+            timeNode.textContent = articleTimeFormatter.format(parsedDate);
+        });
+    }
+
+    /**
      * Extract card article ID.
      *
      * @param {HTMLElement} card
@@ -266,6 +298,7 @@
         const markReadOnSelect = Boolean(options.markReadOnSelect);
         const shouldScrollIntoView = options.scrollIntoView !== false;
         const preferTopAlign = options.scrollMode === "top-if-needed";
+        const forceTopAlign = options.scrollMode === "top-always";
 
         const cards = getCards();
         if (cards.length === 0) {
@@ -282,8 +315,11 @@
 
         cards[boundedIndex].focus({ preventScroll: true });
         if (shouldScrollIntoView) {
-            if (preferTopAlign) {
-                const selectedCard = cards[boundedIndex];
+            const selectedCard = cards[boundedIndex];
+
+            if (forceTopAlign) {
+                selectedCard.scrollIntoView({ block: "start" });
+            } else if (preferTopAlign) {
                 const rect = selectedCard.getBoundingClientRect();
                 const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
                 const needsTopAlignment = rect.top < 0 || rect.top > viewportHeight || rect.bottom > viewportHeight;
@@ -292,7 +328,7 @@
                     selectedCard.scrollIntoView({ block: "start" });
                 }
             } else {
-                cards[boundedIndex].scrollIntoView({ block: "nearest" });
+                selectedCard.scrollIntoView({ block: "nearest" });
             }
         }
 
@@ -513,7 +549,7 @@
             const date = new Date(article.published_at);
             const time = document.createElement("time");
             time.dateTime = date.toISOString();
-            time.textContent = date.toLocaleString();
+            time.textContent = articleTimeFormatter.format(date);
             rightMeta.appendChild(time);
         }
 
@@ -548,10 +584,11 @@
             card.appendChild(media);
         }
 
-        if (article.author) {
+        const authorName = String(article.author || "").trim() || String(article.feed_title || "").trim();
+        if (authorName !== "") {
             const author = document.createElement("p");
             author.className = "feed-article-author";
-            author.textContent = `By ${String(article.author)}`;
+            author.textContent = `By ${authorName}`;
             card.appendChild(author);
         }
 
@@ -851,7 +888,10 @@
 
         if (event.key === "j") {
             event.preventDefault();
-            setSelectedIndex(selectedIndex + 1, { markReadOnSelect: true });
+            setSelectedIndex(selectedIndex + 1, {
+                markReadOnSelect: true,
+                scrollMode: "top-always",
+            });
             return;
         }
 
@@ -859,7 +899,7 @@
             event.preventDefault();
             setSelectedIndex(selectedIndex - 1, {
                 markReadOnSelect: true,
-                scrollMode: "top-if-needed",
+                scrollMode: "top-always",
             });
             return;
         }
@@ -935,6 +975,7 @@
 
     // Initialize card selection from SSR content and start polling.
     initializeArticleBadgeStateFromSsr();
+    localizeTimeNodes(articleList);
     syncSidebarSelection();
 
     clearCardSelection();

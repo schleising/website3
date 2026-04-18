@@ -47,8 +47,9 @@
       </figure>
       {% endif %}
 
-      {% if article.author %}
-      <p class="feed-article-author">By {{ article.author }}</p>
+      {% set author_display = article.author or article.feed_title %}
+      {% if author_display %}
+      <p class="feed-article-author">By {{ author_display }}</p>
       {% endif %}
 
       {% if article.summary_html %}
