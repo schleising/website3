@@ -54,10 +54,22 @@
     let hasMorePages = String(root.dataset.hasMore || "false").toLowerCase() === "true";
     /** @type {number} */
     const prefetchRemainingThreshold = 3;
+    /** @type {number} */
+    const maxAutoPagesPerCycle = 3;
+    /** @type {number} */
+    const pageLoadRetryDelayMs = 900;
+    /** @type {number} */
+    const pagingWatchdogIntervalMs = 1200;
     /** @type {boolean} */
     let pageLoadInFlight = false;
     /** @type {boolean} */
     let pagePrefetchScheduled = false;
+    /** @type {number | null} */
+    let pageLoadRetryTimerId = null;
+    /** @type {number | null} */
+    let pagingWatchdogTimerId = null;
+    /** @type {IntersectionObserver | null} */
+    let pagingSentinelObserver = null;
     /** @type {string} */
     const csrfToken = root.dataset.csrfToken || "";
 
@@ -218,6 +230,7 @@
             <p class="feeds-empty-state-text">${emptyHintMessage}</p>
         `;
         articleList.appendChild(hint);
+        refreshPagingSentinelObserver();
     }
 
     /**
@@ -778,6 +791,7 @@
 
         pendingReadIds.add(articleId);
         syncCardUnreadAction(card);
+        schedulePagePrefetchCheck();
 
         try {
             const response = await fetch(buildMarkReadUrl(articleId), {
@@ -798,9 +812,11 @@
             setCardReadAppearance(card, true);
             setCardNewBadge(card, false);
             await refreshSidebarCounts();
+            schedulePagePrefetchCheck();
         } finally {
             pendingReadIds.delete(articleId);
             syncCardUnreadAction(card);
+            schedulePagePrefetchCheck();
         }
     }
 
@@ -822,6 +838,7 @@
 
         pendingUnreadIds.add(articleId);
         syncCardUnreadAction(card);
+        schedulePagePrefetchCheck();
 
         try {
             const response = await fetch(buildMarkUnreadUrl(articleId), {
@@ -855,6 +872,7 @@
 
                 const nextIndex = Math.max(0, Math.min(removedIndex, remainingCards.length - 1));
                 setSelectedIndex(nextIndex, { scrollIntoView: false });
+                schedulePagePrefetchCheck();
                 return;
             }
 
@@ -874,11 +892,13 @@
             }
 
             await refreshSidebarCounts();
+            schedulePagePrefetchCheck();
         } finally {
             pendingUnreadIds.delete(articleId);
             if (document.contains(card)) {
                 syncCardUnreadAction(card);
             }
+            schedulePagePrefetchCheck();
         }
     }
 
@@ -900,6 +920,7 @@
 
         pendingSaveIds.add(articleId);
         syncCardSaveAction(card);
+        schedulePagePrefetchCheck();
 
         try {
             const response = await fetch(buildMarkSaveUrl(articleId), {
@@ -915,11 +936,13 @@
 
             setCardSavedAppearance(card, true);
             await refreshSidebarCounts();
+            schedulePagePrefetchCheck();
         } finally {
             pendingSaveIds.delete(articleId);
             if (document.contains(card)) {
                 syncCardSaveAction(card);
             }
+            schedulePagePrefetchCheck();
         }
     }
 
@@ -941,6 +964,7 @@
 
         pendingUnsaveIds.add(articleId);
         syncCardSaveAction(card);
+        schedulePagePrefetchCheck();
 
         try {
             const response = await fetch(buildMarkUnsaveUrl(articleId), {
@@ -955,11 +979,13 @@
             }
             setCardSavedAppearance(card, false);
             await refreshSidebarCounts();
+            schedulePagePrefetchCheck();
         } finally {
             pendingUnsaveIds.delete(articleId);
             if (document.contains(card)) {
                 syncCardSaveAction(card);
             }
+            schedulePagePrefetchCheck();
         }
     }
 
@@ -1082,6 +1108,8 @@
             mediaImage.loading = "lazy";
             mediaImage.decoding = "async";
             mediaImage.referrerPolicy = "no-referrer";
+            mediaImage.addEventListener("load", schedulePagePrefetchCheck, { once: true });
+            mediaImage.addEventListener("error", schedulePagePrefetchCheck, { once: true });
             media.appendChild(mediaImage);
 
             card.appendChild(media);
@@ -1239,6 +1267,7 @@
 
         articleList.classList.remove("is-empty");
         articleList.replaceChildren(fragment);
+        refreshPagingSentinelObserver();
 
         if (previousSelectedId !== "") {
             const selectedIdIndex = finalIds.indexOf(previousSelectedId);
@@ -1276,17 +1305,148 @@
     }
 
     /**
+     * Compute the safest offset for the next paging request based on cards that
+     * still match the active server-side filter. This avoids skipping pages when
+     * local read/save toggles mutate what the backend would include.
+     *
+     * @returns {number}
+     */
+    function getPagingRequestOffset() {
+        const cards = getCards();
+        if (cards.length === 0) {
+            return 0;
+        }
+
+        if (selectedCategory === "saved") {
+            return cards.filter(card => {
+                const articleId = getCardArticleId(card);
+                return isCardSaved(card) && !pendingUnsaveIds.has(articleId);
+            }).length;
+        }
+
+        if (selectedCategory === "recently-read" || selectedStatus === "read") {
+            return cards.filter(card => {
+                const articleId = getCardArticleId(card);
+                return isCardMarkedRead(card) && !pendingUnreadIds.has(articleId);
+            }).length;
+        }
+
+        if (selectedStatus === "unread") {
+            return cards.filter(card => {
+                const articleId = getCardArticleId(card);
+                return !isCardMarkedRead(card) && !pendingReadIds.has(articleId);
+            }).length;
+        }
+
+        return cards.length;
+    }
+
+    /**
+     * Build or return the paging sentinel element anchored at list end.
+     *
+     * @returns {HTMLElement}
+     */
+    function ensurePagingSentinelElement() {
+        let sentinel = articleList.querySelector("#feeds-paging-sentinel");
+        if (!(sentinel instanceof HTMLElement)) {
+            sentinel = document.createElement("div");
+            sentinel.id = "feeds-paging-sentinel";
+            sentinel.className = "feeds-paging-sentinel";
+            sentinel.setAttribute("aria-hidden", "true");
+        }
+
+        articleList.appendChild(sentinel);
+        return sentinel;
+    }
+
+    /**
+     * Ensure an observer watches the bottom sentinel for near-end prefetch.
+     */
+    function refreshPagingSentinelObserver() {
+        if (!("IntersectionObserver" in window)) {
+            return;
+        }
+
+        const sentinel = ensurePagingSentinelElement();
+
+        if (!(pagingSentinelObserver instanceof IntersectionObserver)) {
+            pagingSentinelObserver = new IntersectionObserver(
+                entries => {
+                    if (entries.some(entry => entry.isIntersecting)) {
+                        schedulePagePrefetchCheck();
+                    }
+                },
+                {
+                    root: useElementScrollContainer ? scrollContainer : null,
+                    rootMargin: "0px 0px 45% 0px",
+                    threshold: 0,
+                }
+            );
+        } else {
+            pagingSentinelObserver.disconnect();
+        }
+
+        pagingSentinelObserver.observe(sentinel);
+    }
+
+    /**
+     * Queue a delayed retry after paging request failures.
+     */
+    function schedulePageLoadRetry() {
+        if (pageLoadRetryTimerId !== null) {
+            return;
+        }
+
+        pageLoadRetryTimerId = window.setTimeout(() => {
+            pageLoadRetryTimerId = null;
+            schedulePagePrefetchCheck();
+        }, pageLoadRetryDelayMs);
+    }
+
+    /**
+     * Cancel pending delayed paging retry, if any.
+     */
+    function clearPageLoadRetry() {
+        if (pageLoadRetryTimerId === null) {
+            return;
+        }
+
+        window.clearTimeout(pageLoadRetryTimerId);
+        pageLoadRetryTimerId = null;
+    }
+
+    /**
+     * Start a periodic watchdog so paging cannot stall waiting for a scroll event.
+     */
+    function startPagingWatchdog() {
+        if (pagingWatchdogTimerId !== null) {
+            return;
+        }
+
+        pagingWatchdogTimerId = window.setInterval(() => {
+            if (document.hidden || !hasMorePages || pageLoadInFlight) {
+                return;
+            }
+
+            schedulePagePrefetchCheck();
+        }, pagingWatchdogIntervalMs);
+    }
+
+    /**
      * Append one fetched page of article cards without replacing existing list state.
      *
      * @param {{ articles?: Array<Record<string, any>>, has_more?: boolean, next_offset?: number }} payload
+     * @param {number} requestOffset
      */
-    function appendArticlePage(payload) {
+    function appendArticlePage(payload, requestOffset) {
         const incomingArticles = Array.isArray(payload.articles) ? payload.articles : [];
 
         if (incomingArticles.length === 0) {
             hasMorePages = Boolean(payload.has_more);
             if (typeof payload.next_offset === "number") {
                 nextOffset = Math.max(0, payload.next_offset);
+            } else {
+                nextOffset = Math.max(0, requestOffset);
             }
             return;
         }
@@ -1343,8 +1503,10 @@
         if (typeof payload.next_offset === "number") {
             nextOffset = Math.max(0, payload.next_offset);
         } else {
-            nextOffset += incomingArticles.length;
+            nextOffset = Math.max(0, requestOffset + incomingArticles.length);
         }
+
+        refreshPagingSentinelObserver();
     }
 
     /**
@@ -1358,21 +1520,25 @@
         }
 
         pageLoadInFlight = true;
+        const requestOffset = getPagingRequestOffset();
 
         try {
-            const response = await fetch(buildArticlesUrl(nextOffset, pageSize), { method: "GET" });
+            const response = await fetch(buildArticlesUrl(requestOffset, pageSize), { method: "GET" });
             if (!response.ok) {
+                schedulePageLoadRetry();
                 return;
             }
 
             const payload = await response.json();
-            appendArticlePage(payload);
+            clearPageLoadRetry();
+            appendArticlePage(payload, requestOffset);
             scheduleTouchScrollReadCheck();
-            schedulePagePrefetchCheck();
         } catch (_error) {
             // Keep current list if paging request fails.
+            schedulePageLoadRetry();
         } finally {
             pageLoadInFlight = false;
+            schedulePagePrefetchCheck();
         }
     }
 
@@ -1382,15 +1548,24 @@
      * @returns {Promise<void>}
      */
     async function maybePrefetchNextPage() {
-        if (!hasMorePages || pageLoadInFlight) {
-            return;
-        }
+        for (let cycle = 0; cycle < maxAutoPagesPerCycle; cycle += 1) {
+            if (!hasMorePages || pageLoadInFlight) {
+                return;
+            }
 
-        if (countCardsBelowViewport() > prefetchRemainingThreshold) {
-            return;
-        }
+            if (countCardsBelowViewport() > prefetchRemainingThreshold) {
+                return;
+            }
 
-        await loadNextPage();
+            const previousOffset = nextOffset;
+            const previousCardCount = getCards().length;
+            await loadNextPage();
+
+            const currentCardCount = getCards().length;
+            if (nextOffset === previousOffset && currentCardCount === previousCardCount) {
+                return;
+            }
+        }
     }
 
     /**
@@ -1749,6 +1924,17 @@
     }
     window.addEventListener("scroll", schedulePagePrefetchCheck, { passive: true });
     window.addEventListener("resize", schedulePagePrefetchCheck, { passive: true });
+    window.addEventListener("orientationchange", schedulePagePrefetchCheck, { passive: true });
+
+    if (isTouchOnlyDevice) {
+        window.addEventListener("touchmove", schedulePagePrefetchCheck, { passive: true });
+    }
+
+    document.addEventListener("visibilitychange", () => {
+        if (!document.hidden) {
+            schedulePagePrefetchCheck();
+        }
+    });
 
     document.addEventListener("keydown", onKeyDown);
 
@@ -1763,6 +1949,8 @@
     syncSidebarSelection();
 
     clearCardSelection();
+    refreshPagingSentinelObserver();
+    startPagingWatchdog();
     scheduleTouchScrollReadCheck();
     schedulePagePrefetchCheck();
 

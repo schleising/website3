@@ -30,6 +30,15 @@
     gap: 0.9rem;
 }
 
+.feeds-paging-sentinel {
+    width: 100%;
+    min-height: 1px;
+    margin: 0;
+    padding: 0;
+    pointer-events: none;
+    opacity: 0;
+}
+
 .feeds-article-list.is-empty {
     min-height: clamp(20rem, 58vh, 34rem);
     justify-content: center;
