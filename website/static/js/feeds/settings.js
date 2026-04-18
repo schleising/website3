@@ -243,8 +243,8 @@
             return;
         }
 
-        const insertionPoint = container.querySelector('.feed-category-shortcut[data-category-shortcut="recently-read"]')
-            || container.querySelector('.feed-category-shortcut[data-category-shortcut="saved"]')
+        const insertionPoint = container.querySelector('.feed-category-shortcut[data-category-shortcut="saved"]')
+            || container.querySelector('.feed-category-shortcut[data-category-shortcut="recently-read"]')
             || container.querySelector('a[href="/feeds/settings/"]');
 
         const existingLinks = Array.from(container.querySelectorAll(".feed-category-link[data-category-id]"));

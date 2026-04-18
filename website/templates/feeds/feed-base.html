@@ -15,7 +15,7 @@
 {% if feed_page_mode == "reader" %}
   <script defer src="/js/feeds/reader.js?v1.0.34"></script>
 {% elif feed_page_mode == "settings" %}
-<script defer src="/js/feeds/settings.js?v1.0.22"></script>
+<script defer src="/js/feeds/settings.js?v1.0.23"></script>
 {% elif feed_page_mode == "admin" %}
 <script defer src="/js/feeds/admin.js?v1.0.0"></script>
 {% endif %}
@@ -47,14 +47,6 @@
 </a>
 {% endfor %}
 <a
-  href="/feeds/?category=recently-read"
-  class="sub-level-nav feed-sidebar-link feed-category-link feed-category-shortcut{% if selected_category == 'recently-read' %} is-current{% endif %}"
-  {% if selected_category == 'recently-read' %}aria-current="page"{% endif %}
-  data-category-shortcut="recently-read"
->
-  <span class="feed-category-name">Recently Read</span>
-</a>
-<a
   href="/feeds/?category=saved"
   class="sub-level-nav feed-sidebar-link feed-category-link feed-category-shortcut{% if selected_category == 'saved' %} is-current{% endif %}"
   {% if selected_category == 'saved' %}aria-current="page"{% endif %}
@@ -62,6 +54,14 @@
 >
   <span class="feed-category-count feed-category-unread-pill feed-category-unread-pill-all">{{ saved_count }}</span>
   <span class="feed-category-name">Saved</span>
+</a>
+<a
+  href="/feeds/?category=recently-read"
+  class="sub-level-nav feed-sidebar-link feed-category-link feed-category-shortcut{% if selected_category == 'recently-read' %} is-current{% endif %}"
+  {% if selected_category == 'recently-read' %}aria-current="page"{% endif %}
+  data-category-shortcut="recently-read"
+>
+  <span class="feed-category-name">Recently Read</span>
 </a>
 <a href="/feeds/settings/" class="sub-level-nav feed-sidebar-link{% if feed_page_mode == 'settings' %} is-current{% endif %}" {% if feed_page_mode == 'settings' %}aria-current="page"{% endif %}>Settings</a>
 {% if request.state.user != None and request.state.user.can_use_tools %}
