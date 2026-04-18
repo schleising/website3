@@ -145,9 +145,8 @@
 
 .feed-article-title {
     margin: 0;
-    font-size: 1.24rem;
+    font-size: 1.86rem;
     line-height: 1.32;
-    font-weight: 700;
 }
 
 .feed-article-title a {
@@ -652,7 +651,7 @@ body.feed-subscription-popup-open {
     }
 
     .feed-article-title {
-        font-size: 1.12rem;
+        font-size: 1.5rem;
     }
 
     .feed-category-settings-item {
