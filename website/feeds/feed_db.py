@@ -1517,6 +1517,62 @@ async def set_category_color(user_id: str, category_id: str, color_hex: str) -> 
     return FeedCategoryDocument.model_validate(updated) if updated is not None else None
 
 
+async def reorder_category_sort_order(user_id: str, category_ids: list[str]) -> bool:
+    """Persist category ordering for a user by updating sort_order values."""
+
+    if feed_categories_collection is None:
+        return False
+
+    categories = await list_category_documents(user_id)
+    existing_ids_in_order = [category.id for category in categories if category.id is not None]
+    if len(existing_ids_in_order) == 0:
+        return True
+
+    existing_ids_set = set(existing_ids_in_order)
+
+    parsed_requested_ids: list[ObjectId] = []
+    seen_requested: set[ObjectId] = set()
+    for raw_category_id in category_ids:
+        trimmed = str(raw_category_id or "").strip()
+        if trimmed == "":
+            continue
+
+        try:
+            category_object_id = ObjectId(trimmed)
+        except Exception:
+            continue
+
+        if category_object_id not in existing_ids_set or category_object_id in seen_requested:
+            continue
+
+        seen_requested.add(category_object_id)
+        parsed_requested_ids.append(category_object_id)
+
+    # Keep any categories omitted from the payload in their existing relative order.
+    reordered_ids = parsed_requested_ids + [
+        category_id
+        for category_id in existing_ids_in_order
+        if category_id not in seen_requested
+    ]
+
+    now = utc_now()
+    for sort_index, category_id in enumerate(reordered_ids):
+        await feed_categories_collection.update_one(
+            {
+                "_id": category_id,
+                "user_id": user_id,
+            },
+            {
+                "$set": {
+                    "sort_order": sort_index,
+                    "updated_at": now,
+                }
+            },
+        )
+
+    return True
+
+
 def parse_opml_entries(opml_bytes: bytes) -> tuple[list[tuple[str, str, str]], list[str]]:
     """Parse OPML bytes into tuples of (feed_url, title, category_name)."""
 

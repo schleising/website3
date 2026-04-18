@@ -224,6 +224,12 @@ class FeedCategoryColorUpdateRequest(BaseModel):
     color_hex: str
 
 
+class FeedCategoryReorderRequest(BaseModel):
+    """Request payload for persisted category ordering."""
+
+    category_ids: list[str] = Field(default_factory=list)
+
+
 class FeedOpmlImportOptions(BaseModel):
     """Optional import behavior controls for OPML ingestion."""
 

@@ -13,6 +13,7 @@
   data-category-mute-template="/feeds/api/categories/__CATEGORY_ID__/mute/"
   data-category-unmute-template="/feeds/api/categories/__CATEGORY_ID__/unmute/"
   data-category-color-template="/feeds/api/categories/__CATEGORY_ID__/color/"
+  data-category-reorder-endpoint="/feeds/api/categories/reorder/"
   data-subscription-update-template="/feeds/api/subscriptions/__SUBSCRIPTION_ID__/"
   data-subscription-delete-template="/feeds/api/subscriptions/__SUBSCRIPTION_ID__/"
   data-csrf-token="{{ request.state.csrf_token|default('') }}"
@@ -34,7 +35,17 @@
     <h4>Category Preferences</h4>
     <div id="feed-category-settings-list" class="feed-category-settings-list">
       {% for category_item in categories %}
-      <div class="feed-category-settings-item" data-category-id="{{ category_item.category_id }}">
+      <div class="feed-category-settings-item" data-category-id="{{ category_item.category_id }}" draggable="true">
+        <span class="feed-category-drag-handle" aria-hidden="true" title="Drag to reorder">
+          <svg class="feed-action-icon" viewBox="0 0 24 24" focusable="false">
+            <path d="M9 6h.01"></path>
+            <path d="M9 12h.01"></path>
+            <path d="M9 18h.01"></path>
+            <path d="M15 6h.01"></path>
+            <path d="M15 12h.01"></path>
+            <path d="M15 18h.01"></path>
+          </svg>
+        </span>
         <span class="feed-category-settings-name">{{ category_item.name }}</span>
         <div class="feed-category-settings-controls">
           <input

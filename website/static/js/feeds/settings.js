@@ -50,6 +50,8 @@
     /** @type {string} */
     const categoryColorTemplate = root.dataset.categoryColorTemplate || "";
     /** @type {string} */
+    const categoryReorderEndpoint = root.dataset.categoryReorderEndpoint || "";
+    /** @type {string} */
     const subscriptionUpdateTemplate = root.dataset.subscriptionUpdateTemplate || "";
     /** @type {string} */
     const subscriptionDeleteTemplate = root.dataset.subscriptionDeleteTemplate || "";
@@ -60,6 +62,16 @@
     let activeSubscriptionRow = null;
     /** @type {HTMLButtonElement | null} */
     let subscriptionEditTriggerButton = null;
+    /** @type {HTMLElement | null} */
+    let draggingCategoryItem = null;
+    /** @type {boolean} */
+    let categoryReorderInFlight = false;
+    /** @type {number} */
+    let categoryReorderRevision = 0;
+    /** @type {number} */
+    let categoryReorderAppliedRevision = 0;
+    /** @type {string} */
+    let dragStartCategoryOrderSignature = "";
 
     /**
      * Set user-facing status text.
@@ -149,20 +161,379 @@
     }
 
     /**
+     * Return category IDs in current settings-list DOM order.
+     *
+     * @returns {string[]}
+     */
+    function getSettingsCategoryIdsInOrder() {
+        if (!(categoryList instanceof HTMLElement)) {
+            return [];
+        }
+
+        return Array.from(categoryList.querySelectorAll(".feed-category-settings-item"))
+            .map(item => String(item.dataset.categoryId || "").trim())
+            .filter(categoryId => categoryId !== "");
+    }
+
+    /**
+     * Reorder right-sidebar category links to match provided category IDs.
+     *
+     * @param {string[]} orderedCategoryIds
+     */
+    function reorderSidebarCategoryLinks(orderedCategoryIds) {
+        if (!Array.isArray(orderedCategoryIds) || orderedCategoryIds.length === 0) {
+            return;
+        }
+
+        const allLink = document.querySelector('.feed-category-shortcut[data-category-shortcut="all"]');
+        const firstCategoryLink = document.querySelector(".feed-category-link[data-category-id]");
+        const container = (allLink instanceof HTMLElement ? allLink.parentElement : null)
+            || (firstCategoryLink instanceof HTMLElement ? firstCategoryLink.parentElement : null);
+        if (!(container instanceof HTMLElement)) {
+            return;
+        }
+
+        const insertionPoint = container.querySelector('.feed-category-shortcut[data-category-shortcut="recently-read"]')
+            || container.querySelector('.feed-category-shortcut[data-category-shortcut="saved"]')
+            || container.querySelector('a[href="/feeds/settings/"]');
+
+        const existingLinks = Array.from(container.querySelectorAll(".feed-category-link[data-category-id]"));
+        const linkByCategoryId = new Map(
+            existingLinks
+                .filter(link => link instanceof HTMLElement)
+                .map(link => [String(link.dataset.categoryId || ""), link])
+        );
+
+        orderedCategoryIds.forEach(categoryId => {
+            const link = linkByCategoryId.get(categoryId);
+            if (!(link instanceof HTMLElement)) {
+                return;
+            }
+
+            if (insertionPoint instanceof HTMLElement) {
+                container.insertBefore(link, insertionPoint);
+            } else {
+                container.appendChild(link);
+            }
+        });
+    }
+
+    /**
+     * Reorder options in a select element to match category ordering.
+     *
+     * @param {HTMLSelectElement} select
+     * @param {string[]} orderedCategoryIds
+     */
+    function reorderCategoryOptionsInSelect(select, orderedCategoryIds) {
+        const optionByValue = new Map(
+            Array.from(select.options).map(option => [option.value, option])
+        );
+
+        orderedCategoryIds.forEach(categoryId => {
+            const option = optionByValue.get(categoryId);
+            if (option instanceof HTMLOptionElement) {
+                select.appendChild(option);
+            }
+        });
+    }
+
+    /**
+     * Keep subscription category selects in settings-order.
+     *
+     * @param {string[]} orderedCategoryIds
+     */
+    function reorderAllCategorySelects(orderedCategoryIds) {
+        if (!Array.isArray(orderedCategoryIds) || orderedCategoryIds.length === 0) {
+            return;
+        }
+
+        const selects = document.querySelectorAll(
+            ".feed-subscription-category-select"
+        );
+
+        selects.forEach(select => {
+            if (select instanceof HTMLSelectElement) {
+                reorderCategoryOptionsInSelect(select, orderedCategoryIds);
+            }
+        });
+    }
+
+    /**
+     * Persist category order after drag/drop interaction.
+     *
+     * @returns {Promise<void>}
+     */
+    async function persistCategoryOrderIfNeeded() {
+        if (!(categoryList instanceof HTMLElement) || categoryReorderEndpoint === "") {
+            return;
+        }
+
+        if (categoryReorderInFlight) {
+            return;
+        }
+
+        if (categoryReorderAppliedRevision >= categoryReorderRevision) {
+            return;
+        }
+
+        categoryReorderInFlight = true;
+        const revisionAtStart = categoryReorderRevision;
+        const orderedCategoryIds = getSettingsCategoryIdsInOrder();
+
+        setStatus("Saving category order...");
+
+        try {
+            const payload = await requestJson(categoryReorderEndpoint, "POST", {
+                category_ids: orderedCategoryIds,
+            });
+
+            const categories = Array.isArray(payload.categories) ? payload.categories : [];
+            const backendOrder = categories
+                .map(category => String(category.category_id || "").trim())
+                .filter(categoryId => categoryId !== "");
+
+            reorderSidebarCategoryLinks(backendOrder.length > 0 ? backendOrder : orderedCategoryIds);
+            reorderAllCategorySelects(backendOrder.length > 0 ? backendOrder : orderedCategoryIds);
+            updateSidebarCounts(payload);
+
+            categoryReorderAppliedRevision = revisionAtStart;
+            setStatus("Category order updated.");
+        } catch (error) {
+            setStatus(error instanceof Error ? error.message : "Unable to update category order.", true);
+        } finally {
+            categoryReorderInFlight = false;
+            if (categoryReorderAppliedRevision < categoryReorderRevision) {
+                window.setTimeout(() => {
+                    void persistCategoryOrderIfNeeded();
+                }, 0);
+            }
+        }
+    }
+
+    /**
+     * Mark category ordering as changed and queue persistence.
+     */
+    function queueCategoryOrderPersist() {
+        categoryReorderRevision += 1;
+        void persistCategoryOrderIfNeeded();
+    }
+
+    /**
+     * Apply muted visual/label state to a category mute toggle button.
+     *
+     * @param {HTMLButtonElement} button
+     * @param {boolean} muted
+     * @param {string} categoryName
+     */
+    function applyMuteButtonState(button, muted, categoryName) {
+        button.dataset.muted = muted ? "true" : "false";
+        button.classList.toggle("is-muted", muted);
+        const nextLabel = `${muted ? "Unmute" : "Mute"} category${categoryName !== "" ? ` ${categoryName}` : ""}`;
+        button.setAttribute("aria-label", nextLabel);
+        button.title = nextLabel;
+    }
+
+    /**
+     * Update category option labels across all category select controls.
+     *
+     * @param {string} categoryId
+     * @param {string} categoryName
+     */
+    function updateCategoryOptionLabels(categoryId, categoryName) {
+        if (categoryId === "" || categoryName.trim() === "") {
+            return;
+        }
+
+        const selects = document.querySelectorAll(".feed-subscription-category-select");
+        selects.forEach(select => {
+            if (!(select instanceof HTMLSelectElement)) {
+                return;
+            }
+
+            const option = select.querySelector(`option[value="${CSS.escape(categoryId)}"]`);
+            if (option instanceof HTMLOptionElement) {
+                option.textContent = categoryName;
+            }
+        });
+    }
+
+    /**
+     * Create a category settings row from API category payload.
+     *
+     * @param {Record<string, any>} category
+     * @returns {HTMLElement}
+     */
+    function createCategorySettingsItem(category) {
+        const categoryId = String(category.category_id || "").trim();
+        const categoryName = String(category.name || "Category").trim() || "Category";
+        const colorHex = String(category.color_hex || "#1F6FEB").trim() || "#1F6FEB";
+        const muted = Boolean(category.muted);
+
+        const item = document.createElement("div");
+        item.className = "feed-category-settings-item";
+        item.dataset.categoryId = categoryId;
+        item.setAttribute("draggable", "true");
+
+        const dragHandle = document.createElement("span");
+        dragHandle.className = "feed-category-drag-handle";
+        dragHandle.setAttribute("aria-hidden", "true");
+        dragHandle.title = "Drag to reorder";
+        dragHandle.innerHTML = `
+            <svg class="feed-action-icon" viewBox="0 0 24 24" focusable="false">
+                <path d="M9 6h.01"></path>
+                <path d="M9 12h.01"></path>
+                <path d="M9 18h.01"></path>
+                <path d="M15 6h.01"></path>
+                <path d="M15 12h.01"></path>
+                <path d="M15 18h.01"></path>
+            </svg>
+        `;
+
+        const nameNode = document.createElement("span");
+        nameNode.className = "feed-category-settings-name";
+        nameNode.textContent = categoryName;
+
+        const controls = document.createElement("div");
+        controls.className = "feed-category-settings-controls";
+
+        const colorInput = document.createElement("input");
+        colorInput.type = "color";
+        colorInput.className = "feed-category-color-input";
+        colorInput.value = colorHex;
+        colorInput.setAttribute("aria-label", `Select category color for ${categoryName}`);
+
+        const muteButton = document.createElement("button");
+        muteButton.type = "button";
+        muteButton.className = "btn feed-category-mute-button feed-category-mute-icon-button";
+        muteButton.innerHTML = `
+            <svg class="feed-action-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path d="M11 5L6 9H3v6h3l5 4z"></path>
+                <path class="feed-mute-icon-wave" d="M15.5 8.5a5 5 0 0 1 0 7"></path>
+                <path class="feed-mute-icon-slash" d="M4 4l16 16"></path>
+            </svg>
+        `;
+        applyMuteButtonState(muteButton, muted, categoryName);
+
+        controls.appendChild(colorInput);
+        controls.appendChild(muteButton);
+
+        item.appendChild(dragHandle);
+        item.appendChild(nameNode);
+        item.appendChild(controls);
+
+        return item;
+    }
+
+    /**
+     * Keep Category Preferences list in sync with backend categories payload.
+     *
+     * @param {Array<Record<string, any>>} categories
+     */
+    function syncCategoryPreferencesList(categories) {
+        if (!(categoryList instanceof HTMLElement)) {
+            return;
+        }
+
+        const activeElement = document.activeElement;
+        if (
+            activeElement instanceof HTMLInputElement
+            && activeElement.classList.contains("feed-category-color-input")
+        ) {
+            return;
+        }
+
+        // Do not reorder while a drag gesture or reorder request is active.
+        if (draggingCategoryItem instanceof HTMLElement || categoryReorderInFlight) {
+            return;
+        }
+
+        const categoryRows = Array.isArray(categories) ? categories : [];
+        const existingItems = Array.from(categoryList.querySelectorAll(".feed-category-settings-item"));
+        const existingById = new Map(
+            existingItems
+                .filter(item => item instanceof HTMLElement)
+                .map(item => [String(item.dataset.categoryId || "").trim(), item])
+        );
+
+        const seenIds = new Set();
+
+        categoryRows.forEach(category => {
+            const categoryId = String(category.category_id || "").trim();
+            if (categoryId === "") {
+                return;
+            }
+
+            seenIds.add(categoryId);
+            const categoryName = String(category.name || "Category").trim() || "Category";
+            const colorHex = String(category.color_hex || "#1F6FEB").trim() || "#1F6FEB";
+            const muted = Boolean(category.muted);
+
+            let item = existingById.get(categoryId);
+            if (!(item instanceof HTMLElement)) {
+                item = createCategorySettingsItem(category);
+                existingById.set(categoryId, item);
+            }
+
+            const nameNode = item.querySelector(".feed-category-settings-name");
+            if (nameNode instanceof HTMLElement) {
+                nameNode.textContent = categoryName;
+            }
+
+            const colorInput = item.querySelector(".feed-category-color-input");
+            if (colorInput instanceof HTMLInputElement && colorInput.value !== colorHex) {
+                colorInput.value = colorHex;
+            }
+            if (colorInput instanceof HTMLInputElement) {
+                colorInput.setAttribute("aria-label", `Select category color for ${categoryName}`);
+            }
+
+            const muteButton = item.querySelector(".feed-category-mute-button");
+            if (muteButton instanceof HTMLButtonElement) {
+                applyMuteButtonState(muteButton, muted, categoryName);
+            }
+
+            updateSubscriptionCategoryColor(categoryId, colorHex);
+            updateCategoryOptionLabels(categoryId, categoryName);
+
+            categoryList.appendChild(item);
+        });
+
+        existingById.forEach((item, categoryId) => {
+            if (!seenIds.has(categoryId)) {
+                item.remove();
+            }
+        });
+    }
+
+    /**
      * Update right-sidebar category count labels.
      *
-     * @param {{ all_unread_count?: number, categories?: Array<Record<string, any>> }} payload
+     * @param {{ all_unread_count?: number, saved_count?: number, categories?: Array<Record<string, any>> }} payload
      */
     function updateSidebarCounts(payload) {
         const allLink = document.querySelector('.feed-category-shortcut[data-category-shortcut="all"]');
+        const savedLink = document.querySelector('.feed-category-shortcut[data-category-shortcut="saved"]');
         if (allLink) {
             const allCountNode = allLink.querySelector(".feed-category-count");
             if (allCountNode) {
                 allCountNode.textContent = String(Number(payload.all_unread_count || 0));
             }
         }
+        if (savedLink) {
+            const savedCountNode = savedLink.querySelector(".feed-category-count");
+            if (savedCountNode) {
+                savedCountNode.textContent = String(Number(payload.saved_count || 0));
+            }
+        }
 
         const categories = Array.isArray(payload.categories) ? payload.categories : [];
+        const orderedCategoryIds = categories
+            .map(category => String(category.category_id || "").trim())
+            .filter(categoryId => categoryId !== "");
+
+        reorderSidebarCategoryLinks(orderedCategoryIds);
+        reorderAllCategorySelects(orderedCategoryIds);
+
         categories.forEach(category => {
             const categoryId = String(category.category_id || "");
             const link = document.querySelector(`.feed-category-link[data-category-id="${CSS.escape(categoryId)}"]`);
@@ -193,6 +564,8 @@
             }
 
             const payload = await response.json();
+            const categories = Array.isArray(payload.categories) ? payload.categories : [];
+            syncCategoryPreferencesList(categories);
             updateSidebarCounts(payload);
         } catch (_error) {
             // Ignore sidebar refresh failures to avoid blocking settings interactions.
@@ -572,6 +945,152 @@
     }
 
     /**
+     * Remove temporary drop-target highlighting from category items.
+     */
+    function clearCategoryDropTargets() {
+        if (!(categoryList instanceof HTMLElement)) {
+            return;
+        }
+
+        const highlightedItems = categoryList.querySelectorAll(".feed-category-settings-item.is-drop-target");
+        highlightedItems.forEach(item => {
+            if (item instanceof HTMLElement) {
+                item.classList.remove("is-drop-target");
+            }
+        });
+    }
+
+    /**
+     * Begin category drag operation.
+     *
+     * @param {DragEvent} event
+     */
+    function onCategoryDragStart(event) {
+        const target = /** @type {HTMLElement | null} */ (event.target instanceof HTMLElement ? event.target : null);
+        if (!target) {
+            return;
+        }
+
+        const item = target.closest(".feed-category-settings-item");
+        if (!(item instanceof HTMLElement)) {
+            return;
+        }
+
+        // Keep controls interactive; drag starts from the row body/handle.
+        if (target.closest(".feed-category-settings-controls")) {
+            event.preventDefault();
+            return;
+        }
+
+        draggingCategoryItem = item;
+        dragStartCategoryOrderSignature = getSettingsCategoryIdsInOrder().join(",");
+        item.classList.add("is-dragging");
+        clearCategoryDropTargets();
+
+        if (event.dataTransfer) {
+            event.dataTransfer.effectAllowed = "move";
+            event.dataTransfer.setData("text/plain", String(item.dataset.categoryId || ""));
+        }
+    }
+
+    /**
+     * Reposition dragging category row while hovering over peers.
+     *
+     * @param {DragEvent} event
+     */
+    function onCategoryDragOver(event) {
+        if (!(categoryList instanceof HTMLElement) || !(draggingCategoryItem instanceof HTMLElement)) {
+            return;
+        }
+
+        const target = /** @type {HTMLElement | null} */ (event.target instanceof HTMLElement ? event.target : null);
+        if (!target) {
+            return;
+        }
+
+        const targetItem = target.closest(".feed-category-settings-item");
+        if (!(targetItem instanceof HTMLElement) || targetItem === draggingCategoryItem) {
+            return;
+        }
+
+        event.preventDefault();
+        if (event.dataTransfer) {
+            event.dataTransfer.dropEffect = "move";
+        }
+
+        clearCategoryDropTargets();
+        targetItem.classList.add("is-drop-target");
+
+        const targetRect = targetItem.getBoundingClientRect();
+        const shouldInsertAfter = (event.clientY - targetRect.top) > (targetRect.height / 2);
+
+        if (shouldInsertAfter) {
+            if (targetItem.nextSibling !== draggingCategoryItem) {
+                categoryList.insertBefore(draggingCategoryItem, targetItem.nextSibling);
+            }
+            return;
+        }
+
+        if (draggingCategoryItem.nextSibling !== targetItem) {
+            categoryList.insertBefore(draggingCategoryItem, targetItem);
+        }
+    }
+
+    /**
+     * Keep drop enabled when hovering over the category list container.
+     *
+     * @param {DragEvent} event
+     */
+    function onCategoryDrop(event) {
+        if (!(draggingCategoryItem instanceof HTMLElement)) {
+            return;
+        }
+
+        event.preventDefault();
+    }
+
+    /**
+     * Finalize drag operation and persist order if changed.
+     */
+    function onCategoryDragEnd() {
+        if (!(draggingCategoryItem instanceof HTMLElement)) {
+            return;
+        }
+
+        draggingCategoryItem.classList.remove("is-dragging");
+        draggingCategoryItem = null;
+        clearCategoryDropTargets();
+
+        const finalSignature = getSettingsCategoryIdsInOrder().join(",");
+        if (finalSignature === dragStartCategoryOrderSignature) {
+            return;
+        }
+
+        queueCategoryOrderPersist();
+    }
+
+    /**
+     * Enable category drag/drop interactions.
+     */
+    function initializeCategoryDragAndDrop() {
+        if (!(categoryList instanceof HTMLElement)) {
+            return;
+        }
+
+        const items = categoryList.querySelectorAll(".feed-category-settings-item");
+        items.forEach(item => {
+            if (item instanceof HTMLElement) {
+                item.setAttribute("draggable", "true");
+            }
+        });
+
+        categoryList.addEventListener("dragstart", onCategoryDragStart);
+        categoryList.addEventListener("dragover", onCategoryDragOver);
+        categoryList.addEventListener("drop", onCategoryDrop);
+        categoryList.addEventListener("dragend", onCategoryDragEnd);
+    }
+
+    /**
      * Handle mute/unmute actions for category buttons.
      *
      * @param {MouseEvent} event
@@ -612,11 +1131,7 @@
         try {
             const payload = await requestJson(endpoint, "POST", {});
             const nowMuted = Boolean(payload.muted);
-            actionButton.dataset.muted = nowMuted ? "true" : "false";
-            actionButton.classList.toggle("is-muted", nowMuted);
-            const nextLabel = `${nowMuted ? "Unmute" : "Mute"} category${categoryName !== "" ? ` ${categoryName}` : ""}`;
-            actionButton.setAttribute("aria-label", nextLabel);
-            actionButton.title = nextLabel;
+            applyMuteButtonState(actionButton, nowMuted, categoryName);
             setStatus(nowMuted ? "Category muted." : "Category unmuted.");
             await refreshSidebarCounts();
         } catch (error) {
@@ -765,6 +1280,11 @@
     if (categoryList) {
         categoryList.addEventListener("click", onCategoryButtonClick);
         categoryList.addEventListener("change", onCategoryColorChange);
+        initializeCategoryDragAndDrop();
+
+        const initialCategoryOrder = getSettingsCategoryIdsInOrder();
+        reorderSidebarCategoryLinks(initialCategoryOrder);
+        reorderAllCategorySelects(initialCategoryOrder);
     }
 
     if (subscriptionTableWrap) {

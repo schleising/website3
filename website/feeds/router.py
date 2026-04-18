@@ -23,6 +23,7 @@ from .feed_db import (
     mark_article_unread,
     mark_article_unsaved,
     normalize_color_hex,
+    reorder_category_sort_order,
     set_category_color,
     set_category_muted,
     update_subscription_details,
@@ -35,6 +36,7 @@ from .models import (
     FeedCategoryColorUpdateRequest,
     FeedCategoryListResponse,
     FeedCategoryOperationResponse,
+    FeedCategoryReorderRequest,
     FeedOpmlImportOptions,
     FeedOpmlImportResult,
     FeedSubscriptionCreateRequest,
@@ -495,6 +497,26 @@ async def update_category_color(
         muted=updated.muted,
         color_hex=updated.color_hex,
     )
+
+
+@feeds_router.post(
+    "/api/categories/reorder",
+    response_model=FeedCategoryListResponse,
+)
+@feeds_router.post(
+    "/api/categories/reorder/",
+    response_model=FeedCategoryListResponse,
+)
+async def reorder_categories(
+    request: Request,
+    payload: FeedCategoryReorderRequest,
+    _: None = Depends(validate_csrf),
+) -> FeedCategoryListResponse:
+    """Persist category ordering for the authenticated user."""
+
+    username = _require_logged_in_user(request)
+    await reorder_category_sort_order(username, payload.category_ids)
+    return await get_categories_with_counts(username)
 
 
 @feeds_router.post(
