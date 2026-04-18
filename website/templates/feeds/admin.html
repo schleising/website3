@@ -3,17 +3,47 @@
 {% set feed_page_mode = "admin" %}
 
 {% block feeds_content %}
-<section class="feeds-settings">
+<section
+  class="feeds-settings"
+  id="feeds-admin-root"
+  data-categories-endpoint="/feeds/api/categories/"
+  data-admin-feeds-endpoint="/feeds/api/admin/feeds/"
+>
   <article class="site-card feed-settings-card">
     <h4>Feeds Admin</h4>
     <p>Administrative feed diagnostics and controls are available on this page for tool-enabled users.</p>
   </article>
 
   <article class="site-card feed-settings-card">
-    <h4>Current Feed Snapshot</h4>
-    <p>Active categories: {{ categories|length }}</p>
-    <p>Total unread: {{ all_unread_count }}</p>
-    <p>Saved articles: {{ saved_count }}</p>
+    <h4>Subscribed Feeds (All Users)</h4>
+    <p id="feed-admin-empty"{% if feed_admin_rows|length > 0 %} hidden{% endif %}>No subscribed feeds found.</p>
+    <div class="feed-admin-table-wrap" id="feed-admin-table-wrap"{% if feed_admin_rows|length == 0 %} hidden{% endif %}>
+      <div class="feed-admin-table" role="table" aria-label="Subscribed feed refresh table">
+        <div class="feed-admin-table-row feed-admin-table-header" role="row">
+          <div class="feed-admin-cell" role="columnheader">Feed name</div>
+          <div class="feed-admin-cell" role="columnheader">Articles</div>
+          <div class="feed-admin-cell" role="columnheader">Last Refresh Time</div>
+          <div class="feed-admin-cell" role="columnheader">Next refresh time</div>
+          <div class="feed-admin-cell" role="columnheader">Last refresh status</div>
+        </div>
+
+        <div class="feed-admin-table-body" id="feed-admin-table-body">
+        {% for row in feed_admin_rows %}
+        <div class="feed-admin-table-row" role="row" data-feed-id="{{ row.feed_id }}">
+          <div class="feed-admin-cell feed-admin-feed-name" role="cell" title="{{ row.feed_name }}">{{ row.feed_name }}</div>
+          <div class="feed-admin-cell" role="cell">{{ row.article_count }}</div>
+          <div class="feed-admin-cell" role="cell">
+            <time class="feed-admin-time" data-feed-time-value="{{ row.last_refresh_at_iso }}"{% if row.last_refresh_at_iso %} datetime="{{ row.last_refresh_at_iso }}"{% endif %}>{{ row.last_refresh_at_iso if row.last_refresh_at_iso else '-' }}</time>
+          </div>
+          <div class="feed-admin-cell" role="cell">
+            <time class="feed-admin-time" data-feed-time-value="{{ row.next_refresh_at_iso }}"{% if row.next_refresh_at_iso %} datetime="{{ row.next_refresh_at_iso }}"{% endif %}>{{ row.next_refresh_at_iso if row.next_refresh_at_iso else '-' }}</time>
+          </div>
+          <div class="feed-admin-cell feed-admin-status-cell" role="cell">{{ row.last_refresh_status }}</div>
+        </div>
+        {% endfor %}
+        </div>
+      </div>
+    </div>
   </article>
 </section>
 {% endblock %}

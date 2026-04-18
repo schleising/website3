@@ -254,3 +254,20 @@ class FeedSettingsViewModel(BaseModel):
 
     categories: list[FeedCategorySummary]
     subscriptions: list[dict[str, str]]
+
+
+class FeedAdminFeedRow(BaseModel):
+    """Single row in the feeds admin table payload."""
+
+    feed_id: str
+    feed_name: str
+    article_count: int
+    last_refresh_at_iso: str = ""
+    next_refresh_at_iso: str = ""
+    last_refresh_status: str
+
+
+class FeedAdminFeedListResponse(BaseModel):
+    """Feeds admin table response payload."""
+
+    feeds: list[FeedAdminFeedRow] = Field(default_factory=list)

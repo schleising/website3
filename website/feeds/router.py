@@ -15,8 +15,10 @@ from .feed_db import (
     get_article_list,
     get_article_read_statuses,
     get_categories_with_counts,
+    get_feed_admin_context,
     get_feed_reader_context,
     get_feed_settings_context,
+    list_feed_admin_rows,
     import_opml,
     mark_article_read,
     mark_article_saved,
@@ -30,6 +32,8 @@ from .feed_db import (
     validate_feed_url,
 )
 from .models import (
+    FeedAdminFeedRow,
+    FeedAdminFeedListResponse,
     FeedArticleListResponse,
     FeedArticleStatusRequest,
     FeedArticleStatusResponse,
@@ -160,7 +164,7 @@ async def feed_admin_page(request: Request):
             detail="Feeds admin is only available to tool-enabled users.",
         )
 
-    context = await get_feed_settings_context(username)
+    context = await get_feed_admin_context(username)
 
     return TEMPLATES.TemplateResponse(
         request,
@@ -186,6 +190,31 @@ async def get_categories(request: Request) -> FeedCategoryListResponse:
 
     username = _require_logged_in_user(request)
     return await get_categories_with_counts(username)
+
+
+@feeds_router.get(
+    "/api/admin/feeds",
+    response_model=FeedAdminFeedListResponse,
+)
+@feeds_router.get(
+    "/api/admin/feeds/",
+    response_model=FeedAdminFeedListResponse,
+)
+async def get_admin_feeds(request: Request) -> FeedAdminFeedListResponse:
+    """Return subscribed feed refresh/status rows for admin users."""
+
+    _require_logged_in_user(request)
+
+    if not _request_can_use_tools(request):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Feeds admin API is only available to tool-enabled users.",
+        )
+
+    rows = await list_feed_admin_rows()
+    return FeedAdminFeedListResponse(
+        feeds=[FeedAdminFeedRow.model_validate(row) for row in rows]
+    )
 
 
 @feeds_router.get(

@@ -36,6 +36,20 @@ def utc_now() -> datetime:
     return datetime.now(UTC)
 
 
+def format_datetime_utc_iso(value: Any) -> str:
+    """Return an ISO-8601 UTC timestamp string for admin UI fields."""
+
+    if not isinstance(value, datetime):
+        return ""
+
+    if value.tzinfo is None:
+        normalized = value.replace(tzinfo=UTC)
+    else:
+        normalized = value.astimezone(UTC)
+
+    return normalized.isoformat().replace("+00:00", "Z")
+
+
 def normalize_feed_url(feed_url: str) -> str:
     """Normalize feed URL for deduplication and storage.
 
@@ -1743,6 +1757,85 @@ async def get_feed_settings_context(user_id: str) -> dict[str, Any]:
         "recently_read_count": category_payload.recently_read_count,
         "saved_count": category_payload.saved_count,
     }
+
+
+async def list_feed_admin_rows() -> list[dict[str, Any]]:
+    """Return global feed refresh/status rows for all currently subscribed feeds."""
+
+    if user_feed_subscriptions_collection is None:
+        return []
+
+    distinct_feed_ids = await user_feed_subscriptions_collection.distinct("feed_id")
+    feed_ids = [feed_id for feed_id in distinct_feed_ids if isinstance(feed_id, ObjectId)]
+    if len(feed_ids) == 0:
+        return []
+
+    sources_map = await load_sources_map(set(feed_ids))
+
+    article_counts: dict[ObjectId, int] = {}
+    if feed_articles_collection is not None:
+        count_cursor = feed_articles_collection.aggregate(
+            [
+                {
+                    "$match": {
+                        "feed_id": {"$in": feed_ids},
+                        "$or": [
+                            {"is_deleted": False},
+                            {"is_deleted": {"$exists": False}},
+                        ],
+                    }
+                },
+                {
+                    "$group": {
+                        "_id": "$feed_id",
+                        "article_count": {"$sum": 1},
+                    }
+                },
+            ]
+        )
+
+        async for count_doc in count_cursor:
+            feed_id = count_doc.get("_id")
+            if not isinstance(feed_id, ObjectId):
+                continue
+            article_counts[feed_id] = int(count_doc.get("article_count", 0))
+
+    rows: list[dict[str, Any]] = []
+    for feed_id in feed_ids:
+        source = sources_map.get(feed_id)
+        if source is None:
+            continue
+
+        feed_name = str(
+            source.get("title", source.get("normalized_url", "Feed"))
+        ).strip() or "Feed"
+        fetch_status = str(source.get("fetch_status", "new")).strip() or "new"
+
+        rows.append(
+            {
+                "feed_id": str(feed_id),
+                "feed_name": feed_name,
+                "article_count": int(article_counts.get(feed_id, 0)),
+                "last_refresh_at_iso": format_datetime_utc_iso(
+                    source.get("last_fetched_at")
+                ),
+                "next_refresh_at_iso": format_datetime_utc_iso(
+                    source.get("next_refresh_at")
+                ),
+                "last_refresh_status": fetch_status,
+            }
+        )
+
+    rows.sort(key=lambda row: str(row.get("feed_name", "")).lower())
+    return rows
+
+
+async def get_feed_admin_context(user_id: str) -> dict[str, Any]:
+    """Build template context payload for the feed admin page."""
+
+    context = await get_feed_settings_context(user_id)
+    context["feed_admin_rows"] = await list_feed_admin_rows()
+    return context
 
 
 async def log_feed_operation_error(operation_name: str, exc: Exception) -> None:

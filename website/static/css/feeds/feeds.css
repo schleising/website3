@@ -890,6 +890,52 @@ body.feed-category-color-popup-open {
     color: var(--danger);
 }
 
+.feed-admin-table-wrap {
+    width: 100%;
+    overflow-x: auto;
+}
+
+.feed-admin-table {
+    display: grid;
+    grid-template-columns: minmax(13rem, 2.3fr) minmax(7rem, 0.8fr) minmax(13rem, 1.2fr) minmax(13rem, 1.2fr) minmax(10rem, 1fr);
+    column-gap: 0.6rem;
+    align-items: center;
+    min-width: 52rem;
+}
+
+.feed-admin-table-row,
+.feed-admin-table-header {
+    display: contents;
+}
+
+.feed-admin-table-body {
+    display: contents;
+}
+
+.feed-admin-cell {
+    text-align: left;
+    padding: 0.45rem 0.5rem;
+    border-bottom: 0.0625rem solid var(--line);
+    color: var(--text);
+}
+
+.feed-admin-table-header .feed-admin-cell {
+    color: var(--text-soft);
+    font-weight: 700;
+}
+
+.feed-admin-feed-name {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.feed-admin-status-cell {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
 @media screen and (max-width: 42rem) {
     .feed-article-card {
         padding: 0.72rem;
@@ -935,6 +981,10 @@ body.feed-category-color-popup-open {
 
     .feed-subscription-grid {
         grid-template-columns: fit-content(14rem) max-content max-content;
+    }
+
+    .feed-admin-table {
+        min-width: 48rem;
     }
 
     .feed-subscription-url-cell {
