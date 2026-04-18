@@ -370,50 +370,56 @@
     overflow-x: hidden;
 }
 
-.feed-subscription-table {
-    width: 100%;
-    min-width: 0;
-    border-collapse: collapse;
-    table-layout: auto;
+.feed-subscription-grid {
+    display: grid;
+    grid-template-columns: fit-content(18rem) minmax(0, 1fr) max-content max-content;
+    align-items: center;
+    column-gap: 0.6rem;
 }
 
-.feed-subscription-table th,
-.feed-subscription-table td {
+.feed-subscription-grid-header,
+.feed-subscription-row {
+    display: contents;
+}
+
+.feed-subscription-title-cell,
+.feed-subscription-url-cell,
+.feed-subscription-category-cell,
+.feed-subscription-actions-cell {
     text-align: left;
     padding: 0.45rem 0.5rem;
     border-bottom: 0.0625rem solid var(--line);
-    vertical-align: middle;
 }
 
-.feed-subscription-table th {
+.feed-subscription-grid-header .feed-subscription-title-cell,
+.feed-subscription-grid-header .feed-subscription-url-cell,
+.feed-subscription-grid-header .feed-subscription-category-cell,
+.feed-subscription-grid-header .feed-subscription-actions-cell {
     color: var(--text-soft);
     font-weight: 700;
 }
 
 .feed-subscription-title-cell {
-    width: 1%;
-    max-width: 16rem;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
 .feed-subscription-url-cell {
-    width: auto;
-    min-width: 0;
+    display: flex;
+    align-items: center;
 }
 
 .feed-subscription-category-cell {
-    width: 1%;
     white-space: nowrap;
 }
 
 .feed-subscription-actions-cell {
-    width: 1%;
+    justify-self: end;
     white-space: nowrap;
 }
 
-.feed-subscription-table td a {
+.feed-subscription-url-link {
     display: block;
     color: var(--brand-strong);
     text-decoration: none;
@@ -423,8 +429,8 @@
     max-width: 100%;
 }
 
-.feed-subscription-table td a:hover,
-.feed-subscription-table td a:focus-visible {
+.feed-subscription-url-link:hover,
+.feed-subscription-url-link:focus-visible {
     text-decoration: underline;
 }
 
@@ -443,35 +449,16 @@
 }
 
 .feed-subscription-row .feed-subscription-url-input,
-.feed-subscription-row .feed-subscription-category-select,
-.feed-subscription-row .feed-subscription-save-button,
-.feed-subscription-row .feed-subscription-cancel-button {
+.feed-subscription-row .feed-subscription-category-select {
     display: none;
-}
-
-.feed-subscription-row.is-editing .feed-subscription-url-link,
-.feed-subscription-row.is-editing .feed-subscription-category-pill,
-.feed-subscription-row.is-editing .feed-subscription-edit-button {
-    display: none;
-}
-
-.feed-subscription-row.is-editing .feed-subscription-url-input,
-.feed-subscription-row.is-editing .feed-subscription-category-select,
-.feed-subscription-row.is-editing .feed-subscription-save-button,
-.feed-subscription-row.is-editing .feed-subscription-cancel-button {
-    display: inline-flex;
-}
-
-.feed-subscription-row.is-editing .feed-subscription-url-input,
-.feed-subscription-row.is-editing .feed-subscription-category-select {
-    display: block;
 }
 
 .feed-subscription-actions {
     display: flex;
     justify-content: flex-end;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     gap: 0.4rem;
+    white-space: nowrap;
 }
 
 .feed-subscription-cancel-button {
@@ -496,6 +483,103 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
+}
+
+.feed-subscription-edit-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(7, 16, 31, 0.56);
+    backdrop-filter: blur(0.1rem);
+    z-index: 58;
+}
+
+.feed-subscription-edit-popup {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: min(32rem, calc(100vw - 2rem));
+    max-height: calc(100vh - 2rem);
+    overflow: auto;
+    z-index: 59;
+    display: grid;
+    gap: 0.8rem;
+    padding: 1rem;
+}
+
+.feed-subscription-edit-popup.hidden,
+.feed-subscription-edit-backdrop.hidden {
+    display: none;
+}
+
+.feed-subscription-edit-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.6rem;
+}
+
+.feed-subscription-edit-header h4 {
+    margin: 0;
+}
+
+.feed-subscription-edit-close {
+    width: 2rem;
+    min-width: 2rem;
+    min-height: 2rem;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 0.0625rem solid color-mix(in srgb, var(--line), #d5e3f6 55%);
+    background: #e8f1fc;
+    color: var(--brand-strong);
+    font-weight: 700;
+}
+
+.feed-subscription-edit-close:hover,
+.feed-subscription-edit-close:focus-visible {
+    background: #d5e6fb;
+    border-color: color-mix(in srgb, var(--brand-strong), #ffffff 45%);
+}
+
+.feed-subscription-edit-form {
+    display: grid;
+    gap: 0.7rem;
+}
+
+.feed-subscription-edit-form .site-select-menu {
+    width: 100%;
+}
+
+.feed-subscription-edit-form .site-select-trigger {
+    min-height: 2.1rem;
+}
+
+.feed-subscription-edit-popup.has-open-select-menu {
+    max-height: calc(100vh - 0.5rem);
+}
+
+.feed-subscription-edit-popup.has-open-select-menu .site-select-options {
+    position: static;
+    top: auto;
+    left: auto;
+    right: auto;
+    margin-top: 0.3rem;
+    width: 100%;
+    max-height: min(50vh, 18rem);
+    z-index: auto;
+}
+
+.feed-subscription-edit-actions {
+    display: flex;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 0.55rem;
+}
+
+body.feed-subscription-popup-open {
+    overflow: hidden;
 }
 
 .feed-action-icon {
@@ -545,6 +629,14 @@
 
     .feed-category-settings-controls {
         justify-content: flex-end;
+    }
+
+    .feed-subscription-grid {
+        grid-template-columns: fit-content(14rem) max-content max-content;
+    }
+
+    .feed-subscription-url-cell {
+        display: none;
     }
 
     .right-sidebar .feed-sidebar-link {

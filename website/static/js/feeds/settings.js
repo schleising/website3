@@ -20,6 +20,22 @@
     const subscriptionTableWrap = document.getElementById("feed-subscription-table-wrap");
     /** @type {HTMLElement | null} */
     const statusNode = document.getElementById("feed-settings-status");
+    /** @type {HTMLElement | null} */
+    const subscriptionEditPopup = document.getElementById("feed-subscription-edit-popup");
+    /** @type {HTMLElement | null} */
+    const subscriptionEditBackdrop = document.getElementById("feed-subscription-edit-backdrop");
+    /** @type {HTMLFormElement | null} */
+    const subscriptionEditForm = document.getElementById("feed-subscription-edit-form");
+    /** @type {HTMLInputElement | null} */
+    const subscriptionEditIdInput = document.getElementById("feed-subscription-edit-id");
+    /** @type {HTMLInputElement | null} */
+    const subscriptionEditUrlInput = document.getElementById("feed-subscription-edit-url");
+    /** @type {HTMLSelectElement | null} */
+    const subscriptionEditCategorySelect = document.getElementById("feed-subscription-edit-category");
+    /** @type {HTMLButtonElement | null} */
+    const subscriptionEditCloseButton = document.getElementById("feed-subscription-edit-close");
+    /** @type {HTMLButtonElement | null} */
+    const subscriptionEditCancelButton = document.getElementById("feed-subscription-edit-cancel");
 
     /** @type {string} */
     const categoriesEndpoint = root.dataset.categoriesEndpoint || "/feeds/api/categories/";
@@ -39,6 +55,11 @@
     const subscriptionDeleteTemplate = root.dataset.subscriptionDeleteTemplate || "";
     /** @type {string} */
     const csrfToken = root.dataset.csrfToken || "";
+
+    /** @type {HTMLElement | null} */
+    let activeSubscriptionRow = null;
+    /** @type {HTMLButtonElement | null} */
+    let subscriptionEditTriggerButton = null;
 
     /**
      * Set user-facing status text.
@@ -287,23 +308,163 @@
     }
 
     /**
-     * Toggle row editing state and focus the URL input when entering edit mode.
+     * Toggle subscription edit popup visibility.
      *
-     * @param {HTMLElement} row
-     * @param {boolean} isEditing
+     * @param {boolean} isOpen
      */
-    function setSubscriptionRowEditMode(row, isEditing) {
-        row.classList.toggle("is-editing", isEditing);
-        row.dataset.isEditing = isEditing ? "true" : "false";
-
-        if (!isEditing) {
+    function setSubscriptionEditPopupVisibility(isOpen) {
+        if (!(subscriptionEditPopup instanceof HTMLElement) || !(subscriptionEditBackdrop instanceof HTMLElement)) {
             return;
         }
 
-        const urlInput = row.querySelector(".feed-subscription-url-input");
-        if (urlInput instanceof HTMLInputElement) {
-            urlInput.focus();
-            urlInput.select();
+        subscriptionEditPopup.classList.toggle("hidden", !isOpen);
+        subscriptionEditBackdrop.classList.toggle("hidden", !isOpen);
+        subscriptionEditBackdrop.setAttribute("aria-hidden", isOpen ? "false" : "true");
+        document.body.classList.toggle("feed-subscription-popup-open", isOpen);
+    }
+
+    /**
+     * Close subscription edit popup and restore focus to the triggering button.
+     */
+    function closeSubscriptionEditPopup() {
+        setSubscriptionEditPopupVisibility(false);
+
+        if (subscriptionEditTriggerButton instanceof HTMLButtonElement) {
+            subscriptionEditTriggerButton.setAttribute("aria-expanded", "false");
+            subscriptionEditTriggerButton.focus();
+        }
+
+        activeSubscriptionRow = null;
+        subscriptionEditTriggerButton = null;
+    }
+
+    /**
+     * Open subscription edit popup prefilled from the selected row.
+     *
+     * @param {HTMLElement} row
+     * @param {HTMLButtonElement} triggerButton
+     */
+    function openSubscriptionEditPopup(row, triggerButton) {
+        if (
+            !(subscriptionEditPopup instanceof HTMLElement)
+            || !(subscriptionEditIdInput instanceof HTMLInputElement)
+            || !(subscriptionEditUrlInput instanceof HTMLInputElement)
+            || !(subscriptionEditCategorySelect instanceof HTMLSelectElement)
+        ) {
+            setStatus("Subscription edit popup is not available.", true);
+            return;
+        }
+
+        const subscriptionId = String(row.dataset.subscriptionId || "").trim();
+        const rowUrlInput = row.querySelector(".feed-subscription-url-input");
+        const rowCategorySelect = row.querySelector(".feed-subscription-category-select");
+        if (!(rowUrlInput instanceof HTMLInputElement) || !(rowCategorySelect instanceof HTMLSelectElement) || subscriptionId === "") {
+            setStatus("Unable to edit this subscription.", true);
+            return;
+        }
+
+        const titleNode = document.getElementById("feed-subscription-edit-title");
+        const rowTitleCell = row.querySelector(".feed-subscription-title-cell");
+        const sourceTitle = rowTitleCell instanceof HTMLElement
+            ? String(rowTitleCell.textContent || "").trim()
+            : "";
+
+        if (titleNode instanceof HTMLElement) {
+            titleNode.textContent = sourceTitle !== "" ? `Edit Subscription: ${sourceTitle}` : "Edit Subscription";
+        }
+
+        subscriptionEditIdInput.value = subscriptionId;
+        subscriptionEditUrlInput.value = rowUrlInput.value.trim();
+        subscriptionEditCategorySelect.value = rowCategorySelect.value.trim();
+        subscriptionEditCategorySelect.dispatchEvent(new Event("change", { bubbles: true }));
+
+        activeSubscriptionRow = row;
+        subscriptionEditTriggerButton = triggerButton;
+        subscriptionEditTriggerButton.setAttribute("aria-expanded", "true");
+
+        setSubscriptionEditPopupVisibility(true);
+        subscriptionEditUrlInput.focus();
+        subscriptionEditUrlInput.select();
+    }
+
+    /**
+     * Save edits from the subscription popup.
+     *
+     * @param {SubmitEvent} event
+     */
+    async function onSubscriptionEditSubmit(event) {
+        event.preventDefault();
+
+        if (
+            !(activeSubscriptionRow instanceof HTMLElement)
+            || !(subscriptionEditIdInput instanceof HTMLInputElement)
+            || !(subscriptionEditUrlInput instanceof HTMLInputElement)
+            || !(subscriptionEditCategorySelect instanceof HTMLSelectElement)
+        ) {
+            return;
+        }
+
+        const subscriptionId = subscriptionEditIdInput.value.trim();
+        const feedUrl = subscriptionEditUrlInput.value.trim();
+        const categoryId = subscriptionEditCategorySelect.value.trim();
+
+        if (subscriptionId === "" || feedUrl === "" || categoryId === "") {
+            setStatus("Subscription URL and category are required.", true);
+            return;
+        }
+
+        setStatus("Saving subscription changes...");
+
+        try {
+            const endpoint = buildSubscriptionEndpoint(subscriptionUpdateTemplate, subscriptionId);
+            const payload = await requestJson(endpoint, "POST", {
+                feed_url: feedUrl,
+                category_id: categoryId,
+            });
+
+            const updatedUrl = String(payload.normalized_url || feedUrl).trim();
+            const updatedCategoryId = String(payload.category_id || categoryId).trim();
+            const updatedSubscriptionId = String(payload.subscription_id || subscriptionId).trim();
+            const updatedSourceTitle = String(payload.source_title || "").trim();
+
+            const row = activeSubscriptionRow;
+            row.dataset.subscriptionId = updatedSubscriptionId;
+
+            const rowUrlInput = row.querySelector(".feed-subscription-url-input");
+            if (rowUrlInput instanceof HTMLInputElement) {
+                rowUrlInput.value = updatedUrl;
+            }
+
+            const rowCategorySelect = row.querySelector(".feed-subscription-category-select");
+            if (rowCategorySelect instanceof HTMLSelectElement) {
+                rowCategorySelect.value = updatedCategoryId;
+            }
+
+            syncSubscriptionRowUrlLink(row, updatedUrl);
+            syncSubscriptionRowChip(row, updatedCategoryId);
+
+            if (updatedSourceTitle !== "") {
+                const rowTitleCell = row.querySelector(".feed-subscription-title-cell");
+                if (rowTitleCell instanceof HTMLElement) {
+                    rowTitleCell.textContent = updatedSourceTitle;
+                }
+
+                const editButton = row.querySelector(".feed-subscription-edit-button");
+                if (editButton instanceof HTMLButtonElement) {
+                    editButton.setAttribute("aria-label", `Edit subscription ${updatedSourceTitle}`);
+                }
+
+                const deleteButton = row.querySelector(".feed-subscription-delete-button");
+                if (deleteButton instanceof HTMLButtonElement) {
+                    deleteButton.setAttribute("aria-label", `Delete subscription ${updatedSourceTitle}`);
+                }
+            }
+
+            closeSubscriptionEditPopup();
+            setStatus("Subscription updated.");
+            await refreshSidebarCounts();
+        } catch (error) {
+            setStatus(error instanceof Error ? error.message : "Unable to update subscription.", true);
         }
     }
 
@@ -326,8 +487,6 @@
             if (categorySelect instanceof HTMLSelectElement) {
                 syncSubscriptionRowChip(row, categorySelect.value.trim());
             }
-
-            setSubscriptionRowEditMode(row, false);
         });
     }
 
@@ -504,7 +663,7 @@
     }
 
     /**
-     * Handle save/delete actions for existing subscriptions.
+     * Handle edit/delete actions for existing subscriptions.
      *
      * @param {MouseEvent} event
      */
@@ -530,87 +689,8 @@
         }
 
         if (actionButton.classList.contains("feed-subscription-edit-button")) {
-            const urlInput = row.querySelector(".feed-subscription-url-input");
-            const categorySelect = row.querySelector(".feed-subscription-category-select");
-            if (!(urlInput instanceof HTMLInputElement) || !(categorySelect instanceof HTMLSelectElement)) {
-                return;
-            }
-
-            row.dataset.originalFeedUrl = urlInput.value.trim();
-            row.dataset.originalCategoryId = categorySelect.value.trim();
-            setSubscriptionRowEditMode(row, true);
+            openSubscriptionEditPopup(row, actionButton);
             setStatus("Editing subscription.");
-            return;
-        }
-
-        if (actionButton.classList.contains("feed-subscription-cancel-button")) {
-            const urlInput = row.querySelector(".feed-subscription-url-input");
-            const categorySelect = row.querySelector(".feed-subscription-category-select");
-            if (!(urlInput instanceof HTMLInputElement) || !(categorySelect instanceof HTMLSelectElement)) {
-                return;
-            }
-
-            const originalFeedUrl = String(row.dataset.originalFeedUrl || urlInput.value).trim();
-            const originalCategoryId = String(row.dataset.originalCategoryId || categorySelect.value).trim();
-
-            urlInput.value = originalFeedUrl;
-            categorySelect.value = originalCategoryId;
-            syncSubscriptionRowUrlLink(row, originalFeedUrl);
-            syncSubscriptionRowChip(row, originalCategoryId);
-            setSubscriptionRowEditMode(row, false);
-            setStatus("Edit cancelled.");
-            return;
-        }
-
-        if (actionButton.classList.contains("feed-subscription-save-button")) {
-            const urlInput = row.querySelector(".feed-subscription-url-input");
-            const categorySelect = row.querySelector(".feed-subscription-category-select");
-            if (!(urlInput instanceof HTMLInputElement) || !(categorySelect instanceof HTMLSelectElement)) {
-                return;
-            }
-
-            const feedUrl = urlInput.value.trim();
-            const categoryId = categorySelect.value.trim();
-            if (feedUrl === "" || categoryId === "") {
-                setStatus("Subscription URL and category are required.", true);
-                return;
-            }
-
-            setStatus("Saving subscription changes...");
-
-            try {
-                const endpoint = buildSubscriptionEndpoint(subscriptionUpdateTemplate, subscriptionId);
-                const payload = await requestJson(endpoint, "POST", {
-                    feed_url: feedUrl,
-                    category_id: categoryId,
-                });
-
-                const updatedUrl = String(payload.normalized_url || feedUrl);
-                const updatedCategoryId = String(payload.category_id || categoryId);
-                const updatedSubscriptionId = String(payload.subscription_id || subscriptionId);
-                const updatedSourceTitle = String(payload.source_title || "").trim();
-
-                row.dataset.subscriptionId = updatedSubscriptionId;
-                urlInput.value = updatedUrl;
-                categorySelect.value = updatedCategoryId;
-                row.dataset.originalFeedUrl = updatedUrl;
-                row.dataset.originalCategoryId = updatedCategoryId;
-                syncSubscriptionRowUrlLink(row, updatedUrl);
-                if (updatedSourceTitle !== "") {
-                    const titleCell = row.querySelector(".feed-subscription-title-cell");
-                    if (titleCell instanceof HTMLElement) {
-                        titleCell.textContent = updatedSourceTitle;
-                    }
-                }
-                syncSubscriptionRowChip(row, updatedCategoryId);
-                setSubscriptionRowEditMode(row, false);
-
-                setStatus("Subscription updated.");
-                await refreshSidebarCounts();
-            } catch (error) {
-                setStatus(error instanceof Error ? error.message : "Unable to update subscription.", true);
-            }
-
             return;
         }
 
@@ -620,6 +700,11 @@
             try {
                 const endpoint = buildSubscriptionEndpoint(subscriptionDeleteTemplate, subscriptionId);
                 await requestJson(endpoint, "DELETE");
+
+                if (activeSubscriptionRow === row) {
+                    closeSubscriptionEditPopup();
+                }
+
                 row.remove();
                 setStatus("Subscription deleted.");
                 await refreshSidebarCounts();
@@ -630,26 +715,43 @@
     }
 
     /**
-     * Keep row chip text/color in sync while category selection changes.
-     *
-     * @param {Event} event
+     * Initialize popup interactions for editing subscriptions.
      */
-    function onSubscriptionCategorySelectChange(event) {
-        const target = /** @type {HTMLElement | null} */ (event.target instanceof HTMLElement ? event.target : null);
-        if (!(target instanceof HTMLSelectElement) || !target.classList.contains("feed-subscription-category-select")) {
+    function initializeSubscriptionEditPopup() {
+        if (!(subscriptionEditPopup instanceof HTMLElement) || !(subscriptionEditBackdrop instanceof HTMLElement)) {
             return;
         }
 
-        const row = target.closest(".feed-subscription-row");
-        if (!(row instanceof HTMLElement)) {
-            return;
+        // Keep popup layers above any scrolling/card overflow contexts.
+        if (subscriptionEditPopup.parentElement !== document.body) {
+            document.body.appendChild(subscriptionEditPopup);
         }
 
-        if (!row.classList.contains("is-editing")) {
-            return;
+        if (subscriptionEditBackdrop.parentElement !== document.body) {
+            document.body.appendChild(subscriptionEditBackdrop);
         }
 
-        syncSubscriptionRowChip(row, target.value.trim());
+        if (subscriptionEditForm instanceof HTMLFormElement) {
+            subscriptionEditForm.addEventListener("submit", onSubscriptionEditSubmit);
+        }
+
+        if (subscriptionEditCloseButton instanceof HTMLButtonElement) {
+            subscriptionEditCloseButton.addEventListener("click", closeSubscriptionEditPopup);
+        }
+
+        if (subscriptionEditCancelButton instanceof HTMLButtonElement) {
+            subscriptionEditCancelButton.addEventListener("click", closeSubscriptionEditPopup);
+        }
+
+        subscriptionEditBackdrop.addEventListener("click", closeSubscriptionEditPopup);
+
+        document.addEventListener("keydown", event => {
+            if (event.key !== "Escape" || subscriptionEditPopup.classList.contains("hidden")) {
+                return;
+            }
+
+            closeSubscriptionEditPopup();
+        });
     }
 
     if (addForm) {
@@ -667,9 +769,10 @@
 
     if (subscriptionTableWrap) {
         subscriptionTableWrap.addEventListener("click", onSubscriptionActionClick);
-        subscriptionTableWrap.addEventListener("change", onSubscriptionCategorySelectChange);
         initializeSubscriptionRows();
     }
+
+    initializeSubscriptionEditPopup();
 
     // Validate category endpoint wiring once at startup.
     if (categoriesEndpoint === "") {

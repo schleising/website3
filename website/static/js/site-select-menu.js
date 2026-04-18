@@ -179,7 +179,7 @@ function createSiteSelectMenu(selectElement) {
         triggerLabel,
         menu: optionMenu,
         usesBodyPortal,
-        expansionContainer: selectElement.closest(".football-season-popup"),
+        expansionContainer: selectElement.closest("[data-site-select-expansion-container], .football-season-popup"),
         optionIconAttribute,
         placeholderIconPath,
         triggerIcon,
