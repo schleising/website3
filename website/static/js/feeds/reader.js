@@ -64,6 +64,12 @@
     let pageLoadInFlight = false;
     /** @type {boolean} */
     let pagePrefetchScheduled = false;
+    /** @type {boolean} */
+    let tailRefreshInFlight = false;
+    /** @type {number} */
+    let lastTailRefreshAtMs = 0;
+    /** @type {number} */
+    const tailRefreshMinIntervalMs = 1200;
     /** @type {number | null} */
     let pageLoadRetryTimerId = null;
     /** @type {number | null} */
@@ -1822,6 +1828,58 @@
     }
 
     /**
+     * When the list has reached the end, poll for newly-arrived articles that
+     * should be appended in-order without requiring a full page refresh.
+     *
+     * @returns {Promise<void>}
+     */
+    async function refreshTailArticlesWhenAtEnd() {
+        if (hasMorePages || pageLoadInFlight || tailRefreshInFlight) {
+            return;
+        }
+
+        const nowMs = Date.now();
+        if (nowMs - lastTailRefreshAtMs < tailRefreshMinIntervalMs) {
+            return;
+        }
+
+        tailRefreshInFlight = true;
+        lastTailRefreshAtMs = nowMs;
+
+        const requestOffset = getPagingRequestOffset();
+
+        try {
+            const response = await fetch(buildArticlesUrl(requestOffset, pageSize), { method: "GET" });
+            if (!response.ok) {
+                return;
+            }
+
+            const payload = await response.json();
+            const incomingArticles = Array.isArray(payload.articles) ? payload.articles : [];
+
+            if (incomingArticles.length === 0) {
+                hasMorePages = Boolean(payload.has_more);
+                if (typeof payload.next_offset === "number") {
+                    nextOffset = Math.max(0, payload.next_offset);
+                }
+
+                if (hasMorePages) {
+                    schedulePagePrefetchCheck();
+                }
+                return;
+            }
+
+            appendArticlePage(payload, requestOffset);
+            scheduleTouchScrollReadCheck();
+            schedulePagePrefetchCheck();
+        } catch (_error) {
+            // Keep current list if tail refresh fails.
+        } finally {
+            tailRefreshInFlight = false;
+        }
+    }
+
+    /**
      * Poll sidebar counts and in-place card status state for cross-device sync.
      *
      * @returns {Promise<void>}
@@ -1831,6 +1889,7 @@
             refreshSidebarCounts(),
             refreshVisibleCardStatuses(),
         ]);
+        await refreshTailArticlesWhenAtEnd();
     }
 
     /**
