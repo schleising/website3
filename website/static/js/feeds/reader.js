@@ -66,9 +66,6 @@
     })();
 
     /** @type {boolean} */
-    let nonTouchInputDetected = false;
-
-    /** @type {boolean} */
     let touchScrollReadScheduled = false;
 
     /** @type {Intl.DateTimeFormat} */
@@ -185,6 +182,28 @@
     }
 
     /**
+     * Parse article datetimes and treat timezone-less values as UTC.
+     *
+     * @param {string} rawDatetime
+     * @returns {Date | null}
+     */
+    function parseArticleDate(rawDatetime) {
+        const trimmed = String(rawDatetime || "").trim();
+        if (trimmed === "") {
+            return null;
+        }
+
+        const hasTimezone = /(?:Z|[+\-]\d{2}:\d{2})$/i.test(trimmed);
+        const normalized = hasTimezone ? trimmed : `${trimmed}Z`;
+        const parsed = new Date(normalized);
+        if (Number.isNaN(parsed.getTime())) {
+            return null;
+        }
+
+        return parsed;
+    }
+
+    /**
      * Convert datetime strings to current-client-locale text.
      *
      * @param {ParentNode} scope
@@ -201,8 +220,8 @@
                 return;
             }
 
-            const parsedDate = new Date(rawDatetime);
-            if (Number.isNaN(parsedDate.getTime())) {
+            const parsedDate = parseArticleDate(rawDatetime);
+            if (!(parsedDate instanceof Date)) {
                 return;
             }
 
@@ -470,7 +489,7 @@
      * @returns {boolean}
      */
     function shouldUseTouchScrollRead() {
-        return isTouchOnlyDevice && !nonTouchInputDetected;
+        return isTouchOnlyDevice;
     }
 
     /**
@@ -546,11 +565,13 @@
         const rightMeta = document.createElement("div");
         rightMeta.className = "feed-article-meta-right";
         if (article.published_at) {
-            const date = new Date(article.published_at);
-            const time = document.createElement("time");
-            time.dateTime = date.toISOString();
-            time.textContent = articleTimeFormatter.format(date);
-            rightMeta.appendChild(time);
+            const parsedDate = parseArticleDate(String(article.published_at || ""));
+            if (parsedDate instanceof Date) {
+                const time = document.createElement("time");
+                time.dateTime = parsedDate.toISOString();
+                time.textContent = articleTimeFormatter.format(parsedDate);
+                rightMeta.appendChild(time);
+            }
         }
 
         header.appendChild(leftMeta);
@@ -874,8 +895,6 @@
      * @param {KeyboardEvent} event
      */
     function onKeyDown(event) {
-        nonTouchInputDetected = true;
-
         const target = /** @type {HTMLElement | null} */ (event.target instanceof HTMLElement ? event.target : null);
         if (target && ["INPUT", "TEXTAREA", "SELECT", "BUTTON"].includes(target.tagName)) {
             return;
@@ -954,21 +973,6 @@
     document.addEventListener("keydown", onKeyDown);
 
     if (isTouchOnlyDevice) {
-        const markNonTouchInput = () => {
-            nonTouchInputDetected = true;
-        };
-
-        window.addEventListener("wheel", markNonTouchInput, { once: true, passive: true });
-        window.addEventListener("mousemove", markNonTouchInput, { once: true, passive: true });
-        window.addEventListener(
-            "pointerdown",
-            event => {
-                if (event.pointerType === "mouse" || event.pointerType === "pen") {
-                    markNonTouchInput();
-                }
-            },
-            { passive: true }
-        );
         window.addEventListener("scroll", scheduleTouchScrollReadCheck, { passive: true });
         window.addEventListener("touchmove", scheduleTouchScrollReadCheck, { passive: true });
     }

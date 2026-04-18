@@ -226,6 +226,7 @@
     white-space: nowrap;
     flex: 0 0 auto;
     position: relative;
+    order: 1;
 }
 
 .feed-category-link.is-muted .feed-category-name::after {
@@ -260,6 +261,7 @@
     line-height: 1.15;
     font-variant-numeric: tabular-nums;
     flex: 0 0 auto;
+    order: 2;
 }
 
 .feed-category-unread-pill-all {
