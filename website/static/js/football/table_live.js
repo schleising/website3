@@ -52,6 +52,35 @@ function updateTextIfChanged(element, value) {
     }
 }
 
+function isTableItemInPlay(tableItem) {
+    const cssClass = typeof tableItem?.css_class === "string" ? tableItem.css_class : "";
+    return cssClass.includes("in-play");
+}
+
+function updateLiveIndicator(row, tableItem) {
+    const indicatorCell = row.querySelector(".live-indicator-cell");
+    if (!indicatorCell) {
+        return;
+    }
+
+    const shouldShowIndicator = isTableItemInPlay(tableItem);
+    let indicatorDot = indicatorCell.querySelector(".live-indicator-dot");
+
+    if (shouldShowIndicator) {
+        if (!indicatorDot) {
+            indicatorDot = document.createElement("span");
+            indicatorDot.className = "live-indicator-dot";
+            indicatorDot.setAttribute("aria-hidden", "true");
+            indicatorCell.appendChild(indicatorDot);
+        }
+        return;
+    }
+
+    if (indicatorDot) {
+        indicatorDot.remove();
+    }
+}
+
 function updatePositionDelta(row, tableItem) {
     const deltaCell = row.querySelector(".position-delta-cell");
     if (!deltaCell) {
@@ -151,6 +180,7 @@ function updateTableRow(row, tableItem, seasonKey, teamCount) {
     updateSeasonZoneClasses(row, Number(tableItem.position), teamCount);
 
     updateTextIfChanged(row.querySelector(".table-position-value"), tableItem.position);
+    updateLiveIndicator(row, tableItem);
     updatePositionDelta(row, tableItem);
     updateTextIfChanged(row.querySelector(".table-played"), tableItem.played_games);
     updateTextIfChanged(row.querySelector(".table-won"), tableItem.won);
@@ -361,6 +391,16 @@ function patchLiveTable(tableList) {
     if (tableContainer) {
         tableContainer.dataset.teamCount = String(tableList.length);
         tableContainer.style.setProperty("--table-row-count", String(tableList.length));
+
+        const hasLiveValue = tableList.some(tableItem => isTableItemInPlay(tableItem)) ? "true" : "false";
+        if (tableContainer.dataset.hasLive !== hasLiveValue) {
+            tableContainer.dataset.hasLive = hasLiveValue;
+        }
+
+        const hasDeltaValue = tableList.some(tableItem => Boolean(tableItem?.has_started)) ? "true" : "false";
+        if (tableContainer.dataset.hasDelta !== hasDeltaValue) {
+            tableContainer.dataset.hasDelta = hasDeltaValue;
+        }
     }
 
     const seasonKey = tbody.dataset.seasonKey || "";
