@@ -208,6 +208,64 @@
     }
 
     /**
+     * Return a sortable published timestamp for an article payload row.
+     *
+     * @param {Record<string, any> | undefined} article
+     * @returns {number}
+     */
+    function getArticlePublishedTimestamp(article) {
+        if (!article || !article.published_at) {
+            return Number.POSITIVE_INFINITY;
+        }
+
+        const parsedDate = parseArticleDate(String(article.published_at || ""));
+        if (!(parsedDate instanceof Date)) {
+            return Number.POSITIVE_INFINITY;
+        }
+
+        return parsedDate.getTime();
+    }
+
+    /**
+     * Return a sortable published timestamp for an existing card.
+     *
+     * @param {HTMLElement} card
+     * @returns {number}
+     */
+    function getCardPublishedTimestamp(card) {
+        const timeNode = card.querySelector("time[datetime]");
+        if (!(timeNode instanceof HTMLTimeElement)) {
+            return Number.POSITIVE_INFINITY;
+        }
+
+        const parsedDate = parseArticleDate(String(timeNode.dateTime || ""));
+        if (!(parsedDate instanceof Date)) {
+            return Number.POSITIVE_INFINITY;
+        }
+
+        return parsedDate.getTime();
+    }
+
+    /**
+     * Reinsert a card by published timestamp so list order stays oldest-first.
+     *
+     * @param {HTMLElement} card
+     */
+    function repositionCardByPublishedDate(card) {
+        const targetTimestamp = getCardPublishedTimestamp(card);
+        const siblings = getCards().filter(entry => entry !== card);
+
+        for (const sibling of siblings) {
+            if (getCardPublishedTimestamp(sibling) > targetTimestamp) {
+                articleList.insertBefore(card, sibling);
+                return;
+            }
+        }
+
+        articleList.appendChild(card);
+    }
+
+    /**
      * Convert datetime strings to current-client-locale text.
      *
      * @param {ParentNode} scope
@@ -630,6 +688,10 @@
             setCardReadAppearance(card, false);
             setCardNewBadge(card, false);
 
+            if (selectedStatus !== "read") {
+                repositionCardByPublishedDate(card);
+            }
+
             // Leave the card unselected after explicit mark-as-unread to avoid immediate reselection flows.
             if (selectedIndex >= 0) {
                 const cards = getCards();
@@ -827,12 +889,42 @@
             incomingIdsInOrder.push(articleId);
         });
 
-        const finalIds = previousIdsInOrder
-            .filter(articleId => (
-                incomingById.has(articleId)
-                || (retainSessionReadCards && sessionReadArticleIds.has(articleId))
-            ))
-            .concat(incomingIdsInOrder.filter(articleId => !previousCardMap.has(articleId)));
+        const retainedReadIds = retainSessionReadCards
+            ? previousIdsInOrder.filter(
+                articleId => !incomingById.has(articleId) && sessionReadArticleIds.has(articleId)
+            )
+            : [];
+
+        const orderIndexById = new Map();
+        incomingIdsInOrder.forEach((articleId, index) => {
+            orderIndexById.set(articleId, index);
+        });
+        retainedReadIds.forEach((articleId, index) => {
+            orderIndexById.set(articleId, incomingIdsInOrder.length + index);
+        });
+
+        const finalIds = Array.from(new Set([...incomingIdsInOrder, ...retainedReadIds]));
+
+        finalIds.sort((leftId, rightId) => {
+            const leftArticle = incomingById.get(leftId);
+            const rightArticle = incomingById.get(rightId);
+            const leftCard = previousCardMap.get(leftId);
+            const rightCard = previousCardMap.get(rightId);
+
+            const leftTimestamp = leftArticle
+                ? getArticlePublishedTimestamp(leftArticle)
+                : (leftCard instanceof HTMLElement ? getCardPublishedTimestamp(leftCard) : Number.POSITIVE_INFINITY);
+            const rightTimestamp = rightArticle
+                ? getArticlePublishedTimestamp(rightArticle)
+                : (rightCard instanceof HTMLElement ? getCardPublishedTimestamp(rightCard) : Number.POSITIVE_INFINITY);
+
+            if (leftTimestamp !== rightTimestamp) {
+                return leftTimestamp - rightTimestamp;
+            }
+
+            return (orderIndexById.get(leftId) ?? Number.MAX_SAFE_INTEGER)
+                - (orderIndexById.get(rightId) ?? Number.MAX_SAFE_INTEGER);
+        });
 
         incomingIdsInOrder.forEach(articleId => {
             const isAlreadyKnown = knownArticleIds.has(articleId);
