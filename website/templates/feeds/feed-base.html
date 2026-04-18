@@ -62,6 +62,9 @@
   <span class="feed-category-name">Saved</span>
 </a>
 <a href="/feeds/settings/" class="sub-level-nav feed-sidebar-link{% if feed_page_mode == 'settings' %} is-current{% endif %}" {% if feed_page_mode == 'settings' %}aria-current="page"{% endif %}>Settings</a>
+{% if request.state.user != None and request.state.user.can_use_tools %}
+<a href="/feeds/admin/" class="sub-level-nav feed-sidebar-link{% if feed_page_mode == 'admin' %} is-current{% endif %}" {% if feed_page_mode == 'admin' %}aria-current="page"{% endif %}>Admin</a>
+{% endif %}
 {% endblock %}
 
 {% block footer %}

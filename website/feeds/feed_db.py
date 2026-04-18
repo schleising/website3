@@ -208,6 +208,8 @@ async def ensure_feed_source(normalized_url: str, source_title: str) -> dict[str
         "etag": None,
         "last_modified": None,
         "last_fetched_at": None,
+        "next_refresh_at": None,
+        "refresh_interval_seconds": None,
         "fetch_status": "new",
         "last_error": None,
         "next_retry_at": None,
@@ -237,6 +239,7 @@ async def request_immediate_feed_refresh(feed_ids: set[ObjectId]) -> None:
             "$set": {
                 "force_refresh_requested_at": now,
                 "next_retry_at": None,
+                "next_refresh_at": now,
                 "updated_at": now,
             }
         },

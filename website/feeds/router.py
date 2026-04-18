@@ -87,6 +87,16 @@ def _require_logged_in_user(request: Request) -> str:
     return username
 
 
+def _request_can_use_tools(request: Request) -> bool:
+    """Return True when the authenticated user can access admin tools."""
+
+    user = getattr(request.state, "user", None)
+    if user is None:
+        return False
+
+    return bool(getattr(user, "can_use_tools", False))
+
+
 @feeds_router.get("/", response_class=HTMLResponse)
 @feeds_router.get("", response_class=HTMLResponse)
 async def feed_reader_page(
@@ -130,6 +140,34 @@ async def feed_settings_page(request: Request):
         {
             "request": request,
             "title": "Feed Settings",
+            **context,
+        },
+    )
+
+
+@feeds_router.get("/admin", response_class=HTMLResponse)
+@feeds_router.get("/admin/", response_class=HTMLResponse)
+async def feed_admin_page(request: Request):
+    """Render the feeds admin page for users with tools permission."""
+
+    username = _request_username(request)
+    if username is None:
+        return _login_redirect_response("/feeds/admin/")
+
+    if not _request_can_use_tools(request):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Feeds admin is only available to tool-enabled users.",
+        )
+
+    context = await get_feed_settings_context(username)
+
+    return TEMPLATES.TemplateResponse(
+        request,
+        "feeds/admin.html",
+        {
+            "request": request,
+            "title": "Feed Admin",
             **context,
         },
     )

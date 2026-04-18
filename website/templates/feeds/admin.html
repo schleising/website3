@@ -1,0 +1,19 @@
+{% extends "feeds/feed-base.html" %}
+
+{% set feed_page_mode = "admin" %}
+
+{% block feeds_content %}
+<section class="feeds-settings">
+  <article class="site-card feed-settings-card">
+    <h4>Feeds Admin</h4>
+    <p>Administrative feed diagnostics and controls are available on this page for tool-enabled users.</p>
+  </article>
+
+  <article class="site-card feed-settings-card">
+    <h4>Current Feed Snapshot</h4>
+    <p>Active categories: {{ categories|length }}</p>
+    <p>Total unread: {{ all_unread_count }}</p>
+    <p>Saved articles: {{ saved_count }}</p>
+  </article>
+</section>
+{% endblock %}
