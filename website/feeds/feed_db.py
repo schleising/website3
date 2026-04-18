@@ -1086,7 +1086,10 @@ async def list_cards_for_feed_ids(
                     title=str(article_doc.get("title", "Untitled")),
                     link=normalize_article_link(article_doc.get("link")),
                     author=str(article_doc.get("author", "")).strip() or None,
-                    summary_html=sanitize_html(str(article_doc.get("summary_html", "")))
+                    summary_html=sanitize_html(
+                        str(article_doc.get("summary_html", "")),
+                        allow_inline_styles=True,
+                    )
                     if article_doc.get("summary_html")
                     else None,
                     media_image_url=normalize_article_link(article_doc.get("media_image_url")) or None,
@@ -1202,7 +1205,10 @@ async def list_recently_read_cards(
                 title=str(article_doc.get("title", "Untitled")),
                 link=normalize_article_link(article_doc.get("link")),
                 author=str(article_doc.get("author", "")).strip() or None,
-                summary_html=sanitize_html(str(article_doc.get("summary_html", "")))
+                summary_html=sanitize_html(
+                    str(article_doc.get("summary_html", "")),
+                    allow_inline_styles=True,
+                )
                 if article_doc.get("summary_html")
                 else None,
                 media_image_url=normalize_article_link(article_doc.get("media_image_url")) or None,
@@ -1309,7 +1315,10 @@ async def list_saved_cards(
                 title=str(article_doc.get("title", "Untitled")),
                 link=normalize_article_link(article_doc.get("link")),
                 author=str(article_doc.get("author", "")).strip() or None,
-                summary_html=sanitize_html(str(article_doc.get("summary_html", "")))
+                summary_html=sanitize_html(
+                    str(article_doc.get("summary_html", "")),
+                    allow_inline_styles=True,
+                )
                 if article_doc.get("summary_html")
                 else None,
                 media_image_url=normalize_article_link(article_doc.get("media_image_url")) or None,

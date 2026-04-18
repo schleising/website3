@@ -279,11 +279,55 @@
 
 .feed-article-summary {
     color: var(--text);
+    line-height: 1.52;
 }
 
 .feed-article-summary :is(p, ul, ol, blockquote) {
     margin-top: 0;
     margin-bottom: 0.45rem;
+}
+
+.feed-article-summary :is(ul, ol) {
+    padding-inline-start: 1.35rem;
+}
+
+.feed-article-summary li + li {
+    margin-top: 0.2rem;
+}
+
+.feed-article-summary :is(i, em) {
+    font-style: italic;
+}
+
+.feed-article-summary :is(b, strong) {
+    font-weight: 700;
+}
+
+.feed-article-summary blockquote {
+    padding: 0.3rem 0.72rem;
+    border-left: 0.18rem solid color-mix(in srgb, var(--brand-soft), #ffffff 25%);
+    border-radius: 0.3rem;
+    background: color-mix(in srgb, var(--surface-soft), #ffffff 30%);
+}
+
+.feed-article-summary pre {
+    margin: 0 0 0.5rem;
+    padding: 0.55rem 0.7rem;
+    border-radius: 0.42rem;
+    border: 0.0625rem solid color-mix(in srgb, var(--line), #ffffff 15%);
+    background: color-mix(in srgb, var(--surface-soft), #ffffff 26%);
+    white-space: pre-wrap;
+    overflow-x: auto;
+}
+
+.feed-article-summary img {
+    display: block;
+    width: auto;
+    height: auto;
+    max-width: 100%;
+    max-height: none;
+    object-fit: contain;
+    margin: 0.2rem 0 0.55rem;
 }
 
 @media screen and (min-width: 68rem) {
