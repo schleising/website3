@@ -13,6 +13,7 @@ from .feed_db import (
     delete_subscription,
     export_opml,
     get_article_list,
+    get_article_read_statuses,
     get_categories_with_counts,
     get_feed_reader_context,
     get_feed_settings_context,
@@ -27,6 +28,8 @@ from .feed_db import (
 )
 from .models import (
     FeedArticleListResponse,
+    FeedArticleStatusRequest,
+    FeedArticleStatusResponse,
     FeedCategoryColorUpdateRequest,
     FeedCategoryListResponse,
     FeedCategoryOperationResponse,
@@ -168,6 +171,25 @@ async def get_articles(
         offset=max(0, int(offset)),
         limit=max(1, min(100, int(limit))),
     )
+
+
+@feeds_router.post(
+    "/api/articles/statuses",
+    response_model=FeedArticleStatusResponse,
+)
+@feeds_router.post(
+    "/api/articles/statuses/",
+    response_model=FeedArticleStatusResponse,
+)
+async def get_article_statuses(
+    request: Request,
+    payload: FeedArticleStatusRequest,
+) -> FeedArticleStatusResponse:
+    """Return read-state for explicit article IDs visible to the authenticated user."""
+
+    username = _require_logged_in_user(request)
+    statuses = await get_article_read_statuses(username, payload.article_ids)
+    return FeedArticleStatusResponse(statuses=statuses)
 
 
 @feeds_router.post(

@@ -141,6 +141,25 @@ class FeedArticleListResponse(BaseModel):
     next_offset: int = 0
 
 
+class FeedArticleStatusRequest(BaseModel):
+    """Request payload for batch article read-status lookups."""
+
+    article_ids: list[str] = Field(default_factory=list)
+
+
+class FeedArticleStatusItem(BaseModel):
+    """Single article read-status entry."""
+
+    article_id: str
+    is_read: bool
+
+
+class FeedArticleStatusResponse(BaseModel):
+    """Batch article read-status lookup response payload."""
+
+    statuses: list[FeedArticleStatusItem] = Field(default_factory=list)
+
+
 class FeedSubscriptionCreateRequest(BaseModel):
     """Subscription creation request payload."""
 

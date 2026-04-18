@@ -35,6 +35,8 @@
     /** @type {string} */
     const articlesEndpoint = root.dataset.articlesEndpoint || "/feeds/api/articles/";
     /** @type {string} */
+    const articleStatusesEndpoint = root.dataset.articleStatusesEndpoint || "/feeds/api/articles/statuses/";
+    /** @type {string} */
     const categoriesEndpoint = root.dataset.categoriesEndpoint || "/feeds/api/categories/";
     /** @type {string} */
     const markReadEndpointTemplate = root.dataset.markReadEndpointTemplate || "";
@@ -167,10 +169,10 @@
      *
      * @returns {string}
      */
-    function buildArticlesUrl(offset = 0, limitOverride = pageSize) {
+    function buildArticlesUrl(offset = 0, limitOverride = pageSize, statusOverride = selectedStatus) {
         const params = new URLSearchParams();
         params.set("category", selectedCategory);
-        params.set("status_filter", selectedStatus);
+        params.set("status_filter", String(statusOverride || selectedStatus));
         params.set("offset", String(Math.max(0, Number(offset))));
         params.set("limit", String(Math.max(1, Number(limitOverride))));
         return `${articlesEndpoint}?${params.toString()}`;
@@ -1011,9 +1013,13 @@
                 return;
             }
 
-            const isRead = sessionReadArticleIds.has(articleId) || Boolean(article && article.is_read);
+            const isRead = article
+                ? Boolean(article.is_read)
+                : sessionReadArticleIds.has(articleId);
             if (isRead) {
                 newUnreadArticleIds.delete(articleId);
+            } else {
+                sessionReadArticleIds.delete(articleId);
             }
 
             setCardReadAppearance(card, isRead);
@@ -1096,7 +1102,7 @@
             }
 
             const card = renderArticleCard(article);
-            const isRead = sessionReadArticleIds.has(articleId) || Boolean(article.is_read);
+            const isRead = Boolean(article.is_read);
 
             if (
                 selectedStatus === "unread" &&
@@ -1108,6 +1114,8 @@
 
             if (isRead) {
                 newUnreadArticleIds.delete(articleId);
+            } else {
+                sessionReadArticleIds.delete(articleId);
             }
 
             knownArticleIds.add(articleId);
@@ -1342,6 +1350,84 @@
     }
 
     /**
+     * Sync read/unread state for currently rendered cards without replacing/removing cards.
+     *
+     * @returns {Promise<void>}
+     */
+    async function refreshVisibleCardStatuses() {
+        const cards = getCards();
+        if (cards.length === 0) {
+            return;
+        }
+
+        const articleIds = cards
+            .map(getCardArticleId)
+            .filter(articleId => articleId !== "");
+
+        if (articleIds.length === 0) {
+            return;
+        }
+
+        try {
+            const response = await fetch(articleStatusesEndpoint, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ article_ids: articleIds }),
+            });
+            if (!response.ok) {
+                return;
+            }
+
+            const payload = await response.json();
+            const incomingStatuses = Array.isArray(payload.statuses) ? payload.statuses : [];
+            const statusById = new Map(
+                incomingStatuses
+                    .map(status => [String(status.article_id || "").trim(), Boolean(status.is_read)])
+                    .filter(([articleId]) => articleId !== "")
+            );
+
+            cards.forEach(card => {
+                const articleId = getCardArticleId(card);
+                if (articleId === "") {
+                    return;
+                }
+
+                if (pendingReadIds.has(articleId) || pendingUnreadIds.has(articleId)) {
+                    return;
+                }
+
+                if (!statusById.has(articleId)) {
+                    return;
+                }
+
+                const isRead = Boolean(statusById.get(articleId));
+                if (!isRead) {
+                    sessionReadArticleIds.delete(articleId);
+                }
+
+                setCardReadAppearance(card, isRead);
+                setCardNewBadge(card, !isRead && newUnreadArticleIds.has(articleId));
+            });
+        } catch (_error) {
+            // Keep existing card states when status sync fails.
+        }
+    }
+
+    /**
+     * Poll sidebar counts and in-place card status state for cross-device sync.
+     *
+     * @returns {Promise<void>}
+     */
+    async function refreshLiveReaderState() {
+        await Promise.all([
+            refreshSidebarCounts(),
+            refreshVisibleCardStatuses(),
+        ]);
+    }
+
+    /**
      * Handle keyboard shortcuts for article navigation.
      *
      * @param {KeyboardEvent} event
@@ -1449,5 +1535,5 @@
     scheduleTouchScrollReadCheck();
     schedulePagePrefetchCheck();
 
-    window.setInterval(refreshSidebarCounts, 2000);
+    window.setInterval(refreshLiveReaderState, 2000);
 })();

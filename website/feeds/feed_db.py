@@ -21,6 +21,7 @@ from . import (
 from .models import (
     FeedArticleCard,
     FeedArticleListResponse,
+    FeedArticleStatusItem,
     FeedCategoryDocument,
     FeedCategoryListResponse,
     FeedCategorySummary,
@@ -797,6 +798,91 @@ async def get_user_read_map(user_id: str) -> dict[ObjectId, datetime | None]:
         read_map[article_id] = doc.get("read_at")
 
     return read_map
+
+
+async def get_article_read_statuses(
+    user_id: str,
+    article_ids: list[str],
+) -> list[FeedArticleStatusItem]:
+    """Return read-state for explicit article IDs visible to the user."""
+
+    if (
+        user_feed_subscriptions_collection is None
+        or feed_articles_collection is None
+        or user_article_states_collection is None
+    ):
+        return []
+
+    ordered_unique_ids: list[ObjectId] = []
+    seen_ids: set[ObjectId] = set()
+    for raw_article_id in article_ids:
+        trimmed_article_id = str(raw_article_id or "").strip()
+        if trimmed_article_id == "":
+            continue
+
+        try:
+            parsed_article_id = ObjectId(trimmed_article_id)
+        except Exception:
+            continue
+
+        if parsed_article_id in seen_ids:
+            continue
+
+        seen_ids.add(parsed_article_id)
+        ordered_unique_ids.append(parsed_article_id)
+
+    if len(ordered_unique_ids) == 0:
+        return []
+
+    subscription_cursor = user_feed_subscriptions_collection.find(
+        {"user_id": user_id},
+        {"feed_id": 1},
+    )
+    allowed_feed_ids = [
+        doc.get("feed_id")
+        async for doc in subscription_cursor
+        if isinstance(doc.get("feed_id"), ObjectId)
+    ]
+
+    if len(allowed_feed_ids) == 0:
+        return []
+
+    article_cursor = feed_articles_collection.find(
+        {
+            "_id": {"$in": ordered_unique_ids},
+            "feed_id": {"$in": allowed_feed_ids},
+            "is_deleted": False,
+        },
+        {"_id": 1},
+    )
+    visible_article_ids = {
+        article_doc.get("_id")
+        async for article_doc in article_cursor
+        if isinstance(article_doc.get("_id"), ObjectId)
+    }
+
+    if len(visible_article_ids) == 0:
+        return []
+
+    read_state_cursor = user_article_states_collection.find(
+        {
+            "user_id": user_id,
+            "is_read": True,
+            "article_id": {"$in": list(visible_article_ids)},
+        },
+        {"article_id": 1},
+    )
+    read_ids = {
+        state_doc.get("article_id")
+        async for state_doc in read_state_cursor
+        if isinstance(state_doc.get("article_id"), ObjectId)
+    }
+
+    return [
+        FeedArticleStatusItem(article_id=str(article_id), is_read=article_id in read_ids)
+        for article_id in ordered_unique_ids
+        if article_id in visible_article_ids
+    ]
 
 
 async def list_cards_for_feed_ids(
