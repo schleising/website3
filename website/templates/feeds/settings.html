@@ -31,18 +31,6 @@
   </article>
 
   <article class="site-card feed-settings-card">
-    <h4>OPML Import / Export</h4>
-    <form id="feed-opml-import-form" class="feed-settings-form">
-      <label for="feed-opml-file">Import OPML</label>
-      <input id="feed-opml-file" name="opml_file" type="file" accept=".opml,.xml" required>
-      <button type="submit" class="btn btn-primary">Import</button>
-    </form>
-    <div class="feed-export-wrap">
-      <a href="/feeds/api/opml/export/" class="btn btn-primary">Export OPML</a>
-    </div>
-  </article>
-
-  <article class="site-card feed-settings-card">
     <h4>Category Preferences</h4>
     <div id="feed-category-settings-list" class="feed-category-settings-list">
       {% for category_item in categories %}
@@ -158,6 +146,18 @@
       </div>
     </div>
     {% endif %}
+  </article>
+
+  <article class="site-card feed-settings-card">
+    <h4>OPML Import / Export</h4>
+    <form id="feed-opml-import-form" class="feed-settings-form">
+      <label for="feed-opml-file">Import OPML</label>
+      <input id="feed-opml-file" name="opml_file" type="file" accept=".opml,.xml" required>
+      <button type="submit" class="btn btn-primary">Import</button>
+    </form>
+    <div class="feed-export-wrap">
+      <a href="/feeds/api/opml/export/" class="btn btn-primary">Export OPML</a>
+    </div>
   </article>
 
   <div id="feed-subscription-edit-backdrop" class="feed-subscription-edit-backdrop hidden" aria-hidden="true"></div>
