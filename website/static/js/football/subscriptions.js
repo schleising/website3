@@ -98,7 +98,7 @@ function setStatus(message, isError = false) {
 }
 
 function setActionButtonsDisabled(disabled) {
-    const effectiveDisabled = disabled;
+    const effectiveDisabled = disabled || !canManageSubscriptions;
 
     if (subscriptionSaveButton) {
         subscriptionSaveButton.disabled = effectiveDisabled;
@@ -285,6 +285,11 @@ async function ensurePushSubscription() {
 }
 
 async function savePreferences() {
+    if (!canManageSubscriptions) {
+        setStatus("Login or sign up to manage notification preferences.", true);
+        return;
+    }
+
     const teamIds = getSelectedTeamIds();
     if (teamIds.length === 0) {
         setStatus("Select at least one team before saving.", true);
@@ -315,6 +320,11 @@ async function savePreferences() {
 }
 
 async function unsubscribeAll() {
+    if (!canManageSubscriptions) {
+        setStatus("Login or sign up to manage notification preferences.", true);
+        return;
+    }
+
     setActionButtonsDisabled(true);
     setStatus("Unsubscribing...");
 
