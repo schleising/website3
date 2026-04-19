@@ -8,8 +8,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, cast
 
-import cairosvg
-from PIL import Image, ImageChops, ImageStat
+import cairosvg # type: ignore[import]
+from PIL import Image, ImageChops, ImageStat # type: ignore[import]
 
 
 @dataclass
