@@ -2,6 +2,8 @@ from calendar import monthrange, month_name
 from datetime import date, datetime, timedelta
 import json
 import logging
+from pathlib import Path as FilePath
+from urllib.parse import quote
 from ..account.csrf import validate_csrf
 from zoneinfo import ZoneInfo
 
@@ -17,7 +19,7 @@ from fastapi import (
     Response,
     status,
 )
-from fastapi.responses import HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.templating import Jinja2Templates
 
 from .football_db import (
@@ -60,6 +62,11 @@ TEMPLATES = Jinja2Templates("/app/templates")
 
 football_router = APIRouter(prefix="/football")
 
+WEBSITE_ROOT = FilePath("/app")
+FOOTBALL_MANIFEST_PATH = WEBSITE_ROOT / "static" / "manifests" / "football" / "football.webmanifest"
+FOOTBALL_SERVICE_WORKER_PATH = WEBSITE_ROOT / "static" / "football" / "sw.js"
+FOOTBALL_WEB_APP_HOST = "football.schleising.net"
+
 SEASON_MONTH_ORDER = [8, 9, 10, 11, 12, 1, 2, 3, 4, 5]
 LIVE_DAYS_BEFORE_TODAY = 7
 LIVE_DAYS_AFTER_TODAY = 6
@@ -76,13 +83,96 @@ def _year_for_season_month(month: int, season_key: str) -> int:
     return season_start if month >= 8 else season_end
 
 
-def _build_month_nav_links(selected_season_key: str) -> list[dict[str, str]]:
+def _request_host(request: Request) -> str:
+    forwarded_host = request.headers.get("x-forwarded-host", "")
+    host_header = forwarded_host if forwarded_host.strip() != "" else request.headers.get("host", "")
+
+    if host_header.strip() == "":
+        return ""
+
+    first_host = host_header.split(",", maxsplit=1)[0].strip()
+    return first_host.split(":", maxsplit=1)[0].lower()
+
+
+def _is_football_web_app_request(request: Request) -> bool:
+    header_value = request.headers.get("x-is-web-app", "").strip().lower()
+    if header_value == "true":
+        return True
+
+    return _request_host(request) == FOOTBALL_WEB_APP_HOST
+
+
+def _request_scheme(request: Request) -> str:
+    forwarded_scheme = request.headers.get("x-forwarded-proto", "").split(",", maxsplit=1)[0].strip()
+    if forwarded_scheme != "":
+        return forwarded_scheme
+
+    scheme = request.url.scheme
+    return scheme if scheme != "" else "https"
+
+
+def _to_public_football_path(path: str) -> str:
+    if path == "/football" or path == "/football/":
+        return "/"
+
+    if path.startswith("/football/"):
+        public_path = path[len("/football") :]
+        return public_path if public_path.startswith("/") else f"/{public_path}"
+
+    return path
+
+
+def _request_public_path_with_query(request: Request) -> str:
+    path = request.url.path
+    if _is_football_web_app_request(request):
+        path = _to_public_football_path(path)
+
+    query = request.url.query
+    return f"{path}?{query}" if query else path
+
+
+def _build_football_mode_context(request: Request) -> dict[str, str | bool]:
+    is_web_app = _is_football_web_app_request(request)
+    football_base_path = "" if is_web_app else "/football"
+    football_root_path = "/" if is_web_app else "/football/"
+
+    return {
+        "is_web_app": is_web_app,
+        "render_left_sidebar": not is_web_app,
+        "football_base_path": football_base_path,
+        "football_root_path": football_root_path,
+    }
+
+
+def _build_football_auth_links(request: Request) -> dict[str, str]:
+    if _is_football_web_app_request(request):
+        scheme = _request_scheme(request)
+        host = _request_host(request)
+        if host == "":
+            host = FOOTBALL_WEB_APP_HOST
+
+        next_url = f"{scheme}://{host}{_request_public_path_with_query(request)}"
+        encoded_next_url = quote(next_url, safe=":/?=&%#")
+        return {
+            "login_url": f"https://www.schleising.net/account/login/?next={encoded_next_url}",
+            "signup_url": "https://www.schleising.net/account/create/",
+        }
+
+    local_next = _request_public_path_with_query(request)
+    encoded_local_next = quote(local_next, safe="/?=&")
+    return {
+        "login_url": f"/account/login/?next={encoded_local_next}",
+        "signup_url": "/account/create/",
+    }
+
+
+def _build_month_nav_links(selected_season_key: str, football_root_path: str) -> list[dict[str, str]]:
     season_label = get_season_short_label(selected_season_key)
 
     return [
         {
             "label": f"{month_name[month]} {season_label}",
-            "url": f"/football/matches/{month}/?season={selected_season_key}",
+            "url": f"{football_root_path}matches/{month}/?season={selected_season_key}",
         }
         for month in SEASON_MONTH_ORDER
     ]
@@ -290,6 +380,10 @@ async def _build_football_season_context(
     requested_season_key: str | None,
     show_selector: bool = True,
 ) -> dict:
+    mode_context = _build_football_mode_context(request)
+    football_root_path = str(mode_context["football_root_path"])
+    table_root_url = f"{football_root_path}table/"
+
     available_season_keys = await get_available_season_keys()
     current_season_key = infer_current_season_key(available_season_keys)
 
@@ -322,12 +416,15 @@ async def _build_football_season_context(
         "current_season_short_label": get_season_short_label(current_season_key),
         "current_competition_name": get_competition_name_for_season(current_season_key),
         "is_current_season": selected_season_key == current_season_key,
-        "season_switch_path": "/football/table/",
-        "current_season_url": f"/football/table/?season={current_season_key}",
-        "live_scores_url": "/football/",
-        "table_url": f"/football/table/?season={selected_season_key}",
-        "all_matches_url": f"/football/matches/all/?season={selected_season_key}",
-        "month_nav_links": _build_month_nav_links(selected_season_key),
+        "season_switch_path": table_root_url,
+        "current_season_url": f"{table_root_url}?season={current_season_key}",
+        "live_scores_url": football_root_path,
+        "table_url": f"{table_root_url}?season={selected_season_key}",
+        "all_matches_url": f"{football_root_path}matches/all/?season={selected_season_key}",
+        "head_to_head_url": f"{football_root_path}head-to-head/",
+        "subscriptions_url": f"{football_root_path}subscriptions/",
+        "month_nav_links": _build_month_nav_links(selected_season_key, football_root_path),
+        **mode_context,
     }
 
 
@@ -559,6 +656,7 @@ async def get_subscriptions_page(request: Request):
     season_context = await _build_football_season_context(
         request, None, show_selector=False
     )
+    auth_links = _build_football_auth_links(request)
     current_season_key = season_context["current_season_key"]
     teams = await _get_current_season_teams(current_season_key)
 
@@ -573,6 +671,7 @@ async def get_subscriptions_page(request: Request):
             "matches": [],
             "teams": teams,
             "can_manage_subscriptions": _request_username(request) != "Anonymous User",
+            **auth_links,
             **season_context,
         },
     )
@@ -717,6 +816,33 @@ async def get_table(
             "title": "League Table",
             "table_list": table_list,
             **season_context,
+        },
+    )
+
+
+@football_router.get("/manifest.webmanifest")
+async def get_football_manifest(request: Request):
+    if not _is_football_web_app_request(request):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+
+    return FileResponse(
+        path=FOOTBALL_MANIFEST_PATH,
+        media_type="application/manifest+json",
+    )
+
+
+@football_router.get("/sw.js")
+async def get_football_service_worker(request: Request):
+    if not _is_football_web_app_request(request):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+
+    return FileResponse(
+        path=FOOTBALL_SERVICE_WORKER_PATH,
+        media_type="application/javascript",
+        headers={
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            "Pragma": "no-cache",
+            "Expires": "0",
         },
     )
 

@@ -4,7 +4,7 @@
 <link rel="stylesheet" href="/css/table.css?v1.8.6">
 {% block football_scripts %}
 {% if is_current_season|default(false) %}
-<script defer src="/js/football/table_live.js?v1.8.1"></script>
+<script defer src="/js/football/table_live.js?v1.8.2"></script>
 {% endif %}
 {% endblock %}
 {% block title %}<title>Football - {{ title }}</title>{% endblock %}
@@ -27,6 +27,7 @@
 {% endblock %}
 
 {% block football_content %}
+{% set football_root = football_root_path|default('/football/') %}
 {% set ns = namespace(has_live=false, has_delta=false) %}
 {% for table_item in table_list %}
   {% if table_item.has_started %}
@@ -83,7 +84,7 @@
         <div class="row-data data table-cell" role="cell">
           <div class="team-and-badge">
             <img class="team-badge" src="{{ table_item.team.local_crest }}"></img>
-            <a class="team-name" href="/football/matches/team/{{ table_item.team.id }}/?season={{ selected_season_key|default(current_season_key)|default('') }}">{{ table_item.team.short_name }}</a>
+            <a class="team-name" href="{{ football_root }}matches/team/{{ table_item.team.id }}/?season={{ selected_season_key|default(current_season_key)|default('') }}">{{ table_item.team.short_name }}</a>
           </div>
         </div>
         <div class="row-data data table-cell centre-align table-played" role="cell">{{ table_item.played_games }}</div>

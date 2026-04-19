@@ -1,3 +1,18 @@
+const FOOTBALL_FALLBACK_URL = "https://www.schleising.net/football/";
+const FOOTBALL_WEBAPP_URL = "https://football.schleising.net/";
+
+function resolveSafeUrl(value, fallback) {
+    if (typeof value !== "string" || value.trim() === "") {
+        return fallback;
+    }
+
+    try {
+        return new URL(value, self.location.origin).toString();
+    } catch (_) {
+        return fallback;
+    }
+}
+
 self.addEventListener('push', function (event) {
     console.log('Push received:', event);
 
@@ -12,7 +27,8 @@ self.addEventListener('push', function (event) {
         icon: data.icon,
         badge: data.badge,
         data: {
-            url: data.url || '/'
+            url: resolveSafeUrl(data.url, FOOTBALL_FALLBACK_URL),
+            webappUrl: resolveSafeUrl(data.webapp_url, FOOTBALL_WEBAPP_URL),
         },
         requireInteraction: data.requireInteraction || false
     };
@@ -22,23 +38,45 @@ self.addEventListener('push', function (event) {
     );
 });
 
-self.onnotificationclick = (event) => {
-    console.log("On notification click: ", event.notification.tag);
+self.onnotificationclick = event => {
     event.notification.close();
 
-    // This looks to see if the current is already open and
-    // focuses if it is
+    const notificationData = event.notification.data || {};
+    const fallbackUrl = resolveSafeUrl(notificationData.url, FOOTBALL_FALLBACK_URL);
+    const preferredWebAppUrl = resolveSafeUrl(notificationData.webappUrl, FOOTBALL_WEBAPP_URL);
+    const preferredOrigin = new URL(preferredWebAppUrl).origin;
+
     event.waitUntil(
-        clients
-            .matchAll({
-                type: "window",
-            })
-            .then((clientList) => {
-                for (const client of clientList) {
-                    if (client.url === event.notification.data.url && "focus" in client) return client.focus();
+        clients.matchAll({ type: "window", includeUncontrolled: true }).then(async clientList => {
+            for (const client of clientList) {
+                if (client.url.startsWith(preferredOrigin) && "focus" in client) {
+                    return client.focus();
                 }
-                if (clients.openWindow) return clients.openWindow(event.notification.data.url);
-            }),
+            }
+
+            if (clients.openWindow) {
+                try {
+                    const openedWebApp = await clients.openWindow(preferredWebAppUrl);
+                    if (openedWebApp) {
+                        return openedWebApp;
+                    }
+                } catch (_) {
+                    // Fall back to existing www client or open www URL below.
+                }
+            }
+
+            for (const client of clientList) {
+                if (client.url === fallbackUrl && "focus" in client) {
+                    return client.focus();
+                }
+            }
+
+            if (clients.openWindow) {
+                return clients.openWindow(fallbackUrl);
+            }
+
+            return undefined;
+        })
     );
 };
 

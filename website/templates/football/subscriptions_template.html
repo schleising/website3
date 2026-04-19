@@ -1,8 +1,7 @@
 {% extends "football/football-base.html" %}
 
 {% block football_head %}
-<script defer src="/js/football/scope.js?v1.0.0"></script>
-<script defer src="/js/football/subscriptions.js?v1.3.0"></script>
+<script defer src="/js/football/subscriptions.js?v1.4.0"></script>
 {% endblock %}
 
 {% block title %}<title>Football - {{ title }}</title>{% endblock %}
@@ -24,7 +23,7 @@
   </p>
   {% if not can_manage_subscriptions %}
   <p class="football-subscriptions-auth-message">
-    <a href="/account/login/?next={{ request.url.path|urlencode }}">Login</a> or <a href="/account/create/">sign up</a> to subscribe and manage notification preferences.
+    <a href="{{ login_url|default('/account/login/?next=' ~ request.url.path|urlencode) }}">Login</a> or <a href="{{ signup_url|default('/account/create/') }}">sign up</a> to subscribe and manage notification preferences.
   </p>
   {% endif %}
 

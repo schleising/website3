@@ -9,7 +9,13 @@ let hasActiveSubscription = false;
 let canManageSubscriptions = subscriptionSection?.dataset.canManageSubscriptions === "true";
 const csrfToken = subscriptionSection?.dataset.csrfToken || "";
 
-const serviceWorkerPath = "/sw.js";
+const footballHtmlElement = document.documentElement;
+const footballBasePathRaw = String(footballHtmlElement.dataset.footballBasePath || "/football").trim();
+const footballBasePath = footballBasePathRaw === "/" ? "" : footballBasePathRaw.replace(/\/+$/, "");
+const footballRootPath = footballBasePath === "" ? "/" : `${footballBasePath}/`;
+const serviceWorkerPath = `${footballBasePath}/sw.js`;
+const serviceWorkerScope = footballRootPath;
+const subscriptionPreferencesUrl = `${footballRootPath}subscription/preferences/`;
 const vapidPublicKey = "BAE-ATyX2xQGdyv9W5vcsI7qzA1FSui3UYNHgKFSKMmR12_7L9xQcVcDz8JbweMOTWb7npz6VMQMQC1BUylu00E";
 
 function getTeamCheckboxes() {
@@ -181,7 +187,7 @@ async function loadPreferences() {
         }
 
         const payload = { subscription };
-        const data = await requestJson("/football/subscription/preferences/", "POST", payload);
+        const data = await requestJson(subscriptionPreferencesUrl, "POST", payload);
 
         if (!data.is_subscribed) {
             try {
@@ -263,7 +269,7 @@ async function savePreferences() {
             team_ids: teamIds,
         };
 
-        await requestJson("/football/subscription/preferences/", "PUT", payload);
+        await requestJson(subscriptionPreferencesUrl, "PUT", payload);
         hasActiveSubscription = true;
         setStatus("Preferences saved.");
     } catch (error) {
@@ -291,7 +297,7 @@ async function unsubscribeAll() {
             return;
         }
 
-        await requestJson("/football/subscription/preferences/", "DELETE", { subscription });
+        await requestJson(subscriptionPreferencesUrl, "DELETE", { subscription });
         await subscription.unsubscribe();
         resetToUnsubscribedState("Not currently subscribed. Select teams and save to subscribe.");
     } catch (error) {

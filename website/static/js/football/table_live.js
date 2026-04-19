@@ -20,6 +20,11 @@ const SEASON_ZONE_CLASSES = [
     "table-zone-relegation"
 ];
 
+const footballTableHtmlElement = document.documentElement;
+const footballTableBasePathRaw = String(footballTableHtmlElement.dataset.footballBasePath || "/football").trim();
+const footballTableBasePath = footballTableBasePathRaw === "/" ? "" : footballTableBasePathRaw.replace(/\/+$/, "");
+const footballTableRootPath = footballTableBasePath === "" ? "/" : `${footballTableBasePath}/`;
+
 function escapeHtml(value) {
     if (value === null || value === undefined) {
         return "";
@@ -142,7 +147,7 @@ function updateTeamLink(row, teamId, seasonKey) {
         return;
     }
 
-    const expectedHref = `/football/matches/team/${teamId}/${buildSeasonQuery(seasonKey)}`;
+    const expectedHref = `${footballTableRootPath}matches/team/${teamId}/${buildSeasonQuery(seasonKey)}`;
     if (teamLinkElement.getAttribute("href") !== expectedHref) {
         teamLinkElement.setAttribute("href", expectedHref);
     }
@@ -527,7 +532,7 @@ document.addEventListener("readystatechange", event => {
 
     const pageUrl = new URL(window.location.href);
     const wsProtocol = pageUrl.protocol === "https:" ? "wss:" : "ws:";
-    footballTableUrl = `${wsProtocol}//${pageUrl.host}/football/ws/table/${pageUrl.search}`;
+    footballTableUrl = `${wsProtocol}//${pageUrl.host}${footballTableBasePath}/ws/table/${pageUrl.search}`;
     footballTableLoadedDayKey = getDayKey(new Date());
 
     setupRangeInteractions();

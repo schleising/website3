@@ -15,6 +15,11 @@ var isLiveMatchesView = false;
 var hasHydratedInitialFullWindow = false;
 var loadedDayKey = null;
 
+const footballHtmlElement = document.documentElement;
+const footballBasePathRaw = String(footballHtmlElement.dataset.footballBasePath || "/football").trim();
+const footballBasePath = footballBasePathRaw === "/" ? "" : footballBasePathRaw.replace(/\/+$/, "");
+const footballWebSocketPath = `${footballBasePath}/ws/`;
+
 // Add a callback for state changes
 document.addEventListener('readystatechange', event => {
     if (event.target.readyState === "complete") {
@@ -22,8 +27,8 @@ document.addEventListener('readystatechange', event => {
         const pageUrl = new URL(window.location.href);
         const wsProtocol = pageUrl.protocol === "https:" ? "wss:" : "ws:";
 
-        // Always use the football websocket endpoint, regardless of current sub-route.
-        url = `${wsProtocol}//${pageUrl.host}/football/ws/${pageUrl.search}`;
+        // Always use the football websocket endpoint, derived from the active football base path.
+        url = `${wsProtocol}//${pageUrl.host}${footballWebSocketPath}${pageUrl.search}`;
 
         const footballContent = document.querySelector('.football-content-pad');
         isLiveMatchesView = footballContent?.dataset.liveMatchesView === 'true';

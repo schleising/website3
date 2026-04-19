@@ -21,6 +21,7 @@
 {% endblock %}
 
 {% block football_content %}
+{% set football_root = football_root_path|default('/football/') %}
 {% if jump_targets is defined and jump_targets|length > 0 %}
 <section id="football-all-matches-toolbar" class="football-all-matches-toolbar" data-auto-center-next-match="{{ 'true' if all_matches_view|default(false) and is_current_season|default(false) else 'false' }}" aria-label="Match list quick navigation">
   <details class="football-jump-menu" id="football-jump-menu">
@@ -67,7 +68,7 @@
         <div class="team">
           <div class="team-and-badge">
             <img class="team-badge" src="{{ match.home_team.local_crest }}"></img>
-            <a class="team-name" href="/football/matches/team/{{ match.home_team.id }}/?season={{ selected_season_key|default(current_season_key)|default('') }}">{{ match.home_team.short_name }}</a>
+            <a class="team-name" href="{{ football_root }}matches/team/{{ match.home_team.id }}/?season={{ selected_season_key|default(current_season_key)|default('') }}">{{ match.home_team.short_name }}</a>
           </div>
           {% if live_matches %}
           <div class="home-team-score"></div>
@@ -82,7 +83,7 @@
         <div class="team">
           <div class="team-and-badge">
             <img class="team-badge" src="{{ match.away_team.local_crest }}"></img>
-            <a class="team-name" href="/football/matches/team/{{ match.away_team.id }}/?season={{ selected_season_key|default(current_season_key)|default('') }}">{{ match.away_team.short_name }}</a>
+            <a class="team-name" href="{{ football_root }}matches/team/{{ match.away_team.id }}/?season={{ selected_season_key|default(current_season_key)|default('') }}">{{ match.away_team.short_name }}</a>
           </div>
           {% if live_matches %}
           <div class="away-team-score"></div>
@@ -122,7 +123,7 @@
     <div class="team">
       <div class="team-and-badge">
         <img class="team-badge" src="{{ match.home_team.local_crest }}"></img>
-        <a class="team-name" href="/football/matches/team/{{ match.home_team.id }}/?season={{ selected_season_key|default(current_season_key)|default('') }}">{{ match.home_team.short_name }}</a>
+        <a class="team-name" href="{{ football_root }}matches/team/{{ match.home_team.id }}/?season={{ selected_season_key|default(current_season_key)|default('') }}">{{ match.home_team.short_name }}</a>
       </div>
       {% if live_matches %}
       <div class="home-team-score"></div>
@@ -137,7 +138,7 @@
     <div class="team">
       <div class="team-and-badge">
         <img class="team-badge" src="{{ match.away_team.local_crest }}"></img>
-        <a class="team-name" href="/football/matches/team/{{ match.away_team.id }}/?season={{ selected_season_key|default(current_season_key)|default('') }}">{{ match.away_team.short_name }}</a>
+        <a class="team-name" href="{{ football_root }}matches/team/{{ match.away_team.id }}/?season={{ selected_season_key|default(current_season_key)|default('') }}">{{ match.away_team.short_name }}</a>
       </div>
       {% if live_matches %}
       <div class="away-team-score"></div>
