@@ -16,7 +16,7 @@ var hasHydratedInitialFullWindow = false;
 var loadedDayKey = null;
 
 const footballHtmlElement = document.documentElement;
-const footballBasePathRaw = String(footballHtmlElement.dataset.footballBasePath || "/football").trim();
+const footballBasePathRaw = String(footballHtmlElement.dataset.footballBasePath ?? "/football").trim();
 const footballBasePath = footballBasePathRaw === "/" ? "" : footballBasePathRaw.replace(/\/+$/, "");
 const footballWebSocketPath = `${footballBasePath}/ws/`;
 

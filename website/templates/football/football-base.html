@@ -15,10 +15,10 @@
 
 {% block scripts %}
 {% if is_web_app|default(false) %}
-<script defer src="/js/football/pwa.js?v1.0.0"></script>
+<script defer src="/js/football/pwa.js?v1.0.1"></script>
 {% endif %}
 {% if enable_live_updates|default(false) %}
-<script defer src="/js/football/football.js?v1.2.4"></script>
+<script defer src="/js/football/football.js?v1.2.5"></script>
 {% endif %}
 {% if all_matches_view|default(false) or team_matches_view|default(false) %}
 <script defer src="/js/football/all_matches_view.js?v1.0.7"></script>

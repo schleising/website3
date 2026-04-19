@@ -6,7 +6,7 @@
     }
 
     const htmlElement = document.documentElement;
-    const footballBasePathRaw = String(htmlElement.dataset.footballBasePath || "/football").trim();
+    const footballBasePathRaw = String(htmlElement.dataset.footballBasePath ?? "/football").trim();
     const footballBasePath = footballBasePathRaw === "/" ? "" : footballBasePathRaw.replace(/\/+$/, "");
     const serviceWorkerPath = `${footballBasePath}/sw.js`;
     const serviceWorkerScope = footballBasePath === "" ? "/" : `${footballBasePath}/`;

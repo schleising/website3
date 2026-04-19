@@ -10,7 +10,7 @@ let canManageSubscriptions = subscriptionSection?.dataset.canManageSubscriptions
 const csrfToken = subscriptionSection?.dataset.csrfToken || "";
 
 const footballHtmlElement = document.documentElement;
-const footballBasePathRaw = String(footballHtmlElement.dataset.footballBasePath || "/football").trim();
+const footballBasePathRaw = String(footballHtmlElement.dataset.footballBasePath ?? "/football").trim();
 const footballBasePath = footballBasePathRaw === "/" ? "" : footballBasePathRaw.replace(/\/+$/, "");
 const footballRootPath = footballBasePath === "" ? "/" : `${footballBasePath}/`;
 const serviceWorkerPath = `${footballBasePath}/sw.js`;

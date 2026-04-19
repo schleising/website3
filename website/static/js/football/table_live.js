@@ -21,7 +21,7 @@ const SEASON_ZONE_CLASSES = [
 ];
 
 const footballTableHtmlElement = document.documentElement;
-const footballTableBasePathRaw = String(footballTableHtmlElement.dataset.footballBasePath || "/football").trim();
+const footballTableBasePathRaw = String(footballTableHtmlElement.dataset.footballBasePath ?? "/football").trim();
 const footballTableBasePath = footballTableBasePathRaw === "/" ? "" : footballTableBasePathRaw.replace(/\/+$/, "");
 const footballTableRootPath = footballTableBasePath === "" ? "/" : `${footballTableBasePath}/`;
 
