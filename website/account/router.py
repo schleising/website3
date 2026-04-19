@@ -144,6 +144,24 @@ def _build_login_url(result: str | None, next_path: str | None) -> str:
     return f"/account/login/?{urlencode(params)}"
 
 
+def _is_web_app_login_target(next_target: str | None) -> bool:
+    if next_target is None:
+        return False
+
+    candidate = next_target.strip()
+    if candidate == "":
+        return False
+
+    parsed = urlparse(candidate)
+    host = (parsed.hostname or "").lower()
+    path = parsed.path or "/"
+
+    if host in {"feeds.schleising.net", "football.schleising.net"}:
+        return True
+
+    return False
+
+
 @account_router.get("/login", response_class=HTMLResponse)
 @account_router.get("/login/", response_class=HTMLResponse)
 async def get_login_page(
@@ -152,6 +170,7 @@ async def get_login_page(
     next: str | None = None,
 ):
     next_path = _safe_next_path(next)
+    hide_left_sidebar = _is_web_app_login_target(next)
 
     # Render the login page
     return TEMPLATES.TemplateResponse(
@@ -161,6 +180,7 @@ async def get_login_page(
             "request": request,
             "result": result,
             "next_path": next_path,
+            "render_left_sidebar": not hide_left_sidebar,
         },
     )
 
