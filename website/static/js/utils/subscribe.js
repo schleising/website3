@@ -1,6 +1,55 @@
 subscribeButton = document.getElementById('subscribe-button');
 
 const serviceWorkerPath = '/sw.js';
+let isReloadingForUpdate = false;
+
+function promptForWaitingWorker(registration) {
+    if (!registration || !registration.waiting) {
+        return;
+    }
+
+    if (window.__pwaUpdatePromptOpen === true) {
+        return;
+    }
+
+    window.__pwaUpdatePromptOpen = true;
+    const shouldUpdateNow = window.confirm('A new version is available. Update now?');
+    if (shouldUpdateNow) {
+        registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+    } else {
+        window.__pwaUpdatePromptOpen = false;
+    }
+}
+
+function attachUpdateFlow(registration) {
+    if (!registration) {
+        return;
+    }
+
+    promptForWaitingWorker(registration);
+
+    registration.addEventListener('updatefound', () => {
+        const installingWorker = registration.installing;
+        if (installingWorker == null) {
+            return;
+        }
+
+        installingWorker.addEventListener('statechange', () => {
+            if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                promptForWaitingWorker(registration);
+            }
+        });
+    });
+
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (isReloadingForUpdate) {
+            return;
+        }
+
+        isReloadingForUpdate = true;
+        window.location.reload();
+    });
+}
 
 function setButtonState() {
     // Set the button state according to the push registration
@@ -34,10 +83,14 @@ async function updateServiceWorkerRegistration() {
 
     if (registration != null) {
         console.log('Service Worker already registered, updating...');
-        return await registration.update();
+        await registration.update();
+        attachUpdateFlow(registration);
+        return registration;
     } else {
         console.log('Service Worker not registered, registering...');
-        return await navigator.serviceWorker.register(serviceWorkerPath, {scope: serviceWorkerScope});
+        const newRegistration = await navigator.serviceWorker.register(serviceWorkerPath, {scope: serviceWorkerScope});
+        attachUpdateFlow(newRegistration);
+        return newRegistration;
     }
 }
 

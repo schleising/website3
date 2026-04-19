@@ -6,7 +6,7 @@
 <link rel="icon" type="image/png" sizes="48x48" href="/icons/football/webapp/favicon-48x48.png?v1.0.4" />
 <link rel="icon" type="image/x-icon" href="/icons/football/webapp/favicon-48x48.ico?v1.0.4" />
 <link rel="apple-touch-icon" sizes="192x192" href="/icons/football/webapp/android-chrome-192x192.png?v1.0.4" />
-<link rel="manifest" href="{{ football_root_path|default('/') }}manifest.webmanifest?v1.0.5" crossorigin="use-credentials" />
+<link rel="manifest" href="{{ football_root_path|default('/') }}manifest.webmanifest?v1.0.6" crossorigin="use-credentials" />
 <meta name="theme-color" content="#2a5b90">
 {% else %}
 {{ super() }}
@@ -15,7 +15,7 @@
 
 {% block scripts %}
 {% if is_web_app|default(false) %}
-<script defer src="/js/football/pwa.js?v1.0.1"></script>
+<script defer src="/js/football/pwa.js?v1.0.2"></script>
 {% endif %}
 {% if enable_live_updates|default(false) %}
 <script defer src="/js/football/football.js?v1.2.5"></script>

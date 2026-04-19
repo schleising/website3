@@ -23,14 +23,67 @@
  */
 
 var gotDataFromNetwork = false;
+let isReloadingForUpdate = false;
+
+function promptForWaitingWorker(registration) {
+    if (!registration || !registration.waiting) {
+        return;
+    }
+
+    if (window.__pwaUpdatePromptOpen === true) {
+        return;
+    }
+
+    window.__pwaUpdatePromptOpen = true;
+    const shouldUpdateNow = window.confirm("A new version is available. Update now?");
+    if (shouldUpdateNow) {
+        registration.waiting.postMessage({ type: "SKIP_WAITING" });
+    } else {
+        window.__pwaUpdatePromptOpen = false;
+    }
+}
+
+function attachUpdateFlow(registration) {
+    if (!registration) {
+        return;
+    }
+
+    promptForWaitingWorker(registration);
+
+    registration.addEventListener("updatefound", () => {
+        const installingWorker = registration.installing;
+        if (installingWorker == null) {
+            return;
+        }
+
+        installingWorker.addEventListener("statechange", () => {
+            if (installingWorker.state === "installed" && navigator.serviceWorker.controller) {
+                promptForWaitingWorker(registration);
+            }
+        });
+    });
+
+    navigator.serviceWorker.addEventListener("controllerchange", () => {
+        if (isReloadingForUpdate) {
+            return;
+        }
+
+        isReloadingForUpdate = true;
+        window.location.reload();
+    });
+}
 
 document.addEventListener("DOMContentLoaded", async function () {
     // Register the service worker
     if ("serviceWorker" in navigator) {
         navigator.serviceWorker.register("sw.js").then(
             (registration) => {
+                attachUpdateFlow(registration);
+                registration.update();
                 navigator.serviceWorker.ready.then(() => {
-                    registration.active.postMessage({ messageType: "getCachedBetData" });
+                    if (registration.active) {
+                        registration.active.postMessage({ messageType: "getCachedBetData" });
+                    }
                 });
             },
             (error) => {

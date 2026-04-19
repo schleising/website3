@@ -49,6 +49,55 @@ const cityPresets = {
 
 const serviceWorkerPath = "/sw.js";
 const serviceWorkerScope = "/";
+let isReloadingForUpdate = false;
+
+function promptForWaitingWorker(registration) {
+    if (!registration || !registration.waiting) {
+        return;
+    }
+
+    if (window.__pwaUpdatePromptOpen === true) {
+        return;
+    }
+
+    window.__pwaUpdatePromptOpen = true;
+    const shouldUpdateNow = window.confirm("A new version is available. Update now?");
+    if (shouldUpdateNow) {
+        registration.waiting.postMessage({ type: "SKIP_WAITING" });
+    } else {
+        window.__pwaUpdatePromptOpen = false;
+    }
+}
+
+function attachUpdateFlow(registration) {
+    if (!registration) {
+        return;
+    }
+
+    promptForWaitingWorker(registration);
+
+    registration.addEventListener("updatefound", () => {
+        const installingWorker = registration.installing;
+        if (installingWorker == null) {
+            return;
+        }
+
+        installingWorker.addEventListener("statechange", () => {
+            if (installingWorker.state === "installed" && navigator.serviceWorker.controller) {
+                promptForWaitingWorker(registration);
+            }
+        });
+    });
+
+    navigator.serviceWorker.addEventListener("controllerchange", () => {
+        if (isReloadingForUpdate) {
+            return;
+        }
+
+        isReloadingForUpdate = true;
+        window.location.reload();
+    });
+}
 
 const sunriseElement = document.getElementById("sunrise");
 const sunsetElement = document.getElementById("sunset");
@@ -3630,10 +3679,14 @@ async function updateServiceWorkerRegistration() {
     const existingRegistration = await navigator.serviceWorker.getRegistration(serviceWorkerScope);
 
     if (existingRegistration != null) {
-        return existingRegistration.update();
+        await existingRegistration.update();
+        attachUpdateFlow(existingRegistration);
+        return existingRegistration;
     }
 
-    return navigator.serviceWorker.register(serviceWorkerPath, { scope: serviceWorkerScope });
+    const registration = await navigator.serviceWorker.register(serviceWorkerPath, { scope: serviceWorkerScope });
+    attachUpdateFlow(registration);
+    return registration;
 }
 
 function initializeProgressiveWebApp() {

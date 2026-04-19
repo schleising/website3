@@ -131,6 +131,11 @@ self.addEventListener("fetch", /** @param {FetchEvent} event */ (event) => {
 });
 
 self.addEventListener("message", (event) => {
+    if (event.data && (event.data.type === "SKIP_WAITING" || event.data.messageType === "SKIP_WAITING")) {
+        self.skipWaiting();
+        return;
+    }
+
     if (event.data.messageType === "getCachedBetData") {
         event.waitUntil(
             (async () => {

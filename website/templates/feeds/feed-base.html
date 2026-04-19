@@ -8,7 +8,7 @@
 <link rel="shortcut icon" type="image/svg+xml" href="/icons/feeds/feeds-icon-any.svg?v1.0.1" />
 {% if is_web_app %}
 <link rel="apple-touch-icon" href="/icons/feeds/android-chrome-192x192.png?v1.0.1" />
-<link rel="manifest" href="{{ feeds_root_path }}manifest.webmanifest?v1.0.1" crossorigin="use-credentials" />
+<link rel="manifest" href="{{ feeds_root_path }}manifest.webmanifest?v1.0.2" crossorigin="use-credentials" />
 {% endif %}
 {% endblock %}
 
@@ -24,7 +24,7 @@
 
 {% block scripts %}
 {% if is_web_app %}
-  <script defer src="/js/feeds/pwa.js?v1.0.0"></script>
+  <script defer src="/js/feeds/pwa.js?v1.0.1"></script>
 {% endif %}
 {% if feed_page_mode == "reader" %}
   <script defer src="/js/feeds/reader.js?v1.0.40"></script>

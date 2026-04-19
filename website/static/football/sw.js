@@ -80,6 +80,12 @@ self.onnotificationclick = event => {
     );
 };
 
+self.addEventListener('message', event => {
+    if (event.data && (event.data.type === 'SKIP_WAITING' || event.data.messageType === 'SKIP_WAITING')) {
+        self.skipWaiting();
+    }
+});
+
 // Add a fetch event listener to the service worker
 self.addEventListener('fetch', function (event) {
     console.log('Fetch event:', event);
