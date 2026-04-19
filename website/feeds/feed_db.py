@@ -31,7 +31,7 @@ from .models import (
 )
 
 
-READ_VISIBILITY_WINDOW = timedelta(minutes=3)
+READ_VISIBILITY_WINDOW = timedelta(seconds=5)
 RECENTLY_READ_WINDOW = timedelta(days=7)
 
 
@@ -1218,12 +1218,8 @@ async def get_article_list(
 
     read_state_ids = await get_read_article_id_set(user_id)
     recent_read_state_ids: set[ObjectId] = set()
-    if normalized_status in {"unread", "read"}:
-        recent_read_state_ids, expired_read_state_ids = await get_read_article_visibility_sets(user_id)
-        if normalized_status == "unread":
-            # Keep newly-read cards visible until READ_VISIBILITY_WINDOW expires,
-            # then remove them from fresh unread/category fetches.
-            read_state_ids = expired_read_state_ids
+    if normalized_status == "read":
+        recent_read_state_ids, _ = await get_read_article_visibility_sets(user_id)
 
     cards, has_more = await list_cards_for_feed_ids(
         user_id=user_id,
@@ -1466,8 +1462,8 @@ async def list_cards_for_feed_ids(
             return [], False
         base_query["_id"] = {"$in": list(recent_read_state_ids)}
     elif status_filter == "unread" and len(read_state_ids) > 0:
-        # Unread/category views hide only reads that have already expired from
-        # the visibility window, preserving cross-device consistency.
+        # Fresh unread/category page builds exclude read items immediately.
+        # In-session visibility grace is handled client-side via read_at.
         base_query["_id"] = {"$nin": list(read_state_ids)}
 
     # Match frontend ordering: publication date ascending, with undated articles
