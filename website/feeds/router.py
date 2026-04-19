@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Literal
 from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile, status
-from fastapi.responses import HTMLResponse, Response, RedirectResponse
+from fastapi.responses import FileResponse, HTMLResponse, Response, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 from ..account.csrf import validate_csrf
@@ -54,6 +55,10 @@ TEMPLATES = Jinja2Templates("/app/templates")
 
 feeds_router = APIRouter(prefix="/feeds")
 
+WEBSITE_ROOT = Path(__file__).resolve().parents[1]
+FEEDS_MANIFEST_PATH = WEBSITE_ROOT / "static" / "manifests" / "feeds" / "feeds.webmanifest"
+FEEDS_SERVICE_WORKER_PATH = WEBSITE_ROOT / "static" / "feeds" / "sw.js"
+
 
 def _request_username(request: Request) -> str | None:
     """Extract authenticated username from request state."""
@@ -69,11 +74,81 @@ def _request_username(request: Request) -> str | None:
     return username
 
 
-def _login_redirect_response(path: str) -> RedirectResponse:
+def _request_host(request: Request) -> str:
+    """Extract lowercase request host without port."""
+
+    raw_host = request.headers.get("x-forwarded-host") or request.headers.get("host") or ""
+    host = raw_host.split(",")[0].strip().lower()
+    return host.split(":")[0]
+
+
+def _is_web_app_request(request: Request) -> bool:
+    """Return True when request should render feeds in standalone web app mode."""
+
+    web_app_header = request.headers.get("x-is-web-app", "").strip().lower()
+    if web_app_header in {"1", "true", "yes", "on"}:
+        return True
+
+    return _request_host(request) == "feeds.schleising.net"
+
+
+def _request_path_with_query(request: Request) -> str:
+    """Return request path with query string preserved."""
+
+    path = request.url.path if request.url.path != "" else "/"
+    query = request.url.query
+    if query == "":
+        return path
+    return f"{path}?{query}"
+
+
+def _public_web_app_path(request: Request) -> str:
+    """Return external feeds-subdomain path from internal proxied /feeds path."""
+
+    internal_path = _request_path_with_query(request)
+    if internal_path == "/feeds":
+        return "/"
+    if internal_path.startswith("/feeds/"):
+        return internal_path[len("/feeds") :]
+    return internal_path
+
+
+def _feeds_template_context(
+    request: Request,
+    title: str,
+    context: dict[str, object],
+) -> dict[str, object]:
+    """Build shared template context for feeds pages."""
+
+    is_web_app = _is_web_app_request(request)
+    feeds_base_path = "" if is_web_app else "/feeds"
+    feeds_root_path = "/" if is_web_app else "/feeds/"
+
+    return {
+        "request": request,
+        "title": title,
+        "is_web_app": is_web_app,
+        "render_left_sidebar": not is_web_app,
+        "feeds_base_path": feeds_base_path,
+        "feeds_root_path": feeds_root_path,
+        **context,
+    }
+
+
+def _login_redirect_response(request: Request) -> RedirectResponse:
     """Build a login redirect response with return path."""
 
+    if _is_web_app_request(request):
+        scheme = request.headers.get("x-forwarded-proto") or request.url.scheme
+        host = _request_host(request) or (request.url.hostname or "feeds.schleising.net")
+        next_target = f"{scheme}://{host}{_public_web_app_path(request)}"
+        login_url = f"https://www.schleising.net/account/login/?next={quote(next_target, safe=':/?=&%#')}"
+    else:
+        next_target = _request_path_with_query(request)
+        login_url = f"/account/login/?next={quote(next_target, safe='/?=&')}"
+
     return RedirectResponse(
-        f"/account/login/?next={quote(path, safe='/?=&')}",
+        login_url,
         status_code=status.HTTP_303_SEE_OTHER,
     )
 
@@ -112,18 +187,15 @@ async def feed_reader_page(
 
     username = _request_username(request)
     if username is None:
-        return _login_redirect_response("/feeds/")
+        return _login_redirect_response(request)
 
     context = await get_feed_reader_context(username, category, status_filter)
+    template_context = _feeds_template_context(request, "Feeds", context)
 
     return TEMPLATES.TemplateResponse(
         request,
         "feeds/reader.html",
-        {
-            "request": request,
-            "title": "Feeds",
-            **context,
-        },
+        template_context,
     )
 
 
@@ -134,18 +206,15 @@ async def feed_settings_page(request: Request):
 
     username = _request_username(request)
     if username is None:
-        return _login_redirect_response("/feeds/settings/")
+        return _login_redirect_response(request)
 
     context = await get_feed_settings_context(username)
+    template_context = _feeds_template_context(request, "Feed Settings", context)
 
     return TEMPLATES.TemplateResponse(
         request,
         "feeds/settings.html",
-        {
-            "request": request,
-            "title": "Feed Settings",
-            **context,
-        },
+        template_context,
     )
 
 
@@ -156,7 +225,7 @@ async def feed_admin_page(request: Request):
 
     username = _request_username(request)
     if username is None:
-        return _login_redirect_response("/feeds/admin/")
+        return _login_redirect_response(request)
 
     if not _request_can_use_tools(request):
         raise HTTPException(
@@ -165,15 +234,41 @@ async def feed_admin_page(request: Request):
         )
 
     context = await get_feed_admin_context(username)
+    template_context = _feeds_template_context(request, "Feed Admin", context)
 
     return TEMPLATES.TemplateResponse(
         request,
         "feeds/admin.html",
-        {
-            "request": request,
-            "title": "Feed Admin",
-            **context,
-        },
+        template_context,
+    )
+
+
+@feeds_router.get("/manifest.webmanifest", response_class=Response)
+@feeds_router.get("/manifest.webmanifest/", response_class=Response)
+async def feed_manifest(request: Request) -> Response:
+    """Return feeds web app manifest for the dedicated web app host."""
+
+    if not _is_web_app_request(request):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not Found")
+
+    return FileResponse(
+        FEEDS_MANIFEST_PATH,
+        media_type="application/manifest+json",
+    )
+
+
+@feeds_router.get("/sw.js", response_class=Response)
+@feeds_router.get("/sw.js/", response_class=Response)
+async def feed_service_worker(request: Request) -> Response:
+    """Return feeds service worker script for the dedicated web app host."""
+
+    if not _is_web_app_request(request):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not Found")
+
+    return FileResponse(
+        FEEDS_SERVICE_WORKER_PATH,
+        media_type="application/javascript",
+        headers={"Cache-Control": "no-cache"},
     )
 
 

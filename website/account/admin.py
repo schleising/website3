@@ -2,7 +2,7 @@ from datetime import UTC, datetime, timedelta
 import logging
 from typing import Any, Dict, Optional, cast
 
-from fastapi import Depends, status
+from fastapi import Depends, Request, status
 from starlette.requests import HTTPConnection
 
 from fastapi.security import OAuth2
@@ -19,6 +19,7 @@ import bcrypt
 from pydantic import BaseModel
 
 from .user_model import User, UserInDB
+from ..utils.cookie_policy import cookie_domain_for_request
 
 from . import user_collection
 
@@ -254,7 +255,7 @@ async def create_new_user(
         return None
 
 
-def get_login_response(user: User, url: str) -> RedirectResponse:
+def get_login_response(user: User, url: str, request: Request) -> RedirectResponse:
     # If the user is valid, create a JWT token
     access_token_expires = (
         timedelta(seconds=user.token_expiry) if user.token_expiry is not None else None
@@ -266,18 +267,28 @@ def get_login_response(user: User, url: str) -> RedirectResponse:
     )
 
     # Create a redirect response to the login success page
-    target_url = url if url.startswith("/") else f"/account/{url}"
+    target_url = (
+        url
+        if url.startswith("/") or url.startswith("https://") or url.startswith("http://")
+        else f"/account/{url}"
+    )
     response = RedirectResponse(target_url, status_code=status.HTTP_303_SEE_OTHER)
 
     # Set a cookie on the response with the contents as the JWT token
-    response.set_cookie(
-        key="token",
-        max_age=user.token_expiry,
-        value=access_token,
-        secure=True,
-        httponly=True,
-        samesite="lax",
-    )
+    cookie_kwargs: dict[str, Any] = {
+        "key": "token",
+        "max_age": user.token_expiry,
+        "value": access_token,
+        "secure": True,
+        "httponly": True,
+        "samesite": "lax",
+        "path": "/",
+    }
+    cookie_domain = cookie_domain_for_request(request)
+    if cookie_domain is not None:
+        cookie_kwargs["domain"] = cookie_domain
+
+    response.set_cookie(**cookie_kwargs)
 
     # Return the reponse
     return response

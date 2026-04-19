@@ -139,26 +139,31 @@ function setupMobileSidebarToggles() {
     const leftSidebar = document.getElementById("left-sidebar-menu");
     const rightSidebar = document.getElementById("right-sidebar-menu");
 
-    if (!leftToggle || !rightToggle || !leftSidebar || !rightSidebar) {
+    if (!leftToggle && !rightToggle && !leftSidebar && !rightSidebar) {
         return;
     }
 
-    leftToggle.addEventListener("click", function() {
-        toggleMobileSidebar(leftSidebar, leftToggle, rightSidebar, rightToggle);
-    });
+    if (leftToggle && leftSidebar) {
+        leftToggle.addEventListener("click", function() {
+            toggleMobileSidebar(leftSidebar, leftToggle, rightSidebar, rightToggle);
+        });
+    }
 
-    rightToggle.addEventListener("click", function() {
-        toggleMobileSidebar(rightSidebar, rightToggle, leftSidebar, leftToggle);
-    });
+    if (rightToggle && rightSidebar) {
+        rightToggle.addEventListener("click", function() {
+            toggleMobileSidebar(rightSidebar, rightToggle, leftSidebar, leftToggle);
+        });
+    }
 
     document.addEventListener("click", function(event) {
         if (!isOverlaySidebarMode()) {
             return;
         }
 
-        const clickInsideControls = leftToggle.contains(event.target) || rightToggle.contains(event.target);
-        const clickInsideLeft = leftSidebar.contains(event.target);
-        const clickInsideRight = rightSidebar.contains(event.target);
+        const clickInsideControls = (leftToggle ? leftToggle.contains(event.target) : false)
+            || (rightToggle ? rightToggle.contains(event.target) : false);
+        const clickInsideLeft = leftSidebar ? leftSidebar.contains(event.target) : false;
+        const clickInsideRight = rightSidebar ? rightSidebar.contains(event.target) : false;
         if (!clickInsideControls && !clickInsideLeft && !clickInsideRight) {
             closeMobileSidebars();
         }
@@ -177,12 +182,19 @@ function toggleMobileSidebar(sidebarToToggle, toggleToToggle, sidebarToClose, to
     sidebarToToggle.classList.toggle("mobile-open", isOpening);
     toggleToToggle.setAttribute("aria-expanded", isOpening ? "true" : "false");
 
-    if (sidebarToClose.classList.contains("mobile-open")) {
+    if (sidebarToClose && sidebarToClose.classList.contains("mobile-open")) {
         sidebarToClose.classList.remove("mobile-open");
-        toggleToClose.setAttribute("aria-expanded", "false");
+        if (toggleToClose) {
+            toggleToClose.setAttribute("aria-expanded", "false");
+        }
     }
 
-    document.body.classList.toggle("nav-drawer-open", isOpening);
+    const leftSidebar = document.getElementById("left-sidebar-menu");
+    const rightSidebar = document.getElementById("right-sidebar-menu");
+    const anySidebarOpen = (leftSidebar ? leftSidebar.classList.contains("mobile-open") : false)
+        || (rightSidebar ? rightSidebar.classList.contains("mobile-open") : false);
+
+    document.body.classList.toggle("nav-drawer-open", anySidebarOpen);
 }
 
 function closeMobileSidebars() {
@@ -191,20 +203,27 @@ function closeMobileSidebars() {
     const leftSidebar = document.getElementById("left-sidebar-menu");
     const rightSidebar = document.getElementById("right-sidebar-menu");
 
-    if (!leftToggle || !rightToggle || !leftSidebar || !rightSidebar) {
-        return;
+    if (leftSidebar) {
+        leftSidebar.classList.remove("mobile-open");
+        leftSidebar.style.top = "";
+        leftSidebar.style.left = "";
+        leftSidebar.style.right = "";
     }
 
-    leftSidebar.classList.remove("mobile-open");
-    rightSidebar.classList.remove("mobile-open");
-    leftSidebar.style.top = "";
-    leftSidebar.style.left = "";
-    leftSidebar.style.right = "";
-    rightSidebar.style.top = "";
-    rightSidebar.style.left = "";
-    rightSidebar.style.right = "";
-    leftToggle.setAttribute("aria-expanded", "false");
-    rightToggle.setAttribute("aria-expanded", "false");
+    if (rightSidebar) {
+        rightSidebar.classList.remove("mobile-open");
+        rightSidebar.style.top = "";
+        rightSidebar.style.left = "";
+        rightSidebar.style.right = "";
+    }
+
+    if (leftToggle) {
+        leftToggle.setAttribute("aria-expanded", "false");
+    }
+    if (rightToggle) {
+        rightToggle.setAttribute("aria-expanded", "false");
+    }
+
     document.body.classList.remove("nav-drawer-open");
 }
 
@@ -232,21 +251,36 @@ function closeMobileSidebarsOnDesktop() {
 function syncSidebarWidths() {
     const leftSidebar = document.getElementById("left-sidebar-menu");
     const rightSidebar = document.getElementById("right-sidebar-menu");
-    if (!leftSidebar || !rightSidebar) {
+    const hasLeftSidebar = !!leftSidebar;
+    const hasRightSidebar = !!rightSidebar;
+
+    if (!hasLeftSidebar && !hasRightSidebar) {
         return;
     }
 
     const overlayMode = isOverlaySidebarMode();
     if (overlayMode) {
         // Clear previously applied widths so measurement can shrink when content changes.
-        leftSidebar.style.width = "";
-        rightSidebar.style.width = "";
+        if (leftSidebar) {
+            leftSidebar.style.width = "";
+        }
+        if (rightSidebar) {
+            rightSidebar.style.width = "";
+        }
     }
 
-    const leftWidth = measureSidebarContentWidth(leftSidebar);
-    const rightAvailable = !rightSidebar.classList.contains("hidden-sidebar");
-    const rightWidth = rightAvailable ? measureSidebarContentWidth(rightSidebar) : 0;
-    const contentWidth = Math.max(leftWidth, rightWidth);
+    const leftWidth = leftSidebar ? measureSidebarContentWidth(leftSidebar) : 0;
+    const rightAvailable = rightSidebar ? !rightSidebar.classList.contains("hidden-sidebar") : false;
+    const rightWidth = rightSidebar && rightAvailable ? measureSidebarContentWidth(rightSidebar) : 0;
+
+    const widthCandidates = [];
+    if (hasLeftSidebar) {
+        widthCandidates.push(leftWidth);
+    }
+    if (rightAvailable) {
+        widthCandidates.push(rightWidth);
+    }
+    const contentWidth = widthCandidates.length > 0 ? Math.max(...widthCandidates) : 0;
 
     if (!overlayMode && contentWidth > 0) {
         // Keep desktop width in sync with current content instead of max-ever history.
@@ -255,19 +289,24 @@ function syncSidebarWidths() {
 
     if (overlayMode) {
         const overlayMaxWidth = getOverlaySidebarMaxWidth();
-        if (leftWidth > 0) {
+        if (leftSidebar && leftWidth > 0) {
             leftSidebar.style.width = Math.min(leftWidth, overlayMaxWidth) + "px";
         }
-        if (rightAvailable && rightWidth > 0) {
+        if (rightSidebar && rightAvailable && rightWidth > 0) {
             rightSidebar.style.width = Math.min(rightWidth, overlayMaxWidth) + "px";
         }
     } else if (sharedSidebarWidthPx > 0) {
-        leftSidebar.style.width = sharedSidebarWidthPx + "px";
-        rightSidebar.style.width = sharedSidebarWidthPx + "px";
+        if (leftSidebar) {
+            leftSidebar.style.width = sharedSidebarWidthPx + "px";
+        }
+        if (rightSidebar && rightAvailable) {
+            rightSidebar.style.width = sharedSidebarWidthPx + "px";
+        }
     }
 
     const collapseProbeWidth = overlayMode ? contentWidth : Math.max(contentWidth, sharedSidebarWidthPx);
-    updateSidebarCollapseMode(collapseProbeWidth, rightAvailable);
+    const visibleSidebarCount = (hasLeftSidebar ? 1 : 0) + (rightAvailable ? 1 : 0);
+    updateSidebarCollapseMode(collapseProbeWidth, visibleSidebarCount);
 }
 
 function getOverlaySidebarMaxWidth() {
@@ -371,9 +410,14 @@ function measureIntrinsicLinkWidth(link) {
     return textWidth + horizontalPadding + horizontalMargin + horizontalBorder;
 }
 
-function updateSidebarCollapseMode(sidebarWidth, rightAvailable) {
+function updateSidebarCollapseMode(sidebarWidth, visibleSidebarCount) {
     const body = document.body;
-    if (!body || sidebarWidth <= 0) {
+    if (!body) {
+        return;
+    }
+
+    if (visibleSidebarCount <= 0 || sidebarWidth <= 0) {
+        body.classList.remove("collapsed-sidebars");
         return;
     }
 
@@ -384,9 +428,8 @@ function updateSidebarCollapseMode(sidebarWidth, rightAvailable) {
 
     const outerPadding = 24;
     const mainGap = 16;
-    const visibleSidebarCount = rightAvailable ? 2 : 1;
     const reservedForContent = 420;
-    const requiredWidth = (sidebarWidth * visibleSidebarCount) + (mainGap * visibleSidebarCount) + reservedForContent + outerPadding;
+    const requiredWidth = (sidebarWidth * visibleSidebarCount) + (mainGap * Math.max(0, visibleSidebarCount - 1)) + reservedForContent + outerPadding;
     const shouldCollapse = window.innerWidth < requiredWidth;
 
     body.classList.toggle("collapsed-sidebars", shouldCollapse);

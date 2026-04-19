@@ -1,16 +1,18 @@
 from urllib.parse import urlencode, urlparse
 from collections import deque
 from time import time
+from typing import Any
 
 from fastapi import APIRouter, Request, Depends, status
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
-from starlette.responses import RedirectResponse
+from starlette.responses import RedirectResponse, Response
 
 from .admin import authenticate_user, create_new_user, get_login_response
 from .csrf import validate_csrf
 from .user_model import User, CreateUserForm
+from ..utils.cookie_policy import cookie_domain_for_request
 
 # Set the Jinja template location
 TEMPLATES = Jinja2Templates("/app/templates")
@@ -24,6 +26,18 @@ SIGNUP_MIN_FORM_FILL_SECONDS = 2.5
 SIGNUP_MAX_FORM_AGE_SECONDS = 2 * 60 * 60
 
 signup_attempts_by_ip: dict[str, deque[float]] = {}
+
+
+def _delete_auth_cookie(response: Response, request: Request) -> None:
+    cookie_kwargs: dict[str, Any] = {
+        "key": "token",
+        "path": "/",
+    }
+    cookie_domain = cookie_domain_for_request(request)
+    if cookie_domain is not None:
+        cookie_kwargs["domain"] = cookie_domain
+
+    response.delete_cookie(**cookie_kwargs)
 
 
 def _client_ip(request: Request) -> str:
@@ -86,11 +100,15 @@ def _safe_next_path(raw_next: str | None) -> str | None:
 
     parsed = urlparse(candidate)
 
-    # Allow only local relative paths (or path+query+fragment forms without scheme/netloc).
-    if parsed.scheme != "" or parsed.netloc != "":
-        return None
+    is_absolute = parsed.scheme != "" or parsed.netloc != ""
+    if is_absolute:
+        if parsed.scheme.lower() not in {"http", "https"}:
+            return None
 
-    if not candidate.startswith("/"):
+        host = (parsed.hostname or "").lower()
+        if host == "" or (host != "schleising.net" and not host.endswith(".schleising.net")):
+            return None
+    elif not candidate.startswith("/"):
         return None
 
     # Avoid protocol-relative redirects.
@@ -156,7 +174,7 @@ async def get_logout_page(request: Request, result: str | None = None):
     )
 
     # Ensure the cookie gets deleted
-    response.delete_cookie("token")
+    _delete_auth_cookie(response, request)
 
     # Render the logout page
     return response
@@ -182,7 +200,7 @@ async def login(
         response = RedirectResponse(_build_login_url("login_failed", next_path), status_code=status.HTTP_303_SEE_OTHER)
 
         # Ensure that the response deletes any cookie which may still be in the browser
-        response.delete_cookie("token")
+        _delete_auth_cookie(response, request)
 
         # Return the redirect response
         return response
@@ -192,7 +210,7 @@ async def login(
         redirect_target = "/"
     else:
         redirect_target = next_path or "/account/login_success/"
-    response = get_login_response(user, redirect_target)
+    response = get_login_response(user, redirect_target, request)
 
     # Return the response
     return response
@@ -253,7 +271,7 @@ async def create_user(
         request.state.user = user
 
         # Get the login response
-        response = get_login_response(user, "create_success/")
+        response = get_login_response(user, "create_success/", request)
 
         # Return the response
         return response

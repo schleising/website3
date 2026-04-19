@@ -3,15 +3,29 @@
 {% block title %}<title>{{ title }}</title>{% endblock %}
 
 {% block favicons %}
-<link rel="icon" type="image/svg+xml" sizes="any" href="/icons/feeds-favicon.svg?v1.0.0" />
-<link rel="shortcut icon" type="image/svg+xml" href="/icons/feeds-favicon.svg?v1.0.0" />
+<link rel="icon" type="image/svg+xml" sizes="any" href="/icons/feeds/feeds-icon-any.svg?v1.0.1" />
+<link rel="icon" type="image/x-icon" href="/icons/feeds/favicon-48x48.ico?v1.0.1" />
+<link rel="shortcut icon" type="image/svg+xml" href="/icons/feeds/feeds-icon-any.svg?v1.0.1" />
+{% if is_web_app %}
+<link rel="apple-touch-icon" href="/icons/feeds/android-chrome-192x192.png?v1.0.1" />
+<link rel="manifest" href="{{ feeds_root_path }}manifest.webmanifest?v1.0.1" crossorigin="use-credentials" />
+{% endif %}
 {% endblock %}
 
 {% block head %}
-<link rel="stylesheet" href="/css/feeds/feeds.css?v1.0.49">
+{% if is_web_app %}
+<meta name="theme-color" content="#2a5b90">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+{% endif %}
+<link rel="stylesheet" href="/css/feeds/feeds.css?v1.0.50">
 {% endblock %}
 
 {% block scripts %}
+{% if is_web_app %}
+  <script defer src="/js/feeds/pwa.js?v1.0.0"></script>
+{% endif %}
 {% if feed_page_mode == "reader" %}
   <script defer src="/js/feeds/reader.js?v1.0.39"></script>
 {% elif feed_page_mode == "settings" %}
@@ -27,7 +41,7 @@
 
 {% block sidebar %}
 <a
-  href="/feeds/?category=all"
+  href="{{ feeds_root_path }}?category=all"
   class="sub-level-nav feed-sidebar-link feed-category-link feed-category-shortcut{% if selected_category == 'all' %} is-current{% endif %}"
   {% if selected_category == 'all' %}aria-current="page"{% endif %}
   data-category-shortcut="all"
@@ -37,7 +51,7 @@
 </a>
 {% for category_item in categories %}
 <a
-  href="/feeds/?category={{ category_item.category_id }}"
+  href="{{ feeds_root_path }}?category={{ category_item.category_id }}"
   class="sub-level-nav feed-sidebar-link feed-category-link{% if selected_category == category_item.category_id %} is-current{% endif %}{% if category_item.muted %} is-muted{% endif %}"
   {% if selected_category == category_item.category_id %}aria-current="page"{% endif %}
   data-category-id="{{ category_item.category_id }}"
@@ -47,7 +61,7 @@
 </a>
 {% endfor %}
 <a
-  href="/feeds/?category=saved"
+  href="{{ feeds_root_path }}?category=saved"
   class="sub-level-nav feed-sidebar-link feed-category-link feed-category-shortcut{% if selected_category == 'saved' %} is-current{% endif %}"
   {% if selected_category == 'saved' %}aria-current="page"{% endif %}
   data-category-shortcut="saved"
@@ -56,16 +70,16 @@
   <span class="feed-category-name">Saved</span>
 </a>
 <a
-  href="/feeds/?category=recently-read"
+  href="{{ feeds_root_path }}?category=recently-read"
   class="sub-level-nav feed-sidebar-link feed-category-link feed-category-shortcut{% if selected_category == 'recently-read' %} is-current{% endif %}"
   {% if selected_category == 'recently-read' %}aria-current="page"{% endif %}
   data-category-shortcut="recently-read"
 >
   <span class="feed-category-name">Recently Read</span>
 </a>
-<a href="/feeds/settings/" class="sub-level-nav feed-sidebar-link{% if feed_page_mode == 'settings' %} is-current{% endif %}" {% if feed_page_mode == 'settings' %}aria-current="page"{% endif %}>Settings</a>
+<a href="{{ feeds_root_path }}settings/" class="sub-level-nav feed-sidebar-link{% if feed_page_mode == 'settings' %} is-current{% endif %}" {% if feed_page_mode == 'settings' %}aria-current="page"{% endif %}>Settings</a>
 {% if request.state.user != None and request.state.user.can_use_tools %}
-<a href="/feeds/admin/" class="sub-level-nav feed-sidebar-link{% if feed_page_mode == 'admin' %} is-current{% endif %}" {% if feed_page_mode == 'admin' %}aria-current="page"{% endif %}>Admin</a>
+<a href="{{ feeds_root_path }}admin/" class="sub-level-nav feed-sidebar-link{% if feed_page_mode == 'admin' %} is-current{% endif %}" {% if feed_page_mode == 'admin' %}aria-current="page"{% endif %}>Admin</a>
 {% endif %}
 {% endblock %}
 

@@ -1,0 +1,54 @@
+{
+    "name": "Feeds",
+    "short_name": "Feeds",
+    "icons": [
+        {
+            "src": "/icons/feeds/android-chrome-144x144.png?v1.0.1",
+            "sizes": "144x144",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "/icons/feeds/android-chrome-192x192.png?v1.0.1",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "/icons/feeds/android-chrome-512x512.png?v1.0.1",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "/icons/feeds/android-chrome-maskable-512x512.png?v1.0.1",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "maskable"
+        },
+        {
+            "src": "/icons/feeds/feeds-icon-any.svg?v1.0.1",
+            "sizes": "any",
+            "type": "image/svg+xml",
+            "purpose": "any"
+        },
+        {
+            "src": "/icons/feeds/feeds-icon-maskable.svg?v1.0.1",
+            "sizes": "any",
+            "type": "image/svg+xml",
+            "purpose": "maskable"
+        }
+    ],
+    "start_url": "/",
+    "display_override": [
+        "standalone",
+        "minimal-ui"
+    ],
+    "display": "standalone",
+    "background_color": "#eef4ff",
+    "theme_color": "#2a5b90",
+    "orientation": "portrait",
+    "scope": "/",
+    "id": "/",
+    "description": "Read and manage subscribed feeds."
+}

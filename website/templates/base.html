@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-is-web-app="{{ 'true' if (is_web_app|default(false)) else 'false' }}" data-feeds-base-path="{{ feeds_base_path|default('') }}">
 
 <head>
   {% block title %}<title>Home</title>{% endblock %}
@@ -17,7 +17,7 @@
   <script defer src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"
     integrity="sha384-kenU1KFdBIe4zVF0s0G1M5b4hcpxyD9F7jL+jjXkk+Q2h455rYXK/7HAuoJl+0I4"
     crossorigin="anonymous"></script>
-  <script defer src="/js/base.js?v1.2.7"></script>
+  <script defer src="/js/base.js?v1.2.8"></script>
   <script defer src="/js/site-select-menu.js?v1.0.6"></script>
   {% block scripts %}
   {% endblock %}
@@ -27,11 +27,14 @@
 </head>
 
 <body>
+  {% set show_left_sidebar = render_left_sidebar if render_left_sidebar is defined else true %}
   <div id="outer">
     <div id="header">
+        {% if show_left_sidebar %}
         <div class="header-mobile-action left-mobile-action">
           <button type="button" class="mobile-nav-button" id="left-nav-toggle" aria-label="Open main menu" aria-controls="left-sidebar-menu" aria-expanded="false">☰</button>
         </div>
+        {% endif %}
         <div class="header-title-wrap">
           {% block header %}
           {% endblock %}
@@ -41,6 +44,7 @@
         </div>
     </div>
     <div id="main">
+        {% if show_left_sidebar %}
         <div class="sidebar left-sidebar" id="left-sidebar-menu">
         <div class="main-nav">
           <div class="top-level-nav">☰</div>
@@ -63,6 +67,7 @@
           </div>
         </div>
       </div>
+      {% endif %}
       <div id="content">
         {% block content %}
         {% endblock %}

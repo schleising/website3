@@ -14,6 +14,7 @@ from .database.database import Database
 from .account.router import account_router
 from .account.admin import get_current_active_user
 from .account.csrf import CSRF_COOKIE_NAME, ensure_csrf_token
+from .utils.cookie_policy import cookie_domain_for_request
 
 from .aircraft_db.router import aircraft_router
 
@@ -123,14 +124,19 @@ async def csrf_cookie_middleware(request: Request, call_next):
 
     existing = request.cookies.get(CSRF_COOKIE_NAME)
     if existing != csrf_token:
-        response.set_cookie(
-            key=CSRF_COOKIE_NAME,
-            value=csrf_token,
-            secure=True,
-            httponly=False,
-            samesite="lax",
-            path="/",
-        )
+        cookie_kwargs: dict[str, str | bool] = {
+            "key": CSRF_COOKIE_NAME,
+            "value": csrf_token,
+            "secure": True,
+            "httponly": False,
+            "samesite": "lax",
+            "path": "/",
+        }
+        cookie_domain = cookie_domain_for_request(request)
+        if cookie_domain is not None:
+            cookie_kwargs["domain"] = cookie_domain
+
+        response.set_cookie(**cookie_kwargs)
 
     return response
 
