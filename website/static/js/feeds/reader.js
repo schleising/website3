@@ -109,6 +109,8 @@
     const pendingSaveIds = new Set();
     /** @type {Set<string>} */
     const pendingUnsaveIds = new Set();
+    /** @type {Set<string>} */
+    const sessionUnsavedArticleIds = new Set();
 
     /** @type {boolean} */
     const isTouchOnlyDevice = (() => {
@@ -895,6 +897,7 @@
                 return;
             }
 
+            sessionUnsavedArticleIds.delete(articleId);
             setCardSavedAppearance(card, true);
             await refreshSidebarCounts();
             schedulePagePrefetchCheck();
@@ -938,6 +941,11 @@
             if (!response.ok) {
                 return;
             }
+
+            if (selectedCategory === "saved") {
+                sessionUnsavedArticleIds.add(articleId);
+            }
+
             setCardSavedAppearance(card, false);
             await refreshSidebarCounts();
             schedulePagePrefetchCheck();
@@ -1135,7 +1143,7 @@
             incomingIdsInOrder.push(articleId);
         });
 
-        const retainedReadIds = retainSessionReadCards
+        const retainedReadIds = (retainSessionReadCards && selectedCategory !== "saved")
             ? previousIdsInOrder.filter(
                 articleId => {
                     if (incomingById.has(articleId)) {
@@ -1152,6 +1160,10 @@
             )
             : [];
 
+        const retainedUnsavedIds = selectedCategory === "saved"
+            ? previousIdsInOrder.filter(articleId => !incomingById.has(articleId) && sessionUnsavedArticleIds.has(articleId))
+            : [];
+
         const orderIndexById = new Map();
         incomingIdsInOrder.forEach((articleId, index) => {
             orderIndexById.set(articleId, index);
@@ -1160,7 +1172,11 @@
             orderIndexById.set(articleId, incomingIdsInOrder.length + index);
         });
 
-        const finalIds = Array.from(new Set([...incomingIdsInOrder, ...retainedReadIds]));
+        retainedUnsavedIds.forEach((articleId, index) => {
+            orderIndexById.set(articleId, incomingIdsInOrder.length + retainedReadIds.length + index);
+        });
+
+        const finalIds = Array.from(new Set([...incomingIdsInOrder, ...retainedReadIds, ...retainedUnsavedIds]));
 
         finalIds.sort((leftId, rightId) => {
             const leftArticle = incomingById.get(leftId);
