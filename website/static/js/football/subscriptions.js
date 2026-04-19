@@ -166,8 +166,18 @@ async function getExistingPushSubscription() {
 }
 
 async function getCurrentSubscription() {
-    await ensureServiceWorkerRegistration();
-    return getExistingPushSubscription();
+    const existingSubscription = await getExistingPushSubscription();
+    if (existingSubscription) {
+        return existingSubscription;
+    }
+
+    try {
+        await ensureServiceWorkerRegistration();
+        return getExistingPushSubscription();
+    } catch (error) {
+        console.warn("Failed to ensure football service worker registration before loading preferences", error);
+        return null;
+    }
 }
 
 async function requestJson(url, method, payload) {
@@ -249,8 +259,9 @@ async function loadPreferences() {
         setStatus(statusMessageForOwnership(data.ownership_status, selectedCount), data.ownership_status === "different_user");
     } catch (error) {
         console.error("Failed to load preferences", error);
-        resetToUnsubscribedState("Unable to load existing subscription preferences.");
-        setStatus("Unable to load existing subscription preferences.", true);
+        const detail = error instanceof Error ? error.message : "Unable to load existing subscription preferences.";
+        resetToUnsubscribedState(detail);
+        setStatus(detail, true);
     }
 }
 
