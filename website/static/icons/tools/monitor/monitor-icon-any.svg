@@ -1,25 +1,23 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Monitor icon">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="monitorIconTitle monitorIconDesc">
+  <title id="monitorIconTitle">Monitor web app icon</title>
+  <desc id="monitorIconDesc">A house dashboard with a thermometer and humidity droplet on a feeds-style blue gradient background.</desc>
   <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#dff3f2"/>
-      <stop offset="100%" stop-color="#d8e8fb"/>
-    </linearGradient>
-    <linearGradient id="panel" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.98"/>
-      <stop offset="100%" stop-color="#f2f9fe"/>
+    <linearGradient id="monitorBg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1f3f63" />
+      <stop offset="100%" stop-color="#2f6f9f" />
     </linearGradient>
   </defs>
 
-  <rect x="24" y="24" width="464" height="464" rx="110" fill="url(#bg)"/>
+  <rect x="4" y="4" width="56" height="56" rx="12" fill="url(#monitorBg)" />
 
-  <path d="M124 240v126c0 17 13 30 30 30h204c17 0 30-13 30-30V240L256 132 124 240z" fill="url(#panel)" stroke="#8ec7da" stroke-width="10"/>
-  <rect x="224" y="276" width="64" height="120" rx="18" fill="#e6f4fc" stroke="#9ecde1" stroke-width="8"/>
+  <path d="M32 16l16 11v16.5A5.5 5.5 0 0 1 42.5 49h-21A5.5 5.5 0 0 1 16 43.5V27z" fill="#f4f9ff" stroke="#d6e6f6" stroke-width="1.5" />
+  <rect x="28.3" y="31" width="7.4" height="13" rx="3.2" fill="#e1eefb" stroke="#b8d1e9" stroke-width="1" />
 
-  <rect x="158" y="276" width="54" height="96" rx="16" fill="#eaf6fd"/>
-  <path d="M184 360a22 22 0 0 0 22-22v-34a22 22 0 1 0-44 0v34a22 22 0 0 0 22 22z" fill="#2b8fce"/>
+  <rect x="21" y="32" width="6" height="11" rx="3" fill="#ebf5ff" />
+  <path d="M24 41.8a3 3 0 0 0 3-3v-3.9a3 3 0 1 0-6 0v3.9a3 3 0 0 0 3 3z" fill="#4fb1ff" />
 
-  <path d="M330 362c18 0 33-14 33-32 0-26-33-60-33-60s-33 34-33 60c0 18 15 32 33 32z" fill="#3ac1a7"/>
+  <path d="M40.3 42.2c2.5 0 4.5-1.9 4.5-4.3 0-3.4-4.5-7.9-4.5-7.9s-4.5 4.5-4.5 7.9c0 2.4 2 4.3 4.5 4.3z" fill="#22b98a" />
 
-  <rect x="144" y="184" width="224" height="34" rx="14" fill="#edf7ff"/>
-  <polyline points="154,206 196,198 230,203 270,191 312,198 350,190" fill="none" stroke="#1497cf" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="20" y="22" width="24" height="3.6" rx="1.8" fill="#e2effb" />
+  <polyline points="21.4,24.1 25.5,23 29.2,24 33,22.6 36.8,23.6 41.2,22.4" fill="none" stroke="#4fb1ff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
 </svg>

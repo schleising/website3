@@ -1,22 +1,21 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Monitor maskable icon">
   <defs>
-    <linearGradient id="bgm" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#dff3f2"/>
-      <stop offset="100%" stop-color="#d8e8fb"/>
-    </linearGradient>
-    <linearGradient id="card" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#ffffff"/>
-      <stop offset="100%" stop-color="#edf7ff"/>
+    <linearGradient id="monitorMaskBg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1f3f63" />
+      <stop offset="100%" stop-color="#2f6f9f" />
     </linearGradient>
   </defs>
 
-  <rect width="512" height="512" fill="url(#bgm)"/>
+  <rect width="512" height="512" fill="url(#monitorMaskBg)" />
 
-  <path d="M132 238v130c0 17 13 30 30 30h188c17 0 30-13 30-30V238L256 142 132 238z" fill="url(#card)" stroke="#81bfd7" stroke-width="10"/>
-  <rect x="226" y="282" width="60" height="116" rx="18" fill="#e4f3fd" stroke="#97c8dd" stroke-width="8"/>
+  <path d="M256 128l128 88v132a44 44 0 0 1-44 44H172a44 44 0 0 1-44-44V216z" fill="#f4f9ff" stroke="#d6e6f6" stroke-width="12" />
+  <rect x="226" y="250" width="60" height="118" rx="24" fill="#e1eefb" stroke="#b8d1e9" stroke-width="8" />
 
-  <path d="M182 356a20 20 0 0 0 20-20v-30a20 20 0 1 0-40 0v30a20 20 0 0 0 20 20z" fill="#2c8fcf"/>
-  <path d="M330 358c17 0 30-13 30-29 0-24-30-56-30-56s-30 32-30 56c0 16 13 29 30 29z" fill="#37bea3"/>
+  <rect x="166" y="260" width="46" height="94" rx="23" fill="#ebf5ff" />
+  <path d="M189 344a23 23 0 0 0 23-23v-31a23 23 0 1 0-46 0v31a23 23 0 0 0 23 23z" fill="#4fb1ff" />
 
-  <polyline points="164,208 198,201 232,205 272,194 306,200 344,192" fill="none" stroke="#1196cf" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M322 348c19 0 34-15 34-33 0-28-34-65-34-65s-34 37-34 65c0 18 15 33 34 33z" fill="#22b98a" />
+
+  <rect x="166" y="176" width="180" height="28" rx="14" fill="#e2effb" />
+  <polyline points="174,189 202,181 230,189 258,179 286,187 334,176" fill="none" stroke="#4fb1ff" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" />
 </svg>
