@@ -97,9 +97,10 @@
     /** @type {number} */
     let selectedIndex = -1;
 
-    /** @type {boolean} */
-    // Server-driven list polling controls when read cards disappear.
-    const retainSessionReadCards = false;
+    /** @type {number} */
+    const readVisibilityWindowSeconds = Math.max(1, Number(root.dataset.readVisibilityWindowSeconds || 180));
+    /** @type {number} */
+    const readVisibilityWindowMs = readVisibilityWindowSeconds * 1000;
 
     /** @type {Set<string>} */
     const pendingReadIds = new Set();
@@ -369,6 +370,42 @@
     }
 
     /**
+     * Return read-at timestamp for a card as unix milliseconds.
+     *
+     * @param {HTMLElement} card
+     * @returns {number | null}
+     */
+    function getCardReadAtMs(card) {
+        const rawReadAt = String(card.dataset.readAt || "").trim();
+        if (rawReadAt === "") {
+            return null;
+        }
+
+        const parsedDate = parseArticleDate(rawReadAt);
+        if (!(parsedDate instanceof Date)) {
+            return null;
+        }
+
+        return parsedDate.getTime();
+    }
+
+    /**
+     * Return whether a read card should remain visible in unread/category views.
+     *
+     * @param {HTMLElement} card
+     * @param {number} referenceTimeMs
+     * @returns {boolean}
+     */
+    function isWithinReadVisibilityWindow(card, referenceTimeMs) {
+        const readAtMs = getCardReadAtMs(card);
+        if (readAtMs === null) {
+            return false;
+        }
+
+        return (referenceTimeMs - readAtMs) <= readVisibilityWindowMs;
+    }
+
+    /**
      * Return safe article link text, filtering null-like placeholders.
      *
      * @param {unknown} value
@@ -545,11 +582,22 @@
      * @param {HTMLElement} card
      * @param {boolean} isRead
      */
-    function setCardReadAppearance(card, isRead) {
+    function setCardReadAppearance(card, isRead, readAtValue = "") {
         const wasRead = isCardMarkedRead(card);
         const hasUnreadButton = card.querySelector(".feed-article-unread-button") instanceof HTMLButtonElement;
         card.dataset.isRead = isRead ? "true" : "false";
         card.classList.toggle("is-read-article", isRead);
+
+        if (isRead) {
+            const normalizedReadAt = String(readAtValue || "").trim();
+            if (normalizedReadAt !== "") {
+                card.dataset.readAt = normalizedReadAt;
+            } else if (String(card.dataset.readAt || "").trim() === "") {
+                card.dataset.readAt = new Date().toISOString();
+            }
+        } else {
+            card.removeAttribute("data-read-at");
+        }
 
         // Avoid re-running unread action syncing when state is unchanged and UI already matches.
         const unreadActionAlreadyMatches = isRead ? hasUnreadButton : !hasUnreadButton;
@@ -772,7 +820,7 @@
             newUnreadArticleIds.delete(articleId);
             persistArticleIdState();
 
-            setCardReadAppearance(card, true);
+            setCardReadAppearance(card, true, new Date().toISOString());
             setCardNewBadge(card, false);
             await refreshSidebarCounts();
             schedulePagePrefetchCheck();
@@ -839,7 +887,7 @@
                 return;
             }
 
-            setCardReadAppearance(card, false);
+            setCardReadAppearance(card, false, "");
             setCardNewBadge(card, false);
 
             if (selectedStatus !== "read") {
@@ -1018,6 +1066,7 @@
         card.dataset.articleLink = normalizeArticleLink(article.link);
         card.dataset.isRead = Boolean(article.is_read) ? "true" : "false";
         card.dataset.isSaved = Boolean(article.is_saved) ? "true" : "false";
+        card.dataset.readAt = String(article.read_at || "").trim();
         card.tabIndex = 0;
 
         const header = document.createElement("header");
@@ -1143,19 +1192,23 @@
             incomingIdsInOrder.push(articleId);
         });
 
-        const retainedReadIds = (retainSessionReadCards && selectedCategory !== "saved")
+        const nowMs = Date.now();
+        const shouldRetainReadCards = selectedCategory !== "saved"
+            && selectedCategory !== "recently-read"
+            && selectedStatus === "unread";
+
+        const retainedReadIds = shouldRetainReadCards
             ? previousIdsInOrder.filter(
                 articleId => {
                     if (incomingById.has(articleId)) {
                         return false;
                     }
-
-                    if (sessionReadArticleIds.has(articleId)) {
-                        return true;
-                    }
-
                     const existingCard = previousCardMap.get(articleId);
-                    return existingCard instanceof HTMLElement && isCardMarkedRead(existingCard);
+                    return (
+                        existingCard instanceof HTMLElement
+                        && isCardMarkedRead(existingCard)
+                        && isWithinReadVisibilityWindow(existingCard, nowMs)
+                    );
                 }
             )
             : [];
@@ -1229,14 +1282,15 @@
 
             const isRead = article
                 ? Boolean(article.is_read)
-                : sessionReadArticleIds.has(articleId);
+                : isCardMarkedRead(card);
             if (isRead) {
                 newUnreadArticleIds.delete(articleId);
             } else {
                 sessionReadArticleIds.delete(articleId);
             }
 
-            setCardReadAppearance(card, isRead);
+            const readAt = article ? String(article.read_at || "").trim() : String(card.dataset.readAt || "").trim();
+            setCardReadAppearance(card, isRead, readAt);
             const isSaved = article
                 ? Boolean(article.is_saved)
                 : isCardSaved(card);
@@ -1472,7 +1526,7 @@
             }
 
             knownArticleIds.add(articleId);
-            setCardReadAppearance(card, isRead);
+            setCardReadAppearance(card, isRead, String(article.read_at || "").trim());
             setCardSavedAppearance(card, isSaved);
             setCardNewBadge(card, !isRead && newUnreadArticleIds.has(articleId));
             fragment.appendChild(card);
@@ -1602,7 +1656,7 @@
             }
 
             knownArticleIds.add(articleId);
-            setCardReadAppearance(card, isRead);
+            setCardReadAppearance(card, isRead, String(card.dataset.readAt || "").trim());
             setCardSavedAppearance(card, isSaved);
             setCardNewBadge(card, !isRead && newUnreadArticleIds.has(articleId));
         });
@@ -1844,10 +1898,17 @@
                         {
                             isRead: Boolean(status.is_read),
                             isSaved: Boolean(status.is_saved),
+                            readAt: String(status.read_at || "").trim(),
                         },
                     ])
                     .filter(([articleId]) => articleId !== "")
             );
+
+            const cardsToRemove = [];
+            const nowMs = Date.now();
+            const shouldApplyReadVisibilityExpiry = selectedCategory !== "saved"
+                && selectedCategory !== "recently-read"
+                && selectedStatus === "unread";
 
             cards.forEach(card => {
                 const articleId = getCardArticleId(card);
@@ -1875,16 +1936,50 @@
 
                 const isRead = Boolean(status.isRead);
                 const isSaved = Boolean(status.isSaved);
-                if (retainSessionReadCards && isRead) {
+                if (isRead) {
                     sessionReadArticleIds.add(articleId);
                 } else if (!isRead) {
                     sessionReadArticleIds.delete(articleId);
                 }
 
-                setCardReadAppearance(card, isRead);
+                const statusReadAt = String(status.readAt || "").trim();
+                const effectiveReadAt = statusReadAt !== ""
+                    ? statusReadAt
+                    : String(card.dataset.readAt || "").trim();
+
+                setCardReadAppearance(card, isRead, effectiveReadAt);
                 setCardSavedAppearance(card, isSaved);
                 setCardNewBadge(card, !isRead && newUnreadArticleIds.has(articleId));
+
+                if (shouldApplyReadVisibilityExpiry && isRead && !isWithinReadVisibilityWindow(card, nowMs)) {
+                    cardsToRemove.push(card);
+                }
             });
+
+            if (cardsToRemove.length > 0) {
+                const selectedArticleId = getSelectedArticleId();
+                cardsToRemove.forEach(card => {
+                    if (card instanceof HTMLElement) {
+                        card.remove();
+                    }
+                });
+
+                const remainingCards = getCards();
+                if (remainingCards.length === 0) {
+                    renderInlineEmptyHint();
+                    clearCardSelection();
+                } else if (selectedArticleId !== "") {
+                    const retainedIndex = remainingCards.findIndex(card => getCardArticleId(card) === selectedArticleId);
+                    if (retainedIndex >= 0) {
+                        setSelectedIndex(retainedIndex, { scrollIntoView: false });
+                    } else {
+                        const fallbackIndex = Math.max(0, Math.min(selectedIndex, remainingCards.length - 1));
+                        setSelectedIndex(fallbackIndex, { scrollIntoView: false });
+                    }
+                }
+
+                schedulePagePrefetchCheck();
+            }
         } catch (_error) {
             // Keep existing card states when status sync fails.
         }

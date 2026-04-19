@@ -1216,17 +1216,22 @@ async def get_article_list(
             next_offset=normalized_offset,
         )
 
-    recent_read_state_ids, expired_read_state_ids = await get_read_article_visibility_sets(
-        user_id
-    )
+    read_state_ids = await get_read_article_id_set(user_id)
+    recent_read_state_ids: set[ObjectId] = set()
+    if normalized_status in {"unread", "read"}:
+        recent_read_state_ids, expired_read_state_ids = await get_read_article_visibility_sets(user_id)
+        if normalized_status == "unread":
+            # Keep newly-read cards visible until READ_VISIBILITY_WINDOW expires,
+            # then remove them from fresh unread/category fetches.
+            read_state_ids = expired_read_state_ids
 
     cards, has_more = await list_cards_for_feed_ids(
         user_id=user_id,
         allowed_feed_ids=allowed_feed_ids,
         categories_by_id=categories_by_id,
         feed_to_category=feed_to_category,
+        read_state_ids=read_state_ids,
         recent_read_state_ids=recent_read_state_ids,
-        expired_read_state_ids=expired_read_state_ids,
         status_filter=normalized_status,
         offset=normalized_offset,
         limit=normalized_limit,
@@ -1408,23 +1413,27 @@ async def get_article_read_statuses(
             "user_id": user_id,
             "article_id": {"$in": list(visible_article_ids)},
         },
-        {"article_id": 1, "is_read": 1, "is_saved": 1},
+        {"article_id": 1, "is_read": 1, "is_saved": 1, "read_at": 1},
     )
-    state_flags: dict[ObjectId, tuple[bool, bool]] = {}
+    state_flags: dict[ObjectId, tuple[bool, bool, datetime | None]] = {}
     async for state_doc in read_state_cursor:
         article_id = state_doc.get("article_id")
         if not isinstance(article_id, ObjectId):
             continue
+        is_read = bool(state_doc.get("is_read"))
+        read_at = _as_utc_datetime(state_doc.get("read_at")) if is_read else None
         state_flags[article_id] = (
-            bool(state_doc.get("is_read")),
+            is_read,
             bool(state_doc.get("is_saved")),
+            read_at,
         )
 
     return [
         FeedArticleStatusItem(
             article_id=str(article_id),
-            is_read=state_flags.get(article_id, (False, False))[0],
-            is_saved=state_flags.get(article_id, (False, False))[1],
+            is_read=state_flags.get(article_id, (False, False, None))[0],
+            is_saved=state_flags.get(article_id, (False, False, None))[1],
+            read_at=state_flags.get(article_id, (False, False, None))[2],
         )
         for article_id in ordered_unique_ids
         if article_id in visible_article_ids
@@ -1436,8 +1445,8 @@ async def list_cards_for_feed_ids(
     allowed_feed_ids: list[ObjectId],
     categories_by_id: dict[ObjectId, FeedCategoryDocument],
     feed_to_category: dict[ObjectId, ObjectId],
+    read_state_ids: set[ObjectId],
     recent_read_state_ids: set[ObjectId],
-    expired_read_state_ids: set[ObjectId],
     status_filter: str,
     offset: int,
     limit: int,
@@ -1456,10 +1465,10 @@ async def list_cards_for_feed_ids(
         if len(recent_read_state_ids) == 0:
             return [], False
         base_query["_id"] = {"$in": list(recent_read_state_ids)}
-    elif status_filter in {"unread", "all"} and len(expired_read_state_ids) > 0:
-        # Keep recently read cards visible for a short grace period, then
-        # remove them from list views once the read timestamp expires.
-        base_query["_id"] = {"$nin": list(expired_read_state_ids)}
+    elif status_filter == "unread" and len(read_state_ids) > 0:
+        # Unread/category views hide only reads that have already expired from
+        # the visibility window, preserving cross-device consistency.
+        base_query["_id"] = {"$nin": list(read_state_ids)}
 
     # Match frontend ordering: publication date ascending, with undated articles
     # treated as "infinite" and therefore placed at the end.
@@ -2254,6 +2263,8 @@ async def get_feed_reader_context(user_id: str, category_filter: str, status_fil
         "article_has_more": article_payload.has_more,
         "article_next_offset": article_payload.next_offset,
         "article_page_size": article_payload.limit,
+        "read_visibility_window_seconds": int(READ_VISIBILITY_WINDOW.total_seconds()),
+        "recently_read_window_seconds": int(RECENTLY_READ_WINDOW.total_seconds()),
     }
 
 

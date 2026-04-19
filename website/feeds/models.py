@@ -160,6 +160,7 @@ class FeedArticleStatusItem(BaseModel):
     article_id: str
     is_read: bool
     is_saved: bool
+    read_at: datetime | None = None
 
 
 class FeedArticleStatusResponse(BaseModel):

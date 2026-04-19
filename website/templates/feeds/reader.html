@@ -18,6 +18,8 @@
   data-page-size="{{ article_page_size|default(10) }}"
   data-next-offset="{{ article_next_offset|default(0) }}"
   data-has-more="{{ 'true' if article_has_more else 'false' }}"
+  data-read-visibility-window-seconds="{{ read_visibility_window_seconds|default(180) }}"
+  data-recently-read-window-seconds="{{ recently_read_window_seconds|default(604800) }}"
   data-csrf-token="{{ request.state.csrf_token|default('') }}"
 >
   <div id="feeds-article-list" class="feeds-article-list{% if articles|length == 0 %} is-empty{% endif %}">
@@ -47,6 +49,7 @@
       data-article-link="{% if article_href and (article_href | lower) not in ['none', 'null', 'undefined'] %}{{ article_href }}{% else %}{% endif %}"
       data-is-read="{{ 'true' if article.is_read else 'false' }}"
       data-is-saved="{{ 'true' if article.is_saved else 'false' }}"
+      data-read-at="{% if article.read_at is not none %}{{ article.read_at.isoformat() }}{% else %}{% endif %}"
       tabindex="0"
     >
       <header class="feed-article-card-header">
