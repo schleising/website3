@@ -131,6 +131,35 @@
     }
 
     /**
+     * Build feed-name cell, linking to feed URL when available.
+     *
+     * @param {string} feedName
+     * @param {string} feedUrl
+     * @returns {HTMLDivElement}
+     */
+    function createFeedNameCell(feedName, feedUrl) {
+        const cell = document.createElement("div");
+        cell.className = "feed-admin-cell feed-admin-feed-name";
+        cell.setAttribute("role", "cell");
+        cell.title = feedName;
+
+        const normalizedFeedUrl = String(feedUrl || "").trim();
+        if (normalizedFeedUrl === "") {
+            cell.textContent = feedName;
+            return cell;
+        }
+
+        const linkNode = document.createElement("a");
+        linkNode.className = "feed-admin-feed-link";
+        linkNode.href = normalizedFeedUrl;
+        linkNode.target = "_blank";
+        linkNode.rel = "noopener noreferrer";
+        linkNode.textContent = feedName;
+        cell.appendChild(linkNode);
+        return cell;
+    }
+
+    /**
      * Build a localized time cell.
      *
      * @param {string} isoValue
@@ -157,7 +186,7 @@
     /**
      * Render live admin table rows.
      *
-     * @param {Array<{ feed_id?: string, feed_name?: string, article_count?: number, last_refresh_at_iso?: string, next_refresh_at_iso?: string, last_refresh_status?: string }>} rows
+    * @param {Array<{ feed_id?: string, feed_name?: string, feed_url?: string, article_count?: number, last_refresh_at_iso?: string, next_refresh_at_iso?: string, last_refresh_status?: string }>} rows
      */
     function renderAdminRows(rows) {
         if (!(adminTableBody instanceof HTMLElement)) {
@@ -180,6 +209,7 @@
         normalizedRows.forEach(row => {
             const feedId = String(row.feed_id || "").trim();
             const feedName = String(row.feed_name || "Feed").trim() || "Feed";
+            const feedUrl = String(row.feed_url || "").trim();
             const articleCount = Number(row.article_count || 0);
             const lastRefreshIso = String(row.last_refresh_at_iso || "").trim();
             const nextRefreshIso = String(row.next_refresh_at_iso || "").trim();
@@ -192,8 +222,7 @@
                 rowNode.dataset.feedId = feedId;
             }
 
-            const nameCell = createTextCell(feedName, "feed-admin-feed-name");
-            nameCell.title = feedName;
+            const nameCell = createFeedNameCell(feedName, feedUrl);
 
             const countCell = createTextCell(String(Math.max(0, Number.isFinite(articleCount) ? articleCount : 0)));
             const statusCell = createTextCell(lastRefreshStatus, "feed-admin-status-cell");

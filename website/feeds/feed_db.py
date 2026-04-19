@@ -2335,6 +2335,7 @@ async def list_feed_admin_rows() -> list[dict[str, Any]]:
             {
                 "feed_id": str(feed_id),
                 "feed_name": feed_name,
+                "feed_url": str(source.get("normalized_url", "")).strip(),
                 "article_count": int(article_counts.get(feed_id, 0)),
                 "last_refresh_at_iso": format_datetime_utc_iso(
                     source.get("last_fetched_at")

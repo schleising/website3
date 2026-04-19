@@ -1226,6 +1226,22 @@ body.feed-category-color-popup-open {
     text-overflow: ellipsis;
 }
 
+.feed-admin-feed-link {
+    color: var(--brand-strong);
+    text-decoration: none;
+    display: inline-block;
+    max-width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.feed-admin-feed-link:hover,
+.feed-admin-feed-link:focus-visible {
+    color: color-mix(in srgb, var(--brand-strong), #1b3f67 12%);
+    text-decoration: underline;
+}
+
 .feed-admin-status-cell {
     white-space: nowrap;
     overflow: hidden;

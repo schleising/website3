@@ -262,6 +262,7 @@ class FeedAdminFeedRow(BaseModel):
 
     feed_id: str
     feed_name: str
+    feed_url: str = ""
     article_count: int
     last_refresh_at_iso: str = ""
     next_refresh_at_iso: str = ""
