@@ -98,7 +98,7 @@ function setStatus(message, isError = false) {
 }
 
 function setActionButtonsDisabled(disabled) {
-    const effectiveDisabled = disabled || !canManageSubscriptions;
+    const effectiveDisabled = disabled;
 
     if (subscriptionSaveButton) {
         subscriptionSaveButton.disabled = effectiveDisabled;
@@ -145,14 +145,35 @@ async function ensureServiceWorkerRegistration() {
     return navigator.serviceWorker.ready;
 }
 
+async function getExistingPushSubscription() {
+    const scopedRegistration = await navigator.serviceWorker.getRegistration(serviceWorkerScope);
+    if (scopedRegistration) {
+        const scopedSubscription = await scopedRegistration.pushManager.getSubscription();
+        if (scopedSubscription) {
+            return scopedSubscription;
+        }
+    }
+
+    const allRegistrations = await navigator.serviceWorker.getRegistrations();
+    for (const registration of allRegistrations) {
+        const subscription = await registration.pushManager.getSubscription();
+        if (subscription) {
+            return subscription;
+        }
+    }
+
+    return null;
+}
+
 async function getCurrentSubscription() {
-    const registration = await ensureServiceWorkerRegistration();
-    return registration.pushManager.getSubscription();
+    await ensureServiceWorkerRegistration();
+    return getExistingPushSubscription();
 }
 
 async function requestJson(url, method, payload) {
     const response = await fetch(url, {
         method,
+        credentials: "same-origin",
         headers: {
             "Content-Type": "application/json",
             "X-CSRF-Token": csrfToken,
@@ -234,6 +255,11 @@ async function loadPreferences() {
 }
 
 async function ensurePushSubscription() {
+    const existingSubscription = await getExistingPushSubscription();
+    if (existingSubscription) {
+        return existingSubscription;
+    }
+
     const registration = await ensureServiceWorkerRegistration();
     let subscription = await registration.pushManager.getSubscription();
 
@@ -248,11 +274,6 @@ async function ensurePushSubscription() {
 }
 
 async function savePreferences() {
-    if (!canManageSubscriptions) {
-        setStatus("Login or sign up to manage notifications.", true);
-        return;
-    }
-
     const teamIds = getSelectedTeamIds();
     if (teamIds.length === 0) {
         setStatus("Select at least one team before saving.", true);
@@ -271,21 +292,18 @@ async function savePreferences() {
 
         await requestJson(subscriptionPreferencesUrl, "PUT", payload);
         hasActiveSubscription = true;
+        canManageSubscriptions = true;
         setStatus("Preferences saved.");
     } catch (error) {
         console.error("Failed to save preferences", error);
-        setStatus("Unable to save preferences.", true);
+        const detail = error instanceof Error ? error.message : "Unable to save preferences.";
+        setStatus(detail, true);
     } finally {
         setActionButtonsDisabled(false);
     }
 }
 
 async function unsubscribeAll() {
-    if (!canManageSubscriptions) {
-        setStatus("Login or sign up to manage notifications.", true);
-        return;
-    }
-
     setActionButtonsDisabled(true);
     setStatus("Unsubscribing...");
 
@@ -309,11 +327,9 @@ async function unsubscribeAll() {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
-    if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
-        setActionButtonsDisabled(true);
-        setStatus("Push notifications are not supported in this browser.", true);
-        return;
-    }
+    const supportsServiceWorker = "serviceWorker" in navigator;
+    const supportsPushManager = "PushManager" in window;
+    const supportsPushNotifications = supportsServiceWorker && supportsPushManager;
 
     if (subscriptionSelectAll) {
         subscriptionSelectAll.addEventListener("change", event => {
@@ -329,12 +345,22 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     });
 
-    if (canManageSubscriptions && subscriptionSaveButton) {
+    if (subscriptionSaveButton) {
         subscriptionSaveButton.addEventListener("click", savePreferences);
     }
 
-    if (canManageSubscriptions && subscriptionUnsubscribeButton) {
+    if (subscriptionUnsubscribeButton) {
         subscriptionUnsubscribeButton.addEventListener("click", unsubscribeAll);
+    }
+
+    if (!supportsPushNotifications) {
+        setActionButtonsDisabled(true);
+        setStatus("Push notifications are not supported in this browser context.", true);
+        console.warn("Football subscriptions disabled: push support unavailable", {
+            supportsServiceWorker,
+            supportsPushManager,
+        });
+        return;
     }
 
     setActionButtonsDisabled(false);
