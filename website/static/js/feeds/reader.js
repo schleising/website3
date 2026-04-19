@@ -72,10 +72,6 @@
     const tailRefreshMinIntervalMs = 1200;
     /** @type {boolean} */
     let headRefreshProbeInFlight = false;
-    /** @type {number} */
-    let lastHeadRefreshProbeAtMs = 0;
-    /** @type {number} */
-    const headRefreshProbeMinIntervalMs = 6000;
     /** @type {number | null} */
     let pageLoadRetryTimerId = null;
     /** @type {number | null} */
@@ -102,7 +98,8 @@
     let selectedIndex = -1;
 
     /** @type {boolean} */
-    const retainSessionReadCards = selectedStatus === "unread";
+    // Server-driven list polling controls when read cards disappear.
+    const retainSessionReadCards = false;
 
     /** @type {Set<string>} */
     const pendingReadIds = new Set();
@@ -1503,7 +1500,10 @@
         const requestOffset = getPagingRequestOffset();
 
         try {
-            const response = await fetch(buildArticlesUrl(requestOffset, pageSize), { method: "GET" });
+            const response = await fetch(buildArticlesUrl(requestOffset, pageSize), {
+                method: "GET",
+                cache: "no-store",
+            });
             if (!response.ok) {
                 schedulePageLoadRetry();
                 return;
@@ -1677,7 +1677,10 @@
      */
     async function refreshSidebarCounts() {
         try {
-            const response = await fetch(categoriesEndpoint, { method: "GET" });
+            const response = await fetch(categoriesEndpoint, {
+                method: "GET",
+                cache: "no-store",
+            });
             if (!response.ok) {
                 return;
             }
@@ -1697,8 +1700,14 @@
     async function refreshFeedData() {
         try {
             const [categoryResponse, articleResponse] = await Promise.all([
-                fetch(categoriesEndpoint, { method: "GET" }),
-                fetch(buildArticlesUrl(0, Math.max(getCards().length, pageSize)), { method: "GET" }),
+                fetch(categoriesEndpoint, {
+                    method: "GET",
+                    cache: "no-store",
+                }),
+                fetch(buildArticlesUrl(0, Math.max(getCards().length, pageSize)), {
+                    method: "GET",
+                    cache: "no-store",
+                }),
             ]);
 
             if (!categoryResponse.ok || !articleResponse.ok) {
@@ -1719,7 +1728,7 @@
 
     /**
      * Probe the currently-visible server-filtered article window and refresh when
-     * a new eligible item appears at any position (top, middle, or bottom).
+     * server ordering or membership diverges (including timed removals).
      *
      * @returns {Promise<void>}
      */
@@ -1728,27 +1737,18 @@
             return;
         }
 
-        const cards = getCards();
-        if (cards.length === 0) {
-            return;
-        }
-
-        const visibleFilteredIds = cards
-            .filter(isCardIncludedByCurrentFilter)
+        const currentCardIds = getCards()
             .map(getCardArticleId)
             .filter(articleId => articleId !== "");
 
-        const nowMs = Date.now();
-        if (nowMs - lastHeadRefreshProbeAtMs < headRefreshProbeMinIntervalMs) {
-            return;
-        }
-
         headRefreshProbeInFlight = true;
-        lastHeadRefreshProbeAtMs = nowMs;
 
         try {
-            const refreshLimit = Math.max(visibleFilteredIds.length, pageSize);
-            const probeResponse = await fetch(buildArticlesUrl(0, refreshLimit), { method: "GET" });
+            const refreshLimit = Math.max(currentCardIds.length, pageSize);
+            const probeResponse = await fetch(buildArticlesUrl(0, refreshLimit), {
+                method: "GET",
+                cache: "no-store",
+            });
             if (!probeResponse.ok) {
                 return;
             }
@@ -1760,8 +1760,8 @@
                 .filter(articleId => articleId !== "");
 
             if (
-                probeIds.length === visibleFilteredIds.length
-                && probeIds.every((articleId, index) => articleId === visibleFilteredIds[index])
+                probeIds.length === currentCardIds.length
+                && probeIds.every((articleId, index) => articleId === currentCardIds[index])
             ) {
                 return;
             }
@@ -1809,6 +1809,7 @@
         try {
             const response = await fetch(articleStatusesEndpoint, {
                 method: "POST",
+                cache: "no-store",
                 headers: {
                     "Content-Type": "application/json",
                 },
@@ -1895,7 +1896,10 @@
         const requestOffset = getPagingRequestOffset();
 
         try {
-            const response = await fetch(buildArticlesUrl(requestOffset, pageSize), { method: "GET" });
+            const response = await fetch(buildArticlesUrl(requestOffset, pageSize), {
+                method: "GET",
+                cache: "no-store",
+            });
             if (!response.ok) {
                 return;
             }
@@ -1940,6 +1944,7 @@
             refreshSidebarCounts(),
             refreshVisibleCardStatuses(),
         ]);
+        await refreshHeadArticlesIfNeeded();
         await refreshTailArticlesWhenAtEnd();
     }
 

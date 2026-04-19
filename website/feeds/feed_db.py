@@ -31,6 +31,10 @@ from .models import (
 )
 
 
+READ_VISIBILITY_WINDOW = timedelta(minutes=3)
+RECENTLY_READ_WINDOW = timedelta(days=7)
+
+
 def utc_now() -> datetime:
     """Return the current UTC timestamp with timezone information."""
 
@@ -170,6 +174,34 @@ def _as_utc_datetime(value: Any) -> datetime | None:
         return value.replace(tzinfo=UTC)
 
     return value.astimezone(UTC)
+
+
+def read_visibility_cutoff(reference_time: datetime | None = None) -> datetime:
+    """Return the UTC cutoff timestamp for read-article visibility."""
+
+    base_time = _as_utc_datetime(reference_time) or utc_now()
+    return base_time - READ_VISIBILITY_WINDOW
+
+
+def recently_read_cutoff(reference_time: datetime | None = None) -> datetime:
+    """Return the UTC cutoff timestamp for recently-read history."""
+
+    base_time = _as_utc_datetime(reference_time) or utc_now()
+    return base_time - RECENTLY_READ_WINDOW
+
+
+def is_read_within_visibility_window(
+    read_at: Any,
+    *,
+    reference_time: datetime | None = None,
+) -> bool:
+    """Return True when read_at is inside the read-visibility window."""
+
+    normalized_read_at = _as_utc_datetime(read_at)
+    if normalized_read_at is None:
+        return False
+
+    return normalized_read_at >= read_visibility_cutoff(reference_time)
 
 
 def _latest_datetime(left: datetime | None, right: datetime | None) -> datetime | None:
@@ -932,14 +964,46 @@ async def get_read_article_id_set(user_id: str) -> set[ObjectId]:
     return {doc["article_id"] async for doc in cursor if "article_id" in doc}
 
 
-async def get_saved_article_id_set(user_id: str) -> set[ObjectId]:
+async def get_read_article_visibility_sets(
+    user_id: str,
+) -> tuple[set[ObjectId], set[ObjectId]]:
+    """Return article IDs split into recent-read and expired-read sets."""
+
+    if user_article_states_collection is None:
+        return set(), set()
+
+    now = utc_now()
+    recent_read_ids: set[ObjectId] = set()
+    expired_read_ids: set[ObjectId] = set()
+
+    cursor = user_article_states_collection.find(
+        {"user_id": user_id, "is_read": True},
+        {"article_id": 1, "read_at": 1},
+    )
+
+    async for doc in cursor:
+        article_id = doc.get("article_id")
+        if not isinstance(article_id, ObjectId):
+            continue
+
+        if is_read_within_visibility_window(doc.get("read_at"), reference_time=now):
+            recent_read_ids.add(article_id)
+        else:
+            expired_read_ids.add(article_id)
+
+    return recent_read_ids, expired_read_ids
+
+
+async def get_saved_article_id_set(
+    user_id: str,
+) -> set[ObjectId]:
     """Return article IDs that are marked as saved for the user."""
 
     if user_article_states_collection is None:
         return set()
-
     cursor = user_article_states_collection.find(
-        {"user_id": user_id, "is_saved": True}, {"article_id": 1}
+        {"user_id": user_id, "is_saved": True},
+        {"article_id": 1},
     )
     return {doc["article_id"] async for doc in cursor if "article_id" in doc}
 
@@ -995,7 +1059,7 @@ async def count_recently_read(
     feed_to_category: dict[ObjectId, ObjectId],
     categories: list[FeedCategoryDocument],
 ) -> int:
-    """Count recently-read articles in the last seven days, excluding muted categories."""
+    """Count recently-read articles in the last seven days."""
 
     if user_article_states_collection is None or feed_articles_collection is None:
         return 0
@@ -1004,7 +1068,7 @@ async def count_recently_read(
         category.id for category in categories if category.id is not None and category.muted
     }
 
-    threshold = utc_now() - timedelta(days=7)
+    threshold = recently_read_cutoff()
     state_cursor = user_article_states_collection.find(
         {
             "user_id": user_id,
@@ -1152,16 +1216,17 @@ async def get_article_list(
             next_offset=normalized_offset,
         )
 
-    read_state_ids: set[ObjectId] = set()
-    if normalized_status in {"read", "unread"}:
-        read_state_ids = await get_read_article_id_set(user_id)
+    recent_read_state_ids, expired_read_state_ids = await get_read_article_visibility_sets(
+        user_id
+    )
 
     cards, has_more = await list_cards_for_feed_ids(
         user_id=user_id,
         allowed_feed_ids=allowed_feed_ids,
         categories_by_id=categories_by_id,
         feed_to_category=feed_to_category,
-        read_state_ids=read_state_ids,
+        recent_read_state_ids=recent_read_state_ids,
+        expired_read_state_ids=expired_read_state_ids,
         status_filter=normalized_status,
         offset=normalized_offset,
         limit=normalized_limit,
@@ -1371,7 +1436,8 @@ async def list_cards_for_feed_ids(
     allowed_feed_ids: list[ObjectId],
     categories_by_id: dict[ObjectId, FeedCategoryDocument],
     feed_to_category: dict[ObjectId, ObjectId],
-    read_state_ids: set[ObjectId],
+    recent_read_state_ids: set[ObjectId],
+    expired_read_state_ids: set[ObjectId],
     status_filter: str,
     offset: int,
     limit: int,
@@ -1387,11 +1453,13 @@ async def list_cards_for_feed_ids(
     }
 
     if status_filter == "read":
-        if len(read_state_ids) == 0:
+        if len(recent_read_state_ids) == 0:
             return [], False
-        base_query["_id"] = {"$in": list(read_state_ids)}
-    elif status_filter == "unread" and len(read_state_ids) > 0:
-        base_query["_id"] = {"$nin": list(read_state_ids)}
+        base_query["_id"] = {"$in": list(recent_read_state_ids)}
+    elif status_filter in {"unread", "all"} and len(expired_read_state_ids) > 0:
+        # Keep recently read cards visible for a short grace period, then
+        # remove them from list views once the read timestamp expires.
+        base_query["_id"] = {"$nin": list(expired_read_state_ids)}
 
     # Match frontend ordering: publication date ascending, with undated articles
     # treated as "infinite" and therefore placed at the end.
@@ -1513,7 +1581,7 @@ async def list_recently_read_cards(
     offset: int,
     limit: int,
 ) -> tuple[list[FeedArticleCard], bool]:
-    """Return recently-read article cards from the last seven days."""
+    """Return recently-read cards from the last seven days."""
 
     if user_article_states_collection is None or feed_articles_collection is None:
         return [], False
@@ -1532,7 +1600,7 @@ async def list_recently_read_cards(
     if len(eligible_feed_ids) == 0:
         return [], False
 
-    threshold = utc_now() - timedelta(days=7)
+    threshold = recently_read_cutoff()
     pipeline: list[dict[str, Any]] = [
         {
             "$match": {
@@ -1794,25 +1862,13 @@ async def mark_article_read(user_id: str, article_id: str) -> bool:
         return False
 
     now = utc_now()
-    existing_state = await user_article_states_collection.find_one(
-        {"user_id": user_id, "article_id": article_object_id},
-        {"is_read": 1, "read_at": 1},
-    )
-
-    existing_read_at = existing_state.get("read_at") if isinstance(existing_state, dict) else None
-    preserve_existing_read_at = (
-        isinstance(existing_state, dict)
-        and bool(existing_state.get("is_read"))
-        and isinstance(existing_read_at, datetime)
-    )
-    read_at_value = existing_read_at if preserve_existing_read_at else now
 
     await user_article_states_collection.update_one(
         {"user_id": user_id, "article_id": article_object_id},
         {
             "$set": {
                 "is_read": True,
-                "read_at": read_at_value,
+                "read_at": now,
                 "updated_at": now,
             },
             "$setOnInsert": {

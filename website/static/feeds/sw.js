@@ -1,4 +1,4 @@
-const FEEDS_CACHE_VERSION = "feeds-webapp-v2";
+const FEEDS_CACHE_VERSION = "feeds-webapp-v3";
 const FEEDS_SHELL_URLS = [
     "/",
     "/settings/",
@@ -34,6 +34,16 @@ self.addEventListener("fetch", event => {
 
     const requestUrl = new URL(event.request.url);
     if (requestUrl.origin !== self.location.origin) {
+        return;
+    }
+
+    // API responses must always come from network so polling reflects
+    // short-lived state transitions (e.g. read-expiry removals) immediately.
+    if (
+        requestUrl.pathname.startsWith("/api/")
+        || requestUrl.pathname.startsWith("/feeds/api/")
+    ) {
+        event.respondWith(fetch(event.request));
         return;
     }
 
