@@ -31,7 +31,7 @@ from .models import (
 )
 
 
-READ_VISIBILITY_WINDOW = timedelta(seconds=5)
+READ_VISIBILITY_WINDOW = timedelta(minutes=2)
 RECENTLY_READ_WINDOW = timedelta(days=7)
 
 
