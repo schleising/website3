@@ -29,6 +29,9 @@ signup_attempts_by_ip: dict[str, deque[float]] = {}
 
 
 def _delete_auth_cookie(response: Response, request: Request) -> None:
+    # Clear both host-only and shared-domain variants to handle legacy cookies.
+    response.delete_cookie(key="token", path="/")
+
     cookie_kwargs: dict[str, Any] = {
         "key": "token",
         "path": "/",

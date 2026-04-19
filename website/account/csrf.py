@@ -49,6 +49,12 @@ def _is_same_origin_request(request: Request) -> bool:
         normalised_referer_origin = _normalise_origin(referer_header)
         return normalised_referer_origin == expected_origin
 
+    # Some installed web app contexts may omit Origin/Referer for same-origin
+    # fetch requests. Fall back to Fetch Metadata when available.
+    fetch_site = (request.headers.get("sec-fetch-site") or "").strip().lower()
+    if fetch_site in {"same-origin", "none"}:
+        return True
+
     return False
 
 

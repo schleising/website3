@@ -274,6 +274,10 @@ def get_login_response(user: User, url: str, request: Request) -> RedirectRespon
     )
     response = RedirectResponse(target_url, status_code=status.HTTP_303_SEE_OTHER)
 
+    # Clear host-only and shared-domain token variants before setting a fresh token.
+    response.delete_cookie(key="token", path="/")
+    response.delete_cookie(key="token", path="/", domain=".schleising.net")
+
     # Set a cookie on the response with the contents as the JWT token
     cookie_kwargs: dict[str, Any] = {
         "key": "token",
