@@ -34,11 +34,11 @@ propcache==0.4.1
 py-vapid==1.9.4
 pyasn1==0.6.3
 pycparser==3.0
-pydantic==2.13.2
-pydantic_core==2.46.2
+pydantic==2.13.3
+pydantic_core==2.46.3
 Pygments==2.20.0
 pymdown-extensions==10.21.2
-pymongo==4.16.0
+pymongo==4.17.0
 PyQRCode==1.2.1
 python-jose==3.5.0
 python-multipart==0.0.26
