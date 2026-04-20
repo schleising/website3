@@ -4,9 +4,12 @@ import logging
 from datetime import UTC, datetime, timedelta
 from typing import Any, Literal, cast
 import xml.etree.ElementTree as ET
+from urllib.parse import urljoin, urlparse
 
 import aiohttp
 from bson import ObjectId
+from defusedxml import ElementTree as DefusedElementTree
+from defusedxml.common import DefusedXmlException
 from pymongo import ASCENDING, DESCENDING
 from pymongo.errors import DuplicateKeyError
 
@@ -33,6 +36,8 @@ from .models import (
 
 READ_VISIBILITY_WINDOW = timedelta(minutes=2)
 RECENTLY_READ_WINDOW = timedelta(days=7)
+FEED_VALIDATION_MAX_REDIRECTS = 5
+FEED_VALIDATION_REDIRECT_STATUSES = {301, 302, 303, 307, 308}
 
 
 def utc_now() -> datetime:
@@ -93,6 +98,13 @@ def normalize_article_link(value: Any) -> str:
     if normalized == "" or normalized.lower() in {"none", "null", "undefined"}:
         return ""
 
+    parsed = urlparse(normalized)
+    if parsed.scheme.lower() not in {"http", "https"}:
+        return ""
+
+    if parsed.netloc.strip() == "":
+        return ""
+
     return normalized
 
 
@@ -104,31 +116,55 @@ async def validate_feed_url(feed_url: str) -> tuple[str, str]:
     """
 
     normalized_url = normalize_feed_url(feed_url)
+    if not feed_utils.is_public_http_url(normalized_url):
+        raise ValueError("Feed URL must resolve to a public host.")
 
     timeout = aiohttp.ClientTimeout(12)
     headers = {
         "Accept": "application/rss+xml, application/atom+xml, application/xml, text/xml;q=0.9,*/*;q=0.8"
     }
 
+    payload = b""
+    current_url = normalized_url
+
     try:
         async with aiohttp.ClientSession(timeout=timeout, headers=headers) as session:
-            async with session.get(normalized_url) as response:
-                if response.status >= 400:
-                    raise ValueError(f"Feed URL returned HTTP {response.status}.")
+            for _ in range(FEED_VALIDATION_MAX_REDIRECTS + 1):
+                async with session.get(current_url, allow_redirects=False) as response:
+                    if response.status in FEED_VALIDATION_REDIRECT_STATUSES:
+                        redirect_location = str(response.headers.get("Location", "")).strip()
+                        if redirect_location == "":
+                            raise ValueError("Feed URL returned an invalid redirect response.")
 
-                # Follow upstream redirects and canonicalize the final URL so
-                # equivalent inputs (e.g. http -> https) dedupe to one source.
-                final_url = str(response.url).strip()
-                if final_url != "":
-                    normalized_url = normalize_feed_url(final_url)
+                        redirected_url = normalize_feed_url(urljoin(current_url, redirect_location))
+                        if not feed_utils.is_public_http_url(redirected_url):
+                            raise ValueError("Feed URL redirects to a non-public host.")
 
-                payload = await response.read()
+                        current_url = redirected_url
+                        continue
+
+                    if response.status >= 400:
+                        raise ValueError(f"Feed URL returned HTTP {response.status}.")
+
+                    # Canonicalize the final URL so equivalent inputs dedupe to one source.
+                    final_url = str(response.url).strip()
+                    if final_url != "":
+                        normalized_url = normalize_feed_url(final_url)
+                        if not feed_utils.is_public_http_url(normalized_url):
+                            raise ValueError("Feed URL resolved to a non-public host.")
+
+                    payload = await response.read()
+                    break
+            else:
+                raise ValueError(
+                    f"Feed URL redirected too many times (>{FEED_VALIDATION_MAX_REDIRECTS})."
+                )
     except aiohttp.ClientError as exc:
         raise ValueError(f"Unable to fetch feed URL: {exc}") from exc
 
     try:
-        root = ET.fromstring(payload)
-    except ET.ParseError as exc:
+        root = DefusedElementTree.fromstring(payload)
+    except (ET.ParseError, DefusedXmlException) as exc:
         raise ValueError("Feed URL did not return valid XML.") from exc
 
     title = extract_feed_title(root)

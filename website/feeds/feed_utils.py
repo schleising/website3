@@ -1,8 +1,97 @@
 from __future__ import annotations
 
+from functools import lru_cache
 import hashlib
+import ipaddress
+import socket
 from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 import xml.etree.ElementTree as ET
+
+from defusedxml import ElementTree as DefusedElementTree
+from defusedxml.common import DefusedXmlException
+
+
+LOCAL_HOSTNAMES = {
+    "localhost",
+    "localhost.localdomain",
+    "ip6-localhost",
+}
+
+
+def _parse_ip_address(candidate: str) -> ipaddress.IPv4Address | ipaddress.IPv6Address | None:
+    """Return an IP address object when candidate is a literal address."""
+
+    try:
+        return ipaddress.ip_address(candidate)
+    except ValueError:
+        return None
+
+
+@lru_cache(maxsize=2048)
+def _resolve_hostname_addresses(
+    hostname: str,
+) -> tuple[ipaddress.IPv4Address | ipaddress.IPv6Address, ...]:
+    """Resolve hostname to unique addresses for public-network checks."""
+
+    normalized_hostname = hostname.strip().rstrip(".").lower()
+    if normalized_hostname == "":
+        return ()
+
+    try:
+        address_info = socket.getaddrinfo(normalized_hostname, None, proto=socket.IPPROTO_TCP)
+    except (socket.gaierror, OSError):
+        return ()
+
+    seen_addresses: set[str] = set()
+    resolved_addresses: list[ipaddress.IPv4Address | ipaddress.IPv6Address] = []
+
+    for _family, _socktype, _proto, _canonname, sockaddr in address_info:
+        if not isinstance(sockaddr, tuple) or len(sockaddr) == 0:
+            continue
+
+        host_value = str(sockaddr[0]).strip()
+        parsed_ip = _parse_ip_address(host_value)
+        if parsed_ip is None:
+            continue
+
+        canonical_ip = str(parsed_ip)
+        if canonical_ip in seen_addresses:
+            continue
+
+        seen_addresses.add(canonical_ip)
+        resolved_addresses.append(parsed_ip)
+
+    return tuple(resolved_addresses)
+
+
+def is_public_http_url(url: str) -> bool:
+    """Return True when URL is HTTP(S) and resolves to globally-routable hosts."""
+
+    parsed = urlparse(str(url).strip())
+    if parsed.scheme.lower() not in {"http", "https"}:
+        return False
+
+    hostname = (parsed.hostname or "").strip().rstrip(".").lower()
+    if hostname == "":
+        return False
+
+    if hostname in LOCAL_HOSTNAMES:
+        return False
+
+    try:
+        _ = parsed.port
+    except ValueError:
+        return False
+
+    parsed_ip = _parse_ip_address(hostname)
+    if parsed_ip is not None:
+        return bool(parsed_ip.is_global)
+
+    resolved_addresses = _resolve_hostname_addresses(hostname)
+    if len(resolved_addresses) == 0:
+        return False
+
+    return all(address.is_global for address in resolved_addresses)
 
 
 def normalize_feed_url(feed_url: str) -> str:
@@ -71,8 +160,8 @@ def parse_opml_entries(opml_bytes: bytes) -> tuple[list[tuple[str, str, str]], l
     errors: list[str] = []
 
     try:
-        root = ET.fromstring(opml_bytes)
-    except ET.ParseError as exc:
+        root = DefusedElementTree.fromstring(opml_bytes)
+    except (ET.ParseError, DefusedXmlException) as exc:
         raise ValueError(f"Invalid OPML XML: {exc}") from exc
 
     def matches_tag(element: ET.Element, local_name: str) -> bool:

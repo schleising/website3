@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import Literal
 from urllib.parse import quote
@@ -58,6 +59,13 @@ feeds_router = APIRouter(prefix="/feeds")
 WEBSITE_ROOT = Path(__file__).resolve().parents[1]
 FEEDS_MANIFEST_PATH = WEBSITE_ROOT / "static" / "manifests" / "feeds" / "feeds.webmanifest"
 FEEDS_SERVICE_WORKER_PATH = WEBSITE_ROOT / "static" / "feeds" / "sw.js"
+
+try:
+    _opml_import_max_bytes = int(os.getenv("FEEDS_OPML_IMPORT_MAX_BYTES", "1048576"))
+except ValueError:
+    _opml_import_max_bytes = 1048576
+
+OPML_IMPORT_MAX_BYTES = max(1024, _opml_import_max_bytes)
 
 
 def _request_username(request: Request) -> str | None:
@@ -700,11 +708,18 @@ async def import_opml_data(
 
     username = _require_logged_in_user(request)
 
-    file_bytes = await opml_file.read()
+    file_bytes = await opml_file.read(OPML_IMPORT_MAX_BYTES + 1)
     if len(file_bytes) == 0:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Uploaded OPML file is empty.",
+        )
+
+    if len(file_bytes) > OPML_IMPORT_MAX_BYTES:
+        max_size_kib = OPML_IMPORT_MAX_BYTES // 1024
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Uploaded OPML file exceeds the {max_size_kib} KiB size limit.",
         )
 
     options = FeedOpmlImportOptions(

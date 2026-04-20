@@ -140,6 +140,79 @@
     });
 
     /** @type {Set<string>} */
+    const summaryAllowedTags = new Set([
+        "a",
+        "abbr",
+        "acronym",
+        "b",
+        "blockquote",
+        "br",
+        "code",
+        "details",
+        "div",
+        "em",
+        "h1",
+        "h2",
+        "h3",
+        "h4",
+        "h5",
+        "h6",
+        "hr",
+        "i",
+        "img",
+        "li",
+        "ol",
+        "p",
+        "pre",
+        "span",
+        "strong",
+        "summary",
+        "table",
+        "tbody",
+        "td",
+        "th",
+        "thead",
+        "tr",
+        "ul",
+    ]);
+
+    /** @type {Set<string>} */
+    const summaryDropWithContentsTags = new Set([
+        "script",
+        "style",
+        "iframe",
+        "object",
+        "embed",
+        "svg",
+        "math",
+        "noscript",
+    ]);
+
+    /** @type {Set<string>} */
+    const summaryGlobalAllowedAttributes = new Set([
+        "class",
+        "id",
+        "aria-label",
+        "aria-hidden",
+        "title",
+    ]);
+
+    /** @type {Set<string>} */
+    const emptySummaryAttributeSet = new Set();
+
+    /** @type {Record<string, Set<string>>} */
+    const summaryTagAllowedAttributes = {
+        a: new Set(["href", "target", "rel", "title"]),
+        img: new Set(["src", "alt", "title", "width", "height", "loading"]),
+        code: new Set(["class"]),
+        pre: new Set(["class"]),
+        div: new Set(["class", "id"]),
+        span: new Set(["class", "id"]),
+        th: new Set(["colspan", "rowspan"]),
+        td: new Set(["colspan", "rowspan"]),
+    };
+
+    /** @type {Set<string>} */
     const sessionReadArticleIds = new Set();
 
     /** @type {Set<string>} */
@@ -414,7 +487,197 @@
             return "";
         }
 
-        return normalized;
+        try {
+            const parsed = new URL(normalized);
+            if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+                return "";
+            }
+
+            return parsed.toString();
+        } catch (_error) {
+            return "";
+        }
+    }
+
+    /**
+     * Return whether an HTML attribute URL value uses an allowed safe scheme.
+     *
+     * @param {string} value
+     * @param {{ allowRelative: boolean, allowMailto: boolean }} options
+     * @returns {boolean}
+     */
+    function isSafeSummaryUrl(value, options) {
+        const trimmed = String(value || "").trim();
+        if (trimmed === "") {
+            return false;
+        }
+
+        const hasExplicitScheme = /^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(trimmed);
+        if (!hasExplicitScheme) {
+            if (!options.allowRelative) {
+                return false;
+            }
+
+            if (trimmed.startsWith("//")) {
+                return false;
+            }
+
+            return true;
+        }
+
+        try {
+            const parsed = new URL(trimmed);
+            if (parsed.protocol === "http:" || parsed.protocol === "https:") {
+                return true;
+            }
+
+            if (options.allowMailto && parsed.protocol === "mailto:") {
+                return true;
+            }
+        } catch (_error) {
+            return false;
+        }
+
+        return false;
+    }
+
+    /**
+     * Sanitize summary HTML in-browser as defense-in-depth.
+     *
+     * @param {string} rawHtml
+     * @returns {string}
+     */
+    function sanitizeSummaryHtml(rawHtml) {
+        if (typeof rawHtml !== "string" || rawHtml.trim() === "") {
+            return "";
+        }
+
+        const template = document.createElement("template");
+        template.innerHTML = rawHtml;
+
+        const elements = Array.from(template.content.querySelectorAll("*"));
+        elements.forEach(element => {
+            const tagName = element.tagName.toLowerCase();
+
+            if (!summaryAllowedTags.has(tagName)) {
+                if (summaryDropWithContentsTags.has(tagName)) {
+                    element.remove();
+                    return;
+                }
+
+                const parent = element.parentNode;
+                if (!parent) {
+                    element.remove();
+                    return;
+                }
+
+                while (element.firstChild) {
+                    parent.insertBefore(element.firstChild, element);
+                }
+
+                element.remove();
+                return;
+            }
+
+            const allowedTagAttributes = summaryTagAllowedAttributes[tagName] || emptySummaryAttributeSet;
+            const attributes = Array.from(element.attributes);
+            attributes.forEach(attribute => {
+                const attrName = attribute.name.toLowerCase();
+                const attrValue = attribute.value;
+
+                if (attrName.startsWith("on")) {
+                    element.removeAttribute(attribute.name);
+                    return;
+                }
+
+                const isGlobalAllowed = summaryGlobalAllowedAttributes.has(attrName);
+                const isTagAllowed = allowedTagAttributes.has(attrName);
+                if (!isGlobalAllowed && !isTagAllowed) {
+                    element.removeAttribute(attribute.name);
+                    return;
+                }
+
+                if (attrName === "href") {
+                    if (!isSafeSummaryUrl(attrValue, { allowRelative: true, allowMailto: true })) {
+                        element.removeAttribute(attribute.name);
+                        return;
+                    }
+
+                    if (tagName === "a" && element.getAttribute("target") === "_blank") {
+                        const relTokens = String(element.getAttribute("rel") || "")
+                            .split(/\s+/)
+                            .map(token => token.trim().toLowerCase())
+                            .filter(token => token !== "");
+                        if (!relTokens.includes("noopener")) {
+                            relTokens.push("noopener");
+                        }
+                        if (!relTokens.includes("noreferrer")) {
+                            relTokens.push("noreferrer");
+                        }
+                        element.setAttribute("rel", relTokens.join(" "));
+                    }
+                    return;
+                }
+
+                if (attrName === "src") {
+                    if (!isSafeSummaryUrl(attrValue, { allowRelative: false, allowMailto: false })) {
+                        element.removeAttribute(attribute.name);
+                    }
+                    return;
+                }
+
+                if (attrName === "target" && tagName === "a") {
+                    const normalizedTarget = String(attrValue || "").trim().toLowerCase();
+                    if (normalizedTarget !== "_blank" && normalizedTarget !== "_self") {
+                        element.removeAttribute(attribute.name);
+                    } else {
+                        element.setAttribute("target", normalizedTarget);
+                    }
+                    return;
+                }
+
+                if ((attrName === "width" || attrName === "height") && tagName === "img") {
+                    const numericValue = String(attrValue || "").trim();
+                    if (!/^\d{1,4}$/.test(numericValue)) {
+                        element.removeAttribute(attribute.name);
+                    }
+                    return;
+                }
+
+                if (attrName === "loading" && tagName === "img") {
+                    const normalizedLoading = String(attrValue || "").trim().toLowerCase();
+                    if (normalizedLoading !== "lazy" && normalizedLoading !== "eager") {
+                        element.removeAttribute(attribute.name);
+                    } else {
+                        element.setAttribute("loading", normalizedLoading);
+                    }
+                }
+            });
+
+            if (tagName === "a") {
+                const hrefValue = String(element.getAttribute("href") || "").trim();
+                if (hrefValue === "") {
+                    element.removeAttribute("target");
+                    element.removeAttribute("rel");
+                }
+            }
+
+            if (tagName === "img") {
+                const srcValue = String(element.getAttribute("src") || "").trim();
+                if (srcValue === "") {
+                    element.remove();
+                    return;
+                }
+
+                if (!element.hasAttribute("loading")) {
+                    element.setAttribute("loading", "lazy");
+                }
+
+                element.setAttribute("referrerpolicy", "no-referrer");
+            }
+        });
+
+        return template.innerHTML;
     }
 
     /**
@@ -1120,10 +1383,13 @@
         }
 
         if (article.summary_html) {
-            const summary = document.createElement("div");
-            summary.className = "feed-article-summary";
-            summary.innerHTML = String(article.summary_html);
-            card.appendChild(summary);
+            const sanitizedSummary = sanitizeSummaryHtml(String(article.summary_html));
+            if (sanitizedSummary !== "") {
+                const summary = document.createElement("div");
+                summary.className = "feed-article-summary";
+                summary.innerHTML = sanitizedSummary;
+                card.appendChild(summary);
+            }
         }
 
         setCardReadAppearance(card, Boolean(article.is_read));
