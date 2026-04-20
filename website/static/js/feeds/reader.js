@@ -1713,6 +1713,67 @@
     }
 
     /**
+     * Reset header count node classes/styles before reapplying display mode.
+     */
+    function resetHeaderCountNodePresentation() {
+        if (!(pageHeaderCountNode instanceof HTMLElement)) {
+            return;
+        }
+
+        pageHeaderCountNode.classList.remove(
+            "feed-category-count",
+            "feed-category-unread-pill",
+            "feed-category-unread-pill-all",
+            "feeds-page-header-count"
+        );
+        pageHeaderCountNode.style.removeProperty("--feed-category-accent");
+    }
+
+    /**
+     * Render header count as the same pill used by right-sidebar category badges.
+     *
+     * @param {unknown} value
+     * @param {{ useAllAccent?: boolean, accentHex?: string }} [options]
+     */
+    function renderHeaderCountAsPill(value, options = {}) {
+        if (!(pageHeaderCountNode instanceof HTMLElement)) {
+            return;
+        }
+
+        const normalizedValue = normalizeCount(value);
+        const useAllAccent = options.useAllAccent === true;
+        const accentHex = typeof options.accentHex === "string"
+            ? options.accentHex.trim()
+            : "";
+
+        resetHeaderCountNodePresentation();
+        pageHeaderCountNode.classList.add("feed-category-count", "feed-category-unread-pill");
+        if (useAllAccent) {
+            pageHeaderCountNode.classList.add("feed-category-unread-pill-all");
+        } else if (accentHex !== "") {
+            pageHeaderCountNode.style.setProperty("--feed-category-accent", accentHex);
+        }
+
+        pageHeaderCountNode.textContent = String(normalizedValue);
+    }
+
+    /**
+     * Render header count as a plain text suffix.
+     *
+     * @param {string} label
+     */
+    function renderHeaderCountAsText(label) {
+        if (!(pageHeaderCountNode instanceof HTMLElement)) {
+            return;
+        }
+
+        const normalizedLabel = String(label || "").trim();
+        resetHeaderCountNodePresentation();
+        pageHeaderCountNode.classList.add("feeds-page-header-count");
+        pageHeaderCountNode.textContent = normalizedLabel === "" ? "" : `(${normalizedLabel})`;
+    }
+
+    /**
      * Update feeds reader header title/count from live category payload.
      *
      * @param {{ all_unread_count?: number, recently_read_count?: number, saved_count?: number, categories?: Array<Record<string, any>> }} payload
@@ -1726,19 +1787,20 @@
 
         if (selectedCategory === "all") {
             pageHeaderTitleNode.textContent = "All Feeds";
-            pageHeaderCountNode.textContent = `(${normalizeCount(payload.all_unread_count)} unread)`;
+            renderHeaderCountAsPill(payload.all_unread_count, { useAllAccent: true });
             return;
         }
 
         if (selectedCategory === "saved") {
             pageHeaderTitleNode.textContent = "Saved";
-            pageHeaderCountNode.textContent = `(${normalizeCount(payload.saved_count)} saved)`;
+            renderHeaderCountAsPill(payload.saved_count, { useAllAccent: true });
             return;
         }
 
         if (selectedCategory === "recently-read") {
             pageHeaderTitleNode.textContent = "Recently Read";
-            pageHeaderCountNode.textContent = `(${normalizeCount(payload.recently_read_count)} recent)`;
+            // Match sidebar behavior: Recently Read has no count pill/text.
+            renderHeaderCountAsText("");
             return;
         }
 
@@ -1748,12 +1810,14 @@
         if (selectedCategorySummary && typeof selectedCategorySummary === "object") {
             const categoryName = String(selectedCategorySummary.name || "").trim();
             pageHeaderTitleNode.textContent = categoryName === "" ? "Feeds" : categoryName;
-            pageHeaderCountNode.textContent = `(${normalizeCount(selectedCategorySummary.unread_count)} unread)`;
+            renderHeaderCountAsPill(selectedCategorySummary.unread_count, {
+                accentHex: String(selectedCategorySummary.color_hex || "").trim(),
+            });
             return;
         }
 
         pageHeaderTitleNode.textContent = "Feeds";
-        pageHeaderCountNode.textContent = "";
+        renderHeaderCountAsText("");
     }
 
     /**

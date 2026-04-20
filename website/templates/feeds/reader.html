@@ -3,27 +3,43 @@
 {% set feed_page_mode = "reader" %}
 
 {% block header %}
-{% set header = namespace(title="Feeds", count_label="") %}
+{% set header = namespace(
+  title="Feeds",
+  count_value="",
+  count_label="",
+  count_is_pill=false,
+  count_use_all_pill=false,
+  count_accent=""
+) %}
 {% if selected_category == "all" %}
   {% set header.title = "All Feeds" %}
-  {% set header.count_label = (all_unread_count|int) ~ " unread" %}
+  {% set header.count_value = all_unread_count|int %}
+  {% set header.count_is_pill = true %}
+  {% set header.count_use_all_pill = true %}
 {% elif selected_category == "saved" %}
   {% set header.title = "Saved" %}
-  {% set header.count_label = (saved_count|int) ~ " saved" %}
+  {% set header.count_value = saved_count|int %}
+  {% set header.count_is_pill = true %}
+  {% set header.count_use_all_pill = true %}
 {% elif selected_category == "recently-read" %}
   {% set header.title = "Recently Read" %}
-  {% set header.count_label = (recently_read_count|int) ~ " recent" %}
 {% else %}
   {% for category_item in categories %}
     {% if category_item.category_id == selected_category %}
       {% set header.title = category_item.name %}
-      {% set header.count_label = (category_item.unread_count|int) ~ " unread" %}
+      {% set header.count_value = category_item.unread_count|int %}
+      {% set header.count_is_pill = true %}
+      {% set header.count_accent = category_item.color_hex %}
     {% endif %}
   {% endfor %}
 {% endif %}
 <h3 class="header-text feeds-page-header">
   <span id="feeds-page-header-title">{{ header.title }}</span>
-  <span id="feeds-page-header-count" class="feeds-page-header-count">{% if header.count_label %}({{ header.count_label }}){% endif %}</span>
+  <span
+    id="feeds-page-header-count"
+    class="{% if header.count_is_pill %}feed-category-count feed-category-unread-pill{% if header.count_use_all_pill %} feed-category-unread-pill-all{% endif %}{% else %}feeds-page-header-count{% endif %}"
+    {% if header.count_is_pill and header.count_accent %}style="--feed-category-accent: {{ header.count_accent }};"{% endif %}
+  >{% if header.count_is_pill %}{{ header.count_value }}{% elif header.count_label %}({{ header.count_label }}){% endif %}</span>
 </h3>
 {% endblock %}
 
