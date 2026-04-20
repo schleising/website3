@@ -2,6 +2,7 @@ let footballTableSocket = null;
 let footballTableUrl;
 let footballTableIntervalId = null;
 let selectedTeamId = null;
+let hoveredTeamId = null;
 let footballTableLoadedDayKey = null;
 let lastInteractionPointerType = "mouse";
 
@@ -297,24 +298,65 @@ function syncSelectedHighlight() {
     applyRangeHighlights(selectedRow);
 }
 
-function clearSelectionIfTappedOutsideSelectedRow(event) {
-    if (!selectedTeamId) {
+function syncActiveRangeHighlight() {
+    if (selectedTeamId) {
+        syncSelectedHighlight();
+        return;
+    }
+
+    if (!hoveredTeamId) {
+        clearRangeHighlights();
         return;
     }
 
     const rows = getTableRows();
-    const selectedRow = rows.find(row => row.dataset.teamId === selectedTeamId);
+    const hoveredRow = rows.find(row => row.dataset.teamId === hoveredTeamId);
+    if (!hoveredRow) {
+        clearRangeHighlights();
+        return;
+    }
 
-    if (!selectedRow) {
+    applyRangeHighlights(hoveredRow);
+}
+
+function clearSelectionIfTappedOutsideSelectedRow(event) {
+    const tbody = document.getElementById("football-live-table-body");
+    if (!tbody) {
+        selectedTeamId = null;
+        hoveredTeamId = null;
+        clearRangeHighlights();
+        return;
+    }
+
+    if (!selectedTeamId && !hoveredTeamId) {
         return;
     }
 
     const target = event.target;
-    if (target instanceof Node && selectedRow.contains(target)) {
+    if (!(target instanceof Node)) {
+        selectedTeamId = null;
+        hoveredTeamId = null;
+        clearRangeHighlights();
+        return;
+    }
+
+    const rows = getTableRows();
+    const selectedRow = selectedTeamId
+        ? rows.find(row => row.dataset.teamId === selectedTeamId)
+        : null;
+    if (selectedRow && selectedRow.contains(target)) {
+        return;
+    }
+
+    const hoveredRow = !selectedRow && hoveredTeamId
+        ? rows.find(row => row.dataset.teamId === hoveredTeamId)
+        : null;
+    if (hoveredRow && hoveredRow.contains(target)) {
         return;
     }
 
     selectedTeamId = null;
+    hoveredTeamId = null;
     clearRangeHighlights();
 }
 
@@ -348,10 +390,12 @@ function setupRangeInteractions() {
             return;
         }
 
+        hoveredTeamId = row.dataset.teamId || null;
         applyRangeHighlights(row);
     });
 
     tbody.addEventListener("mouseleave", () => {
+        hoveredTeamId = null;
         if (selectedTeamId) {
             syncSelectedHighlight();
             return;
@@ -380,6 +424,7 @@ function setupRangeInteractions() {
         }
 
         selectedTeamId = teamId;
+        hoveredTeamId = null;
         applyRangeHighlights(row);
     });
 
@@ -446,7 +491,7 @@ function patchLiveTable(tableList) {
         tbody.appendChild(fragment);
     }
 
-    syncSelectedHighlight();
+    syncActiveRangeHighlight();
 }
 
 function renderLiveTable(tableList) {
