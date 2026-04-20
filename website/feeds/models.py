@@ -41,6 +41,8 @@ class FeedArticleDocument(BaseModel):
     id: PyObjectId | None = Field(default=None, alias="_id")
     feed_id: PyObjectId
     dedupe_key: str
+    canonical_url: str | None = None
+    external_id: str | None = None
     title: str
     link: str
     author: str | None = None

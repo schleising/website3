@@ -304,20 +304,37 @@ async def _merge_duplicate_feed_articles(
 
     async for article_doc in cursor:
         source_article_id = article_doc.get("_id")
+        canonical_url = normalize_article_link(article_doc.get("canonical_url"))
+        external_id = str(article_doc.get("external_id", "")).strip()
         dedupe_key = str(article_doc.get("dedupe_key", "")).strip()
 
         if not isinstance(source_article_id, ObjectId):
             continue
 
-        if dedupe_key == "":
-            # No stable key; keep historical row to avoid unsafe merges.
+        if canonical_url != "":
+            target_lookup: dict[str, Any] = {
+                "feed_id": canonical_feed_id,
+                "$or": [
+                    {"canonical_url": canonical_url},
+                    {"link": canonical_url},
+                ],
+            }
+        elif external_id != "" and external_id.lower() not in {"none", "null", "undefined"}:
+            target_lookup = {
+                "feed_id": canonical_feed_id,
+                "external_id": external_id,
+            }
+        elif dedupe_key != "":
+            target_lookup = {
+                "feed_id": canonical_feed_id,
+                "dedupe_key": dedupe_key,
+            }
+        else:
+            # No stable identity; keep historical row to avoid unsafe merges.
             continue
 
         target_article = await feed_articles_collection.find_one(
-            {
-                "feed_id": canonical_feed_id,
-                "dedupe_key": dedupe_key,
-            },
+            target_lookup,
             {"_id": 1},
         )
 
@@ -331,10 +348,7 @@ async def _merge_duplicate_feed_articles(
                 target_article_id = insert_result.inserted_id
             except DuplicateKeyError:
                 existing_target = await feed_articles_collection.find_one(
-                    {
-                        "feed_id": canonical_feed_id,
-                        "dedupe_key": dedupe_key,
-                    },
+                    target_lookup,
                     {"_id": 1},
                 )
                 target_article_id = (
