@@ -52,6 +52,7 @@
             {% set current_path = request.url.path %}
             {% set current_section = current_path.split('/')[1] if current_path != '/' else '' %}
             <a class="sub-level-nav{% if current_path == '/' %} is-current{% endif %}" href="/"{% if current_path == '/' %} aria-current="page"{% endif %}>Home</a>
+            <a class="sub-level-nav{% if current_section == 'webapps' %} is-current{% endif %}" href="/webapps/"{% if current_section == 'webapps' %} aria-current="page"{% endif %}>Webapps</a>
             <a class="sub-level-nav{% if current_section == 'football' %} is-current{% endif %}" href="/football/table/" data-nav-prefix="/football/"{% if current_section == 'football' %} aria-current="page"{% endif %}>Football</a>
             {% if request.state.user != None %}
             <a class="sub-level-nav{% if current_section == 'feeds' %} is-current{% endif %}" href="/feeds/" data-nav-prefix="/feeds/"{% if current_section == 'feeds' %} aria-current="page"{% endif %}>Feeds</a>

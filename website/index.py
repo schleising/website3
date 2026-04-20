@@ -78,6 +78,99 @@ logging.basicConfig(
 # Set the base template location
 TEMPLATES = Jinja2Templates("/app/templates")
 
+WEBAPPS_PUBLIC: list[dict[str, str]] = [
+    {
+        "name": "Astronomy",
+        "url": "https://astronomy.schleising.net",
+    },
+    {
+        "name": "Football",
+        "url": "https://football.schleising.net",
+    },
+]
+
+WEBAPPS_AUTHENTICATED: list[dict[str, str]] = [
+    {
+        "name": "Feeds",
+        "url": "https://feeds.schleising.net",
+    },
+]
+
+WEBAPPS_TOOLS_ONLY: list[dict[str, str]] = [
+    {
+        "name": "Authentik",
+        "url": "https://auth.schleising.net",
+    },
+    {
+        "name": "Bet",
+        "url": "https://bet.schleising.net",
+    },
+    {
+        "name": "Converter",
+        "url": "https://converter.schleising.net",
+    },
+    {
+        "name": "Logger",
+        "url": "https://logger.schleising.net",
+    },
+    {
+        "name": "Monitor",
+        "url": "https://monitor.schleising.net",
+    },
+    {
+        "name": "Transcoder",
+        "url": "https://transcoder.schleising.net",
+    },
+    {
+        "name": "SRM Monitor",
+        "url": "https://srm-monitor.schleising.net",
+    },
+    {
+        "name": "Overseerr",
+        "url": "https://overseerr.schleising.net",
+    },
+    {
+        "name": "Pi-hole",
+        "url": "https://pihole.schleising.net",
+    },
+    {
+        "name": "Plex",
+        "url": "https://plex.schleising.net",
+    },
+    {
+        "name": "Portainer",
+        "url": "https://portainer.schleising.net",
+    },
+    {
+        "name": "Prowlarr",
+        "url": "https://prowlarr.schleising.net",
+    },
+    {
+        "name": "Radarr",
+        "url": "https://radarr.schleising.net",
+    },
+    {
+        "name": "Sonarr",
+        "url": "https://sonarr.schleising.net",
+    },
+    {
+        "name": "Tautulli",
+        "url": "https://tautulli.schleising.net",
+    },
+    {
+        "name": "Transmission",
+        "url": "https://transmission.schleising.net",
+    },
+    {
+        "name": "NAS",
+        "url": "https://nas.schleising.net",
+    },
+    {
+        "name": "Router",
+        "url": "https://router.schleising.net",
+    },
+]
+
 # Get an instance of the Database class
 MONGODB = Database()
 
@@ -176,3 +269,24 @@ async def validation_exception_handler(request, exc):
 @app.get("/", response_class=HTMLResponse)
 async def root(request: Request):
     return TEMPLATES.TemplateResponse(request, "index.html", {"request": request})
+
+
+@app.get("/webapps", response_class=HTMLResponse)
+@app.get("/webapps/", response_class=HTMLResponse)
+async def webapps_page(request: Request):
+    user = getattr(request.state, "user", None)
+    is_logged_in = user is not None
+    can_use_tools = bool(getattr(user, "can_use_tools", False))
+
+    return TEMPLATES.TemplateResponse(
+        request,
+        "webapps.html",
+        {
+            "request": request,
+            "public_webapps": WEBAPPS_PUBLIC,
+            "authenticated_webapps": WEBAPPS_AUTHENTICATED,
+            "tools_only_webapps": WEBAPPS_TOOLS_ONLY,
+            "is_logged_in": is_logged_in,
+            "can_use_tools": can_use_tools,
+        },
+    )

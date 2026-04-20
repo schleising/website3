@@ -1,0 +1,85 @@
+.webapps-page {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.85rem;
+}
+
+.webapps-group {
+    padding: 0.95rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+}
+
+.webapps-group-header {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+}
+
+.webapps-group-header h4 {
+    margin: 0;
+    font-size: 1.12rem;
+}
+
+.webapps-group-header p {
+    margin: 0;
+    color: var(--text-soft);
+}
+
+.webapps-access-hint {
+    margin: 0;
+    font-size: 0.92rem;
+    font-weight: 600;
+}
+
+.webapps-access-hint.is-available {
+    color: var(--success);
+}
+
+.webapps-access-hint.is-restricted {
+    color: var(--warning);
+}
+
+.webapps-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem;
+}
+
+.webapps-list li {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+    border: 0.0625rem solid var(--line);
+    border-radius: 0.6rem;
+    padding: 0.45rem 0.6rem;
+    background: #ffffff;
+}
+
+.webapps-link {
+    color: var(--brand-strong);
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.webapps-link:hover,
+.webapps-link:focus-visible {
+    text-decoration: underline;
+}
+
+.webapps-host {
+    color: var(--text-soft);
+    font-size: 0.88rem;
+    word-break: break-word;
+}
+
+@media screen and (max-width: 56rem) {
+    .webapps-list {
+        grid-template-columns: 1fr;
+    }
+}

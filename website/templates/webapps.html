@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block title %}<title>Webapps</title>{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="/css/webapps.css?v1.0.0">
+{% endblock %}
+
+{% block header %}
+<h3 class="header-text no-margin">Webapps</h3>
+{% endblock %}
+
+{% macro render_webapp_group(title, description, apps) -%}
+<section class="webapps-group site-card" aria-label="{{ title }}">
+  <header class="webapps-group-header">
+    <h4>{{ title }}</h4>
+    <p>{{ description }}</p>
+  </header>
+
+  <ul class="webapps-list" role="list">
+    {% for app_item in apps %}
+    <li>
+      <a class="webapps-link" href="{{ app_item.url }}" target="_blank" rel="noopener noreferrer">{{ app_item.name }}</a>
+      <span class="webapps-host">{{ app_item.url | replace('https://', '') }}</span>
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+{%- endmacro %}
+
+{% block content %}
+<section class="webapps-page" aria-label="Webapp availability groups">
+  {{ render_webapp_group(
+    "Available Publicly",
+    "Accessible without signing in.",
+    public_webapps
+  ) }}
+
+  {% if is_logged_in %}
+  {{ render_webapp_group(
+    "Available If Logged In",
+    "Requires an authenticated website account.",
+    authenticated_webapps
+  ) }}
+  {% endif %}
+
+  {% if can_use_tools %}
+  {{ render_webapp_group(
+    "Available If can_use_tools = True",
+    "Requires a user account with tool access enabled.",
+    tools_only_webapps
+  ) }}
+  {% endif %}
+</section>
+{% endblock %}
+
+{% block footer %}
+&copy; 2026 Steve's Website. All rights reserved.
+{% endblock %}
