@@ -12,7 +12,6 @@
   <rect width="320" height="180" rx="20" fill="url(#sm-bg)"/>
   <circle cx="50" cy="26" r="58" fill="#ffffff" fill-opacity="0.08"/>
   <circle cx="286" cy="156" r="72" fill="#95bde4" fill-opacity="0.1"/>
-  <rect x="102" y="34" width="116" height="116" rx="22" fill="#f7fbff" fill-opacity="0.96"/>
   <g transform="translate(120 52) scale(1.25)">
     <rect x="4" y="4" width="56" height="56" rx="12" fill="url(#sm-icon-bg)"/>
     <path d="M32 16l16 11v16.5A5.5 5.5 0 0 1 42.5 49h-21A5.5 5.5 0 0 1 16 43.5V27z" fill="#f4f9ff" stroke="#d6e6f6" stroke-width="1.5"/>

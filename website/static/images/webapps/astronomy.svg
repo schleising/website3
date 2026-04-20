@@ -16,7 +16,6 @@
   <rect width="320" height="180" rx="20" fill="url(#a-bg)"/>
   <circle cx="50" cy="28" r="58" fill="#ffffff" fill-opacity="0.08"/>
   <circle cx="282" cy="158" r="74" fill="#9ec0ea" fill-opacity="0.09"/>
-  <rect x="102" y="34" width="116" height="116" rx="22" fill="#f7fbff" fill-opacity="0.96"/>
   <g transform="translate(120 52) scale(0.15625)">
     <rect x="24" y="24" width="464" height="464" rx="112" fill="url(#a-icon-space)"/>
     <circle cx="256" cy="264" r="102" fill="#f2a64d"/>
