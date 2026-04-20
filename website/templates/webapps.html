@@ -3,7 +3,8 @@
 {% block title %}<title>Webapps</title>{% endblock %}
 
 {% block head %}
-<link rel="stylesheet" href="/css/webapps.css?v1.0.0">
+<link rel="stylesheet" href="/css/index.css?v1.1.0">
+<link rel="stylesheet" href="/css/webapps.css?v1.2.0">
 {% endblock %}
 
 {% block header %}
@@ -11,20 +12,23 @@
 {% endblock %}
 
 {% macro render_webapp_group(title, description, apps) -%}
-<section class="webapps-group site-card" aria-label="{{ title }}">
+<section class="webapps-group" aria-label="{{ title }}">
   <header class="webapps-group-header">
     <h4>{{ title }}</h4>
     <p>{{ description }}</p>
   </header>
 
-  <ul class="webapps-list" role="list">
+  <div class="home-cards-grid webapps-cards-grid">
     {% for app_item in apps %}
-    <li>
-      <a class="webapps-link" href="{{ app_item.url }}" target="_blank" rel="noopener noreferrer">{{ app_item.name }}</a>
-      <span class="webapps-host">{{ app_item.url | replace('https://', '') }}</span>
-    </li>
+    <a class="home-card-link" href="{{ app_item.url }}" target="_blank" rel="noopener noreferrer">
+      <article class="home-card site-card webapp-card">
+        <img class="home-card-image webapp-card-image" src="{{ app_item.icon_svg }}" alt="{{ app_item.name }} icon" loading="lazy" decoding="async">
+        <h4>{{ app_item.name }}</h4>
+        <p class="webapps-host">{{ app_item.url | replace('https://', '') }}</p>
+      </article>
+    </a>
     {% endfor %}
-  </ul>
+  </div>
 </section>
 {%- endmacro %}
 

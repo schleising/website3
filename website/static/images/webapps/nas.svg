@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 180" role="img" aria-label="NAS webapp illustration">
+  <defs>
+    <linearGradient id="n-bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#163254"/>
+      <stop offset="1" stop-color="#2a608f"/>
+    </linearGradient>
+  </defs>
+  <rect width="320" height="180" rx="20" fill="url(#n-bg)"/>
+  <circle cx="48" cy="24" r="60" fill="#ffffff" fill-opacity="0.08"/>
+  <circle cx="286" cy="156" r="72" fill="#95bee7" fill-opacity="0.1"/>
+  <rect x="90" y="30" width="140" height="116" rx="18" fill="#f8fbff"/>
+  <rect x="118" y="54" width="84" height="20" rx="5" fill="#2f6f9f"/>
+  <rect x="118" y="80" width="84" height="20" rx="5" fill="#3f81bb"/>
+  <rect x="118" y="106" width="84" height="20" rx="5" fill="#5a9dd3"/>
+  <circle cx="188" cy="64" r="2.8" fill="#d9ecff"/>
+  <circle cx="188" cy="90" r="2.8" fill="#d9ecff"/>
+  <circle cx="188" cy="116" r="2.8" fill="#d9ecff"/>
+  <text x="160" y="160" text-anchor="middle" font-size="14" font-family="Segoe UI, Arial, sans-serif" fill="#e8f3ff">NAS</text>
+</svg>

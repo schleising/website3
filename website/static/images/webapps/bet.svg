@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 180" role="img" aria-label="Bet webapp illustration">
+  <defs>
+    <linearGradient id="b-bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#18375d"/>
+      <stop offset="1" stop-color="#2b5e8f"/>
+    </linearGradient>
+  </defs>
+  <rect width="320" height="180" rx="20" fill="url(#b-bg)"/>
+  <circle cx="46" cy="28" r="60" fill="#ffffff" fill-opacity="0.08"/>
+  <circle cx="282" cy="154" r="72" fill="#97c1ea" fill-opacity="0.1"/>
+  <rect x="102" y="34" width="116" height="116" rx="22" fill="#f7fbff" fill-opacity="0.96"/>
+  <rect x="124" y="63" width="72" height="54" rx="8" fill="#e8f3ff" stroke="#bfd8ef" stroke-width="2"/>
+  <rect x="132" y="72" width="10" height="36" rx="3" fill="#4fa8e2"/>
+  <rect x="146" y="80" width="10" height="28" rx="3" fill="#79bbe9"/>
+  <rect x="160" y="67" width="10" height="41" rx="3" fill="#2f9a60"/>
+  <rect x="174" y="86" width="10" height="22" rx="3" fill="#a2cdee"/>
+  <path d="M132 92l14-8 14 5 18-14" fill="none" stroke="#2f9a60" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="160" y="160" text-anchor="middle" font-size="15" font-family="Segoe UI, Arial, sans-serif" fill="#e8f3ff">Bet</text>
+</svg>

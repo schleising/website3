@@ -78,97 +78,49 @@ logging.basicConfig(
 # Set the base template location
 TEMPLATES = Jinja2Templates("/app/templates")
 
+WEBAPPS_CARD_IMAGE_VERSION = "1.0.2"
+
+
+def _webapp_image(filename: str) -> str:
+    return f"/images/webapps/{filename}?v{WEBAPPS_CARD_IMAGE_VERSION}"
+
+
+def _webapp(name: str, url: str, icon_svg: str) -> dict[str, str]:
+    return {
+        "name": name,
+        "url": url,
+        "icon_svg": icon_svg,
+    }
+
+
 WEBAPPS_PUBLIC: list[dict[str, str]] = [
-    {
-        "name": "Astronomy",
-        "url": "https://astronomy.schleising.net",
-    },
-    {
-        "name": "Football",
-        "url": "https://football.schleising.net",
-    },
+    _webapp("Astronomy", "https://astronomy.schleising.net", _webapp_image("astronomy.svg")),
+    _webapp("Football", "https://football.schleising.net", _webapp_image("football.svg")),
 ]
 
 WEBAPPS_AUTHENTICATED: list[dict[str, str]] = [
-    {
-        "name": "Feeds",
-        "url": "https://feeds.schleising.net",
-    },
+    _webapp("Feeds", "https://feeds.schleising.net", _webapp_image("feeds.svg")),
 ]
 
 WEBAPPS_TOOLS_ONLY: list[dict[str, str]] = [
-    {
-        "name": "Authentik",
-        "url": "https://auth.schleising.net",
-    },
-    {
-        "name": "Bet",
-        "url": "https://bet.schleising.net",
-    },
-    {
-        "name": "Converter",
-        "url": "https://converter.schleising.net",
-    },
-    {
-        "name": "Logger",
-        "url": "https://logger.schleising.net",
-    },
-    {
-        "name": "Monitor",
-        "url": "https://monitor.schleising.net",
-    },
-    {
-        "name": "Transcoder",
-        "url": "https://transcoder.schleising.net",
-    },
-    {
-        "name": "SRM Monitor",
-        "url": "https://srm-monitor.schleising.net",
-    },
-    {
-        "name": "Overseerr",
-        "url": "https://overseerr.schleising.net",
-    },
-    {
-        "name": "Pi-hole",
-        "url": "https://pihole.schleising.net",
-    },
-    {
-        "name": "Plex",
-        "url": "https://plex.schleising.net",
-    },
-    {
-        "name": "Portainer",
-        "url": "https://portainer.schleising.net",
-    },
-    {
-        "name": "Prowlarr",
-        "url": "https://prowlarr.schleising.net",
-    },
-    {
-        "name": "Radarr",
-        "url": "https://radarr.schleising.net",
-    },
-    {
-        "name": "Sonarr",
-        "url": "https://sonarr.schleising.net",
-    },
-    {
-        "name": "Tautulli",
-        "url": "https://tautulli.schleising.net",
-    },
-    {
-        "name": "Transmission",
-        "url": "https://transmission.schleising.net",
-    },
-    {
-        "name": "NAS",
-        "url": "https://nas.schleising.net",
-    },
-    {
-        "name": "Router",
-        "url": "https://router.schleising.net",
-    },
+    _webapp("Authentik", "https://auth.schleising.net", _webapp_image("authentik.svg")),
+    _webapp("Bet", "https://bet.schleising.net", _webapp_image("bet.svg")),
+    _webapp("Converter", "https://converter.schleising.net", _webapp_image("converter.svg")),
+    _webapp("Logger", "https://logger.schleising.net", _webapp_image("logger.svg")),
+    _webapp("Monitor", "https://monitor.schleising.net", _webapp_image("monitor.svg")),
+    _webapp("Transcoder", "https://transcoder.schleising.net", _webapp_image("transcoder.svg")),
+    _webapp("SRM Monitor", "https://srm-monitor.schleising.net", _webapp_image("srm-monitor.svg")),
+    _webapp("Overseerr", "https://overseerr.schleising.net", _webapp_image("overseerr.svg")),
+    _webapp("Pi-hole", "https://pihole.schleising.net", _webapp_image("pihole.svg")),
+    _webapp("Plex", "https://plex.schleising.net", _webapp_image("plex.svg")),
+    _webapp("Portainer", "https://portainer.schleising.net", _webapp_image("portainer.svg")),
+    _webapp("Prowlarr", "https://prowlarr.schleising.net", _webapp_image("prowlarr.svg")),
+    _webapp("Radarr", "https://radarr.schleising.net", _webapp_image("radarr.svg")),
+    _webapp("Sonarr", "https://sonarr.schleising.net", _webapp_image("sonarr.svg")),
+    _webapp("Tautulli", "https://tautulli.schleising.net", _webapp_image("tautulli.svg")),
+    _webapp("Transmission", "https://transmission.schleising.net", _webapp_image("transmission.svg")),
+    _webapp("NAS", "https://nas.schleising.net", _webapp_image("nas.svg")),
+    _webapp("Router", "https://router.schleising.net", _webapp_image("router.svg")),
 ]
 
 # Get an instance of the Database class

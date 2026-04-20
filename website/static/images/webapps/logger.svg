@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 180" role="img" aria-label="Logger webapp illustration">
+  <defs>
+    <linearGradient id="l-bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#193a61"/>
+      <stop offset="1" stop-color="#366fa0"/>
+    </linearGradient>
+  </defs>
+  <rect width="320" height="180" rx="20" fill="url(#l-bg)"/>
+  <circle cx="50" cy="26" r="60" fill="#ffffff" fill-opacity="0.08"/>
+  <circle cx="286" cy="154" r="72" fill="#96c0e8" fill-opacity="0.1"/>
+  <rect x="102" y="34" width="116" height="116" rx="22" fill="#f7fbff" fill-opacity="0.96"/>
+  <rect x="126" y="60" width="68" height="60" rx="8" fill="#e8f3ff" stroke="#bfd8ef" stroke-width="2"/>
+  <path d="M142 76h36M142 88h30M142 100h24" fill="none" stroke="#5f8fbf" stroke-width="4" stroke-linecap="round"/>
+  <circle cx="170" cy="108" r="10" fill="#2f9a60"/>
+  <path d="M165 108l4 4 7-8" fill="none" stroke="#f7fbff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="160" y="160" text-anchor="middle" font-size="15" font-family="Segoe UI, Arial, sans-serif" fill="#e8f3ff">Logger</text>
+</svg>

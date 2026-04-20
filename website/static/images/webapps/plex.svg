@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 180" role="img" aria-label="Plex webapp illustration">
+  <defs>
+    <linearGradient id="pl-bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1f2733"/>
+      <stop offset="1" stop-color="#38485c"/>
+    </linearGradient>
+  </defs>
+  <rect width="320" height="180" rx="20" fill="url(#pl-bg)"/>
+  <circle cx="48" cy="24" r="62" fill="#ffffff" fill-opacity="0.07"/>
+  <circle cx="286" cy="156" r="76" fill="#ced7e8" fill-opacity="0.1"/>
+  <rect x="90" y="30" width="140" height="116" rx="18" fill="#f8fbff"/>
+  <circle cx="160" cy="88" r="36" fill="#1e2734"/>
+  <polygon points="150,68 182,88 150,108" fill="#f4c04b"/>
+  <text x="160" y="160" text-anchor="middle" font-size="14" font-family="Segoe UI, Arial, sans-serif" fill="#e5ebf6">Plex</text>
+</svg>
