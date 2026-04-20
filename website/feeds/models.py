@@ -163,6 +163,7 @@ class FeedArticleStatusItem(BaseModel):
     is_read: bool
     is_saved: bool
     read_at: datetime | None = None
+    saved_at: datetime | None = None
 
 
 class FeedArticleStatusResponse(BaseModel):

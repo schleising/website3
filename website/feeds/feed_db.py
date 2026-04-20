@@ -273,8 +273,8 @@ async def _merge_user_article_state(
 
         merged_is_read = target_is_read or source_is_read
         merged_is_saved = target_is_saved or source_is_saved
-        merged_read_at = _latest_datetime(target_read_at, source_read_at) if merged_is_read else None
-        merged_saved_at = _latest_datetime(target_saved_at, source_saved_at) if merged_is_saved else None
+        merged_read_at = _latest_datetime(target_read_at, source_read_at)
+        merged_saved_at = _latest_datetime(target_saved_at, source_saved_at)
 
         await user_article_states_collection.update_one(
             {"_id": target_state["_id"]},
@@ -1423,27 +1423,30 @@ async def get_article_read_statuses(
             "user_id": user_id,
             "article_id": {"$in": list(visible_article_ids)},
         },
-        {"article_id": 1, "is_read": 1, "is_saved": 1, "read_at": 1},
+        {"article_id": 1, "is_read": 1, "is_saved": 1, "read_at": 1, "saved_at": 1},
     )
-    state_flags: dict[ObjectId, tuple[bool, bool, datetime | None]] = {}
+    state_flags: dict[ObjectId, tuple[bool, bool, datetime | None, datetime | None]] = {}
     async for state_doc in read_state_cursor:
         article_id = state_doc.get("article_id")
         if not isinstance(article_id, ObjectId):
             continue
         is_read = bool(state_doc.get("is_read"))
-        read_at = _as_utc_datetime(state_doc.get("read_at")) if is_read else None
+        read_at = _as_utc_datetime(state_doc.get("read_at"))
+        saved_at = _as_utc_datetime(state_doc.get("saved_at"))
         state_flags[article_id] = (
             is_read,
             bool(state_doc.get("is_saved")),
             read_at,
+            saved_at,
         )
 
     return [
         FeedArticleStatusItem(
             article_id=str(article_id),
-            is_read=state_flags.get(article_id, (False, False, None))[0],
-            is_saved=state_flags.get(article_id, (False, False, None))[1],
-            read_at=state_flags.get(article_id, (False, False, None))[2],
+            is_read=state_flags.get(article_id, (False, False, None, None))[0],
+            is_saved=state_flags.get(article_id, (False, False, None, None))[1],
+            read_at=state_flags.get(article_id, (False, False, None, None))[2],
+            saved_at=state_flags.get(article_id, (False, False, None, None))[3],
         )
         for article_id in ordered_unique_ids
         if article_id in visible_article_ids
@@ -1920,9 +1923,6 @@ async def mark_article_unread(user_id: str, article_id: str) -> bool:
                 "is_read": False,
                 "updated_at": now,
             },
-            "$unset": {
-                "read_at": "",
-            },
             "$setOnInsert": {
                 "created_at": now,
             },
@@ -1984,9 +1984,6 @@ async def mark_article_unsaved(user_id: str, article_id: str) -> bool:
             "$set": {
                 "is_saved": False,
                 "updated_at": now,
-            },
-            "$unset": {
-                "saved_at": "",
             },
             "$setOnInsert": {
                 "is_read": False,
