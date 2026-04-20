@@ -178,10 +178,50 @@ function updateSeasonZoneClasses(row, position, teamCount) {
     }
 }
 
+function getInPlayOutcomePointAdjustment(cssClass) {
+    const normalizedClass = typeof cssClass === "string" ? cssClass : "";
+
+    if (normalizedClass.includes("winning")) {
+        return 3;
+    }
+
+    if (normalizedClass.includes("drawing")) {
+        return 1;
+    }
+
+    return 0;
+}
+
+function setRowPreGameData(row, tableItem) {
+    const normalizeNumeric = value => {
+        const parsed = Number(value);
+        return Number.isFinite(parsed) ? parsed : 0;
+    };
+
+    const isInPlay = isTableItemInPlay(tableItem);
+    const cssClass = typeof tableItem?.css_class === "string" ? tableItem.css_class : "";
+
+    const playedNow = normalizeNumeric(tableItem?.played_games);
+    const pointsNow = normalizeNumeric(tableItem?.points);
+
+    if (!isInPlay) {
+        row.dataset.basePlayed = String(playedNow);
+        row.dataset.basePoints = String(pointsNow);
+        return;
+    }
+
+    const basePlayed = Math.max(0, playedNow - 1);
+    const basePoints = Math.max(0, pointsNow - getInPlayOutcomePointAdjustment(cssClass));
+
+    row.dataset.basePlayed = String(basePlayed);
+    row.dataset.basePoints = String(basePoints);
+}
+
 function updateTableRow(row, tableItem, seasonKey, teamCount) {
     row.dataset.position = String(tableItem.position);
     row.dataset.played = String(tableItem.played_games);
     row.dataset.points = String(tableItem.points);
+    setRowPreGameData(row, tableItem);
 
     updateSeasonZoneClasses(row, Number(tableItem.position), teamCount);
 
@@ -220,6 +260,49 @@ function asNumber(value) {
     return Number.isFinite(parsed) ? parsed : 0;
 }
 
+function getRowCalculationPoints(row) {
+    const basePoints = String(row?.dataset?.basePoints || "").trim();
+    if (basePoints !== "") {
+        return asNumber(basePoints);
+    }
+
+    return asNumber(row?.dataset?.points);
+}
+
+function getRowCalculationPlayed(row) {
+    const basePlayed = String(row?.dataset?.basePlayed || "").trim();
+    if (basePlayed !== "") {
+        return asNumber(basePlayed);
+    }
+
+    return asNumber(row?.dataset?.played);
+}
+
+function primeRowPreGameDataFromDom(row) {
+    if (!(row instanceof HTMLElement)) {
+        return;
+    }
+
+    const pointsNow = asNumber(row.dataset.points);
+    const playedNow = asNumber(row.dataset.played);
+
+    const isInPlay = row.querySelector(".live-indicator-dot") !== null;
+    if (!isInPlay) {
+        row.dataset.basePoints = String(pointsNow);
+        row.dataset.basePlayed = String(playedNow);
+        return;
+    }
+
+    const deltaElement = row.querySelector(".table-position-delta");
+    const cssClass = deltaElement instanceof HTMLElement ? deltaElement.className : "";
+
+    const basePoints = Math.max(0, pointsNow - getInPlayOutcomePointAdjustment(cssClass));
+    const basePlayed = Math.max(0, playedNow - 1);
+
+    row.dataset.basePoints = String(basePoints);
+    row.dataset.basePlayed = String(basePlayed);
+}
+
 function applyRangeHighlights(activeRow) {
     if (!activeRow) {
         clearRangeHighlights();
@@ -238,13 +321,13 @@ function applyRangeHighlights(activeRow) {
     const teamCount = rows.length;
     const totalGames = Math.max((teamCount - 1) * 2, 0);
     const activePosition = asNumber(activeRow.dataset.position);
-    const activePoints = asNumber(activeRow.dataset.points);
-    const activePlayed = asNumber(activeRow.dataset.played);
+    const activePoints = getRowCalculationPoints(activeRow);
+    const activePlayed = getRowCalculationPlayed(activeRow);
     const activeMaxPoints = activePoints + Math.max(0, totalGames - activePlayed) * 3;
     const activeMinPoints = activePoints;
 
     const highestPossiblePosition =
-        1 + rows.filter(row => row !== activeRow && asNumber(row.dataset.points) > activeMaxPoints).length;
+        1 + rows.filter(row => row !== activeRow && getRowCalculationPoints(row) > activeMaxPoints).length;
 
     const lowestPossiblePosition =
         1 + rows.filter(row => {
@@ -252,8 +335,8 @@ function applyRangeHighlights(activeRow) {
                 return false;
             }
 
-            const otherPoints = asNumber(row.dataset.points);
-            const otherPlayed = asNumber(row.dataset.played);
+            const otherPoints = getRowCalculationPoints(row);
+            const otherPlayed = getRowCalculationPlayed(row);
             const otherMaxPoints = otherPoints + Math.max(0, totalGames - otherPlayed) * 3;
             return otherMaxPoints >= activeMinPoints;
         }).length;
@@ -365,6 +448,8 @@ function setupRangeInteractions() {
     if (!tbody) {
         return;
     }
+
+    getTableRows().forEach(primeRowPreGameDataFromDom);
 
     document.addEventListener("pointerdown", event => {
         if (typeof event.pointerType === "string" && event.pointerType !== "") {
