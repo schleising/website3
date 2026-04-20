@@ -2,6 +2,31 @@
 
 {% set feed_page_mode = "reader" %}
 
+{% block header %}
+{% set header = namespace(title="Feeds", count_label="") %}
+{% if selected_category == "all" %}
+  {% set header.title = "All Feeds" %}
+  {% set header.count_label = (all_unread_count|int) ~ " unread" %}
+{% elif selected_category == "saved" %}
+  {% set header.title = "Saved" %}
+  {% set header.count_label = (saved_count|int) ~ " saved" %}
+{% elif selected_category == "recently-read" %}
+  {% set header.title = "Recently Read" %}
+  {% set header.count_label = (recently_read_count|int) ~ " recent" %}
+{% else %}
+  {% for category_item in categories %}
+    {% if category_item.category_id == selected_category %}
+      {% set header.title = category_item.name %}
+      {% set header.count_label = (category_item.unread_count|int) ~ " unread" %}
+    {% endif %}
+  {% endfor %}
+{% endif %}
+<h3 class="header-text feeds-page-header">
+  <span id="feeds-page-header-title">{{ header.title }}</span>
+  <span id="feeds-page-header-count" class="feeds-page-header-count">{% if header.count_label %}({{ header.count_label }}){% endif %}</span>
+</h3>
+{% endblock %}
+
 {% block feeds_content %}
 <section
   class="feeds-reader"

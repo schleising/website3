@@ -16,6 +16,11 @@
         return;
     }
 
+    /** @type {HTMLElement | null} */
+    const pageHeaderTitleNode = document.getElementById("feeds-page-header-title");
+    /** @type {HTMLElement | null} */
+    const pageHeaderCountNode = document.getElementById("feeds-page-header-count");
+
     /** @type {HTMLElement} */
     const scrollContainer = /** @type {HTMLElement} */ (document.getElementById("content") || document.documentElement);
     /** @type {boolean} */
@@ -1693,6 +1698,65 @@
     }
 
     /**
+     * Normalize unknown count input to non-negative integer.
+     *
+     * @param {unknown} value
+     * @returns {number}
+     */
+    function normalizeCount(value) {
+        const parsed = Number(value);
+        if (!Number.isFinite(parsed) || parsed < 0) {
+            return 0;
+        }
+
+        return Math.floor(parsed);
+    }
+
+    /**
+     * Update feeds reader header title/count from live category payload.
+     *
+     * @param {{ all_unread_count?: number, recently_read_count?: number, saved_count?: number, categories?: Array<Record<string, any>> }} payload
+     */
+    function updateReaderHeader(payload) {
+        if (!(pageHeaderTitleNode instanceof HTMLElement) || !(pageHeaderCountNode instanceof HTMLElement)) {
+            return;
+        }
+
+        const categories = Array.isArray(payload.categories) ? payload.categories : [];
+
+        if (selectedCategory === "all") {
+            pageHeaderTitleNode.textContent = "All Feeds";
+            pageHeaderCountNode.textContent = `(${normalizeCount(payload.all_unread_count)} unread)`;
+            return;
+        }
+
+        if (selectedCategory === "saved") {
+            pageHeaderTitleNode.textContent = "Saved";
+            pageHeaderCountNode.textContent = `(${normalizeCount(payload.saved_count)} saved)`;
+            return;
+        }
+
+        if (selectedCategory === "recently-read") {
+            pageHeaderTitleNode.textContent = "Recently Read";
+            pageHeaderCountNode.textContent = `(${normalizeCount(payload.recently_read_count)} recent)`;
+            return;
+        }
+
+        const selectedCategorySummary = categories.find(
+            category => String(category.category_id || "").trim() === selectedCategory
+        );
+        if (selectedCategorySummary && typeof selectedCategorySummary === "object") {
+            const categoryName = String(selectedCategorySummary.name || "").trim();
+            pageHeaderTitleNode.textContent = categoryName === "" ? "Feeds" : categoryName;
+            pageHeaderCountNode.textContent = `(${normalizeCount(selectedCategorySummary.unread_count)} unread)`;
+            return;
+        }
+
+        pageHeaderTitleNode.textContent = "Feeds";
+        pageHeaderCountNode.textContent = "";
+    }
+
+    /**
      * Update right-sidebar category count labels.
      *
       * @param {{ all_unread_count?: number, recently_read_count?: number, saved_count?: number, categories?: Array<Record<string, any>> }} payload
@@ -1737,6 +1801,7 @@
             }
         });
 
+        updateReaderHeader(payload);
         syncSidebarSelection();
     }
 

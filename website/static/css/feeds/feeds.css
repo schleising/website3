@@ -664,6 +664,19 @@
     margin: 0;
 }
 
+.feeds-page-header {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.45rem;
+    flex-wrap: wrap;
+}
+
+.feeds-page-header-count {
+    color: var(--text-soft);
+    font-size: 0.86em;
+    font-weight: 600;
+}
+
 .feed-settings-form {
     display: flex;
     flex-direction: column;
