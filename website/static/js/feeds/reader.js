@@ -283,25 +283,6 @@
     }
 
     /**
-     * Return a sortable published timestamp for an article payload row.
-     *
-     * @param {Record<string, any> | undefined} article
-     * @returns {number}
-     */
-    function getArticlePublishedTimestamp(article) {
-        if (!article || !article.published_at) {
-            return Number.POSITIVE_INFINITY;
-        }
-
-        const parsedDate = parseArticleDate(String(article.published_at || ""));
-        if (!(parsedDate instanceof Date)) {
-            return Number.POSITIVE_INFINITY;
-        }
-
-        return parsedDate.getTime();
-    }
-
-    /**
      * Return a sortable published timestamp for an existing card.
      *
      * @param {HTMLElement} card

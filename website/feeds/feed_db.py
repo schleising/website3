@@ -2182,7 +2182,6 @@ async def export_opml(user_id: str) -> str:
         ET.SubElement(empty_opml, "body")
         return ET.tostring(empty_opml, encoding="utf-8", xml_declaration=True).decode("utf-8")
 
-    category_map = {category.id: category for category in categories if category.id is not None}
     feed_ids = {sub["feed_id"] for sub in subscriptions if "feed_id" in sub}
     source_map = await load_sources_map(feed_ids)
 
