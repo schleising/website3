@@ -1064,13 +1064,7 @@
         categoryPill.className = "feed-category-pill";
         categoryPill.style.setProperty("--feed-category-color", String(article.category_color_hex || "#1F6FEB"));
         categoryPill.textContent = String(article.category_name || "Category");
-
-        const sourceTitle = document.createElement("span");
-        sourceTitle.className = "feed-source-title";
-        sourceTitle.textContent = String(article.feed_title || "Feed");
-
         leftMeta.appendChild(categoryPill);
-        leftMeta.appendChild(sourceTitle);
 
         const rightMeta = document.createElement("div");
         rightMeta.className = "feed-article-meta-right";
@@ -1086,6 +1080,19 @@
 
         header.appendChild(leftMeta);
         header.appendChild(rightMeta);
+
+        const sourceTitleText = String(article.feed_title || "").trim();
+        if (sourceTitleText !== "") {
+            const sourceTitleRow = document.createElement("p");
+            sourceTitleRow.className = "feed-source-title-row";
+
+            const sourceTitle = document.createElement("span");
+            sourceTitle.className = "feed-source-title";
+            sourceTitle.textContent = sourceTitleText;
+            sourceTitleRow.appendChild(sourceTitle);
+
+            header.appendChild(sourceTitleRow);
+        }
 
         const title = document.createElement("h5");
         title.className = "feed-article-title";

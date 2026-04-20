@@ -96,13 +96,16 @@
       <header class="feed-article-card-header">
         <div class="feed-article-meta-left">
           <span class="feed-category-pill" style="--feed-category-color: {{ article.category_color_hex }};">{{ article.category_name }}</span>
-          <span class="feed-source-title">{{ article.feed_title }}</span>
         </div>
         <div class="feed-article-meta-right">
           {% if article.published_at is not none %}
           <time datetime="{{ article.published_at.isoformat() }}">{{ article.published_at.strftime('%Y-%m-%d %H:%M') }}</time>
           {% endif %}
         </div>
+
+        {% if article.feed_title %}
+        <p class="feed-source-title-row"><span class="feed-source-title">{{ article.feed_title }}</span></p>
+        {% endif %}
       </header>
 
       <h5 class="feed-article-title">
