@@ -647,30 +647,10 @@
      */
     function setCardNewBadge(card, showBadge) {
         const existingBadge = card.querySelector(".feed-new-badge");
-
-        if (!showBadge) {
-            if (existingBadge) {
-                existingBadge.remove();
-            }
-            card.classList.remove("is-new-article");
-            return;
-        }
-
-        card.classList.add("is-new-article");
-
         if (existingBadge) {
-            return;
+            existingBadge.remove();
         }
-
-        const leftMeta = card.querySelector(".feed-article-meta-left");
-        if (!(leftMeta instanceof HTMLElement)) {
-            return;
-        }
-
-        const badge = document.createElement("span");
-        badge.className = "feed-new-badge";
-        badge.textContent = "New";
-        leftMeta.appendChild(badge);
+        card.classList.remove("is-new-article");
     }
 
     /**

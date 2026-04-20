@@ -157,10 +157,6 @@
     transform: translate(-0.22rem, 0.18rem);
 }
 
-.feed-article-card.is-new-article {
-    --site-card-top-accent: color-mix(in srgb, var(--brand-strong), #ffffff 35%);
-}
-
 .feed-article-card.is-read-article {
     background: linear-gradient(
         180deg,
@@ -308,20 +304,6 @@
     font-size: 0.82rem;
     font-weight: 600;
     letter-spacing: 0.01em;
-}
-
-.feed-new-badge {
-    display: inline-flex;
-    align-items: center;
-    font-size: 0.72rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
-    padding: 0.14rem 0.36rem;
-    border-radius: 0.35rem;
-    background: color-mix(in srgb, var(--brand-strong), #ffffff 82%);
-    color: var(--brand-strong);
-    border: 0.0625rem solid color-mix(in srgb, var(--brand-strong), #ffffff 58%);
 }
 
 .feed-article-title {
