@@ -2,6 +2,9 @@
 
 ## Requirements
 
+All statements in this section are normative requirements.
+Design goals and implementation preferences are documented separately under `## Design` and do not override requirement statements.
+
 ### General
 
 1. All reads and writes to the database shall be performed through the FastAPI API, and not directly from the frontend
@@ -36,7 +39,7 @@
 27. The feed reader shall only be available to logged in users
 28. The feed reader shall be available at the URL path `/feeds/`
 29. The feed reader shall display unread articles in full width cards on the feed reader page, with the oldest articles appearing at the top of the list
-30. The feed reader shall auto refresh every 10 seconds to check for new feeds
+30. The feed reader shall auto refresh every 2 seconds to check for feed/category/status updates while preserving visual stability
 31. The feed reader shall allow the user to move through feeds using j (next) and k (previous) keys, and open the selected feed in a new tab using the spacebar or enter key
 32. When an article is selected either by click, tap or j/k the article shall be marked as read and this state shall be persisted in the database so that the article is not shown as unread on the next page load or refresh
 33. The feed reader shall allow the user to add new RSS feeds by entering a URL and clicking an "Add" button, all feeds should be added to a category
@@ -64,7 +67,7 @@
 52. Backend code shall be implemented in the backend/src/feeds directory, with appropriate subdirectories for database models, API endpoints, and background tasks
 53. The backend code shall be implemented as a new thread that runs alongside the existing backend code, and shall not interfere with the existing functionality of the site
 54. The backend code shall be responsible for creating a mongodb feeds database and the necessary collections and indexes to store feed data, user subscriptions, and read/unread status of articles
-55. The backend code shall fetch subscribed feeds once every 5 minutes and store the feed data in the database
+55. The backend code shall fetch subscribed feeds on a policy-driven interval schedule (bounded by configured min/max refresh constraints) and store the feed data in the database
 56. The backend shall only fetch each subscription once, even if multiple users are subscribed to the same feed, to avoid unnecessary network requests and reduce load on the feed servers
 57. The feeds shall be fetched and stored in the database in a way that allows for efficient querying and filtering by category, read/unread status, and other relevant criteria
 58. The backend shall mark articles as deleted after 7 days
@@ -80,7 +83,7 @@
 65. The FastAPI code shall provide an API endpoint to mark articles as read for the logged in user, which shall update the database accordingly and return an appropriate response if the article ID is invalid or the user is not authorized to modify the article's read status
 66. The FastAPI code shall provide an API endpoint to retrieve the list of feed categories and their associated unread article counts for the logged in user, which shall return an appropriate response if the user is not authorized to access the feed data
 67. The right menu shall preserve the currently selected category highlight across polling refreshes, and shall not fall back to All Feeds unless the user explicitly navigates there
-68. Unread and recently-read counts in the right menu shall update immediately after a user marks an article as read, without waiting for the next 10-second polling cycle
+68. Unread and recently-read counts in the right menu shall update immediately after a user marks an article as read, without waiting for the next polling cycle
 69. Recently Read membership shall remain stable for seven days from the original read timestamp, and shall not be reduced to a single polling cycle
 70. In unread views, articles marked as read shall remain visible in the current session as greyed cards and shall be removed only after the user navigates away and returns to the category
 71. The system shall not auto-create a default General category at page load; categories shall be created only through explicit user actions (add/import/category assignment)
@@ -97,10 +100,26 @@
 82. Article cards shall not render dedicated `Mark Read`, `Read`, or `Open` action buttons
 83. When a feed entry contains media image metadata (for example `media:*` tags), the reader shall display the largest available image under the title and above the article content
 
+### Additional Requirements Added During Development
+
+84. Article identity matching for ingestion shall prioritize canonical URL first, then external ID, then dedupe key fallback.
+85. Source deduplication migration flows shall merge per-user article state when duplicate article records are consolidated.
+86. If a matching article is re-ingested after soft delete, the article shall be revived (`is_deleted=false`, `deleted_at=null`) rather than duplicated.
+87. User article state shall include saved state fields (`is_saved`, `saved_at`) in addition to read fields.
+88. Read/save timestamp history shall remain sticky across inverse actions (`read->unread`, `saved->unsaved`) and shall not be unset.
+89. Batch article status responses shall include read/save booleans and both timestamps (`read_at`, `saved_at`) for visible article IDs.
+90. Backend ordering shall be authoritative for feed article responses, with client reconciliation preserving backend order.
+91. Frontend refresh logic shall avoid global client-side resorting that can override backend ordering and cause list jitter.
+92. Head refresh comparison shall account for in-session retained cards before deciding to trigger a full rerender.
+93. Reader live-state synchronization shall run on a 2-second polling interval.
+94. Category order shall be user-persisted via an explicit reorder API endpoint.
+95. Feed admin status APIs shall be restricted to authenticated tool-enabled users.
+
 ## Design
 
 This section provides a full implementation design for review only.
 No application code is included in this document.
+Where this section uses words like "should" or "prefer", they are design goals rather than normative requirements.
 
 ### 1. Design Goals
 
@@ -123,14 +142,14 @@ No application code is included in this document.
 flowchart LR
 	 Browser["Main Site Feed Reader UI"] -->|Initial request| FastAPI["FastAPI Feed Endpoints (/feeds/*)"]
 	 FastAPI -->|SSR HTML templates| Browser
-	 Browser -->|Minimal Fetch API calls| FastAPI
+	 Browser -->|2s polling + mutation Fetch API calls| FastAPI
 	 Settings["Feed Settings (Add/Mute/Color/OPML)"] -->|Fetch API + file upload/download| FastAPI
 	 FastAPI -->|Read/Write via Pydantic models| FeedDB[("MongoDB: feeds database")]
-	 Worker["Backend Feed Worker Thread"] -->|Every 5 min fetch unique subscriptions| Sources["External RSS/Atom Feeds"]
+	 Worker["Backend Feed Worker Thread"] -->|Policy cadence + force refresh for newly added/imported sources| Sources["External RSS/Atom Feeds"]
 	 Sources -->|Feed payloads| Worker
-	 Worker -->|Upsert feed sources and articles| FeedDB
+	 Worker -->|Upsert feed sources and articles by URL/external_id identity| FeedDB
 	 Worker -->|Retention with unread safety rules| FeedDB
-	 FastAPI -->|Unread counts, articles, settings| Browser
+	 FastAPI -->|Unread/recent/saved counts, article pages, status batch payloads| Browser
 	 FastAPI -->|OPML 2.0 import/export| Settings
 ```
 
@@ -138,20 +157,22 @@ flowchart LR
 
 1. Frontend page (`/feeds/`):
 	1. Renders unread article cards full-width, oldest first.
-	2. Polls every 10 seconds for updates.
+	2. Polls every 2 seconds for category counts, visible status reconciliation, and head/tail refresh checks.
 	3. Handles keyboard navigation (`j`, `k`, `Enter`, `Space`).
 	4. Uses SSR for initial render and minimal JavaScript for incremental interactions.
 	5. Uses only Fetch API calls to FastAPI for all reads/writes.
+	6. Preserves backend ordering and avoids global client-side resorting during refresh.
 2. FastAPI layer (`website/feeds`):
 	1. Authenticates user context.
 	2. Validates request and response models using Pydantic.
 	3. Applies authorization rules so users only access their own subscriptions/preferences/read state.
 	4. Returns category counts and article lists with filtering.
 	5. Serves server-rendered templates for primary page loads.
+	6. Serves explicit article status batch payloads containing read/save flags and timestamps.
 3. Backend worker (`backend/src/feeds`):
 	1. Runs in a dedicated thread alongside existing backend behavior.
-	2. Fetches each unique subscribed feed once every 5 minutes.
-	3. Upserts source metadata and normalized articles.
+	2. Fetches each unique subscribed feed on a policy-driven interval schedule.
+	3. Upserts source metadata and normalized articles using URL-first identity with external-id fallback.
 	4. Applies retention lifecycle rules while preserving unread articles.
 4. MongoDB feeds database:
 	1. Stores global feed/article data.
@@ -224,10 +245,16 @@ erDiagram
 		  string feed_id PK
 		  string normalized_url UK
 		  string title
+		  string image_url
 		  string etag
 		  string last_modified
 		  datetime last_fetched_at
+		  datetime next_refresh_at
+		  datetime next_retry_at
+		  int refresh_interval_seconds
+		  datetime force_refresh_requested_at
 		  string fetch_status
+		  string last_error
 		  datetime created_at
 		  datetime updated_at
 	 }
@@ -243,9 +270,13 @@ erDiagram
 		  string article_id PK
 		  string feed_id FK
 		  string dedupe_key UK
+		  string canonical_url
+		  string external_id
 		  string title
 		  string link
 		  string author
+		  string summary_html
+		  string media_image_url
 		  datetime published_at
 		  datetime fetched_at
 		  boolean is_deleted
@@ -257,6 +288,8 @@ erDiagram
 		  string article_id FK
 		  boolean is_read
 		  datetime read_at
+		  boolean is_saved
+		  datetime saved_at
 		  datetime created_at
 		  datetime updated_at
 	 }
@@ -268,7 +301,7 @@ erDiagram
 	1. One document per canonical feed URL.
 	2. Shared by all users to satisfy deduped fetching.
 2. `feed_article`:
-	1. Global article cache keyed by `feed_id + dedupe_key`.
+	1. Global article cache using URL-first identity (`canonical_url`) with external-id and dedupe-key fallback.
 	2. Includes retention lifecycle markers.
 	3. Stores optional media image URL metadata extracted from feed entry `media:*` tags.
 3. `user_feed_subscription`:
@@ -285,9 +318,12 @@ erDiagram
 1. `feed_source`:
 	1. Unique: `normalized_url`.
 2. `feed_article`:
-	1. Unique: `(feed_id, dedupe_key)`.
-	2. Query: `(published_at)`.
-	3. Query: `(is_deleted, deleted_at)` for retention scans.
+	1. Unique partial: `(feed_id, canonical_url)` for canonical URL identities.
+	2. Unique partial: `(feed_id, external_id)` for external-id identities.
+	3. Unique: `(feed_id, dedupe_key)` fallback identity.
+	4. Query: `(feed_id, published_at)` for article list retrieval.
+	5. Query: `(is_deleted, deleted_at)` for retention scans.
+	6. Query: `(_id, feed_id)` for visibility and join checks.
 3. `user_feed_subscription`:
 	1. Unique: `(user_id, feed_id)`.
 	2. Query: `(user_id, category_id)`.
@@ -297,7 +333,7 @@ erDiagram
 	3. Query: `(user_id, color_hex)` for settings and consistency checks.
 5. `user_article_state`:
 	1. Unique: `(user_id, article_id)`.
-	2. Query: `(user_id, is_read, read_at)`.
+	2. Query: `(user_id, is_read, read_at DESC)`.
 	3. Query: `(article_id, is_read)` to support unread-preservation retention checks.
 
 ### 4. Backend Worker Design (`backend/src/feeds`)
@@ -309,7 +345,7 @@ sequenceDiagram
 	 participant DB as MongoDB
 	 participant R as RSS Feed Server
 
-	 loop Every 5 minutes
+	 loop Every scheduled refresh interval
 		  W->>DB: Read active subscriptions and dedupe by feed URL
 		  DB-->>W: Unique feed list with ETag/Last-Modified metadata
 		  par For each unique feed
@@ -319,7 +355,8 @@ sequenceDiagram
 				else 200 OK
 					 R-->>W: Feed document
 					 W->>DB: Upsert FEED_SOURCE metadata
-					 W->>DB: Upsert FEED_ARTICLE by stable dedupe key
+					 W->>DB: Upsert FEED_ARTICLE by canonical_url, external_id, then dedupe_key
+					 W->>DB: Revive matched soft-deleted article rows
 				else Network or parse failure
 					 R-->>W: Error or invalid payload
 					 W->>DB: Record fetch failure and next retry window
@@ -343,7 +380,9 @@ sequenceDiagram
 2. Resolve all user subscriptions to unique canonical URLs.
 3. Fetch each unique feed once per cycle.
 4. Fan out resulting articles to all subscribed users through query joins (no duplicate network fetch).
-5. Support an explicit source-level force-refresh flag so newly added/imported subscriptions trigger near-immediate worker fetches without breaking the regular 5-minute cadence.
+5. Identify article rows using canonical URL first, external ID second, dedupe key fallback third.
+6. Merge duplicate-source article rows by identity and consolidate per-user article state into canonical rows.
+7. Support an explicit source-level force-refresh flag so newly added/imported subscriptions trigger near-immediate worker fetches without breaking the regular scheduled cadence.
 
 #### 4.3 Retention Guard Rules
 
@@ -366,18 +405,27 @@ sequenceDiagram
 1. Page routes:
 	1. `GET /feeds/`: main feed reader page.
 	2. `GET /feeds/settings/`: feed settings page.
+	3. `GET /feeds/admin/`: feed admin status page.
+	4. `GET /feeds/manifest.webmanifest`: web app manifest.
+	5. `GET /feeds/sw.js`: web app service worker.
 2. API routes:
 	1. `GET /feeds/api/articles`: list articles with filters.
-	2. `GET /feeds/api/categories`: list categories with unread counts and mute state.
-	3. `POST /feeds/api/subscriptions`: add subscription with category assignment.
-	4. `POST /feeds/api/subscriptions/{subscription_id}`: update subscription URL/category.
-	5. `DELETE /feeds/api/subscriptions/{subscription_id}`: delete subscription.
-	6. `POST /feeds/api/articles/{article_id}/read`: mark article as read.
-	7. `POST /feeds/api/categories/{category_id}/mute`: mute category.
-	8. `POST /feeds/api/categories/{category_id}/unmute`: unmute category.
-	9. `POST /feeds/api/categories/{category_id}/color`: update category color preference.
-	10. `POST /feeds/api/opml/import`: import subscriptions/categories from OPML.
-	11. `GET /feeds/api/opml/export`: export subscriptions/categories as OPML.
+	2. `POST /feeds/api/articles/statuses`: batch read/save status lookup for visible article IDs.
+	3. `GET /feeds/api/categories`: list categories with unread counts and mute state.
+	4. `POST /feeds/api/subscriptions`: add subscription with category assignment.
+	5. `POST /feeds/api/subscriptions/{subscription_id}`: update subscription URL/category.
+	6. `DELETE /feeds/api/subscriptions/{subscription_id}`: delete subscription.
+	7. `POST /feeds/api/articles/{article_id}/read`: mark article as read.
+	8. `POST /feeds/api/articles/{article_id}/unread`: mark article as unread.
+	9. `POST /feeds/api/articles/{article_id}/save`: mark article as saved.
+	10. `POST /feeds/api/articles/{article_id}/unsave`: mark article as unsaved.
+	11. `POST /feeds/api/categories/{category_id}/mute`: mute category.
+	12. `POST /feeds/api/categories/{category_id}/unmute`: unmute category.
+	13. `POST /feeds/api/categories/{category_id}/color`: update category color preference.
+	14. `POST /feeds/api/categories/reorder`: persist right-menu category order.
+	15. `POST /feeds/api/opml/import`: import subscriptions/categories from OPML.
+	16. `GET /feeds/api/opml/export`: export subscriptions/categories as OPML.
+	17. `GET /feeds/api/admin/feeds`: feed source/admin status rows (tool-enabled users only).
 
 #### 5.2 API Query Semantics
 
@@ -385,10 +433,12 @@ sequenceDiagram
 	1. `all`: all non-muted categories.
 	2. specific category id: only that category, unless muted.
 	3. `recently-read`: read items in last 7 days, newest first, excluding muted categories.
-	4. recently-read retention uses persisted read timestamps and remains stable for the full 7-day window.
+	4. `saved`: saved items for the user, newest-saved first.
+	5. recently-read retention uses persisted read timestamps and remains stable for the full 7-day window.
 2. Primary article listing for main reader:
 	1. unread only by default.
 	2. oldest first (ascending publication date).
+	3. backend ordering is authoritative; frontend preserves this order while reconciling retained session cards.
 3. Mute behavior:
 	1. muted categories are excluded from article results in all filters.
 	2. unread counts remain visible in right menu.
@@ -400,10 +450,11 @@ sequenceDiagram
 1. Request models:
 	1. Add subscription payload.
 	2. Update subscription payload.
-	2. Mark read payload.
-	3. Category mute/unmute payload.
-	4. Category color update payload.
-	5. OPML import options payload (duplicate policy, default category policy).
+	3. Batch article status request payload.
+	4. Category mute/unmute payload.
+	5. Category color update payload.
+	6. Category reorder payload.
+	7. OPML import options payload (duplicate policy, default category policy).
 2. Response models:
 	1. Article card model.
 	2. Category count model.
@@ -412,6 +463,7 @@ sequenceDiagram
 	5. OPML import summary model (created feeds/categories, skipped duplicates, errors).
 	6. Subscription update and delete response models.
 	7. Article media image URL field used for reader card rendering when present.
+	8. Article status model includes read/save flags and both timestamps (`read_at`, `saved_at`).
 3. Validation rules:
 	1. Feed URL must be `http/https`, normalized, length-limited.
 	2. Category IDs and article IDs must be valid object IDs/UUIDs.
@@ -478,14 +530,18 @@ sequenceDiagram
 
 #### 6.4 Polling and UI Consistency
 
-1. Poll interval: 10 seconds.
-2. Polling request includes current category/filter context.
+1. Poll interval: 2 seconds.
+2. Polling includes:
+	1. category/sidebar count refresh,
+	2. visible article status batch refresh (`/api/articles/statuses`),
+	3. head/tail article-window reconciliation.
 3. Preserve current keyboard selection where possible after refresh.
 4. Show non-blocking error banner/toast if refresh fails.
-5. Preserve existing card order during polling updates and append newly arrived articles to avoid disruptive list movement.
+5. Preserve backend-provided order during polling updates and avoid global client-side resorting.
 6. Keep visual position stable across refreshes unless a user action changes selection or read state.
 7. Sidebar unread/recently-read counts refresh immediately after mark-read operations.
 8. Sidebar selection highlight remains pinned to the active category across polling updates.
+9. In-session retained transition cards (read->unread and saved->unsaved) are reconciled without forcing full list rerenders.
 
 #### 6.5 Settings and OPML Workflows
 
@@ -533,11 +589,13 @@ sequenceDiagram
 	 API->>DB: Query unread articles oldest-first
 	 DB-->>API: Article cards
 	 API-->>UI: Articles response
-	 loop Every 10 seconds
-		  UI->>API: GET /feeds/api/articles?cursor=last_seen
-		  API->>DB: Fetch deltas for current filter
-		  DB-->>API: New or changed articles
-		  API-->>UI: Delta response
+	 loop Every 2 seconds
+		  UI->>API: GET /feeds/api/categories
+		  API-->>UI: Category count payload
+		  UI->>API: POST /feeds/api/articles/statuses
+		  API-->>UI: Read/save status payload
+		  UI->>API: GET /feeds/api/articles?category=all&status=unread
+		  API-->>UI: Ordered article payload
 	 end
 	 U->>UI: j/k and Enter or Space
 	 UI->>API: POST /feeds/api/articles/{articleId}/read
@@ -669,6 +727,11 @@ sequenceDiagram
 2. Test sets include unit, API integration, and key end-to-end interaction paths.
 3. Test cases cover edge conditions and failure handling (network, validation, auth, retention, and OPML parsing).
 4. Test runs produce machine-readable and human-readable output for debugging.
+5. Current automated suites include:
+	1. `website/tests/feeds/test_feed_helpers.py`.
+	2. `backend/src/tests/feed_worker/test_refresh_policy.py`.
+	3. `backend/src/tests/feed_worker/test_media_image_extraction.py`.
+	4. `backend/src/tests/feed_worker/test_article_deduplication.py`.
 
 #### 14.4 Manual Validation for Non-Automatable Requirements
 
@@ -684,6 +747,31 @@ sequenceDiagram
 2. Every requirement maps to one or more automated or manual test cases.
 3. Every test case references requirement IDs and includes current status.
 4. Test evidence (logs/reports/screenshots where needed) is linked to trace entries.
+
+Current status snapshot (from `website/feeds/TESTING.md` matrices):
+
+| Test ID | Test Type | Latest Matrix Status |
+| --- | --- | --- |
+| UT-FEEDS-001 | Automated | Defined (Automated) |
+| UT-FEEDS-002 | Automated | Defined (Automated) |
+| UT-FEEDS-003 | Automated | Defined (Automated) |
+| UT-FEEDS-004 | Automated | Defined (Automated) |
+| UT-FEEDS-005 | Automated | Defined (Automated) |
+| UT-FEEDS-006 | Automated | Defined (Automated) |
+| IT-FEEDS-001 | Manual | Defined (Manual) |
+| IT-FEEDS-002 | Manual | Defined (Manual) |
+| IT-FEEDS-003 | Manual | Defined (Manual) |
+| IT-FEEDS-004 | Manual | Defined (Manual) |
+| IT-FEEDS-005 | Manual | Defined (Manual) |
+| IT-FEEDS-006 | Manual | Defined (Manual) |
+| IT-FEEDS-007 | Manual | Defined (Manual) |
+| IT-FEEDS-008 | Manual | Defined (Manual) |
+| IT-FEEDS-009 | Manual | Defined (Manual) |
+
+Coverage note:
+
+1. Current matrix-backed requirement coverage spans requirements `16` through `83`.
+2. Requirements `84` through `95` are documented in this README and should be added to the matrix file in the next traceability maintenance update.
 
 Requirement -> Test Matrix template:
 
@@ -736,7 +824,7 @@ Test -> Requirement Matrix template:
 | 27 | Logged-in users only | 6.1, 7 |
 | 28 | Reader URL `/feeds/` | 5.1, 6.1 |
 | 29 | Unread cards, oldest first | 2.1, 5.2, 6.2 |
-| 30 | 10-second auto refresh | 2.1, 6.4 |
+| 30 | 2-second auto refresh | 2.1, 6.4 |
 | 31 | j/k + enter/space behavior | 2.1, 6.3 |
 | 32 | Mark article read on click/tap/j-k selection | 5.1, 6.3 |
 | 33 | Add feed URL + category | 5.1, 5.3, 6.5 |
@@ -761,7 +849,7 @@ Test -> Requirement Matrix template:
 | 52 | Backend code in `backend/src/feeds` | 2.1, 4 |
 | 53 | Backend thread parallel to existing site | 4.1 |
 | 54 | MongoDB feeds DB + collections/indexes | 3, 3.2 |
-| 55 | Fetch subscribed feeds every 5 minutes | 4 |
+| 55 | Fetch subscribed feeds on policy-driven interval schedule | 4 |
 | 56 | Deduped fetch for shared subscriptions | 4.2 |
 | 57 | Efficient query/filter storage | 3.2, 4.2, 5.2, 13 |
 | 58 | Mark articles deleted after 7 days | 4, 8 |
@@ -790,6 +878,18 @@ Test -> Requirement Matrix template:
 | 81 | Enter/Space open article in background tab flow | 6.3 |
 | 82 | Feed cards remove Mark Read/Read/Open action buttons | 6.2 |
 | 83 | Largest media-tag image renders below article title | 3.1, 5.3, 6.2 |
+| 84 | URL-first article identity with external-id and dedupe fallback | 3.1, 4.2 |
+| 85 | Duplicate-source consolidation merges user article state | 4.2, 5.3 |
+| 86 | Soft-deleted article revival on identity match reingest | 4.2, 8 |
+| 87 | User article state includes saved fields (`is_saved`, `saved_at`) | 3.1, 5.3 |
+| 88 | Read/save timestamps remain sticky across inverse actions | 5.2, 6.4 |
+| 89 | Article status batch response includes read/save timestamps | 5.1, 5.3, 6.4 |
+| 90 | Backend ordering is authoritative for article list responses | 5.2, 6.4 |
+| 91 | Frontend avoids global resort overriding backend order | 6.4 |
+| 92 | Head refresh probe accounts for retained cards before rerender | 6.4 |
+| 93 | Reader live-state sync runs on 2-second interval | 6.4 |
+| 94 | Category ordering persisted via reorder endpoint | 5.1, 6.5 |
+| 95 | Admin feed status APIs are tool-enabled user restricted | 5.1, 7 |
 
 ### 16. Traceability Table: Design -> Requirements
 
@@ -800,28 +900,28 @@ Test -> Requirement Matrix template:
 | 2.1 Component Responsibilities | 1, 6, 8, 9, 10, 27, 29, 36, 51, 52, 53, 61 |
 | 2.2 OPML Interoperability Flow | 44, 45 |
 | 2.3 Local Test Environment Architecture | 16, 17, 19, 21 |
-| 3. Data Model Design | 34, 42, 51, 54, 57, 71, 83 |
-| 3.1 Collection Notes | 34, 42, 51, 54, 71, 83 |
+| 3. Data Model Design | 34, 42, 51, 54, 57, 71, 83, 84, 87 |
+| 3.1 Collection Notes | 34, 42, 51, 54, 71, 83, 84, 87 |
 | 3.2 Index Plan | 34, 54, 57, 60 |
-| 4. Backend Worker Design | 46, 52, 53, 55, 56, 57, 58, 59, 60 |
+| 4. Backend Worker Design | 46, 52, 53, 55, 56, 57, 58, 59, 60, 84, 85, 86 |
 | 4.1 Threading and Isolation | 53 |
-| 4.2 Feed Deduplication Strategy | 46, 56, 57 |
+| 4.2 Feed Deduplication Strategy | 46, 56, 57, 84, 85, 86 |
 | 4.3 Retention Guard Rules | 58, 59, 60 |
 | 4.4 Test Scenario Controls | 17, 22, 23 |
-| 5. FastAPI Design | 1, 2, 3, 4, 5, 35, 61, 62, 63, 64, 65, 66, 78, 79, 83 |
-| 5.1 Route Structure | 1, 28, 32, 33, 40, 43, 44, 45, 62, 63, 64, 65, 66, 78, 79 |
-| 5.2 API Query Semantics | 29, 36, 37, 38, 39, 41, 51, 63, 66, 69, 75 |
-| 5.3 Pydantic Models | 2, 3, 4, 5, 35, 44, 51, 64, 65, 78, 79, 83 |
+| 5. FastAPI Design | 1, 2, 3, 4, 5, 35, 61, 62, 63, 64, 65, 66, 78, 79, 83, 87, 89, 94, 95 |
+| 5.1 Route Structure | 1, 28, 32, 33, 40, 43, 44, 45, 62, 63, 64, 65, 66, 78, 79, 89, 94, 95 |
+| 5.2 API Query Semantics | 29, 36, 37, 38, 39, 41, 51, 63, 66, 69, 75, 88, 90 |
+| 5.3 Pydantic Models | 2, 3, 4, 5, 35, 44, 51, 64, 65, 78, 79, 83, 87, 89 |
 | 5.4 OPML Import and Export Contract | 44, 45 |
-| 6. Frontend UX and Interaction Design | 6, 7, 10, 26, 27, 29, 30, 31, 32, 33, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 47, 48, 49, 50, 51, 62, 67, 68, 70, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83 |
+| 6. Frontend UX and Interaction Design | 6, 7, 10, 26, 27, 29, 30, 31, 32, 33, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 47, 48, 49, 50, 51, 62, 67, 68, 70, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 88, 90, 91, 92, 93 |
 | 6.1 Navigation and Access | 26, 27, 28 |
 | 6.2 Main Reader Layout | 6, 7, 29, 36, 38, 39, 41, 50, 51, 69, 70, 73, 74, 75, 80, 82, 83 |
 | 6.3 Keyboard and Interaction Rules | 31, 32, 37, 62, 67, 76, 81 |
-| 6.4 Polling and UI Consistency | 8, 9, 30, 47, 48, 49, 50, 67, 68, 70 |
-| 6.5 Settings and OPML Workflows | 33, 40, 42, 43, 44, 45, 46, 47, 51, 71, 72, 77, 78, 79 |
+| 6.4 Polling and UI Consistency | 8, 9, 30, 47, 48, 49, 50, 67, 68, 70, 88, 90, 91, 92, 93 |
+| 6.5 Settings and OPML Workflows | 33, 40, 42, 43, 44, 45, 46, 47, 51, 71, 72, 77, 78, 79, 94 |
 | 6.6 Rendering and JavaScript Strategy | 10, 11 |
-| 7. Security and Data Integrity | 1, 2, 3, 4, 5, 10, 21, 27, 35, 65, 66, 78, 79 |
-| 8. Retention and Data Lifecycle | 58, 59, 60 |
+| 7. Security and Data Integrity | 1, 2, 3, 4, 5, 10, 21, 27, 35, 65, 66, 78, 79, 95 |
+| 8. Retention and Data Lifecycle | 58, 59, 60, 86 |
 | 9. Error Handling and Resilience | 8, 9, 17, 64, 65 |
 | 10. Monitoring and Auditability | 15, 17, 20, 46, 57, 60 |
 | 11. Engineering Standards and Conventions | 11, 12, 13 |
