@@ -13,6 +13,10 @@
     --accent-soft: hsl(194, 54%, 93%);
     --ok-soft: hsl(150, 36%, 91%);
     --ok-strong: hsl(151, 52%, 27%);
+    --error-card-border: hsla(7, 72%, 45%, 0.24);
+    --error-card-bg-start: hsla(7, 84%, 97%, 0.94);
+    --error-card-bg-end: hsla(33, 100%, 97%, 0.9);
+    --error-card-text: hsl(10, 62%, 34%);
     --current-empty-bg: hsla(0, 0%, 100%, 0.74);
     --current-empty-border: hsla(214, 28%, 34%, 0.22);
     --filename-popup-bg: hsla(216, 26%, 15%, 0.96);
@@ -503,16 +507,16 @@ body::after {
     gap: 0.5rem;
     width: 100%;
     min-width: 0;
-    border: 0.0625rem solid hsla(7, 72%, 45%, 0.24);
+    border: 0.0625rem solid var(--error-card-border);
     border-radius: 0.58rem;
     padding: 0.36rem 0.46rem;
-    background: linear-gradient(168deg, hsla(7, 84%, 97%, 0.94), hsla(33, 100%, 97%, 0.9));
+    background: linear-gradient(168deg, var(--error-card-bg-start), var(--error-card-bg-end));
 }
 
 .conversion-errors-text {
     font-size: 0.9rem;
     font-weight: 700;
-    color: hsl(10, 62%, 34%);
+    color: var(--error-card-text);
     text-align: left;
     min-width: 0;
 }
@@ -670,6 +674,10 @@ body.dark-mode {
     --accent-soft: hsla(192, 35%, 26%, 0.65);
     --ok-soft: hsla(149, 38%, 26%, 0.75);
     --ok-strong: hsl(147, 62%, 78%);
+    --error-card-border: hsla(7, 82%, 68%, 0.42);
+    --error-card-bg-start: hsla(6, 48%, 26%, 0.88);
+    --error-card-bg-end: hsla(19, 44%, 20%, 0.82);
+    --error-card-text: hsl(10, 90%, 88%);
     --current-empty-bg: hsla(214, 24%, 24%, 0.9);
     --current-empty-border: hsla(206, 28%, 68%, 0.2);
     --filename-popup-bg: hsla(214, 30%, 12%, 0.98);
