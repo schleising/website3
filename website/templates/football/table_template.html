@@ -67,7 +67,7 @@
         data-points="{{ table_item.points }}"
       >
         <div class="row-data data table-cell position" role="cell">
-          <div class="table-position-value">{{ table_item.position }}</div>
+          <div class="table-position-value">{{ table_item.position_label or table_item.position }}</div>
         </div>
         <div class="row-data data table-cell live-indicator-cell" role="cell">
           {% if table_item.css_class and 'in-play' in table_item.css_class %}

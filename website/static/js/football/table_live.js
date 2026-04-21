@@ -225,7 +225,8 @@ function updateTableRow(row, tableItem, seasonKey, teamCount) {
 
     updateSeasonZoneClasses(row, Number(tableItem.position), teamCount);
 
-    updateTextIfChanged(row.querySelector(".table-position-value"), tableItem.position);
+    const positionDisplayValue = tableItem.position_label || tableItem.position;
+    updateTextIfChanged(row.querySelector(".table-position-value"), positionDisplayValue);
     updateLiveIndicator(row, tableItem);
     updatePositionDelta(row, tableItem);
     updateTextIfChanged(row.querySelector(".table-played"), tableItem.played_games);

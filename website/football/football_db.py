@@ -90,6 +90,52 @@ def _normalise_table_form_items(table_list: list[LiveTableItem]) -> None:
         table_item.form_list = _build_form_list(table_item.form)
 
 
+def _apply_position_outcome_labels(table_list: list[LiveTableItem]) -> None:
+    """Annotate table rows with guaranteed champion/relegation markers."""
+
+    if len(table_list) == 0:
+        return
+
+    team_count = len(table_list)
+    total_matches_per_team = max(team_count - 1, 0) * 2
+
+    max_points_by_team_id: dict[int, int] = {}
+    for table_item in table_list:
+        remaining_matches = max(total_matches_per_team - table_item.played_games, 0)
+        max_points_by_team_id[table_item.team.id] = table_item.points + (remaining_matches * 3)
+        table_item.position_label = None
+
+    # Guaranteed champion: current points are greater than every other team's max possible points.
+    if team_count > 1:
+        first_row = table_list[0]
+        first_points = first_row.points
+        max_other_points = max(
+            max_points_by_team_id[item.team.id]
+            for item in table_list[1:]
+        )
+        if first_points > max_other_points:
+            first_row.position_label = "C"
+
+    # Guaranteed bottom three (relegated): at least team_count - 3 teams already have more
+    # points than this team can possibly reach.
+    guaranteed_above_threshold = max(team_count - 3, 0)
+
+    if guaranteed_above_threshold == 0:
+        return
+
+    current_points = [item.points for item in table_list]
+
+    for table_item in table_list:
+        if table_item.position_label is not None:
+            continue
+
+        max_points = max_points_by_team_id[table_item.team.id]
+        guaranteed_above = sum(1 for points in current_points if points > max_points)
+
+        if guaranteed_above >= guaranteed_above_threshold:
+            table_item.position_label = "R"
+
+
 def infer_current_season_key(available_season_keys: list[str]) -> str:
     now = datetime.now(tz=UTC)
     season_start_year = now.year if now.month >= 8 else now.year - 1
@@ -427,6 +473,7 @@ async def get_table_db() -> list[LiveTableItem]:
         ]
 
     _normalise_table_form_items(table_list)
+    _apply_position_outcome_labels(table_list)
 
     return table_list
 
@@ -456,6 +503,7 @@ async def get_table_db_for_season(season_key: str | None = None) -> list[LiveTab
             ]
 
     _normalise_table_form_items(table_list)
+    _apply_position_outcome_labels(table_list)
 
     return table_list
 

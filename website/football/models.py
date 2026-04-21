@@ -236,6 +236,7 @@ class FormItem(BaseModel):
 
 
 class LiveTableItem(TableItem):
+    position_label: str | None = None
     has_started: bool = False
     is_halftime: bool = False
     has_finished: bool = False
