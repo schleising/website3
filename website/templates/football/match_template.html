@@ -22,6 +22,7 @@
 
 {% block football_content %}
 {% set football_root = football_root_path|default('/football/') %}
+{% set card_season_key = selected_season_key|default(current_season_key)|default('') %}
 {% if jump_targets is defined and jump_targets|length > 0 %}
 <section id="football-all-matches-toolbar" class="football-all-matches-toolbar" data-auto-center-next-match="{{ 'true' if all_matches_view|default(false) and is_current_season|default(false) else 'false' }}" aria-label="Match list quick navigation">
   <details class="football-jump-menu" id="football-jump-menu">
@@ -59,11 +60,20 @@
           {% else %}
           <div class="match-start">{{ match.local_date.strftime('%a %d %b %H:%M %Z') }}</div>
           {% endif %}
-          {% if live_matches %}
-          <div class="match-status"></div>
-          {% else %}
-          <div class="match-status">{{ match.status }}</div>
-          {% endif %}
+          <div class="match-meta-actions">
+            <a
+              class="match-h2h-pill"
+              href="{{ football_root }}head-to-head/?team_a={{ match.home_team.id }}&team_b={{ match.away_team.id }}{% if card_season_key %}&season={{ card_season_key }}{% endif %}"
+              aria-label="View {{ match.home_team.short_name }} vs {{ match.away_team.short_name }} head to head"
+            >
+              H2H
+            </a>
+            {% if live_matches %}
+            <div class="match-status"></div>
+            {% else %}
+            <div class="match-status">{{ match.status }}</div>
+            {% endif %}
+          </div>
         </div>
         <div class="team">
           <div class="team-and-badge">
@@ -114,11 +124,20 @@
       {% else %}
       <div class="match-start">{{ match.local_date.strftime('%a %d %b %H:%M %Z') }}</div>
       {% endif %}
-      {% if live_matches %}
-      <div class="match-status"></div>
-      {% else %}
-      <div class="match-status">{{ match.status }}</div>
-      {% endif %}
+      <div class="match-meta-actions">
+        <a
+          class="match-h2h-pill"
+          href="{{ football_root }}head-to-head/?team_a={{ match.home_team.id }}&team_b={{ match.away_team.id }}{% if card_season_key %}&season={{ card_season_key }}{% endif %}"
+          aria-label="View {{ match.home_team.short_name }} vs {{ match.away_team.short_name }} head to head"
+        >
+          H2H
+        </a>
+        {% if live_matches %}
+        <div class="match-status"></div>
+        {% else %}
+        <div class="match-status">{{ match.status }}</div>
+        {% endif %}
+      </div>
     </div>
     <div class="team">
       <div class="team-and-badge">

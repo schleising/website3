@@ -748,6 +748,53 @@ body.football-season-popup-open {
     font-size: 0.75rem;
 }
 
+.match-meta-actions {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.38rem;
+    min-width: 0;
+    margin-left: auto;
+}
+
+.match-status {
+    white-space: nowrap;
+}
+
+.match-h2h-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 0.0625rem solid color-mix(in srgb, var(--brand-soft), #ffffff 30%);
+    border-radius: 999rem;
+    background: color-mix(in srgb, var(--brand-soft), #ffffff 68%);
+    color: var(--brand-strong);
+    font-size: 0.64rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    line-height: 1;
+    text-transform: uppercase;
+    text-decoration: none;
+    padding: 0.16rem 0.48rem;
+    white-space: nowrap;
+    transition: background 120ms ease, border-color 120ms ease, transform 120ms ease, color 120ms ease;
+}
+
+.match-h2h-pill:hover,
+.match-h2h-pill:focus-visible {
+    background: color-mix(in srgb, var(--brand), #ffffff 72%);
+    border-color: color-mix(in srgb, var(--brand), #ffffff 36%);
+    color: var(--brand-strong);
+    transform: translateY(-0.03125rem);
+}
+
+@media screen and (max-width: 42rem) {
+    .match-h2h-pill {
+        padding: 0.14rem 0.44rem;
+        font-size: 0.62rem;
+    }
+}
+
 .team-and-badge {
     display: flex;
     flex-direction: row;
