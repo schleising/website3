@@ -111,7 +111,7 @@ WEBAPPS_TOOLS_ONLY: list[dict[str, str]] = [
     _webapp("Transcoder", "https://transcoder.schleising.net", _webapp_image("transcoder.svg")),
     _webapp("SRM Monitor", "https://srm-monitor.schleising.net", _webapp_image("srm-monitor.svg")),
     _webapp("Overseerr", "https://overseerr.schleising.net", _webapp_image("overseerr.svg")),
-    _webapp("Pi-hole", "https://pihole.schleising.net", _webapp_image("pihole.svg")),
+    _webapp("Pi-hole", "https://pihole.schleising.net/admin/", _webapp_image("pihole.svg")),
     _webapp("Plex", "https://plex.schleising.net", _webapp_image("plex.svg")),
     _webapp("Portainer", "https://portainer.schleising.net", _webapp_image("portainer.svg")),
     _webapp("Prowlarr", "https://prowlarr.schleising.net", _webapp_image("prowlarr.svg")),
