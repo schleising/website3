@@ -165,6 +165,11 @@ def _apply_position_outcome_labels(table_list: list[LiveTableItem]) -> None:
             table_item.position_label = "R"
 
 
+def _clear_position_outcome_labels(table_list: list[LiveTableItem]) -> None:
+    for table_item in table_list:
+        table_item.position_label = None
+
+
 def infer_current_season_key(available_season_keys: list[str]) -> str:
     now = datetime.now(tz=UTC)
     season_start_year = now.year if now.month >= 8 else now.year - 1
@@ -532,7 +537,15 @@ async def get_table_db_for_season(season_key: str | None = None) -> list[LiveTab
             ]
 
     _normalise_table_form_items(table_list)
-    _apply_position_outcome_labels(table_list)
+
+    available_season_keys = await get_available_season_keys()
+    current_season_key = infer_current_season_key(available_season_keys)
+    should_apply_outcome_labels = season_key is None or season_key == current_season_key
+
+    if should_apply_outcome_labels:
+        _apply_position_outcome_labels(table_list)
+    else:
+        _clear_position_outcome_labels(table_list)
 
     return table_list
 
