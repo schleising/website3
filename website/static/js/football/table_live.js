@@ -9,6 +9,10 @@ let lastInteractionPointerType = "mouse";
 const FOOTBALL_TABLE_REFRESH_INTERVAL_MS = 10000;
 const FOOTBALL_MATCH_POPUP_CACHE_TTL_MS = 15000;
 const FOOTBALL_MATCH_POPUP_HIDE_DELAY_MS = 140;
+const FOOTBALL_MATCH_POPUP_EDGE_MARGIN_PX = 10;
+const FOOTBALL_MATCH_POPUP_GAP_PX = 3;
+const FOOTBALL_MATCH_POPUP_HORIZONTAL_GAP_PX = 6;
+const FOOTBALL_MATCH_POPUP_FALLBACK_HEIGHT_PX = 190;
 const RANGE_CLASSES = [
     "table-range-focus",
     "table-range-high",
@@ -658,22 +662,57 @@ function positionLiveMatchPopup(anchorElement) {
         return;
     }
 
-    const popupWidth = 288;
-    const margin = 10;
+    const margin = FOOTBALL_MATCH_POPUP_EDGE_MARGIN_PX;
+    const gap = FOOTBALL_MATCH_POPUP_GAP_PX;
+    const horizontalGap = FOOTBALL_MATCH_POPUP_HORIZONTAL_GAP_PX;
     const anchorRect = anchorElement.getBoundingClientRect();
     const viewportWidth = window.innerWidth;
     const viewportHeight = window.innerHeight;
+    const popupRect = liveMatchPopupElement.getBoundingClientRect();
+    const popupWidth = Math.max(Math.round(popupRect.width), 1);
+    const measuredPopupHeight = Math.round(popupRect.height);
+    const popupHeight = measuredPopupHeight > 0
+        ? measuredPopupHeight
+        : FOOTBALL_MATCH_POPUP_FALLBACK_HEIGHT_PX;
 
-    let left = anchorRect.left + (anchorRect.width / 2) - (popupWidth / 2);
-    left = Math.max(margin, Math.min(left, viewportWidth - popupWidth - margin));
+    // Prefer placing the popup just to the right of the live score chip.
+    const preferredRightLeft = anchorRect.right + horizontalGap;
+    const preferredLeftLeft = anchorRect.left - popupWidth - horizontalGap;
+    const maxLeft = viewportWidth - popupWidth - margin;
 
-    const prefersAbove = anchorRect.bottom + 190 > viewportHeight;
-    const top = prefersAbove
-        ? Math.max(margin, anchorRect.top - 190)
-        : Math.min(viewportHeight - 190 - margin, anchorRect.bottom + 8);
+    let left = preferredRightLeft;
+    if (left > maxLeft) {
+        left = preferredLeftLeft;
+    }
+    left = Math.max(margin, Math.min(left, maxLeft));
+
+    const availableAbove = anchorRect.top - margin;
+    const availableBelow = viewportHeight - anchorRect.bottom - margin;
+    const fitsAbove = availableAbove >= (popupHeight + gap);
+    const fitsBelow = availableBelow >= (popupHeight + gap);
+
+    let placeAbove = true;
+    if (!fitsAbove && fitsBelow) {
+        placeAbove = false;
+    } else if (!fitsAbove && !fitsBelow) {
+        placeAbove = availableAbove >= availableBelow;
+    }
+
+    // On touch, keep the popup away from the finger whenever there is space above.
+    if (lastInteractionPointerType === "touch" && fitsAbove) {
+        placeAbove = true;
+    }
+
+    const preferredTop = placeAbove
+        ? anchorRect.top - popupHeight - gap
+        : anchorRect.bottom + gap;
+    const clampedTop = Math.max(
+        margin,
+        Math.min(preferredTop, viewportHeight - popupHeight - margin)
+    );
 
     liveMatchPopupElement.style.left = `${Math.round(left)}px`;
-    liveMatchPopupElement.style.top = `${Math.round(top)}px`;
+    liveMatchPopupElement.style.top = `${Math.round(clampedTop)}px`;
 }
 
 function renderLiveMatchPopupCard(matchData) {
