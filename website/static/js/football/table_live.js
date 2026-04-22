@@ -31,7 +31,16 @@ const footballTableHtmlElement = document.documentElement;
 const footballTableBasePathRaw = String(footballTableHtmlElement.dataset.footballBasePath ?? "/football").trim();
 const footballTableBasePath = footballTableBasePathRaw === "/" ? "" : footballTableBasePathRaw.replace(/\/+$/, "");
 const footballTableRootPath = footballTableBasePath === "" ? "/" : `${footballTableBasePath}/`;
-const IN_PROGRESS_MATCH_STATUSES = new Set(["IN_PLAY", "PAUSED", "IN PLAY", "HALF TIME"]);
+const POPUP_ELIGIBLE_MATCH_STATUSES = new Set([
+    "IN_PLAY",
+    "PAUSED",
+    "IN PLAY",
+    "HALF TIME",
+    "FINISHED",
+    "FULL TIME",
+    "SUSPENDED",
+    "AWARDED",
+]);
 
 let liveMatchPopupElement = null;
 let liveMatchPopupCardElement = null;
@@ -121,12 +130,12 @@ function updatePositionDelta(row, tableItem) {
         deltaElement.className = `table-position-delta ${tableItem.css_class || ""}`.trim();
         const compactScore = String(tableItem.score_string || "").replaceAll(" ", "");
         updateTextIfChanged(deltaElement, compactScore);
-        const isLiveMatchChip = isTableItemInPlay(tableItem);
-        deltaElement.dataset.liveMatch = isLiveMatchChip ? "true" : "false";
-        if (isLiveMatchChip) {
+        const hasStartedMatchChip = tableItem?.has_started === true;
+        deltaElement.dataset.liveMatch = hasStartedMatchChip ? "true" : "false";
+        if (hasStartedMatchChip) {
             deltaElement.setAttribute("role", "button");
             deltaElement.setAttribute("tabindex", "0");
-            deltaElement.setAttribute("aria-label", "Show live match details");
+            deltaElement.setAttribute("aria-label", "Show match details");
             deltaElement.classList.add("is-live-match-chip");
         } else {
             deltaElement.removeAttribute("role");
@@ -628,6 +637,9 @@ function formatLiveMatchStatus(statusValue) {
     if (status === "SUSPENDED") {
         return "Suspended";
     }
+    if (status === "FINISHED" || status === "FULL TIME") {
+        return "Full Time";
+    }
     return status === "" ? "Live" : status;
 }
 
@@ -636,9 +648,32 @@ function normalizeMatchStatus(statusValue) {
     return status.replaceAll("_", " ");
 }
 
-function isInProgressMatchStatus(statusValue) {
+function isPopupEligibleMatchStatus(statusValue) {
     const normalizedStatus = normalizeMatchStatus(statusValue);
-    return IN_PROGRESS_MATCH_STATUSES.has(normalizedStatus);
+    return POPUP_ELIGIBLE_MATCH_STATUSES.has(normalizedStatus);
+}
+
+function matchStatusPriority(statusValue) {
+    const normalizedStatus = normalizeMatchStatus(statusValue);
+
+    if (normalizedStatus === "IN PLAY" || normalizedStatus === "PAUSED" || normalizedStatus === "HALF TIME") {
+        return 0;
+    }
+
+    if (normalizedStatus === "SUSPENDED") {
+        return 1;
+    }
+
+    if (normalizedStatus === "FINISHED" || normalizedStatus === "FULL TIME" || normalizedStatus === "AWARDED") {
+        return 2;
+    }
+
+    return 3;
+}
+
+function parseStartTimeMs(startTimeIso) {
+    const parsedMs = Date.parse(String(startTimeIso || ""));
+    return Number.isNaN(parsedMs) ? Number.NEGATIVE_INFINITY : parsedMs;
 }
 
 function formatLiveMatchStart(startTimeIso) {
@@ -795,7 +830,7 @@ async function ensureLiveMatchPopupMatches(forceRefresh = false) {
         })
         .then(payload => {
             const matches = Array.isArray(payload?.matches) ? payload.matches : [];
-            liveMatchPopupMatches = matches.filter(match => isInProgressMatchStatus(match?.status));
+            liveMatchPopupMatches = matches.filter(match => isPopupEligibleMatchStatus(match?.status));
             liveMatchPopupLastLoadedAt = Date.now();
             return liveMatchPopupMatches;
         })
@@ -817,11 +852,27 @@ function findLiveMatchByTeamName(teamName) {
         return null;
     }
 
-    return liveMatchPopupMatches.find(match => {
+    const matchingMatches = liveMatchPopupMatches.filter(match => {
         const homeName = normalizeTeamShortName(match?.home_team);
         const awayName = normalizeTeamShortName(match?.away_team);
         return homeName === normalizedTeamName || awayName === normalizedTeamName;
-    }) || null;
+    });
+
+    if (matchingMatches.length === 0) {
+        return null;
+    }
+
+    matchingMatches.sort((a, b) => {
+        const statusDelta = matchStatusPriority(a?.status) - matchStatusPriority(b?.status);
+        if (statusDelta !== 0) {
+            return statusDelta;
+        }
+
+        // For equal status buckets, prefer the most recent kickoff.
+        return parseStartTimeMs(b?.start_time_iso) - parseStartTimeMs(a?.start_time_iso);
+    });
+
+    return matchingMatches[0] || null;
 }
 
 function cancelLiveMatchPopupHide() {
