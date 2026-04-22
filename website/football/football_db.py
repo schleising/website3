@@ -99,16 +99,45 @@ def _apply_position_outcome_labels(table_list: list[LiveTableItem]) -> None:
     team_count = len(table_list)
     total_matches_per_team = max(team_count - 1, 0) * 2
 
+    def _is_in_play(table_item: LiveTableItem) -> bool:
+        css_class = str(table_item.css_class or "")
+        return "in-play" in css_class.split()
+
+    def _current_result_points(table_item: LiveTableItem) -> int:
+        css_class = str(table_item.css_class or "")
+        css_tokens = set(css_class.split())
+
+        if "winning" in css_tokens:
+            return 3
+        if "drawing" in css_tokens:
+            return 1
+
+        return 0
+
     max_points_by_team_id: dict[int, int] = {}
+    adjusted_points_by_team_id: dict[int, int] = {}
     for table_item in table_list:
-        remaining_matches = max(total_matches_per_team - table_item.played_games, 0)
-        max_points_by_team_id[table_item.team.id] = table_item.points + (remaining_matches * 3)
+        adjusted_played_games = table_item.played_games
+        adjusted_points = table_item.points
+
+        # Live table rows include provisional in-play updates. Roll them back for C/R
+        # certainty checks so labels only change when results are actually locked in.
+        if _is_in_play(table_item):
+            adjusted_played_games = max(adjusted_played_games - 1, 0)
+            adjusted_points = max(
+                adjusted_points - _current_result_points(table_item),
+                0,
+            )
+
+        remaining_matches = max(total_matches_per_team - adjusted_played_games, 0)
+        max_points_by_team_id[table_item.team.id] = adjusted_points + (remaining_matches * 3)
+        adjusted_points_by_team_id[table_item.team.id] = adjusted_points
         table_item.position_label = None
 
     # Guaranteed champion: current points are greater than every other team's max possible points.
     if team_count > 1:
         first_row = table_list[0]
-        first_points = first_row.points
+        first_points = adjusted_points_by_team_id[first_row.team.id]
         max_other_points = max(
             max_points_by_team_id[item.team.id]
             for item in table_list[1:]
@@ -123,7 +152,7 @@ def _apply_position_outcome_labels(table_list: list[LiveTableItem]) -> None:
     if guaranteed_above_threshold == 0:
         return
 
-    current_points = [item.points for item in table_list]
+    current_points = [adjusted_points_by_team_id[item.team.id] for item in table_list]
 
     for table_item in table_list:
         if table_item.position_label is not None:
