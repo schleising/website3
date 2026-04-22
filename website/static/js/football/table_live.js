@@ -7,6 +7,8 @@ let footballTableLoadedDayKey = null;
 let lastInteractionPointerType = "mouse";
 
 const FOOTBALL_TABLE_REFRESH_INTERVAL_MS = 10000;
+const FOOTBALL_MATCH_POPUP_CACHE_TTL_MS = 15000;
+const FOOTBALL_MATCH_POPUP_HIDE_DELAY_MS = 140;
 const RANGE_CLASSES = [
     "table-range-focus",
     "table-range-high",
@@ -25,6 +27,16 @@ const footballTableHtmlElement = document.documentElement;
 const footballTableBasePathRaw = String(footballTableHtmlElement.dataset.footballBasePath ?? "/football").trim();
 const footballTableBasePath = footballTableBasePathRaw === "/" ? "" : footballTableBasePathRaw.replace(/\/+$/, "");
 const footballTableRootPath = footballTableBasePath === "" ? "/" : `${footballTableBasePath}/`;
+const IN_PROGRESS_MATCH_STATUSES = new Set(["IN_PLAY", "PAUSED", "IN PLAY", "HALF TIME"]);
+
+let liveMatchPopupElement = null;
+let liveMatchPopupCardElement = null;
+let liveMatchPopupAnchor = null;
+let liveMatchPopupPinned = false;
+let liveMatchPopupHideTimerId = null;
+let liveMatchPopupFetchPromise = null;
+let liveMatchPopupMatches = [];
+let liveMatchPopupLastLoadedAt = 0;
 
 function escapeHtml(value) {
     if (value === null || value === undefined) {
@@ -105,6 +117,19 @@ function updatePositionDelta(row, tableItem) {
         deltaElement.className = `table-position-delta ${tableItem.css_class || ""}`.trim();
         const compactScore = String(tableItem.score_string || "").replaceAll(" ", "");
         updateTextIfChanged(deltaElement, compactScore);
+        const isLiveMatchChip = isTableItemInPlay(tableItem);
+        deltaElement.dataset.liveMatch = isLiveMatchChip ? "true" : "false";
+        if (isLiveMatchChip) {
+            deltaElement.setAttribute("role", "button");
+            deltaElement.setAttribute("tabindex", "0");
+            deltaElement.setAttribute("aria-label", "Show live match details");
+            deltaElement.classList.add("is-live-match-chip");
+        } else {
+            deltaElement.removeAttribute("role");
+            deltaElement.removeAttribute("tabindex");
+            deltaElement.removeAttribute("aria-label");
+            deltaElement.classList.remove("is-live-match-chip");
+        }
         return;
     }
 
@@ -495,6 +520,10 @@ function setupRangeInteractions() {
             return;
         }
 
+        if (getLiveMatchChipFromTarget(event.target)) {
+            return;
+        }
+
         if (lastInteractionPointerType === "mouse") {
             return;
         }
@@ -515,6 +544,440 @@ function setupRangeInteractions() {
     });
 
     document.addEventListener("click", clearSelectionIfTappedOutsideSelectedRow);
+}
+
+function normalizeTeamShortName(value) {
+    return String(value || "").trim().toLowerCase();
+}
+
+function getSeasonQueryForTablePage() {
+    const tbody = document.getElementById("football-live-table-body");
+    if (!tbody) {
+        return "";
+    }
+
+    return buildSeasonQuery(String(tbody.dataset.seasonKey || "").trim());
+}
+
+function createLiveMatchPopupElements() {
+    if (liveMatchPopupElement && liveMatchPopupCardElement) {
+        return;
+    }
+
+    liveMatchPopupElement = document.createElement("div");
+    liveMatchPopupElement.className = "live-match-popup";
+    liveMatchPopupElement.hidden = true;
+
+    liveMatchPopupCardElement = document.createElement("article");
+    liveMatchPopupCardElement.className = "score-widget site-card live-match-popup-card";
+    liveMatchPopupElement.appendChild(liveMatchPopupCardElement);
+
+    liveMatchPopupElement.addEventListener("mouseenter", () => {
+        cancelLiveMatchPopupHide();
+    });
+
+    liveMatchPopupElement.addEventListener("mouseleave", () => {
+        if (liveMatchPopupPinned) {
+            return;
+        }
+        scheduleLiveMatchPopupHide();
+    });
+
+    document.body.appendChild(liveMatchPopupElement);
+}
+
+function getLiveMatchChipFromTarget(target) {
+    if (!(target instanceof Element)) {
+        return null;
+    }
+
+    return target.closest(".table-position-delta[data-live-match=\"true\"]");
+}
+
+function getRowTeamName(row) {
+    if (!(row instanceof HTMLElement)) {
+        return "";
+    }
+
+    const teamLink = row.querySelector(".team-name");
+    if (!(teamLink instanceof HTMLElement)) {
+        return "";
+    }
+
+    return String(teamLink.textContent || "").trim();
+}
+
+function formatLiveMatchStatus(statusValue) {
+    const status = String(statusValue || "").trim().toUpperCase();
+    if (status === "IN_PLAY") {
+        return "In Play";
+    }
+    if (status === "IN PLAY") {
+        return "In Play";
+    }
+    if (status === "PAUSED") {
+        return "Half Time";
+    }
+    if (status === "HALF TIME") {
+        return "Half Time";
+    }
+    if (status === "SUSPENDED") {
+        return "Suspended";
+    }
+    return status === "" ? "Live" : status;
+}
+
+function normalizeMatchStatus(statusValue) {
+    const status = String(statusValue || "").trim().toUpperCase();
+    return status.replaceAll("_", " ");
+}
+
+function isInProgressMatchStatus(statusValue) {
+    const normalizedStatus = normalizeMatchStatus(statusValue);
+    return IN_PROGRESS_MATCH_STATUSES.has(normalizedStatus);
+}
+
+function formatLiveMatchStart(startTimeIso) {
+    const parsedDate = new Date(String(startTimeIso || ""));
+    if (Number.isNaN(parsedDate.getTime())) {
+        return "Kickoff";
+    }
+
+    return parsedDate.toLocaleString(undefined, {
+        weekday: "short",
+        day: "2-digit",
+        month: "short",
+        hour: "2-digit",
+        minute: "2-digit",
+        timeZoneName: "short",
+    });
+}
+
+function positionLiveMatchPopup(anchorElement) {
+    if (!liveMatchPopupElement || !anchorElement) {
+        return;
+    }
+
+    const popupWidth = 288;
+    const margin = 10;
+    const anchorRect = anchorElement.getBoundingClientRect();
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+
+    let left = anchorRect.left + (anchorRect.width / 2) - (popupWidth / 2);
+    left = Math.max(margin, Math.min(left, viewportWidth - popupWidth - margin));
+
+    const prefersAbove = anchorRect.bottom + 190 > viewportHeight;
+    const top = prefersAbove
+        ? Math.max(margin, anchorRect.top - 190)
+        : Math.min(viewportHeight - 190 - margin, anchorRect.bottom + 8);
+
+    liveMatchPopupElement.style.left = `${Math.round(left)}px`;
+    liveMatchPopupElement.style.top = `${Math.round(top)}px`;
+}
+
+function renderLiveMatchPopupCard(matchData) {
+    if (!liveMatchPopupCardElement) {
+        return;
+    }
+
+    if (!matchData) {
+        liveMatchPopupCardElement.innerHTML = `
+            <div class="date-and-time">
+                <div class="match-start">Live Match</div>
+                <div class="match-status">Unavailable</div>
+            </div>
+            <div class="team">
+                <div class="team-and-badge">
+                    <span class="team-name">Match details are loading.</span>
+                </div>
+                <div class="home-team-score">-</div>
+            </div>
+            <div class="team">
+                <div class="team-and-badge">
+                    <span class="team-name">Please try again.</span>
+                </div>
+                <div class="away-team-score">-</div>
+            </div>
+        `;
+        return;
+    }
+
+    const homeScore = matchData.home_team_score ?? "-";
+    const awayScore = matchData.away_team_score ?? "-";
+    const statusText = formatLiveMatchStatus(matchData.status);
+    const kickoffText = formatLiveMatchStart(matchData.start_time_iso);
+
+    liveMatchPopupCardElement.innerHTML = `
+        <div class="date-and-time">
+            <div class="match-start">${escapeHtml(kickoffText)}</div>
+            <div class="match-status">${escapeHtml(statusText)}</div>
+        </div>
+        <div class="team">
+            <div class="team-and-badge">
+                <span class="team-name">${escapeHtml(matchData.home_team)}</span>
+            </div>
+            <div class="home-team-score">${escapeHtml(homeScore)}</div>
+        </div>
+        <div class="team">
+            <div class="team-and-badge">
+                <span class="team-name">${escapeHtml(matchData.away_team)}</span>
+            </div>
+            <div class="away-team-score">${escapeHtml(awayScore)}</div>
+        </div>
+    `;
+}
+
+async function ensureLiveMatchPopupMatches(forceRefresh = false) {
+    const now = Date.now();
+    if (!forceRefresh && (now - liveMatchPopupLastLoadedAt) < FOOTBALL_MATCH_POPUP_CACHE_TTL_MS) {
+        return liveMatchPopupMatches;
+    }
+
+    if (liveMatchPopupFetchPromise) {
+        return liveMatchPopupFetchPromise;
+    }
+
+    const seasonQuery = getSeasonQueryForTablePage();
+    const url = `${footballTableRootPath}api/${seasonQuery}`;
+
+    liveMatchPopupFetchPromise = fetch(url, {
+        method: "GET",
+        credentials: "same-origin",
+        headers: {
+            "Accept": "application/json",
+        },
+    })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`Live match details request failed: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(payload => {
+            const matches = Array.isArray(payload?.matches) ? payload.matches : [];
+            liveMatchPopupMatches = matches.filter(match => isInProgressMatchStatus(match?.status));
+            liveMatchPopupLastLoadedAt = Date.now();
+            return liveMatchPopupMatches;
+        })
+        .catch(error => {
+            console.error(error);
+            liveMatchPopupMatches = [];
+            return liveMatchPopupMatches;
+        })
+        .finally(() => {
+            liveMatchPopupFetchPromise = null;
+        });
+
+    return liveMatchPopupFetchPromise;
+}
+
+function findLiveMatchByTeamName(teamName) {
+    const normalizedTeamName = normalizeTeamShortName(teamName);
+    if (normalizedTeamName === "") {
+        return null;
+    }
+
+    return liveMatchPopupMatches.find(match => {
+        const homeName = normalizeTeamShortName(match?.home_team);
+        const awayName = normalizeTeamShortName(match?.away_team);
+        return homeName === normalizedTeamName || awayName === normalizedTeamName;
+    }) || null;
+}
+
+function cancelLiveMatchPopupHide() {
+    if (liveMatchPopupHideTimerId !== null) {
+        window.clearTimeout(liveMatchPopupHideTimerId);
+        liveMatchPopupHideTimerId = null;
+    }
+}
+
+function hideLiveMatchPopup() {
+    cancelLiveMatchPopupHide();
+
+    if (!liveMatchPopupElement) {
+        return;
+    }
+
+    liveMatchPopupElement.hidden = true;
+    liveMatchPopupAnchor = null;
+    liveMatchPopupPinned = false;
+}
+
+function scheduleLiveMatchPopupHide() {
+    cancelLiveMatchPopupHide();
+    liveMatchPopupHideTimerId = window.setTimeout(() => {
+        hideLiveMatchPopup();
+    }, FOOTBALL_MATCH_POPUP_HIDE_DELAY_MS);
+}
+
+async function showLiveMatchPopup(anchorElement, options = {}) {
+    if (!(anchorElement instanceof HTMLElement)) {
+        return;
+    }
+
+    const persistent = options.persistent === true;
+    const forceRefresh = options.forceRefresh === true;
+
+    createLiveMatchPopupElements();
+    cancelLiveMatchPopupHide();
+
+    const row = anchorElement.closest(".data-row[data-team-id]");
+    const teamName = getRowTeamName(row);
+
+    liveMatchPopupAnchor = anchorElement;
+    liveMatchPopupPinned = persistent;
+
+    if (liveMatchPopupElement) {
+        liveMatchPopupElement.hidden = false;
+    }
+
+    renderLiveMatchPopupCard(null);
+    positionLiveMatchPopup(anchorElement);
+
+    await ensureLiveMatchPopupMatches(forceRefresh);
+    if (liveMatchPopupAnchor !== anchorElement) {
+        return;
+    }
+
+    const liveMatch = findLiveMatchByTeamName(teamName);
+    renderLiveMatchPopupCard(liveMatch);
+    positionLiveMatchPopup(anchorElement);
+}
+
+function setupLiveMatchPopupInteractions() {
+    const tbody = document.getElementById("football-live-table-body");
+    if (!tbody) {
+        return;
+    }
+
+    tbody.addEventListener("mouseover", event => {
+        if (liveMatchPopupPinned) {
+            return;
+        }
+
+        const chip = getLiveMatchChipFromTarget(event.target);
+        if (!chip) {
+            return;
+        }
+
+        if (lastInteractionPointerType === "touch") {
+            return;
+        }
+
+        void showLiveMatchPopup(chip, { persistent: false, forceRefresh: false });
+    });
+
+    tbody.addEventListener("mouseout", event => {
+        if (liveMatchPopupPinned) {
+            return;
+        }
+
+        const chip = getLiveMatchChipFromTarget(event.target);
+        if (!chip) {
+            return;
+        }
+
+        const relatedTarget = event.relatedTarget;
+        if (relatedTarget instanceof Node) {
+            if (chip.contains(relatedTarget)) {
+                return;
+            }
+
+            if (liveMatchPopupElement && liveMatchPopupElement.contains(relatedTarget)) {
+                return;
+            }
+        }
+
+        scheduleLiveMatchPopupHide();
+    });
+
+    tbody.addEventListener("click", event => {
+        const chip = getLiveMatchChipFromTarget(event.target);
+        if (!chip) {
+            return;
+        }
+
+        event.preventDefault();
+        event.stopImmediatePropagation();
+
+        const isSameChip = liveMatchPopupPinned && liveMatchPopupAnchor === chip;
+        if (isSameChip) {
+            hideLiveMatchPopup();
+            return;
+        }
+
+        void showLiveMatchPopup(chip, { persistent: true, forceRefresh: true });
+    });
+
+    tbody.addEventListener("keydown", event => {
+        const chip = getLiveMatchChipFromTarget(event.target);
+        if (!chip) {
+            return;
+        }
+
+        if (event.key !== "Enter" && event.key !== " ") {
+            return;
+        }
+
+        event.preventDefault();
+        const isSameChip = liveMatchPopupPinned && liveMatchPopupAnchor === chip;
+        if (isSameChip) {
+            hideLiveMatchPopup();
+            return;
+        }
+
+        void showLiveMatchPopup(chip, { persistent: true, forceRefresh: true });
+    });
+
+    document.addEventListener("click", event => {
+        if (!liveMatchPopupPinned) {
+            return;
+        }
+
+        const target = event.target;
+        if (!(target instanceof Node)) {
+            hideLiveMatchPopup();
+            return;
+        }
+
+        if (liveMatchPopupElement && liveMatchPopupElement.contains(target)) {
+            return;
+        }
+
+        const chip = getLiveMatchChipFromTarget(target);
+        if (chip && chip === liveMatchPopupAnchor) {
+            return;
+        }
+
+        hideLiveMatchPopup();
+    });
+
+    window.addEventListener("scroll", () => {
+        if (!liveMatchPopupElement || liveMatchPopupElement.hidden) {
+            return;
+        }
+
+        if (!liveMatchPopupAnchor || !liveMatchPopupAnchor.isConnected) {
+            hideLiveMatchPopup();
+            return;
+        }
+
+        positionLiveMatchPopup(liveMatchPopupAnchor);
+    }, { passive: true });
+
+    window.addEventListener("resize", () => {
+        if (!liveMatchPopupElement || liveMatchPopupElement.hidden) {
+            return;
+        }
+
+        if (!liveMatchPopupAnchor || !liveMatchPopupAnchor.isConnected) {
+            hideLiveMatchPopup();
+            return;
+        }
+
+        positionLiveMatchPopup(liveMatchPopupAnchor);
+    });
 }
 
 function patchLiveTable(tableList) {
@@ -575,6 +1038,13 @@ function patchLiveTable(tableList) {
         const fragment = document.createDocumentFragment();
         desiredRows.forEach(row => fragment.appendChild(row));
         tbody.appendChild(fragment);
+    }
+
+    if (
+        liveMatchPopupAnchor
+        && (!liveMatchPopupAnchor.isConnected || liveMatchPopupAnchor.dataset.liveMatch !== "true")
+    ) {
+        hideLiveMatchPopup();
     }
 
     syncActiveRangeHighlight();
@@ -667,6 +1137,7 @@ document.addEventListener("readystatechange", event => {
     footballTableLoadedDayKey = getDayKey(new Date());
 
     setupRangeInteractions();
+    setupLiveMatchPopupInteractions();
     openTableWebSocket();
 });
 
