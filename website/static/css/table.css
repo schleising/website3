@@ -26,6 +26,8 @@
     --table-live-pill-radius: 0.42rem;
     --table-live-indicator-width: 0.74rem;
     --table-live-indicator-column-width: 0rem;
+    --table-movement-column-width: 0rem;
+    --table-movement-width: 0.92rem;
     --table-live-chip-column-width: 0rem;
     --table-position-value-width: 1.2rem;
     --table-form-font: 0.54rem;
@@ -45,6 +47,7 @@
     --table-grid-columns:
         minmax(1.55rem, 0.42fr)
         minmax(0, var(--table-live-indicator-column-width))
+        minmax(0, var(--table-movement-column-width))
         minmax(0, var(--table-live-chip-column-width))
         minmax(10.8rem, 2.52fr)
         minmax(2.7rem, 0.76fr)
@@ -84,6 +87,10 @@
 
 .table-container[data-has-live="true"] {
     --table-live-indicator-column-width: var(--table-live-indicator-width);
+}
+
+.table-container[data-has-movement="true"] {
+    --table-movement-column-width: var(--table-movement-width);
 }
 
 .table-container[data-has-delta="true"] {
@@ -194,7 +201,7 @@
 }
 
 .table-container .table-col-pos {
-    grid-column: span 3;
+    grid-column: span 4;
 }
 
 .table-container .live-indicator-cell {
@@ -208,6 +215,38 @@
     grid-column: 2;
 }
 
+.table-container .position-change-cell {
+    justify-content: center;
+    overflow: visible;
+    padding-left: 0;
+    padding-right: 0;
+}
+
+.data-row > .position-change-cell {
+    grid-column: 3;
+}
+
+.table-container .table-position-change {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: auto;
+    height: auto;
+    font-size: 0.72rem;
+    line-height: 1;
+    font-weight: 800;
+    background: transparent;
+    text-shadow: 0 0.01rem 0 rgba(0, 0, 0, 0.15);
+}
+
+.table-container .table-position-change-up {
+    color: color-mix(in srgb, var(--success), #0f6e57 20%);
+}
+
+.table-container .table-position-change-down {
+    color: color-mix(in srgb, var(--danger), #972c41 20%);
+}
+
 .table-container .position-delta-cell {
     justify-content: center;
     overflow: visible;
@@ -216,7 +255,7 @@
 }
 
 .data-row > .position-delta-cell {
-    grid-column: 3;
+    grid-column: 4;
 }
 
 .table-container .live-indicator-dot {
@@ -400,6 +439,7 @@
         --table-grid-columns:
             minmax(1.45rem, 0.46fr)
             minmax(0, var(--table-live-indicator-column-width))
+            minmax(0, var(--table-movement-column-width))
             minmax(0, var(--table-live-chip-column-width))
             minmax(9.3rem, 2.38fr)
             minmax(2.5rem, 0.74fr)
@@ -438,6 +478,7 @@
         --table-grid-columns:
             minmax(1.42rem, 0.52fr)
             minmax(0, var(--table-live-indicator-column-width))
+            minmax(0, var(--table-movement-column-width))
             minmax(0, var(--table-live-chip-column-width))
             minmax(8.28rem, 2.74fr)
             minmax(2.24rem, 0.8fr)

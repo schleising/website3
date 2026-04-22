@@ -230,29 +230,57 @@ function getInPlayOutcomePointAdjustment(cssClass) {
     return 0;
 }
 
+function parseScoreString(scoreString) {
+    const rawValue = String(scoreString || "").trim();
+    const matched = rawValue.match(/^(\d+)\s*-\s*(\d+)$/);
+    if (!matched) {
+        return null;
+    }
+
+    return {
+        goalsFor: Number(matched[1]),
+        goalsAgainst: Number(matched[2]),
+    };
+}
+
 function setRowPreGameData(row, tableItem) {
     const normalizeNumeric = value => {
         const parsed = Number(value);
         return Number.isFinite(parsed) ? parsed : 0;
     };
 
-    const isInPlay = isTableItemInPlay(tableItem);
+    const hasStarted = tableItem?.has_started === true;
     const cssClass = typeof tableItem?.css_class === "string" ? tableItem.css_class : "";
+    const scoreData = parseScoreString(tableItem?.score_string);
 
     const playedNow = normalizeNumeric(tableItem?.played_games);
     const pointsNow = normalizeNumeric(tableItem?.points);
+    const goalsForNow = normalizeNumeric(tableItem?.goals_for);
+    const goalsAgainstNow = normalizeNumeric(tableItem?.goals_against);
+    const goalDifferenceNow = normalizeNumeric(tableItem?.goal_difference);
 
-    if (!isInPlay) {
+    if (!hasStarted) {
         row.dataset.basePlayed = String(playedNow);
         row.dataset.basePoints = String(pointsNow);
+        row.dataset.baseGoalsFor = String(goalsForNow);
+        row.dataset.baseGoalsAgainst = String(goalsAgainstNow);
+        row.dataset.baseGoalDifference = String(goalDifferenceNow);
         return;
     }
 
     const basePlayed = Math.max(0, playedNow - 1);
     const basePoints = Math.max(0, pointsNow - getInPlayOutcomePointAdjustment(cssClass));
+    const goalsForDelta = scoreData?.goalsFor || 0;
+    const goalsAgainstDelta = scoreData?.goalsAgainst || 0;
+    const baseGoalsFor = Math.max(0, goalsForNow - goalsForDelta);
+    const baseGoalsAgainst = Math.max(0, goalsAgainstNow - goalsAgainstDelta);
+    const baseGoalDifference = goalDifferenceNow - (goalsForDelta - goalsAgainstDelta);
 
     row.dataset.basePlayed = String(basePlayed);
     row.dataset.basePoints = String(basePoints);
+    row.dataset.baseGoalsFor = String(baseGoalsFor);
+    row.dataset.baseGoalsAgainst = String(baseGoalsAgainst);
+    row.dataset.baseGoalDifference = String(baseGoalDifference);
 }
 
 function updateTableRow(row, tableItem, seasonKey, teamCount) {
@@ -317,6 +345,26 @@ function getRowCalculationPlayed(row) {
     return asNumber(row?.dataset?.played);
 }
 
+function getRowCalculationGoalDifference(row) {
+    const baseGoalDifference = String(row?.dataset?.baseGoalDifference || "").trim();
+    if (baseGoalDifference !== "") {
+        return asNumber(baseGoalDifference);
+    }
+
+    const goalDifferenceCell = row?.querySelector(".table-goal-difference");
+    return asNumber(goalDifferenceCell?.textContent);
+}
+
+function getRowCalculationGoalsFor(row) {
+    const baseGoalsFor = String(row?.dataset?.baseGoalsFor || "").trim();
+    if (baseGoalsFor !== "") {
+        return asNumber(baseGoalsFor);
+    }
+
+    const goalsForCell = row?.querySelector(".table-goals-for");
+    return asNumber(goalsForCell?.textContent);
+}
+
 function primeRowPreGameDataFromDom(row) {
     if (!(row instanceof HTMLElement)) {
         return;
@@ -324,22 +372,144 @@ function primeRowPreGameDataFromDom(row) {
 
     const pointsNow = asNumber(row.dataset.points);
     const playedNow = asNumber(row.dataset.played);
+    const goalsForNow = asNumber(row.querySelector(".table-goals-for")?.textContent);
+    const goalsAgainstNow = asNumber(row.querySelector(".table-goals-against")?.textContent);
+    const goalDifferenceNow = asNumber(row.querySelector(".table-goal-difference")?.textContent);
 
-    const isInPlay = row.querySelector(".live-indicator-dot") !== null;
-    if (!isInPlay) {
+    const hasStarted = row.querySelector(".table-position-delta") !== null;
+    if (!hasStarted) {
         row.dataset.basePoints = String(pointsNow);
         row.dataset.basePlayed = String(playedNow);
+        row.dataset.baseGoalsFor = String(goalsForNow);
+        row.dataset.baseGoalsAgainst = String(goalsAgainstNow);
+        row.dataset.baseGoalDifference = String(goalDifferenceNow);
         return;
     }
 
     const deltaElement = row.querySelector(".table-position-delta");
     const cssClass = deltaElement instanceof HTMLElement ? deltaElement.className : "";
+    const scoreData = parseScoreString(deltaElement?.textContent);
 
     const basePoints = Math.max(0, pointsNow - getInPlayOutcomePointAdjustment(cssClass));
     const basePlayed = Math.max(0, playedNow - 1);
+    const goalsForDelta = scoreData?.goalsFor || 0;
+    const goalsAgainstDelta = scoreData?.goalsAgainst || 0;
+    const baseGoalsFor = Math.max(0, goalsForNow - goalsForDelta);
+    const baseGoalsAgainst = Math.max(0, goalsAgainstNow - goalsAgainstDelta);
+    const baseGoalDifference = goalDifferenceNow - (goalsForDelta - goalsAgainstDelta);
 
     row.dataset.basePoints = String(basePoints);
     row.dataset.basePlayed = String(basePlayed);
+    row.dataset.baseGoalsFor = String(baseGoalsFor);
+    row.dataset.baseGoalsAgainst = String(baseGoalsAgainst);
+    row.dataset.baseGoalDifference = String(baseGoalDifference);
+}
+
+function compareRowsForBaselinePosition(a, b) {
+    const pointsDelta = getRowCalculationPoints(b) - getRowCalculationPoints(a);
+    if (pointsDelta !== 0) {
+        return pointsDelta;
+    }
+
+    const goalDifferenceDelta = getRowCalculationGoalDifference(b) - getRowCalculationGoalDifference(a);
+    if (goalDifferenceDelta !== 0) {
+        return goalDifferenceDelta;
+    }
+
+    const goalsForDelta = getRowCalculationGoalsFor(b) - getRowCalculationGoalsFor(a);
+    if (goalsForDelta !== 0) {
+        return goalsForDelta;
+    }
+
+    const currentPositionDelta = asNumber(a?.dataset?.position) - asNumber(b?.dataset?.position);
+    if (currentPositionDelta !== 0) {
+        return currentPositionDelta;
+    }
+
+    const teamIdA = asNumber(a?.dataset?.teamId);
+    const teamIdB = asNumber(b?.dataset?.teamId);
+    return teamIdA - teamIdB;
+}
+
+function buildBaselinePositionByTeam(rows) {
+    const sortedRows = rows
+        .slice()
+        .sort(compareRowsForBaselinePosition);
+
+    const baselinePositionByTeam = new Map();
+    sortedRows.forEach((row, index) => {
+        const teamId = String(row?.dataset?.teamId || "").trim();
+        if (teamId !== "") {
+            baselinePositionByTeam.set(teamId, index + 1);
+        }
+    });
+
+    return baselinePositionByTeam;
+}
+
+function updatePositionMovementCell(row, movementDelta) {
+    const cell = row.querySelector(".position-change-cell");
+    if (!cell) {
+        return;
+    }
+
+    let movementElement = cell.querySelector(".table-position-change");
+
+    if (movementDelta === 0) {
+        if (movementElement) {
+            movementElement.remove();
+        }
+        cell.removeAttribute("aria-label");
+        row.dataset.positionMovement = "0";
+        return;
+    }
+
+    if (!movementElement) {
+        movementElement = document.createElement("span");
+        movementElement.className = "table-position-change";
+        movementElement.setAttribute("aria-hidden", "true");
+        cell.appendChild(movementElement);
+    }
+
+    if (movementDelta > 0) {
+        movementElement.className = "table-position-change table-position-change-up";
+        movementElement.textContent = "▲";
+        cell.setAttribute("aria-label", `Moved up ${movementDelta} place${movementDelta === 1 ? "" : "s"}`);
+    } else {
+        const placesDropped = Math.abs(movementDelta);
+        movementElement.className = "table-position-change table-position-change-down";
+        movementElement.textContent = "▼";
+        cell.setAttribute("aria-label", `Moved down ${placesDropped} place${placesDropped === 1 ? "" : "s"}`);
+    }
+
+    row.dataset.positionMovement = String(movementDelta);
+}
+
+function updatePositionMovementIndicators(rows) {
+    if (!Array.isArray(rows) || rows.length === 0) {
+        return;
+    }
+
+    const tableContainer = rows[0].closest(".table-container");
+    const baselinePositionByTeam = buildBaselinePositionByTeam(rows);
+    let hasMovement = false;
+
+    rows.forEach(row => {
+        const teamId = String(row?.dataset?.teamId || "").trim();
+        const currentPosition = asNumber(row?.dataset?.position);
+        const baselinePosition = baselinePositionByTeam.get(teamId) || currentPosition;
+        const movementDelta = baselinePosition - currentPosition;
+
+        if (movementDelta !== 0) {
+            hasMovement = true;
+        }
+
+        updatePositionMovementCell(row, movementDelta);
+    });
+
+    if (tableContainer) {
+        tableContainer.dataset.hasMovement = hasMovement ? "true" : "false";
+    }
 }
 
 function applyRangeHighlights(activeRow) {
@@ -488,7 +658,9 @@ function setupRangeInteractions() {
         return;
     }
 
-    getTableRows().forEach(primeRowPreGameDataFromDom);
+    const rows = getTableRows();
+    rows.forEach(primeRowPreGameDataFromDom);
+    updatePositionMovementIndicators(rows);
 
     document.addEventListener("pointerdown", event => {
         if (typeof event.pointerType === "string" && event.pointerType !== "") {
@@ -1129,6 +1301,8 @@ function patchLiveTable(tableList) {
         desiredRows.forEach(row => fragment.appendChild(row));
         tbody.appendChild(fragment);
     }
+
+    updatePositionMovementIndicators(getTableRows());
 
     if (
         liveMatchPopupAnchor

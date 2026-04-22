@@ -1,10 +1,10 @@
 {% extends "football/football-base.html" %}
 
 {% block football_head %}
-<link rel="stylesheet" href="/css/table.css?v1.8.7">
+<link rel="stylesheet" href="/css/table.css?v1.8.9">
 {% block football_scripts %}
 {% if is_current_season|default(false) %}
-<script defer src="/js/football/table_live.js?v1.8.17"></script>
+<script defer src="/js/football/table_live.js?v1.8.18"></script>
 {% endif %}
 {% endblock %}
 {% block title %}<title>Football - {{ title }}</title>{% endblock %}
@@ -37,7 +37,7 @@
     {% set ns.has_live = true %}
   {% endif %}
 {% endfor %}
-<div class="table-container" data-team-count="{{ table_list|length }}" data-has-live="{{ 'true' if ns.has_live else 'false' }}" data-has-delta="{{ 'true' if ns.has_delta else 'false' }}" style="--table-row-count: {{ table_list|length }};">
+<div class="table-container" data-team-count="{{ table_list|length }}" data-has-live="{{ 'true' if ns.has_live else 'false' }}" data-has-delta="{{ 'true' if ns.has_delta else 'false' }}" data-has-movement="false" style="--table-row-count: {{ table_list|length }};">
   <section class="table-grid" role="table" aria-label="{{ title }}">
     <header class="table-grid-header sticky-header" role="rowgroup">
       <div class="header-row" role="row">
@@ -74,6 +74,7 @@
           <span class="live-indicator-dot" aria-hidden="true"></span>
           {% endif %}
         </div>
+        <div class="row-data data table-cell position-change-cell" role="cell"></div>
         <div class="row-data data table-cell position-delta-cell" role="cell">
           {% if table_item.has_started %}
           <div class="table-position-delta {{ table_item.css_class }}">
