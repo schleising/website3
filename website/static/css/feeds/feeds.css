@@ -386,6 +386,7 @@
 
 .feed-article-summary {
     color: var(--text);
+    font-size: 1.04rem;
     line-height: 1.52;
 }
 
