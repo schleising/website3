@@ -6,6 +6,30 @@
 
     /** @type {HTMLElement | null} */
     const root = document.getElementById("feeds-reader-root");
+    /** @type {HTMLElement | null} */
+    const articleList = document.getElementById("feeds-article-list");
+    /** @type {HTMLElement | null} */
+    const pageHeaderTitleNode = document.getElementById("feeds-page-header-title");
+    /** @type {HTMLElement | null} */
+    const pageHeaderCountNode = document.getElementById("feeds-page-header-count");
+    if (!root || !articleList) {
+        return;
+    }
+
+    /** @type {string} */
+    const selectedCategory = String(root.dataset.selectedCategory || "all").trim() || "all";
+    /** @type {string} */
+    const selectedStatus = String(root.dataset.selectedStatus || "unread").trim() || "unread";
+    /** @type {string} */
+    const articlesEndpoint = root.dataset.articlesEndpoint || "/feeds/api/articles/";
+    /** @type {string} */
+    const articleStatusesEndpoint = root.dataset.articleStatusesEndpoint || "/feeds/api/articles/statuses/";
+
+    /** @type {HTMLElement} */
+    const scrollContainer = document.documentElement;
+    /** @type {boolean} */
+    const useElementScrollContainer = false;
+
     const categoriesEndpoint = root.dataset.categoriesEndpoint || "/feeds/api/categories/";
     /** @type {string} */
     const markReadEndpointTemplate = root.dataset.markReadEndpointTemplate || "";
@@ -81,8 +105,7 @@
             ? navigator.maxTouchPoints > 0
             : false;
         const coarsePointer = window.matchMedia("(any-pointer: coarse)").matches;
-        const finePointer = window.matchMedia("(any-pointer: fine)").matches;
-        return (hasTouchCapability || coarsePointer) && !finePointer;
+        return hasTouchCapability || coarsePointer;
     })();
 
     /** @type {boolean} */
@@ -1155,7 +1178,7 @@
     }
 
     /**
-     * Mark unread cards as read after they scroll above the viewport.
+     * Mark unread cards as read after their heading scrolls above the viewport.
      */
     function markCardsReadAboveViewport() {
         if (!shouldUseTouchScrollRead()) {
@@ -1170,8 +1193,12 @@
                 return;
             }
 
-            const rect = card.getBoundingClientRect();
-            if (rect.bottom <= containerTop) {
+            const heading = card.querySelector(".feed-article-title");
+            const headingRect = heading instanceof HTMLElement
+                ? heading.getBoundingClientRect()
+                : card.getBoundingClientRect();
+
+            if (headingRect.bottom <= containerTop) {
                 markCardRead(card);
             }
         });
@@ -2371,6 +2398,10 @@
         const card = target.closest(".feed-article-card");
         if (!(card instanceof HTMLElement)) {
             return;
+        }
+
+        if (target.closest(".feed-article-title a")) {
+            markCardRead(card);
         }
 
         const cards = getCards();
