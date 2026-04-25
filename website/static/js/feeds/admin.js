@@ -186,7 +186,7 @@
     /**
      * Render live admin table rows.
      *
-    * @param {Array<{ feed_id?: string, feed_name?: string, feed_url?: string, article_count?: number, last_refresh_at_iso?: string, next_refresh_at_iso?: string, last_refresh_status?: string }>} rows
+    * @param {Array<{ feed_id?: string, feed_name?: string, feed_url?: string, article_count?: number, last_refresh_at_iso?: string, next_refresh_at_iso?: string, last_refresh_status?: string, last_refresh_error?: string }>} rows
      */
     function renderAdminRows(rows) {
         if (!(adminTableBody instanceof HTMLElement)) {
@@ -214,6 +214,7 @@
             const lastRefreshIso = String(row.last_refresh_at_iso || "").trim();
             const nextRefreshIso = String(row.next_refresh_at_iso || "").trim();
             const lastRefreshStatus = String(row.last_refresh_status || "new").trim() || "new";
+            const lastRefreshError = String(row.last_refresh_error || "").trim();
 
             const rowNode = document.createElement("div");
             rowNode.className = "feed-admin-table-row";
@@ -226,12 +227,14 @@
 
             const countCell = createTextCell(String(Math.max(0, Number.isFinite(articleCount) ? articleCount : 0)));
             const statusCell = createTextCell(lastRefreshStatus, "feed-admin-status-cell");
+            const errorCell = createTextCell(lastRefreshError !== "" ? lastRefreshError : "-");
 
             rowNode.appendChild(nameCell);
             rowNode.appendChild(countCell);
             rowNode.appendChild(createTimeCell(lastRefreshIso));
             rowNode.appendChild(createTimeCell(nextRefreshIso));
             rowNode.appendChild(statusCell);
+            rowNode.appendChild(errorCell);
 
             adminTableBody.appendChild(rowNode);
         });

@@ -270,6 +270,7 @@ class FeedAdminFeedRow(BaseModel):
     last_refresh_at_iso: str = ""
     next_refresh_at_iso: str = ""
     last_refresh_status: str
+    last_refresh_error: str = ""
 
 
 class FeedAdminFeedListResponse(BaseModel):

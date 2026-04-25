@@ -20,6 +20,7 @@
           <div class="feed-admin-cell" role="columnheader">Last Refresh Time</div>
           <div class="feed-admin-cell" role="columnheader">Next refresh time</div>
           <div class="feed-admin-cell" role="columnheader">Last refresh status</div>
+          <div class="feed-admin-cell" role="columnheader">Last refresh error</div>
         </div>
 
         <div class="feed-admin-table-body" id="feed-admin-table-body">
@@ -40,6 +41,7 @@
             <time class="feed-admin-time" data-feed-time-value="{{ row.next_refresh_at_iso }}"{% if row.next_refresh_at_iso %} datetime="{{ row.next_refresh_at_iso }}"{% endif %}>{{ row.next_refresh_at_iso if row.next_refresh_at_iso else '-' }}</time>
           </div>
           <div class="feed-admin-cell feed-admin-status-cell" role="cell">{{ row.last_refresh_status }}</div>
+          <div class="feed-admin-cell" role="cell">{{ row.last_refresh_error if row.last_refresh_error else '-' }}</div>
         </div>
         {% endfor %}
         </div>

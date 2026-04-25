@@ -1211,10 +1211,10 @@ body.feed-category-color-popup-open {
 
 .feed-admin-table {
     display: grid;
-    grid-template-columns: minmax(13rem, 2.3fr) minmax(7rem, 0.8fr) minmax(13rem, 1.2fr) minmax(13rem, 1.2fr) minmax(10rem, 1fr);
+    grid-template-columns: minmax(13rem, 2fr) minmax(7rem, 0.7fr) minmax(12rem, 1fr) minmax(12rem, 1fr) minmax(9rem, 0.8fr) minmax(16rem, 1.8fr);
     column-gap: 0.6rem;
     align-items: center;
-    min-width: 52rem;
+    min-width: 68rem;
 }
 
 .feed-admin-table-row,
@@ -1336,7 +1336,7 @@ body.feed-category-color-popup-open {
     }
 
     .feed-admin-table {
-        min-width: 48rem;
+        min-width: 62rem;
     }
 
     .feed-subscription-url-cell {

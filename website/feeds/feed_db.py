@@ -2389,6 +2389,7 @@ async def list_feed_admin_rows() -> list[dict[str, Any]]:
                     source.get("next_refresh_at")
                 ),
                 "last_refresh_status": fetch_status,
+                "last_refresh_error": str(source.get("last_error", "")).strip(),
             }
         )
 
