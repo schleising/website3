@@ -6,42 +6,6 @@
 
     /** @type {HTMLElement | null} */
     const root = document.getElementById("feeds-reader-root");
-    if (!root) {
-        return;
-    }
-
-    /** @type {HTMLElement | null} */
-    const articleList = document.getElementById("feeds-article-list");
-    if (!articleList) {
-        return;
-    }
-
-    /** @type {HTMLElement | null} */
-    const pageHeaderTitleNode = document.getElementById("feeds-page-header-title");
-    /** @type {HTMLElement | null} */
-    const pageHeaderCountNode = document.getElementById("feeds-page-header-count");
-
-    /** @type {HTMLElement} */
-    const scrollContainer = /** @type {HTMLElement} */ (document.getElementById("content") || document.documentElement);
-    /** @type {boolean} */
-    const useElementScrollContainer = (
-        scrollContainer instanceof HTMLElement
-        && scrollContainer !== document.documentElement
-        && scrollContainer !== document.body
-    );
-
-    /** @type {string} */
-    const categoryFromUrl = new URLSearchParams(window.location.search).get("category");
-    const selectedCategory = (categoryFromUrl && categoryFromUrl.trim() !== ""
-        ? categoryFromUrl
-        : (root.dataset.selectedCategory || "all"));
-    /** @type {string} */
-    const selectedStatus = root.dataset.selectedStatus || "unread";
-    /** @type {string} */
-    const articlesEndpoint = root.dataset.articlesEndpoint || "/feeds/api/articles/";
-    /** @type {string} */
-    const articleStatusesEndpoint = root.dataset.articleStatusesEndpoint || "/feeds/api/articles/statuses/";
-    /** @type {string} */
     const categoriesEndpoint = root.dataset.categoriesEndpoint || "/feeds/api/categories/";
     /** @type {string} */
     const markReadEndpointTemplate = root.dataset.markReadEndpointTemplate || "";
