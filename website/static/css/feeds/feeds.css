@@ -1206,42 +1206,60 @@ body.feed-category-color-popup-open {
 
 .feed-admin-table-wrap {
     width: 100%;
-    overflow-x: auto;
+    overflow: hidden;
 }
 
 .feed-admin-table {
-    display: grid;
-    grid-template-columns: minmax(13rem, 2fr) minmax(7rem, 0.7fr) minmax(12rem, 1fr) minmax(12rem, 1fr) minmax(9rem, 0.8fr) minmax(16rem, 1.8fr);
-    column-gap: 0.6rem;
-    align-items: center;
-    min-width: 68rem;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    gap: 0.2rem;
 }
 
-.feed-admin-table-row,
 .feed-admin-table-header {
-    display: contents;
+    display: grid;
+    grid-template-columns: minmax(0, 1.45fr) minmax(2.8rem, 0.45fr) minmax(4.8rem, 0.62fr) minmax(4.8rem, 0.62fr) minmax(4.8rem, 0.55fr) minmax(0, 1fr);
+    column-gap: 0.45rem;
+    align-items: stretch;
 }
 
 .feed-admin-table-body {
-    display: contents;
+    display: flex;
+    flex-direction: column;
+}
+
+.feed-admin-table-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1.45fr) minmax(2.8rem, 0.45fr) minmax(4.8rem, 0.62fr) minmax(4.8rem, 0.62fr) minmax(4.8rem, 0.55fr) minmax(0, 1fr);
+    column-gap: 0.45rem;
+    align-items: stretch;
 }
 
 .feed-admin-cell {
+    display: flex;
+    align-items: center;
     text-align: left;
-    padding: 0.45rem 0.5rem;
+    padding: 0.42rem 0.35rem;
     border-bottom: 0.0625rem solid var(--line);
     color: var(--text);
+    font-size: 0.84rem;
+    min-width: 0;
 }
 
 .feed-admin-table-header .feed-admin-cell {
     color: var(--text-soft);
     font-weight: 700;
+    border-bottom-width: 0.11rem;
+    font-size: 0.76rem;
+    letter-spacing: 0.01em;
+    text-transform: uppercase;
 }
 
 .feed-admin-feed-name {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    font-weight: 600;
 }
 
 .feed-admin-feed-link {
@@ -1264,6 +1282,10 @@ body.feed-category-color-popup-open {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+}
+
+.feed-admin-time {
+    font-variant-numeric: tabular-nums;
 }
 
 @media screen and (max-width: 42rem) {
@@ -1335,8 +1357,57 @@ body.feed-category-color-popup-open {
         grid-template-columns: fit-content(14rem) max-content max-content;
     }
 
-    .feed-admin-table {
-        min-width: 62rem;
+    .feed-admin-table-header {
+        display: none;
+    }
+
+    .feed-admin-table-row {
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: 0.3rem 0.6rem;
+        margin-top: 0.35rem;
+        padding: 0.5rem 0.55rem;
+        border: 0.0625rem solid color-mix(in srgb, var(--line), #ffffff 30%);
+        border-radius: 0.55rem;
+        background: color-mix(in srgb, var(--surface-soft), #ffffff 22%);
+    }
+
+    .feed-admin-cell {
+        border-bottom: 0;
+        padding: 0;
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 0.5rem;
+        white-space: normal;
+        overflow-wrap: anywhere;
+        text-overflow: clip;
+        font-size: 0.82rem;
+    }
+
+    .feed-admin-table-body .feed-admin-cell::before {
+        content: attr(data-label);
+        color: var(--text-soft);
+        font-size: 0.74rem;
+        font-weight: 700;
+        letter-spacing: 0.01em;
+        text-transform: uppercase;
+        flex: 0 0 auto;
+    }
+
+    .feed-admin-table-body .feed-admin-feed-name {
+        grid-column: 1 / -1;
+        display: block;
+        font-size: 0.9rem;
+        padding-bottom: 0.1rem;
+    }
+
+    .feed-admin-table-body .feed-admin-feed-name::before {
+        content: none;
+    }
+
+    .feed-admin-feed-link {
+        white-space: normal;
+        overflow-wrap: anywhere;
     }
 
     .feed-subscription-url-cell {

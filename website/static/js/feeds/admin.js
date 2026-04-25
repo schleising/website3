@@ -24,7 +24,6 @@
 
     /** @type {Intl.DateTimeFormat} */
     const localeDateTimeFormatter = new Intl.DateTimeFormat(undefined, {
-        dateStyle: "medium",
         timeStyle: "short",
     });
 
@@ -120,12 +119,16 @@
      *
      * @param {string} text
      * @param {string} [extraClassName]
+     * @param {string} [label]
      * @returns {HTMLDivElement}
      */
-    function createTextCell(text, extraClassName = "") {
+    function createTextCell(text, extraClassName = "", label = "") {
         const cell = document.createElement("div");
         cell.className = `feed-admin-cell ${extraClassName}`.trim();
         cell.setAttribute("role", "cell");
+        if (label.trim() !== "") {
+            cell.dataset.label = label;
+        }
         cell.textContent = text;
         return cell;
     }
@@ -141,6 +144,7 @@
         const cell = document.createElement("div");
         cell.className = "feed-admin-cell feed-admin-feed-name";
         cell.setAttribute("role", "cell");
+        cell.dataset.label = "Feed";
         cell.title = feedName;
 
         const normalizedFeedUrl = String(feedUrl || "").trim();
@@ -163,13 +167,17 @@
      * Build a localized time cell.
      *
      * @param {string} isoValue
+     * @param {string} label
      * @returns {HTMLDivElement}
      */
-    function createTimeCell(isoValue) {
+    function createTimeCell(isoValue, label) {
         const normalizedIso = typeof isoValue === "string" ? isoValue.trim() : "";
         const cell = document.createElement("div");
         cell.className = "feed-admin-cell";
         cell.setAttribute("role", "cell");
+        if (label.trim() !== "") {
+            cell.dataset.label = label;
+        }
 
         const timeNode = document.createElement("time");
         timeNode.className = "feed-admin-time";
@@ -225,14 +233,18 @@
 
             const nameCell = createFeedNameCell(feedName, feedUrl);
 
-            const countCell = createTextCell(String(Math.max(0, Number.isFinite(articleCount) ? articleCount : 0)));
-            const statusCell = createTextCell(lastRefreshStatus, "feed-admin-status-cell");
-            const errorCell = createTextCell(lastRefreshError !== "" ? lastRefreshError : "-");
+            const countCell = createTextCell(
+                String(Math.max(0, Number.isFinite(articleCount) ? articleCount : 0)),
+                "",
+                "Cnt"
+            );
+            const statusCell = createTextCell(lastRefreshStatus, "feed-admin-status-cell", "State");
+            const errorCell = createTextCell(lastRefreshError !== "" ? lastRefreshError : "-", "", "Error");
 
             rowNode.appendChild(nameCell);
             rowNode.appendChild(countCell);
-            rowNode.appendChild(createTimeCell(lastRefreshIso));
-            rowNode.appendChild(createTimeCell(nextRefreshIso));
+            rowNode.appendChild(createTimeCell(lastRefreshIso, "Last"));
+            rowNode.appendChild(createTimeCell(nextRefreshIso, "Next"));
             rowNode.appendChild(statusCell);
             rowNode.appendChild(errorCell);
 
