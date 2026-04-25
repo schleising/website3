@@ -1218,7 +1218,7 @@ body.feed-category-color-popup-open {
 
 .feed-admin-table-header {
     display: grid;
-    grid-template-columns: minmax(0, 1.45fr) minmax(2.8rem, 0.45fr) minmax(4.8rem, 0.62fr) minmax(4.8rem, 0.62fr) minmax(4.8rem, 0.55fr) minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1.35fr) minmax(2.6rem, 0.42fr) minmax(4.5rem, 0.56fr) minmax(4.5rem, 0.56fr) minmax(2.8rem, 0.34fr) minmax(4.5rem, 0.52fr) minmax(0, 0.95fr);
     column-gap: 0.45rem;
     align-items: stretch;
 }
@@ -1230,7 +1230,7 @@ body.feed-category-color-popup-open {
 
 .feed-admin-table-row {
     display: grid;
-    grid-template-columns: minmax(0, 1.45fr) minmax(2.8rem, 0.45fr) minmax(4.8rem, 0.62fr) minmax(4.8rem, 0.62fr) minmax(4.8rem, 0.55fr) minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1.35fr) minmax(2.6rem, 0.42fr) minmax(4.5rem, 0.56fr) minmax(4.5rem, 0.56fr) minmax(2.8rem, 0.34fr) minmax(4.5rem, 0.52fr) minmax(0, 0.95fr);
     column-gap: 0.45rem;
     align-items: stretch;
 }
@@ -1286,6 +1286,15 @@ body.feed-category-color-popup-open {
 
 .feed-admin-time {
     font-variant-numeric: tabular-nums;
+}
+
+.feed-admin-next-seconds {
+    display: inline-block;
+    min-width: 1.4rem;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+    color: color-mix(in srgb, var(--brand-strong), #1b3f67 12%);
 }
 
 @media screen and (max-width: 42rem) {

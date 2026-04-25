@@ -192,6 +192,80 @@
     }
 
     /**
+     * Build next-refresh countdown cell.
+     *
+     * @param {string} isoValue
+     * @param {string} label
+     * @returns {HTMLDivElement}
+     */
+    function createCountdownCell(isoValue, label) {
+        const normalizedIso = typeof isoValue === "string" ? isoValue.trim() : "";
+        const cell = document.createElement("div");
+        cell.className = "feed-admin-cell";
+        cell.setAttribute("role", "cell");
+        if (label.trim() !== "") {
+            cell.dataset.label = label;
+        }
+
+        const countdownNode = document.createElement("span");
+        countdownNode.className = "feed-admin-next-seconds";
+        countdownNode.dataset.feedNextRefreshValue = normalizedIso;
+
+        cell.appendChild(countdownNode);
+        return cell;
+    }
+
+    /**
+     * Render remaining seconds for each countdown field when <60 seconds remain.
+     */
+    function updateNextRefreshCountdowns() {
+        if (!(adminTableBody instanceof HTMLElement)) {
+            return;
+        }
+
+        const nowMs = Date.now();
+        const countdownNodes = adminTableBody.querySelectorAll(
+            ".feed-admin-next-seconds[data-feed-next-refresh-value]"
+        );
+
+        countdownNodes.forEach(countdownNode => {
+            if (!(countdownNode instanceof HTMLElement)) {
+                return;
+            }
+
+            const rowNode = countdownNode.closest(".feed-admin-table-row");
+            const statusNode =
+                rowNode instanceof HTMLElement
+                    ? rowNode.querySelector(".feed-admin-status-cell")
+                    : null;
+
+            const isoValue = String(countdownNode.dataset.feedNextRefreshValue || "").trim();
+            if (isoValue === "") {
+                countdownNode.textContent = "";
+                return;
+            }
+
+            const targetDate = new Date(isoValue);
+            if (Number.isNaN(targetDate.getTime())) {
+                countdownNode.textContent = "";
+                return;
+            }
+
+            const remainingSeconds = Math.ceil((targetDate.getTime() - nowMs) / 1000);
+            if (remainingSeconds < 60 && remainingSeconds >= 0) {
+                countdownNode.textContent = String(remainingSeconds);
+                return;
+            }
+
+            if (remainingSeconds <= 0 && statusNode instanceof HTMLElement) {
+                statusNode.textContent = "refreshing";
+            }
+
+            countdownNode.textContent = "";
+        });
+    }
+
+    /**
      * Render live admin table rows.
      *
     * @param {Array<{ feed_id?: string, feed_name?: string, feed_url?: string, article_count?: number, last_refresh_at_iso?: string, next_refresh_at_iso?: string, last_refresh_status?: string, last_refresh_error?: string }>} rows
@@ -245,11 +319,14 @@
             rowNode.appendChild(countCell);
             rowNode.appendChild(createTimeCell(lastRefreshIso, "Last"));
             rowNode.appendChild(createTimeCell(nextRefreshIso, "Next"));
+            rowNode.appendChild(createCountdownCell(nextRefreshIso, "In"));
             rowNode.appendChild(statusCell);
             rowNode.appendChild(errorCell);
 
             adminTableBody.appendChild(rowNode);
         });
+
+        updateNextRefreshCountdowns();
     }
 
     /**
@@ -319,6 +396,8 @@
     }
 
     localizeSsrTimes();
+    updateNextRefreshCountdowns();
     refreshLiveAdminState();
     window.setInterval(refreshLiveAdminState, 2000);
+    window.setInterval(updateNextRefreshCountdowns, 1000);
 })();

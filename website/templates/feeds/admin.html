@@ -19,6 +19,7 @@
           <div class="feed-admin-cell" role="columnheader">Cnt</div>
           <div class="feed-admin-cell" role="columnheader">Last</div>
           <div class="feed-admin-cell" role="columnheader">Next</div>
+          <div class="feed-admin-cell" role="columnheader">In</div>
           <div class="feed-admin-cell" role="columnheader">State</div>
           <div class="feed-admin-cell" role="columnheader">Error</div>
         </div>
@@ -39,6 +40,9 @@
           </div>
           <div class="feed-admin-cell" role="cell" data-label="Next">
             <time class="feed-admin-time" data-feed-time-value="{{ row.next_refresh_at_iso }}"{% if row.next_refresh_at_iso %} datetime="{{ row.next_refresh_at_iso }}"{% endif %}>{{ row.next_refresh_at_iso if row.next_refresh_at_iso else '-' }}</time>
+          </div>
+          <div class="feed-admin-cell" role="cell" data-label="In">
+            <span class="feed-admin-next-seconds" data-feed-next-refresh-value="{{ row.next_refresh_at_iso }}"></span>
           </div>
           <div class="feed-admin-cell feed-admin-status-cell" role="cell" data-label="State">{{ row.last_refresh_status }}</div>
           <div class="feed-admin-cell" role="cell" data-label="Error">{{ row.last_refresh_error if row.last_refresh_error else '-' }}</div>
