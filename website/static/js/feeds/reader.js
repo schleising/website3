@@ -102,11 +102,6 @@
     /** @type {number} */
     let selectedIndex = -1;
 
-    /** @type {number} */
-    const readVisibilityWindowSeconds = Math.max(1, Number(root.dataset.readVisibilityWindowSeconds || 180));
-    /** @type {number} */
-    const readVisibilityWindowMs = readVisibilityWindowSeconds * 1000;
-
     /** @type {Set<string>} */
     const pendingReadIds = new Set();
     /** @type {Set<string>} */
@@ -115,10 +110,6 @@
     const pendingSaveIds = new Set();
     /** @type {Set<string>} */
     const pendingUnsaveIds = new Set();
-    /** @type {Set<string>} */
-    const sessionUnsavedArticleIds = new Set();
-    /** @type {Set<string>} */
-    const sessionUnreadArticleIds = new Set();
 
     /** @type {boolean} */
     const isTouchOnlyDevice = (() => {
@@ -428,42 +419,6 @@
      */
     function getCardArticleId(card) {
         return String(card.dataset.articleId || "").trim();
-    }
-
-    /**
-     * Return read-at timestamp for a card as unix milliseconds.
-     *
-     * @param {HTMLElement} card
-     * @returns {number | null}
-     */
-    function getCardReadAtMs(card) {
-        const rawReadAt = String(card.dataset.readAt || "").trim();
-        if (rawReadAt === "") {
-            return null;
-        }
-
-        const parsedDate = parseArticleDate(rawReadAt);
-        if (!(parsedDate instanceof Date)) {
-            return null;
-        }
-
-        return parsedDate.getTime();
-    }
-
-    /**
-     * Return whether a read card should remain visible in unread/category views.
-     *
-     * @param {HTMLElement} card
-     * @param {number} referenceTimeMs
-     * @returns {boolean}
-     */
-    function isWithinReadVisibilityWindow(card, referenceTimeMs) {
-        const readAtMs = getCardReadAtMs(card);
-        if (readAtMs === null) {
-            return false;
-        }
-
-        return (referenceTimeMs - readAtMs) <= readVisibilityWindowMs;
     }
 
     /**
@@ -1061,7 +1016,6 @@
             }
 
             sessionReadArticleIds.add(articleId);
-            sessionUnreadArticleIds.delete(articleId);
             newUnreadArticleIds.delete(articleId);
             persistArticleIdState();
 
@@ -1110,10 +1064,6 @@
 
             sessionReadArticleIds.delete(articleId);
             newUnreadArticleIds.delete(articleId);
-
-            if (selectedCategory === "recently-read" || selectedStatus === "read") {
-                sessionUnreadArticleIds.add(articleId);
-            }
 
             persistArticleIdState();
 
@@ -1175,7 +1125,6 @@
                 return;
             }
 
-            sessionUnsavedArticleIds.delete(articleId);
             setCardSavedAppearance(card, true, new Date().toISOString());
             await refreshSidebarCounts();
             schedulePagePrefetchCheck();
@@ -1218,10 +1167,6 @@
 
             if (!response.ok) {
                 return;
-            }
-
-            if (selectedCategory === "saved") {
-                sessionUnsavedArticleIds.add(articleId);
             }
 
             setCardSavedAppearance(card, false);
@@ -1433,42 +1378,8 @@
             incomingIdsInOrder.push(articleId);
         });
 
-        const nowMs = Date.now();
-        const shouldRetainReadCards = selectedCategory !== "saved"
-            && selectedCategory !== "recently-read"
-            && selectedStatus === "unread";
-        const shouldRetainUnreadCards = selectedCategory === "recently-read"
-            || selectedStatus === "read";
-
-        const retainedReadIds = shouldRetainReadCards
-            ? previousIdsInOrder.filter(
-                articleId => {
-                    if (incomingById.has(articleId)) {
-                        return false;
-                    }
-                    const existingCard = previousCardMap.get(articleId);
-                    return (
-                        existingCard instanceof HTMLElement
-                        && isCardMarkedRead(existingCard)
-                        && isWithinReadVisibilityWindow(existingCard, nowMs)
-                    );
-                }
-            )
-            : [];
-
-        const retainedUnreadIds = shouldRetainUnreadCards
-            ? previousIdsInOrder.filter(articleId => !incomingById.has(articleId) && sessionUnreadArticleIds.has(articleId))
-            : [];
-
-        const retainedUnsavedIds = selectedCategory === "saved"
-            ? previousIdsInOrder.filter(articleId => !incomingById.has(articleId) && sessionUnsavedArticleIds.has(articleId))
-            : [];
-
-        const retainedIdSet = new Set([
-            ...retainedReadIds,
-            ...retainedUnreadIds,
-            ...retainedUnsavedIds,
-        ]);
+        const retainedExistingIds = previousIdsInOrder.filter(articleId => !incomingById.has(articleId));
+        const retainedIdSet = new Set(retainedExistingIds);
 
         // Trust backend ordering for incoming rows and only place retained cards
         // relative to their prior neighbors to avoid visible list jumps.
@@ -1527,7 +1438,6 @@
                 : isCardMarkedRead(card);
             if (isRead) {
                 newUnreadArticleIds.delete(articleId);
-                sessionUnreadArticleIds.delete(articleId);
             } else {
                 sessionReadArticleIds.delete(articleId);
             }
@@ -1537,9 +1447,6 @@
             const isSaved = article
                 ? Boolean(article.is_saved)
                 : isCardSaved(card);
-            if (isSaved) {
-                sessionUnsavedArticleIds.delete(articleId);
-            }
             const savedAt = article ? String(article.saved_at || "").trim() : String(card.dataset.savedAt || "").trim();
             setCardSavedAppearance(card, isSaved, savedAt);
             setCardNewBadge(card, !isRead && newUnreadArticleIds.has(articleId));
@@ -2169,7 +2076,7 @@
 
     /**
      * Probe the currently-visible server-filtered article window and refresh when
-     * server ordering or membership diverges (including timed removals).
+     * server ordering or membership diverges.
      *
      * @returns {Promise<void>}
      */
@@ -2202,48 +2109,9 @@
                 .filter(articleId => articleId !== "");
 
             const probeIdSet = new Set(probeIds);
-            const currentCardMap = new Map();
-            currentCards.forEach(card => {
-                const articleId = getCardArticleId(card);
-                if (articleId !== "") {
-                    currentCardMap.set(articleId, card);
-                }
-            });
 
-            const nowMs = Date.now();
-            const shouldRetainReadCards = selectedCategory !== "saved"
-                && selectedCategory !== "recently-read"
-                && selectedStatus === "unread";
-            const shouldRetainUnreadCards = selectedCategory === "recently-read"
-                || selectedStatus === "read";
-
-            const retainedReadIds = shouldRetainReadCards
-                ? currentCardIds.filter(articleId => {
-                    if (probeIdSet.has(articleId)) {
-                        return false;
-                    }
-                    const existingCard = currentCardMap.get(articleId);
-                    return (
-                        existingCard instanceof HTMLElement
-                        && isCardMarkedRead(existingCard)
-                        && isWithinReadVisibilityWindow(existingCard, nowMs)
-                    );
-                })
-                : [];
-
-            const retainedUnreadIds = shouldRetainUnreadCards
-                ? currentCardIds.filter(articleId => !probeIdSet.has(articleId) && sessionUnreadArticleIds.has(articleId))
-                : [];
-
-            const retainedUnsavedIds = selectedCategory === "saved"
-                ? currentCardIds.filter(articleId => !probeIdSet.has(articleId) && sessionUnsavedArticleIds.has(articleId))
-                : [];
-
-            const retainedIdSet = new Set([
-                ...retainedReadIds,
-                ...retainedUnreadIds,
-                ...retainedUnsavedIds,
-            ]);
+            const retainedExistingIds = currentCardIds.filter(articleId => !probeIdSet.has(articleId));
+            const retainedIdSet = new Set(retainedExistingIds);
 
             // Mirror renderArticles ordering: backend IDs first, then retained IDs
             // inserted relative to their next known neighbor.
@@ -2344,12 +2212,6 @@
                     .filter(([articleId]) => articleId !== "")
             );
 
-            const cardsToRemove = [];
-            const nowMs = Date.now();
-            const shouldApplyReadVisibilityExpiry = selectedCategory !== "saved"
-                && selectedCategory !== "recently-read"
-                && selectedStatus === "unread";
-
             cards.forEach(card => {
                 const articleId = getCardArticleId(card);
                 if (articleId === "") {
@@ -2378,12 +2240,8 @@
                 const isSaved = Boolean(status.isSaved);
                 if (isRead) {
                     sessionReadArticleIds.add(articleId);
-                    sessionUnreadArticleIds.delete(articleId);
                 } else if (!isRead) {
                     sessionReadArticleIds.delete(articleId);
-                }
-                if (isSaved) {
-                    sessionUnsavedArticleIds.delete(articleId);
                 }
 
                 const statusReadAt = String(status.readAt || "").trim();
@@ -2411,36 +2269,7 @@
                     setCardSavedAppearance(card, isSaved, effectiveSavedAt);
                 }
                 setCardNewBadge(card, !isRead && newUnreadArticleIds.has(articleId));
-
-                if (shouldApplyReadVisibilityExpiry && isRead && !isWithinReadVisibilityWindow(card, nowMs)) {
-                    cardsToRemove.push(card);
-                }
             });
-
-            if (cardsToRemove.length > 0) {
-                const selectedArticleId = getSelectedArticleId();
-                cardsToRemove.forEach(card => {
-                    if (card instanceof HTMLElement) {
-                        card.remove();
-                    }
-                });
-
-                const remainingCards = getCards();
-                if (remainingCards.length === 0) {
-                    renderInlineEmptyHint();
-                    clearCardSelection();
-                } else if (selectedArticleId !== "") {
-                    const retainedIndex = remainingCards.findIndex(card => getCardArticleId(card) === selectedArticleId);
-                    if (retainedIndex >= 0) {
-                        setSelectedIndex(retainedIndex, { scrollIntoView: false });
-                    } else {
-                        const fallbackIndex = Math.max(0, Math.min(selectedIndex, remainingCards.length - 1));
-                        setSelectedIndex(fallbackIndex, { scrollIntoView: false });
-                    }
-                }
-
-                schedulePagePrefetchCheck();
-            }
         } catch (_error) {
             // Keep existing card states when status sync fails.
         }

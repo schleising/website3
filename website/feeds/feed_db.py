@@ -1515,8 +1515,9 @@ async def list_cards_for_feed_ids(
             return [], False
         base_query["_id"] = {"$in": list(recent_read_state_ids)}
     elif status_filter == "unread" and len(read_state_ids) > 0:
-        # Fresh unread/category page builds exclude read items immediately.
-        # In-session visibility grace is handled client-side via read_at.
+        # Fresh unread/category page loads exclude read items immediately.
+        # The client intentionally keeps already-rendered cards visible until
+        # the user performs a full page refresh.
         base_query["_id"] = {"$nin": list(read_state_ids)}
 
     # Match frontend ordering: publication date ascending, with undated articles
@@ -2305,8 +2306,6 @@ async def get_feed_reader_context(user_id: str, category_filter: str, status_fil
         "article_has_more": article_payload.has_more,
         "article_next_offset": article_payload.next_offset,
         "article_page_size": article_payload.limit,
-        "read_visibility_window_seconds": int(READ_VISIBILITY_WINDOW.total_seconds()),
-        "recently_read_window_seconds": int(RECENTLY_READ_WINDOW.total_seconds()),
     }
 
 
