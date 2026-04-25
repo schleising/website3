@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 from datetime import UTC, datetime, timedelta
+import re
 from typing import Any, Literal, cast
 import xml.etree.ElementTree as ET
 from urllib.parse import urljoin, urlparse
@@ -167,14 +168,96 @@ async def validate_feed_url(feed_url: str) -> tuple[str, str]:
     except (ET.ParseError, DefusedXmlException) as exc:
         raise ValueError("Feed URL did not return valid XML.") from exc
 
-    title = extract_feed_title(root)
+    title = extract_feed_title(root, normalized_url)
     if title == "":
         title = normalized_url
 
     return normalized_url, title
 
 
-def extract_feed_title(root: ET.Element) -> str:
+def _is_bbc_feed_source_url(source_url: str) -> bool:
+    """Return True when source URL points to BBC's feeds host."""
+
+    hostname = (urlparse(str(source_url).strip()).hostname or "").strip().lower()
+    return hostname == "feeds.bbci.co.uk"
+
+
+def _humanize_bbc_feed_slug(value: str) -> str:
+    """Convert BBC feed URL slugs into readable title segments."""
+
+    normalized = str(value or "").strip().lower()
+    if normalized == "":
+        return ""
+
+    normalized = re.sub(r"\.(xml|rss)$", "", normalized)
+    normalized = normalized.replace("-", " ").replace("_", " ")
+    normalized = re.sub(r"(?<=[a-z])(?=\d)", " ", normalized)
+    normalized = re.sub(r"\s+", " ", normalized).strip()
+
+    if normalized == "":
+        return ""
+
+    return normalized.title()
+
+
+def _derive_bbc_display_title_from_url(source_url: str) -> str:
+    """Derive a section-specific display title from a BBC feed URL path."""
+
+    parsed = urlparse(str(source_url).strip())
+    path_segments = [segment for segment in parsed.path.split("/") if segment != ""]
+    if len(path_segments) == 0:
+        return ""
+
+    if path_segments[-1].lower() in {"rss", "rss.xml", "index.xml"}:
+        path_segments = path_segments[:-1]
+
+    if len(path_segments) == 0:
+        return ""
+
+    channel_name = _humanize_bbc_feed_slug(path_segments[0])
+    if channel_name == "":
+        return ""
+
+    channel_title = f"BBC {channel_name}"
+    if len(path_segments) == 1:
+        return channel_title
+
+    section_name = _humanize_bbc_feed_slug(path_segments[1])
+    if section_name == "":
+        return channel_title
+
+    return f"{channel_title} - {section_name}"
+
+
+def _is_generic_bbc_title(title: str) -> bool:
+    """Return True when a stored BBC title is generic and non-section specific."""
+
+    normalized = re.sub(r"\s+", " ", str(title or "").strip().lower())
+    return normalized in {"bbc", "bbc sport", "bbc news"}
+
+
+def resolve_source_display_title(source_doc: dict[str, Any]) -> str:
+    """Return source display title with BBC section fallback for generic stored titles."""
+
+    source_url = str(source_doc.get("normalized_url", "")).strip()
+    stored_title = str(source_doc.get("title", source_url or "Feed")).strip()
+
+    if (
+        source_url != ""
+        and _is_bbc_feed_source_url(source_url)
+        and _is_generic_bbc_title(stored_title)
+    ):
+        derived_title = _derive_bbc_display_title_from_url(source_url)
+        if derived_title != "":
+            return derived_title
+
+    if stored_title != "":
+        return stored_title
+
+    return source_url or "Feed"
+
+
+def extract_feed_title(root: ET.Element, source_url: str = "") -> str:
     """Extract feed title from RSS or Atom root element."""
 
     tag = root.tag.lower()
@@ -182,8 +265,17 @@ def extract_feed_title(root: ET.Element) -> str:
     if tag.endswith("rss"):
         channel = root.find("channel")
         if channel is not None:
-            title = channel.findtext("title", default="")
-            return title.strip()
+            title = str(channel.findtext("title", default="")).strip()
+            description = str(channel.findtext("description", default="")).strip()
+
+            if _is_bbc_feed_source_url(source_url) and description != "":
+                return description
+
+            if title != "":
+                return title
+
+            if description != "":
+                return description
 
     if tag.endswith("feed"):
         for child in root:
@@ -897,7 +989,7 @@ async def list_user_subscription_rows(user_id: str) -> list[dict[str, Any]]:
             {
                 "subscription_id": str(sub["_id"]),
                 "feed_id": str(sub["feed_id"]),
-                "source_title": str(source.get("title", source.get("normalized_url", "Feed"))),
+                "source_title": resolve_source_display_title(source),
                 "source_url": str(source.get("normalized_url", "")),
                 "source_image_url": str(source.get("image_url", "")).strip(),
                 "category_id": str(category.id),
@@ -2381,9 +2473,7 @@ async def list_feed_admin_rows() -> list[dict[str, Any]]:
         if source is None:
             continue
 
-        feed_name = str(
-            source.get("title", source.get("normalized_url", "Feed"))
-        ).strip() or "Feed"
+        feed_name = resolve_source_display_title(source)
         fetch_status = str(source.get("fetch_status", "new")).strip() or "new"
 
         rows.append(
