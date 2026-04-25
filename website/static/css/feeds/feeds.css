@@ -1210,29 +1210,23 @@ body.feed-category-color-popup-open {
 }
 
 .feed-admin-table {
-    display: flex;
-    flex-direction: column;
+    --feed-admin-columns: minmax(0, 1.24fr) minmax(2.4rem, 0.36fr) max-content minmax(4.2rem, 0.5fr) minmax(4.2rem, 0.5fr) minmax(2.6rem, 0.3fr) minmax(4.2rem, 0.44fr) minmax(0, 0.88fr);
+    display: grid;
+    grid-template-columns: var(--feed-admin-columns);
+    column-gap: 0.45rem;
     width: 100%;
-    gap: 0.2rem;
 }
 
 .feed-admin-table-header {
-    display: grid;
-    grid-template-columns: minmax(0, 1.35fr) minmax(2.6rem, 0.42fr) minmax(4.5rem, 0.56fr) minmax(4.5rem, 0.56fr) minmax(2.8rem, 0.34fr) minmax(4.5rem, 0.52fr) minmax(0, 0.95fr);
-    column-gap: 0.45rem;
-    align-items: stretch;
+    display: contents;
 }
 
 .feed-admin-table-body {
-    display: flex;
-    flex-direction: column;
+    display: contents;
 }
 
 .feed-admin-table-row {
-    display: grid;
-    grid-template-columns: minmax(0, 1.35fr) minmax(2.6rem, 0.42fr) minmax(4.5rem, 0.56fr) minmax(4.5rem, 0.56fr) minmax(2.8rem, 0.34fr) minmax(4.5rem, 0.52fr) minmax(0, 0.95fr);
-    column-gap: 0.45rem;
-    align-items: stretch;
+    display: contents;
 }
 
 .feed-admin-cell {
@@ -1286,6 +1280,18 @@ body.feed-category-color-popup-open {
 
 .feed-admin-time {
     font-variant-numeric: tabular-nums;
+}
+
+.feed-admin-cell[data-label="Latest"] {
+    overflow: hidden;
+}
+
+.feed-admin-cell[data-label="Latest"] .feed-admin-time {
+    display: inline-block;
+    max-width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .feed-admin-next-seconds {
@@ -1366,11 +1372,23 @@ body.feed-category-color-popup-open {
         grid-template-columns: fit-content(14rem) max-content max-content;
     }
 
+    .feed-admin-table {
+        display: flex;
+        flex-direction: column;
+        gap: 0.2rem;
+    }
+
     .feed-admin-table-header {
         display: none;
     }
 
+    .feed-admin-table-body {
+        display: flex;
+        flex-direction: column;
+    }
+
     .feed-admin-table-row {
+        display: grid;
         grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
         gap: 0.3rem 0.6rem;
         margin-top: 0.35rem;

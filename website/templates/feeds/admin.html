@@ -17,6 +17,7 @@
         <div class="feed-admin-table-row feed-admin-table-header" role="row">
           <div class="feed-admin-cell" role="columnheader">Feed</div>
           <div class="feed-admin-cell" role="columnheader">Cnt</div>
+          <div class="feed-admin-cell" role="columnheader">Latest</div>
           <div class="feed-admin-cell" role="columnheader">Last</div>
           <div class="feed-admin-cell" role="columnheader">Next</div>
           <div class="feed-admin-cell" role="columnheader">In</div>
@@ -35,6 +36,9 @@
             {% endif %}
           </div>
           <div class="feed-admin-cell" role="cell" data-label="Cnt">{{ row.article_count }}</div>
+          <div class="feed-admin-cell" role="cell" data-label="Latest">
+            <time class="feed-admin-time" data-feed-time-format="date-time" data-feed-time-value="{{ row.latest_article_at_iso }}"{% if row.latest_article_at_iso %} datetime="{{ row.latest_article_at_iso }}"{% endif %}>{{ row.latest_article_at_iso if row.latest_article_at_iso else '-' }}</time>
+          </div>
           <div class="feed-admin-cell" role="cell" data-label="Last">
             <time class="feed-admin-time" data-feed-time-value="{{ row.last_refresh_at_iso }}"{% if row.last_refresh_at_iso %} datetime="{{ row.last_refresh_at_iso }}"{% endif %}>{{ row.last_refresh_at_iso if row.last_refresh_at_iso else '-' }}</time>
           </div>

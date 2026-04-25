@@ -2338,6 +2338,7 @@ async def list_feed_admin_rows() -> list[dict[str, Any]]:
     sources_map = await load_sources_map(set(feed_ids))
 
     article_counts: dict[ObjectId, int] = {}
+    latest_article_times: dict[ObjectId, datetime] = {}
     if feed_articles_collection is not None:
         count_cursor = feed_articles_collection.aggregate(
             [
@@ -2354,6 +2355,11 @@ async def list_feed_admin_rows() -> list[dict[str, Any]]:
                     "$group": {
                         "_id": "$feed_id",
                         "article_count": {"$sum": 1},
+                        "latest_article_at": {
+                            "$max": {
+                                "$ifNull": ["$published_at", "$fetched_at"]
+                            }
+                        },
                     }
                 },
             ]
@@ -2364,6 +2370,10 @@ async def list_feed_admin_rows() -> list[dict[str, Any]]:
             if not isinstance(feed_id, ObjectId):
                 continue
             article_counts[feed_id] = int(count_doc.get("article_count", 0))
+
+            latest_article_at = _as_utc_datetime(count_doc.get("latest_article_at"))
+            if latest_article_at is not None:
+                latest_article_times[feed_id] = latest_article_at
 
     rows: list[dict[str, Any]] = []
     for feed_id in feed_ids:
@@ -2382,6 +2392,9 @@ async def list_feed_admin_rows() -> list[dict[str, Any]]:
                 "feed_name": feed_name,
                 "feed_url": str(source.get("normalized_url", "")).strip(),
                 "article_count": int(article_counts.get(feed_id, 0)),
+                "latest_article_at_iso": format_datetime_utc_iso(
+                    latest_article_times.get(feed_id)
+                ),
                 "last_refresh_at_iso": format_datetime_utc_iso(
                     source.get("last_fetched_at")
                 ),

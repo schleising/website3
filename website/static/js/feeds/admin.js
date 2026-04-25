@@ -23,7 +23,13 @@
     const adminTableWrap = document.getElementById("feed-admin-table-wrap");
 
     /** @type {Intl.DateTimeFormat} */
-    const localeDateTimeFormatter = new Intl.DateTimeFormat(undefined, {
+    const localeTimeFormatter = new Intl.DateTimeFormat(undefined, {
+        timeStyle: "short",
+    });
+
+    /** @type {Intl.DateTimeFormat} */
+    const localeFullDateTimeFormatter = new Intl.DateTimeFormat(undefined, {
+        dateStyle: "medium",
         timeStyle: "short",
     });
 
@@ -34,9 +40,10 @@
      * Format an ISO datetime string to browser locale text.
      *
      * @param {string} value
+     * @param {"time" | "date-time"} formatStyle
      * @returns {string}
      */
-    function formatLocaleDateTime(value) {
+    function formatLocaleDateTime(value, formatStyle = "time") {
         const normalized = typeof value === "string" ? value.trim() : "";
         if (normalized === "") {
             return "-";
@@ -47,7 +54,11 @@
             return "-";
         }
 
-        return localeDateTimeFormatter.format(dateValue);
+        if (formatStyle === "date-time") {
+            return localeFullDateTimeFormatter.format(dateValue);
+        }
+
+        return localeTimeFormatter.format(dateValue);
     }
 
     /**
@@ -168,9 +179,10 @@
      *
      * @param {string} isoValue
      * @param {string} label
+     * @param {"time" | "date-time"} [formatStyle]
      * @returns {HTMLDivElement}
      */
-    function createTimeCell(isoValue, label) {
+    function createTimeCell(isoValue, label, formatStyle = "time") {
         const normalizedIso = typeof isoValue === "string" ? isoValue.trim() : "";
         const cell = document.createElement("div");
         cell.className = "feed-admin-cell";
@@ -182,10 +194,11 @@
         const timeNode = document.createElement("time");
         timeNode.className = "feed-admin-time";
         timeNode.dataset.feedTimeValue = normalizedIso;
+        timeNode.dataset.feedTimeFormat = formatStyle;
         if (normalizedIso !== "") {
             timeNode.dateTime = normalizedIso;
         }
-        timeNode.textContent = formatLocaleDateTime(normalizedIso);
+        timeNode.textContent = formatLocaleDateTime(normalizedIso, formatStyle);
 
         cell.appendChild(timeNode);
         return cell;
@@ -268,7 +281,7 @@
     /**
      * Render live admin table rows.
      *
-    * @param {Array<{ feed_id?: string, feed_name?: string, feed_url?: string, article_count?: number, last_refresh_at_iso?: string, next_refresh_at_iso?: string, last_refresh_status?: string, last_refresh_error?: string }>} rows
+    * @param {Array<{ feed_id?: string, feed_name?: string, feed_url?: string, article_count?: number, latest_article_at_iso?: string, last_refresh_at_iso?: string, next_refresh_at_iso?: string, last_refresh_status?: string, last_refresh_error?: string }>} rows
      */
     function renderAdminRows(rows) {
         if (!(adminTableBody instanceof HTMLElement)) {
@@ -293,6 +306,7 @@
             const feedName = String(row.feed_name || "Feed").trim() || "Feed";
             const feedUrl = String(row.feed_url || "").trim();
             const articleCount = Number(row.article_count || 0);
+            const latestArticleIso = String(row.latest_article_at_iso || "").trim();
             const lastRefreshIso = String(row.last_refresh_at_iso || "").trim();
             const nextRefreshIso = String(row.next_refresh_at_iso || "").trim();
             const lastRefreshStatus = String(row.last_refresh_status || "new").trim() || "new";
@@ -317,6 +331,7 @@
 
             rowNode.appendChild(nameCell);
             rowNode.appendChild(countCell);
+            rowNode.appendChild(createTimeCell(latestArticleIso, "Latest", "date-time"));
             rowNode.appendChild(createTimeCell(lastRefreshIso, "Last"));
             rowNode.appendChild(createTimeCell(nextRefreshIso, "Next"));
             rowNode.appendChild(createCountdownCell(nextRefreshIso, "In"));
@@ -344,7 +359,11 @@
             }
 
             const isoValue = String(timeNode.dataset.feedTimeValue || "").trim();
-            timeNode.textContent = formatLocaleDateTime(isoValue);
+            const formatStyle =
+                String(timeNode.dataset.feedTimeFormat || "time") === "date-time"
+                    ? "date-time"
+                    : "time";
+            timeNode.textContent = formatLocaleDateTime(isoValue, formatStyle);
             if (isoValue !== "") {
                 timeNode.dateTime = isoValue;
             } else {
