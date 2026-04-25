@@ -882,8 +882,10 @@ async def get_simplified_matches(request: Request) -> SimplifiedFootballData:
                     tz=ZoneInfo("Europe/London")
                 ).isoformat(),
                 home_team=str(match.home_team.short_name),
+                home_team_crest=str(match.home_team.local_crest),
                 home_team_score=match.score.full_time.home,
                 away_team=str(match.away_team.short_name),
+                away_team_crest=str(match.away_team.local_crest),
                 away_team_score=match.score.full_time.away,
             )
         )

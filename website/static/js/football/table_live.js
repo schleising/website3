@@ -13,6 +13,7 @@ const FOOTBALL_MATCH_POPUP_EDGE_MARGIN_PX = 10;
 const FOOTBALL_MATCH_POPUP_GAP_PX = 3;
 const FOOTBALL_MATCH_POPUP_HORIZONTAL_GAP_PX = 6;
 const FOOTBALL_MATCH_POPUP_FALLBACK_HEIGHT_PX = 190;
+const FOOTBALL_UNKNOWN_TEAM_CREST_PATH = "/images/football/crests/unknown_team.svg";
 const RANGE_CLASSES = [
     "table-range-focus",
     "table-range-high",
@@ -906,6 +907,15 @@ function formatLiveMatchStart(startTimeIso) {
     });
 }
 
+function normalizeTeamCrestPath(value) {
+    const crestPath = String(value || "").trim();
+    if (crestPath === "") {
+        return FOOTBALL_UNKNOWN_TEAM_CREST_PATH;
+    }
+
+    return crestPath;
+}
+
 function positionLiveMatchPopup(anchorElement) {
     if (!liveMatchPopupElement || !anchorElement) {
         return;
@@ -995,6 +1005,10 @@ function renderLiveMatchPopupCard(matchData) {
     const awayScore = matchData.away_team_score ?? "-";
     const statusText = formatLiveMatchStatus(matchData.status);
     const kickoffText = formatLiveMatchStart(matchData.start_time_iso);
+    const homeTeamName = String(matchData.home_team || "Home");
+    const awayTeamName = String(matchData.away_team || "Away");
+    const homeTeamCrest = normalizeTeamCrestPath(matchData.home_team_crest);
+    const awayTeamCrest = normalizeTeamCrestPath(matchData.away_team_crest);
 
     liveMatchPopupCardElement.innerHTML = `
         <div class="date-and-time">
@@ -1003,13 +1017,15 @@ function renderLiveMatchPopupCard(matchData) {
         </div>
         <div class="team">
             <div class="team-and-badge">
-                <span class="team-name">${escapeHtml(matchData.home_team)}</span>
+                <img class="team-badge" src="${escapeHtml(homeTeamCrest)}" alt="${escapeHtml(homeTeamName)} crest" loading="lazy"></img>
+                <span class="team-name">${escapeHtml(homeTeamName)}</span>
             </div>
             <div class="home-team-score">${escapeHtml(homeScore)}</div>
         </div>
         <div class="team">
             <div class="team-and-badge">
-                <span class="team-name">${escapeHtml(matchData.away_team)}</span>
+                <img class="team-badge" src="${escapeHtml(awayTeamCrest)}" alt="${escapeHtml(awayTeamName)} crest" loading="lazy"></img>
+                <span class="team-name">${escapeHtml(awayTeamName)}</span>
             </div>
             <div class="away-team-score">${escapeHtml(awayScore)}</div>
         </div>

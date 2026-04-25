@@ -437,8 +437,10 @@ class SimplifiedMatch(BaseModel):
     status: str
     start_time_iso: str
     home_team: str
+    home_team_crest: str | None = None
     home_team_score: int | None = None
     away_team: str
+    away_team_crest: str | None = None
     away_team_score: int | None = None
 
 
