@@ -60,6 +60,33 @@ function handleFeedsCategoryNavigation(event, destinationUrl) {
     return true;
 }
 
+function getNormalisedFootballBasePath() {
+    const htmlElement = document.documentElement;
+    const basePathValue = htmlElement?.dataset?.footballBasePath;
+    const basePathRaw = String(basePathValue ?? "/football").trim();
+    if (basePathRaw === "" || basePathRaw === "/") {
+        return "/";
+    }
+
+    return normalisePath(basePathRaw);
+}
+
+function isFootballLatestPath(pathValue) {
+    const footballBasePath = getNormalisedFootballBasePath();
+    const normalisedPath = normalisePath(pathValue);
+    return normalisedPath === footballBasePath;
+}
+
+function handleFootballShellNavigation(event, destinationUrl) {
+    if (isFootballLatestPath(window.location.pathname)) {
+        return false;
+    }
+
+    event.preventDefault();
+    window.location.replace(destinationUrl.toString());
+    return true;
+}
+
 function setupHistoryModeNavigation() {
     document.addEventListener("click", function(event) {
         if (event.defaultPrevented || event.button !== 0) {
@@ -122,6 +149,11 @@ function setupHistoryModeNavigation() {
             return;
         }
 
+        if (historyMode === "football-shell") {
+            handleFootballShellNavigation(event, destinationUrl);
+            return;
+        }
+
         if (historyMode !== "replace") {
             return;
         }
@@ -140,12 +172,17 @@ function setupHistoryModeNavigation() {
             return;
         }
 
-        if (form.dataset.historyMode !== "replace") {
+        const historyMode = String(form.dataset.historyMode || "").trim();
+        if (historyMode !== "replace" && historyMode !== "football-shell") {
             return;
         }
 
         const method = String(form.method || "get").trim().toLowerCase();
         if (method !== "get") {
+            return;
+        }
+
+        if (historyMode === "football-shell" && isFootballLatestPath(window.location.pathname)) {
             return;
         }
 
