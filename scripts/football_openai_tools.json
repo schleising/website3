@@ -1,0 +1,94 @@
+[
+  {
+    "type": "function",
+    "name": "query_football_history",
+    "description": "Query historical football data from the Football History API using one action-based schema.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "request": {
+          "type": "object",
+          "properties": {
+            "action": {
+              "type": "string",
+              "enum": [
+                "get_aggregate_stats",
+                "get_head_to_head",
+                "get_league_table",
+                "get_match_results"
+              ]
+            },
+            "filters": {
+              "type": "object",
+              "properties": {
+                "teams": {
+                  "type": "array",
+                  "items": { "type": "string" }
+                },
+                "competitions": {
+                  "type": "array",
+                  "items": { "type": "string" }
+                },
+                "season_start": {
+                  "type": "string",
+                  "pattern": "^\\d{4}/\\d{2}$"
+                },
+                "season_end": {
+                  "type": "string",
+                  "pattern": "^\\d{4}/\\d{2}$"
+                },
+                "venue": {
+                  "type": "string",
+                  "enum": ["home", "away", "both"],
+                  "default": "both"
+                }
+              }
+            },
+            "metrics": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "goals_for",
+                  "goals_against",
+                  "goal_difference",
+                  "wins",
+                  "draws",
+                  "losses",
+                  "points",
+                  "matches_played"
+                ]
+              }
+            },
+            "group_by": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": ["team", "season", "competition", "manager"]
+              }
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "sort_by": {
+              "type": "object",
+              "properties": {
+                "field": { "type": "string" },
+                "order": {
+                  "type": "string",
+                  "enum": ["asc", "desc"]
+                }
+              },
+              "required": ["field", "order"]
+            }
+          },
+          "required": ["action", "filters"],
+          "additionalProperties": false
+        }
+      },
+      "required": ["request"],
+      "additionalProperties": false
+    }
+  }
+]

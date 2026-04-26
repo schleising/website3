@@ -61,3 +61,67 @@ Replacing `domain.com` with your domain name, this will request a certificate fr
 To detach from the container use the `CTRL-p CTRL-q` sequence
 
 > :warning: There is a [limit](https://letsencrypt.org/docs/duplicate-certificate-limit/) of 5 duplicate orders per week from Let's Encrypt, so make sure the nginx image is fairly stable by the time you do this
+
+## Football History API (Chatbot Tooling)
+
+The football app now includes a schema-driven endpoint for chatbot tool calls.
+
+- Endpoint: `POST /football/api/history/query/`
+- Auth: `Authorization: Bearer <api_key>`
+- API key format: `fha_<8-char-id>_<secret>`
+- Request body shape: `{ "request": { ... } }`
+- Response body shape: `{ "response": { "status": ..., "data": [...], "metadata": ..., "error_message": ... } }`
+
+The request schema supports:
+
+- `action`: `get_aggregate_stats`, `get_head_to_head`, `get_league_table`, `get_match_results`
+- `filters`: `teams`, `competitions`, `season_start`, `season_end`, `venue`
+- `metrics`, `group_by`, `limit`, `sort_by`
+
+Season ranges use the `YYYY/YY` format, for example:
+
+- `"season_start": "1992/93"`
+- `"season_end": "2023/24"`
+
+### Scripts
+
+- `scripts/generate_football_api_key.py`
+	- Generates a new API key and stores only a bcrypt hash in MongoDB (`football_chatbot_api_keys` collection).
+- `scripts/football_chatbot_client.py`
+	- Minimal Python client helper for remote calls.
+- `scripts/football_openai_tools.json`
+	- OpenAI tool definition for function calling.
+
+Example key generation:
+
+```bash
+python scripts/generate_football_api_key.py --name production-chatbot
+```
+
+Example API query using the client:
+
+```python
+from scripts.football_chatbot_client import FootballHistoryApiClient
+
+client = FootballHistoryApiClient(
+		base_url="https://www.schleising.net",
+		api_key="fha_xxxxxxxx_replace_me",
+)
+
+response = client.query(
+		{
+				"action": "get_aggregate_stats",
+				"filters": {
+						"teams": ["Arsenal"],
+						"competitions": ["Premier League"],
+						"season_start": "2018/19",
+						"season_end": "2023/24",
+						"venue": "both",
+				},
+				"metrics": ["goals_for", "goals_against", "points", "matches_played"],
+				"group_by": ["team", "season"],
+				"sort_by": {"field": "points", "order": "desc"},
+				"limit": 10,
+		}
+)
+```

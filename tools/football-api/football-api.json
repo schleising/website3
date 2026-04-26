@@ -1,0 +1,113 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Football History API",
+  "description": "A single-endpoint API designed to handle flexible queries about historical football data parsed by a chatbot.",
+  "type": "object",
+  "properties": {
+    "request": {
+      "type": "object",
+      "description": "The payload sent from the chatbot to your server.",
+      "properties": {
+        "action": {
+          "type": "string",
+          "enum": ["get_aggregate_stats", "get_head_to_head", "get_league_table", "get_match_results"],
+          "description": "The primary intent of the user's question."
+        },
+        "filters": {
+          "type": "object",
+          "description": "Constraints extracted from the user's question.",
+          "properties": {
+            "teams": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "List of specific teams mentioned (e.g., ['Arsenal', 'Aston Villa'])."
+            },
+            "competitions": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Specific competitions or eras (e.g., ['Premier League', 'Division 1'])."
+            },
+            "season_start": {
+              "type": "string",
+              "pattern": "^\\d{4}/\\d{2}$",
+              "description": "Start of the timeframe (e.g., '1992/93')."
+            },
+            "season_end": {
+              "type": "string",
+              "pattern": "^\\d{4}/\\d{2}$",
+              "description": "End of the timeframe (e.g., '2023/24')."
+            },
+            "venue": {
+              "type": "string",
+              "enum": ["home", "away", "both"],
+              "default": "both"
+            }
+          }
+        },
+        "metrics": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["goals_for", "goals_against", "goal_difference", "wins", "draws", "losses", "points", "matches_played"]
+          },
+          "description": "The specific numerical values the user is asking for. If omitted, return a sensible default set based on the action."
+        },
+        "group_by": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["team", "season", "competition", "manager"]
+          },
+          "description": "How the data should be aggregated (e.g., by 'team' to get a list of all teams)."
+        },
+        "limit": {
+          "type": "integer",
+          "description": "If the user asks for 'Top 5', this limit is applied."
+        },
+        "sort_by": {
+          "type": "object",
+          "properties": {
+            "field": { "type": "string" },
+            "order": { "type": "string", "enum": ["asc", "desc"] }
+          }
+        }
+      },
+      "required": ["action", "filters"]
+    },
+    "response": {
+      "type": "object",
+      "description": "The payload sent back from your server to the chatbot.",
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["success", "error", "no_data"]
+        },
+        "data": {
+          "type": "array",
+          "description": "The array of results matching the query. Format depends on the 'action' and 'group_by' fields.",
+          "items": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "metadata": {
+          "type": "object",
+          "description": "Additional context that might help the chatbot formulate its natural language response.",
+          "properties": {
+            "total_records": { "type": "integer" },
+            "query_execution_time_ms": { "type": "integer" },
+            "data_disclaimer": { 
+              "type": "string",
+              "description": "E.g., 'Points calculated at 3-for-a-win historically applied to eras where it was 2-for-a-win'."
+            }
+          }
+        },
+        "error_message": {
+          "type": "string",
+          "description": "Provided if status is 'error'."
+        }
+      },
+      "required": ["status", "data"]
+    }
+  }
+}

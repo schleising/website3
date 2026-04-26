@@ -17,3 +17,6 @@ football_push = mongodb.get_collection('football_push_subscriptions')
 
 # Set the collection for team primary colours
 team_primary_colours = mongodb.get_collection('pl_team_primary_colours')
+
+# Set the collection for football history chatbot API keys
+football_api_keys = mongodb.get_collection('football_chatbot_api_keys')

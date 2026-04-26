@@ -41,6 +41,7 @@ from .football_db import (
 )
 
 from .football_utils import update_match_timezone, create_bet_standings
+from .chatbot_history_api import football_history_api_router
 
 from .models import (
     FootballBetList,
@@ -61,6 +62,7 @@ from .models import (
 TEMPLATES = Jinja2Templates("/app/templates")
 
 football_router = APIRouter(prefix="/football")
+football_router.include_router(football_history_api_router, prefix="/api/history")
 
 WEBSITE_ROOT = FilePath("/app")
 FOOTBALL_MANIFEST_PATH = WEBSITE_ROOT / "static" / "manifests" / "football" / "football.webmanifest"
