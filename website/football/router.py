@@ -1,5 +1,6 @@
+import asyncio
 from calendar import monthrange, month_name
-from datetime import date, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 import json
 import logging
 from pathlib import Path as FilePath
@@ -41,7 +42,25 @@ from .football_db import (
 )
 
 from .football_utils import update_match_timezone, create_bet_standings
-from .chatbot_history_api import football_history_api_router
+from .chatbot_history_api import (
+    football_history_api_router,
+    query_football_history,
+    _require_football_history_api_key,
+)
+from .chatbot_history_models import (
+    FootballHistoryAction,
+    FootballHistoryFilters,
+    FootballHistoryGroupBy,
+    FootballHistoryMetric,
+    FootballHistoryRequestEnvelope,
+    FootballHistoryRequestModel,
+    FootballHistoryResponseEnvelope,
+    FootballHistoryResponseMetadata,
+    FootballHistorySortBy,
+    FootballHistorySortOrder,
+    FootballHistoryStatus,
+    FootballHistoryVenue,
+)
 
 from .models import (
     FootballBetList,
@@ -68,11 +87,17 @@ WEBSITE_ROOT = FilePath("/app")
 FOOTBALL_MANIFEST_PATH = WEBSITE_ROOT / "static" / "manifests" / "football" / "football.webmanifest"
 FOOTBALL_SERVICE_WORKER_PATH = WEBSITE_ROOT / "static" / "football" / "sw.js"
 FOOTBALL_WEB_APP_HOST = "football.schleising.net"
+FOOTBALL_STATS_DEFAULT_SEASON_SPAN = 8
+FOOTBALL_HISTORY_API_KEY_PATHS = (
+    WEBSITE_ROOT / "secrets" / "football-api-key.txt",
+    FilePath(__file__).resolve().parent.parent / "secrets" / "football-api-key.txt",
+)
 
 SEASON_MONTH_ORDER = [8, 9, 10, 11, 12, 1, 2, 3, 4, 5]
 LIVE_DAYS_BEFORE_TODAY = 7
 LIVE_DAYS_AFTER_TODAY = 6
 LONDON_TZ = ZoneInfo("Europe/London")
+_football_history_api_key_cache: str | None = None
 
 
 def _season_year_bounds(season_key: str) -> tuple[int, int]:
@@ -326,6 +351,137 @@ def _season_matches_window(season_key: str) -> tuple[datetime, datetime]:
     )
 
 
+def _season_sort_year(season_key: str) -> int:
+    season_start, _ = season_key.split("_", maxsplit=1)
+    return int(season_start)
+
+
+def _season_label_for_history_api(season_key: str) -> str:
+    season_start, season_end = season_key.split("_", maxsplit=1)
+    return f"{season_start}/{season_end[-2:]}"
+
+
+def _normalise_stats_season_range(
+    available_season_keys: list[str],
+    requested_start_key: str | None,
+    requested_end_key: str | None,
+    default_end_key: str,
+) -> tuple[str, str]:
+    if len(available_season_keys) == 0:
+        return default_end_key, default_end_key
+
+    sorted_keys = sorted(set(available_season_keys), key=_season_sort_year)
+    if default_end_key in sorted_keys:
+        resolved_end_key = default_end_key
+    else:
+        resolved_end_key = sorted_keys[-1]
+
+    if requested_end_key in sorted_keys:
+        resolved_end_key = requested_end_key
+
+    resolved_end_index = sorted_keys.index(resolved_end_key)
+    default_start_index = max(
+        0,
+        resolved_end_index - (FOOTBALL_STATS_DEFAULT_SEASON_SPAN - 1),
+    )
+
+    resolved_start_key = sorted_keys[default_start_index]
+    if requested_start_key in sorted_keys:
+        resolved_start_key = requested_start_key
+
+    return resolved_start_key, resolved_end_key
+
+
+def _load_football_history_api_key() -> str:
+    global _football_history_api_key_cache
+
+    if _football_history_api_key_cache is not None:
+        return _football_history_api_key_cache
+
+    for key_path in FOOTBALL_HISTORY_API_KEY_PATHS:
+        if not key_path.is_file():
+            continue
+
+        api_key = key_path.read_text(encoding="utf-8").strip()
+        if api_key == "":
+            continue
+
+        _football_history_api_key_cache = api_key
+        return api_key
+
+    raise RuntimeError("Football history API key is not configured on the server.")
+
+
+def _extract_history_data(
+    envelope: FootballHistoryResponseEnvelope,
+    dataset_label: str,
+    errors: list[str],
+) -> tuple[list[dict[str, object]], FootballHistoryResponseMetadata | None]:
+    response_model = envelope.response
+    response_metadata = response_model.metadata
+
+    if response_model.status == FootballHistoryStatus.error:
+        detail = response_model.error_message or "History API query failed."
+        errors.append(f"{dataset_label}: {detail}")
+        return [], response_metadata
+
+    return response_model.data, response_metadata
+
+
+def _format_history_match_rows(rows: list[dict[str, object]]) -> list[dict[str, object]]:
+    formatted_rows: list[dict[str, object]] = []
+
+    for row in rows:
+        formatted_row = dict(row)
+        utc_date = formatted_row.get("utc_date")
+        formatted_kickoff = "-"
+
+        if isinstance(utc_date, str) and utc_date.strip() != "":
+            try:
+                parsed_datetime = datetime.fromisoformat(utc_date.replace("Z", "+00:00"))
+                if parsed_datetime.tzinfo is None:
+                    parsed_datetime = parsed_datetime.replace(tzinfo=UTC)
+
+                formatted_kickoff = parsed_datetime.astimezone(LONDON_TZ).strftime(
+                    "%a %d %b %Y %H:%M %Z"
+                )
+            except ValueError:
+                formatted_kickoff = utc_date
+
+        home_goals = formatted_row.get("home_goals")
+        away_goals = formatted_row.get("away_goals")
+        if home_goals is None or away_goals is None:
+            scoreline = "-"
+        else:
+            scoreline = f"{home_goals}-{away_goals}"
+
+        formatted_row["kickoff_local"] = formatted_kickoff
+        formatted_row["scoreline"] = scoreline
+        formatted_rows.append(formatted_row)
+
+    return formatted_rows
+
+
+def _parse_optional_query_int(raw_value: str | None) -> tuple[int | None, bool]:
+    if raw_value is None:
+        return None, False
+
+    candidate = raw_value.strip()
+    if candidate == "":
+        return None, False
+
+    try:
+        return int(candidate), False
+    except ValueError:
+        return None, True
+
+
+async def _query_history_api_internal(
+    payload: FootballHistoryRequestEnvelope,
+) -> FootballHistoryResponseEnvelope:
+    return await query_football_history(payload, None)
+
+
 def _build_all_matches_jump_targets(day_groups: list[dict], today_value: datetime) -> tuple[str | None, list[dict[str, str]]]:
     if len(day_groups) == 0:
         return (None, [])
@@ -423,6 +579,7 @@ async def _build_football_season_context(
         "live_scores_url": football_root_path,
         "table_url": f"{table_root_url}?season={selected_season_key}",
         "all_matches_url": f"{football_root_path}matches/all/?season={selected_season_key}",
+        "stats_url": f"{football_root_path}stats/",
         "head_to_head_url": f"{football_root_path}head-to-head/",
         "subscriptions_url": f"{football_root_path}subscriptions/",
         "month_nav_links": _build_month_nav_links(selected_season_key, football_root_path),
@@ -794,6 +951,332 @@ async def get_head_to_head_matches(
             ),
             "summary": summary,
             "validation_message": validation_message,
+            **season_context,
+        },
+    )
+
+
+@football_router.get("/stats", response_class=HTMLResponse)
+@football_router.get("/stats/", response_class=HTMLResponse)
+async def get_stats_page(
+    request: Request,
+    season_start: str | None = Query(default=None),
+    season_end: str | None = Query(default=None),
+    competition: str | None = Query(default=None),
+    venue: str = Query(default=FootballHistoryVenue.both.value),
+    team: str | None = Query(default=None),
+    team_a: str | None = Query(default=None),
+    team_b: str | None = Query(default=None),
+):
+    season_context = await _build_football_season_context(
+        request,
+        season_end,
+        show_selector=False,
+    )
+
+    available_seasons = season_context.get("available_seasons", [])
+    available_season_keys = [
+        str(season_option.get("key", ""))
+        for season_option in available_seasons
+        if str(season_option.get("key", "")) != ""
+    ]
+
+    selected_start_key, selected_end_key = _normalise_stats_season_range(
+        available_season_keys=available_season_keys,
+        requested_start_key=season_start,
+        requested_end_key=season_end,
+        default_end_key=str(season_context["selected_season_key"]),
+    )
+
+    selected_start_history_label = _season_label_for_history_api(selected_start_key)
+    selected_end_history_label = _season_label_for_history_api(selected_end_key)
+
+    selected_team_id, team_parse_error = _parse_optional_query_int(team)
+    selected_team_a_id, team_a_parse_error = _parse_optional_query_int(team_a)
+    selected_team_b_id, team_b_parse_error = _parse_optional_query_int(team_b)
+
+    teams = await retreive_all_teams()
+    teams_by_id = {team_option.id: team_option for team_option in teams}
+
+    selected_team = (
+        teams_by_id.get(selected_team_id) if selected_team_id is not None else None
+    )
+    selected_team_a = (
+        teams_by_id.get(selected_team_a_id) if selected_team_a_id is not None else None
+    )
+    selected_team_b = (
+        teams_by_id.get(selected_team_b_id) if selected_team_b_id is not None else None
+    )
+
+    available_competitions = sorted(
+        {
+            get_competition_name_for_season(season_key)
+            for season_key in available_season_keys
+        }
+    )
+    selected_competition = (
+        competition.strip()
+        if isinstance(competition, str) and competition.strip() in available_competitions
+        else None
+    )
+
+    try:
+        selected_venue = FootballHistoryVenue(venue)
+    except ValueError:
+        selected_venue = FootballHistoryVenue.both
+
+    query_errors: list[str] = []
+    aggregate_rows: list[dict[str, object]] = []
+    table_rows: list[dict[str, object]] = []
+    recent_result_rows: list[dict[str, object]] = []
+    h2h_summary: dict[str, object] | None = None
+    h2h_result_rows: list[dict[str, object]] = []
+    aggregate_query_ms: int | None = None
+    table_query_ms: int | None = None
+    recent_results_query_ms: int | None = None
+    h2h_query_ms: int | None = None
+    aggregate_disclaimer: str | None = None
+
+    if team_parse_error:
+        query_errors.append("Selected team filter is invalid.")
+    elif selected_team_id is not None and selected_team is None:
+        query_errors.append("Selected team filter is invalid.")
+    if team_a_parse_error:
+        query_errors.append("Head to head Team A is invalid.")
+    elif selected_team_a_id is not None and selected_team_a is None:
+        query_errors.append("Head to head Team A is invalid.")
+    if team_b_parse_error:
+        query_errors.append("Head to head Team B is invalid.")
+    elif selected_team_b_id is not None and selected_team_b is None:
+        query_errors.append("Head to head Team B is invalid.")
+    if (
+        selected_team_a is not None
+        and selected_team_b is not None
+        and selected_team_a.id == selected_team_b.id
+    ):
+        query_errors.append("Head to head teams must be different.")
+
+    team_filters = [str(selected_team.short_name)] if selected_team is not None else []
+    competition_filters = [selected_competition] if selected_competition is not None else []
+
+    if len(query_errors) == 0:
+        try:
+            history_api_key = _load_football_history_api_key()
+        except RuntimeError as exc:
+            query_errors.append(str(exc))
+        else:
+            try:
+                await _require_football_history_api_key(
+                    authorization=f"Bearer {history_api_key}"
+                )
+            except HTTPException as exc:
+                query_errors.append(f"History API authentication failed: {exc.detail}")
+
+        if len(query_errors) == 0:
+
+            aggregate_payload = FootballHistoryRequestEnvelope(
+                request=FootballHistoryRequestModel(
+                    action=FootballHistoryAction.get_aggregate_stats,
+                    filters=FootballHistoryFilters(
+                        teams=team_filters,
+                        competitions=competition_filters,
+                        season_start=selected_start_history_label,
+                        season_end=selected_end_history_label,
+                        venue=selected_venue,
+                    ),
+                    metrics=[
+                        FootballHistoryMetric.matches_played,
+                        FootballHistoryMetric.wins,
+                        FootballHistoryMetric.draws,
+                        FootballHistoryMetric.losses,
+                        FootballHistoryMetric.goals_for,
+                        FootballHistoryMetric.goals_against,
+                        FootballHistoryMetric.goal_difference,
+                        FootballHistoryMetric.points,
+                    ],
+                    group_by=[FootballHistoryGroupBy.team],
+                    sort_by=FootballHistorySortBy(
+                        field="points",
+                        order=FootballHistorySortOrder.desc,
+                    ),
+                    limit=20,
+                )
+            )
+
+            table_payload = FootballHistoryRequestEnvelope(
+                request=FootballHistoryRequestModel(
+                    action=FootballHistoryAction.get_league_table,
+                    filters=FootballHistoryFilters(
+                        teams=team_filters,
+                        competitions=competition_filters,
+                        season_start=selected_end_history_label,
+                        season_end=selected_end_history_label,
+                        venue=selected_venue,
+                    ),
+                    sort_by=FootballHistorySortBy(
+                        field="position",
+                        order=FootballHistorySortOrder.asc,
+                    ),
+                    limit=20,
+                )
+            )
+
+            recent_results_payload = FootballHistoryRequestEnvelope(
+                request=FootballHistoryRequestModel(
+                    action=FootballHistoryAction.get_match_results,
+                    filters=FootballHistoryFilters(
+                        teams=team_filters,
+                        competitions=competition_filters,
+                        season_start=selected_start_history_label,
+                        season_end=selected_end_history_label,
+                        venue=selected_venue,
+                    ),
+                    sort_by=FootballHistorySortBy(
+                        field="utc_date",
+                        order=FootballHistorySortOrder.desc,
+                    ),
+                    limit=20,
+                )
+            )
+
+            query_jobs: list[tuple[str, FootballHistoryRequestEnvelope]] = [
+                ("Aggregate stats", aggregate_payload),
+                ("League table", table_payload),
+                ("Recent results", recent_results_payload),
+            ]
+
+            should_query_h2h = (
+                selected_team_a is not None
+                and selected_team_b is not None
+                and selected_team_a.id != selected_team_b.id
+            )
+
+            if should_query_h2h and selected_team_a is not None and selected_team_b is not None:
+                h2h_payload = FootballHistoryRequestEnvelope(
+                    request=FootballHistoryRequestModel(
+                        action=FootballHistoryAction.get_head_to_head,
+                        filters=FootballHistoryFilters(
+                            teams=[
+                                str(selected_team_a.short_name),
+                                str(selected_team_b.short_name),
+                            ],
+                            competitions=competition_filters,
+                            season_start=selected_start_history_label,
+                            season_end=selected_end_history_label,
+                            venue=selected_venue,
+                        ),
+                        sort_by=FootballHistorySortBy(
+                            field="utc_date",
+                            order=FootballHistorySortOrder.desc,
+                        ),
+                        limit=14,
+                    )
+                )
+                query_jobs.append(("Head to head", h2h_payload))
+
+            query_results = await asyncio.gather(
+                *[
+                    _query_history_api_internal(payload)
+                    for _, payload in query_jobs
+                ],
+                return_exceptions=True,
+            )
+
+            envelopes: dict[str, FootballHistoryResponseEnvelope] = {}
+
+            for (dataset_label, _), query_result in zip(query_jobs, query_results):
+                if isinstance(query_result, BaseException):
+                    query_errors.append(f"{dataset_label}: {query_result}")
+                    continue
+
+                if not isinstance(query_result, FootballHistoryResponseEnvelope):
+                    query_errors.append(
+                        f"{dataset_label}: History API returned an unexpected response."
+                    )
+                    continue
+
+                envelopes[dataset_label] = query_result
+
+            aggregate_envelope = envelopes.get("Aggregate stats")
+            if aggregate_envelope is not None:
+                aggregate_rows, aggregate_metadata = _extract_history_data(
+                    aggregate_envelope,
+                    "Aggregate stats",
+                    query_errors,
+                )
+                if aggregate_metadata is not None:
+                    aggregate_query_ms = aggregate_metadata.query_execution_time_ms
+                    aggregate_disclaimer = aggregate_metadata.data_disclaimer
+
+            table_envelope = envelopes.get("League table")
+            if table_envelope is not None:
+                table_rows, table_metadata = _extract_history_data(
+                    table_envelope,
+                    "League table",
+                    query_errors,
+                )
+                if table_metadata is not None:
+                    table_query_ms = table_metadata.query_execution_time_ms
+
+            recent_results_envelope = envelopes.get("Recent results")
+            if recent_results_envelope is not None:
+                recent_result_rows, recent_results_metadata = _extract_history_data(
+                    recent_results_envelope,
+                    "Recent results",
+                    query_errors,
+                )
+                if recent_results_metadata is not None:
+                    recent_results_query_ms = recent_results_metadata.query_execution_time_ms
+                recent_result_rows = _format_history_match_rows(recent_result_rows)
+
+            h2h_envelope = envelopes.get("Head to head")
+            if h2h_envelope is not None:
+                h2h_rows, h2h_metadata = _extract_history_data(
+                    h2h_envelope,
+                    "Head to head",
+                    query_errors,
+                )
+                if h2h_metadata is not None:
+                    h2h_query_ms = h2h_metadata.query_execution_time_ms
+
+                if (
+                    len(h2h_rows) > 0
+                    and isinstance(h2h_rows[0], dict)
+                    and h2h_rows[0].get("record_type") == "summary"
+                ):
+                    h2h_summary = h2h_rows[0]
+                    h2h_result_rows = _format_history_match_rows(h2h_rows[1:])
+                else:
+                    h2h_result_rows = _format_history_match_rows(h2h_rows)
+
+    return TEMPLATES.TemplateResponse(
+        request,
+        "football/stats_template.html",
+        {
+            "request": request,
+            "title": "Stats",
+            "teams": teams,
+            "selected_team_filter": selected_team,
+            "selected_team_a": selected_team_a,
+            "selected_team_b": selected_team_b,
+            "selected_start_key": selected_start_key,
+            "selected_end_key": selected_end_key,
+            "selected_start_label": get_season_short_label(selected_start_key),
+            "selected_end_label": get_season_short_label(selected_end_key),
+            "selected_competition": selected_competition,
+            "available_competitions": available_competitions,
+            "selected_venue": selected_venue.value,
+            "aggregate_rows": aggregate_rows,
+            "table_rows": table_rows,
+            "recent_result_rows": recent_result_rows,
+            "h2h_summary": h2h_summary,
+            "h2h_result_rows": h2h_result_rows,
+            "aggregate_query_ms": aggregate_query_ms,
+            "table_query_ms": table_query_ms,
+            "recent_results_query_ms": recent_results_query_ms,
+            "h2h_query_ms": h2h_query_ms,
+            "aggregate_disclaimer": aggregate_disclaimer,
+            "query_errors": query_errors,
             **season_context,
         },
     )

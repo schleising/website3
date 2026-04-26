@@ -1,0 +1,390 @@
+{% extends "football/football-base.html" %}
+
+{% block football_head %}
+<link rel="stylesheet" href="/css/football/stats.css?v1.0.0">
+{% endblock %}
+
+{% block title %}<title>Football - Stats</title>{% endblock %}
+
+{% block header %}
+<h3 class="header-text football-header-text">
+  <span class="football-header-title">Football History Stats</span>
+</h3>
+{% endblock %}
+
+{% block football_content %}
+{% set football_root = football_root_path|default('/football/') %}
+<div class="football-stats-layout">
+  <section class="football-stats-filters site-card" aria-label="Stats filters">
+    <h4 class="football-stats-heading">Query Builder</h4>
+    <p class="football-stats-helper">Run aggregate, table, results, and head-to-head history queries from one screen.</p>
+
+    <form class="football-stats-form" method="get" action="{{ stats_url|default(football_root ~ 'stats/') }}">
+      <div class="football-stats-filter-grid">
+        <label class="football-stats-field" for="stats-season-start">
+          <span>Season Start</span>
+          <select
+            id="stats-season-start"
+            name="season_start"
+            class="site-select"
+            required
+          >
+            {% for season_option in available_seasons %}
+            <option
+              value="{{ season_option.key }}"
+              {% if season_option.key == selected_start_key %}selected{% endif %}
+            >
+              {{ season_option.label }}
+            </option>
+            {% endfor %}
+          </select>
+        </label>
+
+        <label class="football-stats-field" for="stats-season-end">
+          <span>Season End</span>
+          <select
+            id="stats-season-end"
+            name="season_end"
+            class="site-select"
+            required
+          >
+            {% for season_option in available_seasons %}
+            <option
+              value="{{ season_option.key }}"
+              {% if season_option.key == selected_end_key %}selected{% endif %}
+            >
+              {{ season_option.label }}
+            </option>
+            {% endfor %}
+          </select>
+        </label>
+
+        <label class="football-stats-field" for="stats-competition">
+          <span>Competition</span>
+          <select id="stats-competition" name="competition" class="site-select">
+            <option value="" {% if not selected_competition %}selected{% endif %}>All competitions</option>
+            {% for competition_option in available_competitions %}
+            <option
+              value="{{ competition_option }}"
+              {% if selected_competition == competition_option %}selected{% endif %}
+            >
+              {{ competition_option }}
+            </option>
+            {% endfor %}
+          </select>
+        </label>
+
+        <label class="football-stats-field" for="stats-venue">
+          <span>Venue Filter</span>
+          <select id="stats-venue" name="venue" class="site-select">
+            <option value="both" {% if selected_venue == 'both' %}selected{% endif %}>Home + Away</option>
+            <option value="home" {% if selected_venue == 'home' %}selected{% endif %}>Home only</option>
+            <option value="away" {% if selected_venue == 'away' %}selected{% endif %}>Away only</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="football-stats-filter-grid football-stats-filter-grid--teams">
+        <label class="football-stats-field" for="stats-team-filter">
+          <span>Focus Team</span>
+          <select
+            id="stats-team-filter"
+            name="team"
+            class="site-select"
+            data-site-select-option-icon="data-crest"
+            data-site-select-placeholder-icon="/images/football/crests/unknown_team.svg"
+          >
+            <option value="" {% if not selected_team_filter %}selected{% endif %}>All teams</option>
+            {% for team_option in teams %}
+            <option
+              value="{{ team_option.id }}"
+              data-crest="{{ team_option.local_crest }}"
+              {% if selected_team_filter and selected_team_filter.id == team_option.id %}selected{% endif %}
+            >
+              {{ team_option.short_name }}
+            </option>
+            {% endfor %}
+          </select>
+        </label>
+
+        <label class="football-stats-field" for="stats-team-a">
+          <span>Head to Head Team A</span>
+          <select
+            id="stats-team-a"
+            name="team_a"
+            class="site-select"
+            data-site-select-option-icon="data-crest"
+            data-site-select-placeholder-icon="/images/football/crests/unknown_team.svg"
+          >
+            <option value="" {% if not selected_team_a %}selected{% endif %}>Optional</option>
+            {% for team_option in teams %}
+            <option
+              value="{{ team_option.id }}"
+              data-crest="{{ team_option.local_crest }}"
+              {% if selected_team_a and selected_team_a.id == team_option.id %}selected{% endif %}
+            >
+              {{ team_option.short_name }}
+            </option>
+            {% endfor %}
+          </select>
+        </label>
+
+        <label class="football-stats-field" for="stats-team-b">
+          <span>Head to Head Team B</span>
+          <select
+            id="stats-team-b"
+            name="team_b"
+            class="site-select"
+            data-site-select-option-icon="data-crest"
+            data-site-select-placeholder-icon="/images/football/crests/unknown_team.svg"
+          >
+            <option value="" {% if not selected_team_b %}selected{% endif %}>Optional</option>
+            {% for team_option in teams %}
+            <option
+              value="{{ team_option.id }}"
+              data-crest="{{ team_option.local_crest }}"
+              {% if selected_team_b and selected_team_b.id == team_option.id %}selected{% endif %}
+            >
+              {{ team_option.short_name }}
+            </option>
+            {% endfor %}
+          </select>
+        </label>
+      </div>
+
+      <div class="football-stats-actions">
+        <button type="submit" class="btn btn-primary">Run Stats Query</button>
+        <a
+          class="btn btn-primary football-stats-reset"
+          href="{{ stats_url|default(football_root ~ 'stats/') }}"
+          data-history-mode="football-shell"
+        >
+          Reset
+        </a>
+      </div>
+    </form>
+
+    <div class="football-stats-summary-chips" aria-label="Selected filters">
+      <span class="football-stats-chip">Range {{ selected_start_label }} to {{ selected_end_label }}</span>
+      {% if selected_competition %}
+      <span class="football-stats-chip">Competition {{ selected_competition }}</span>
+      {% endif %}
+      {% if selected_team_filter %}
+      <span class="football-stats-chip">Team {{ selected_team_filter.short_name }}</span>
+      {% endif %}
+      {% if selected_venue != 'both' %}
+      <span class="football-stats-chip">Venue {{ selected_venue|capitalize }}</span>
+      {% endif %}
+    </div>
+  </section>
+
+  {% if query_errors|length > 0 %}
+  <section class="football-empty-state site-card" aria-live="polite">
+    <h3>History API Issues</h3>
+    {% for error in query_errors %}
+    <p class="football-stats-error-line">{{ error }}</p>
+    {% endfor %}
+  </section>
+  {% endif %}
+
+  <div class="football-stats-panels">
+    <section class="football-stats-panel site-card">
+      <div class="football-stats-panel-head">
+        <h4>Aggregate Leaderboard</h4>
+        {% if aggregate_query_ms is not none %}
+        <span class="football-stats-query-ms">{{ aggregate_query_ms }} ms</span>
+        {% endif %}
+      </div>
+      {% if aggregate_disclaimer %}
+      <p class="football-stats-note">{{ aggregate_disclaimer }}</p>
+      {% endif %}
+
+      <div class="football-stats-table-wrap">
+        <table class="football-stats-table" aria-label="Aggregate team statistics">
+          <thead>
+            <tr>
+              <th scope="col">#</th>
+              <th scope="col">Team</th>
+              <th scope="col" class="stats-num">Pld</th>
+              <th scope="col" class="stats-num">W</th>
+              <th scope="col" class="stats-num">D</th>
+              <th scope="col" class="stats-num">L</th>
+              <th scope="col" class="stats-num">GF</th>
+              <th scope="col" class="stats-num">GA</th>
+              <th scope="col" class="stats-num">GD</th>
+              <th scope="col" class="stats-num">Pts</th>
+              <th scope="col" class="stats-num">Titles</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% if aggregate_rows|length > 0 %}
+              {% for row in aggregate_rows %}
+              <tr>
+                <td>{{ loop.index }}</td>
+                <td>{{ row.team|default('-') }}</td>
+                <td class="stats-num">{{ row.matches_played|default('-') }}</td>
+                <td class="stats-num">{{ row.wins|default('-') }}</td>
+                <td class="stats-num">{{ row.draws|default('-') }}</td>
+                <td class="stats-num">{{ row.losses|default('-') }}</td>
+                <td class="stats-num">{{ row.goals_for|default('-') }}</td>
+                <td class="stats-num">{{ row.goals_against|default('-') }}</td>
+                <td class="stats-num">{{ row.goal_difference|default('-') }}</td>
+                <td class="stats-num"><strong>{{ row.points|default('-') }}</strong></td>
+                <td class="stats-num">{{ row.league_titles|default('-') }}</td>
+              </tr>
+              {% endfor %}
+            {% else %}
+              <tr>
+                <td colspan="11" class="football-stats-empty">No aggregate data found for the selected filters.</td>
+              </tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="football-stats-panel site-card">
+      <div class="football-stats-panel-head">
+        <h4>League Table Snapshot ({{ selected_end_label }})</h4>
+        {% if table_query_ms is not none %}
+        <span class="football-stats-query-ms">{{ table_query_ms }} ms</span>
+        {% endif %}
+      </div>
+      <div class="football-stats-table-wrap">
+        <table class="football-stats-table" aria-label="League table snapshot">
+          <thead>
+            <tr>
+              <th scope="col">Pos</th>
+              <th scope="col">Team</th>
+              <th scope="col" class="stats-num">Pld</th>
+              <th scope="col" class="stats-num">W</th>
+              <th scope="col" class="stats-num">D</th>
+              <th scope="col" class="stats-num">L</th>
+              <th scope="col" class="stats-num">GD</th>
+              <th scope="col" class="stats-num">Pts</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% if table_rows|length > 0 %}
+              {% for row in table_rows %}
+              <tr>
+                <td>{{ row.position|default('-') }}</td>
+                <td>{{ row.team|default('-') }}</td>
+                <td class="stats-num">{{ row.matches_played|default('-') }}</td>
+                <td class="stats-num">{{ row.wins|default('-') }}</td>
+                <td class="stats-num">{{ row.draws|default('-') }}</td>
+                <td class="stats-num">{{ row.losses|default('-') }}</td>
+                <td class="stats-num">{{ row.goal_difference|default('-') }}</td>
+                <td class="stats-num"><strong>{{ row.points|default('-') }}</strong></td>
+              </tr>
+              {% endfor %}
+            {% else %}
+              <tr>
+                <td colspan="8" class="football-stats-empty">No league table data found for this season.</td>
+              </tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <div class="football-stats-panels">
+    <section class="football-stats-panel site-card">
+      <div class="football-stats-panel-head">
+        <h4>Recent Match Results</h4>
+        {% if recent_results_query_ms is not none %}
+        <span class="football-stats-query-ms">{{ recent_results_query_ms }} ms</span>
+        {% endif %}
+      </div>
+      <div class="football-stats-table-wrap">
+        <table class="football-stats-table football-stats-table--results" aria-label="Recent historical match results">
+          <thead>
+            <tr>
+              <th scope="col">Kickoff</th>
+              <th scope="col">Home</th>
+              <th scope="col" class="stats-num">Score</th>
+              <th scope="col">Away</th>
+              <th scope="col">Winner</th>
+              <th scope="col">Competition</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% if recent_result_rows|length > 0 %}
+              {% for row in recent_result_rows %}
+              <tr>
+                <td>{{ row.kickoff_local|default('-') }}</td>
+                <td>{{ row.home_team|default('-') }}</td>
+                <td class="stats-num"><strong>{{ row.scoreline|default('-') }}</strong></td>
+                <td>{{ row.away_team|default('-') }}</td>
+                <td>{{ row.winner|default('-') }}</td>
+                <td>{{ row.competition|default('-') }}</td>
+              </tr>
+              {% endfor %}
+            {% else %}
+              <tr>
+                <td colspan="6" class="football-stats-empty">No match results found for the selected filters.</td>
+              </tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="football-stats-panel site-card">
+      <div class="football-stats-panel-head">
+        <h4>Head to Head</h4>
+        {% if h2h_query_ms is not none %}
+        <span class="football-stats-query-ms">{{ h2h_query_ms }} ms</span>
+        {% endif %}
+      </div>
+
+      {% if h2h_summary %}
+      <div class="football-stats-h2h-summary">
+        <span>{{ h2h_summary.team_a|default('Team A') }} W {{ h2h_summary.wins|default('-') }}</span>
+        <span>Draws {{ h2h_summary.draws|default('-') }}</span>
+        <span>{{ h2h_summary.team_b|default('Team B') }} W {{ h2h_summary.losses|default('-') }}</span>
+        <span>Goals {{ h2h_summary.goals_for|default('-') }} : {{ h2h_summary.goals_against|default('-') }}</span>
+      </div>
+      {% elif selected_team_a and selected_team_b %}
+      <p class="football-stats-empty football-stats-empty--inline">No head-to-head records found for this filter window.</p>
+      {% else %}
+      <p class="football-stats-empty football-stats-empty--inline">Select Team A and Team B to load head-to-head history.</p>
+      {% endif %}
+
+      <div class="football-stats-table-wrap">
+        <table class="football-stats-table football-stats-table--results" aria-label="Head to head historical matches">
+          <thead>
+            <tr>
+              <th scope="col">Kickoff</th>
+              <th scope="col">Home</th>
+              <th scope="col" class="stats-num">Score</th>
+              <th scope="col">Away</th>
+              <th scope="col">Winner</th>
+              <th scope="col">Season</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% if h2h_result_rows|length > 0 %}
+              {% for row in h2h_result_rows %}
+              <tr>
+                <td>{{ row.kickoff_local|default('-') }}</td>
+                <td>{{ row.home_team|default('-') }}</td>
+                <td class="stats-num"><strong>{{ row.scoreline|default('-') }}</strong></td>
+                <td>{{ row.away_team|default('-') }}</td>
+                <td>{{ row.winner|default('-') }}</td>
+                <td>{{ row.season|default('-') }}</td>
+              </tr>
+              {% endfor %}
+            {% else %}
+              <tr>
+                <td colspan="6" class="football-stats-empty">No head-to-head match rows loaded.</td>
+              </tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+</div>
+{% endblock %}

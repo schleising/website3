@@ -1,0 +1,262 @@
+.football-stats-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    min-height: 0;
+    padding-bottom: var(--football-content-pad-space, 1.35rem);
+}
+
+.football-stats-filters {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 0.95rem 1rem;
+}
+
+.football-stats-heading {
+    margin: 0;
+    color: var(--brand-strong);
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+.football-stats-helper {
+    margin: 0;
+    color: var(--text-soft);
+    font-size: 0.88rem;
+}
+
+.football-stats-form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.7rem;
+}
+
+.football-stats-filter-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.65rem;
+}
+
+.football-stats-filter-grid--teams {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.football-stats-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.28rem;
+}
+
+.football-stats-field span {
+    color: var(--brand-strong);
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.football-stats-field .site-select-menu {
+    width: 100%;
+}
+
+.football-stats-field .site-select-trigger {
+    min-height: 2.08rem;
+}
+
+.football-stats-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.55rem;
+}
+
+.football-stats-reset {
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.football-stats-summary-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.42rem;
+}
+
+.football-stats-chip {
+    display: inline-flex;
+    align-items: center;
+    border: 0.0625rem solid rgba(158, 184, 215, 0.88);
+    border-radius: 999rem;
+    background: rgba(255, 255, 255, 0.76);
+    color: var(--brand-strong);
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 0.16rem 0.5rem;
+}
+
+.football-stats-error-line {
+    margin: 0;
+}
+
+.football-stats-panels {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+}
+
+.football-stats-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    min-height: 0;
+    padding: 0.95rem 1rem;
+}
+
+.football-stats-panel-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+}
+
+.football-stats-panel-head h4 {
+    margin: 0;
+    color: var(--brand-strong);
+    font-size: 0.96rem;
+    font-weight: 700;
+}
+
+.football-stats-query-ms {
+    color: var(--text-soft);
+    font-size: 0.72rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.football-stats-note {
+    margin: 0;
+    color: var(--text-soft);
+    font-size: 0.8rem;
+}
+
+.football-stats-table-wrap {
+    overflow: auto;
+    border: 0.0625rem solid rgba(154, 181, 214, 0.8);
+    border-radius: 0.58rem;
+    background: rgba(255, 255, 255, 0.74);
+}
+
+.football-stats-table {
+    width: 100%;
+    min-width: 38rem;
+    border-collapse: collapse;
+    border-spacing: 0;
+}
+
+.football-stats-table--results {
+    min-width: 48rem;
+}
+
+.football-stats-table th,
+.football-stats-table td {
+    padding: 0.38rem 0.48rem;
+    border-bottom: 0.0625rem solid rgba(159, 186, 219, 0.48);
+    font-size: 0.78rem;
+    color: var(--text);
+    text-align: left;
+}
+
+.football-stats-table th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: rgba(229, 238, 248, 0.98);
+    color: var(--brand-strong);
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.01rem;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.football-stats-table tbody tr:nth-child(even) {
+    background: rgba(246, 250, 255, 0.7);
+}
+
+.football-stats-table tbody tr:hover {
+    background: rgba(229, 239, 251, 0.7);
+}
+
+.football-stats-table .stats-num {
+    text-align: right;
+}
+
+.football-stats-empty {
+    margin: 0;
+    color: var(--text-soft);
+    font-size: 0.84rem;
+    text-align: center;
+    padding: 0.6rem 0.4rem;
+}
+
+.football-stats-empty--inline {
+    text-align: left;
+    padding: 0;
+}
+
+.football-stats-h2h-summary {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.42rem;
+}
+
+.football-stats-h2h-summary span {
+    display: inline-flex;
+    align-items: center;
+    border: 0.0625rem solid rgba(163, 189, 221, 0.86);
+    border-radius: 999rem;
+    background: rgba(248, 251, 255, 0.94);
+    color: var(--brand-strong);
+    font-size: 0.74rem;
+    font-weight: 700;
+    padding: 0.16rem 0.52rem;
+}
+
+@media screen and (max-width: 82rem) {
+    .football-stats-filter-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .football-stats-filter-grid--teams {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media screen and (max-width: 65rem) {
+    .football-stats-panels {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media screen and (max-width: 50rem) {
+    .football-stats-filters,
+    .football-stats-panel {
+        padding: 0.85rem 0.9rem;
+    }
+
+    .football-stats-filter-grid,
+    .football-stats-filter-grid--teams {
+        grid-template-columns: 1fr;
+    }
+
+    .football-stats-table {
+        min-width: 32rem;
+    }
+
+    .football-stats-table--results {
+        min-width: 42rem;
+    }
+
+    .football-stats-chip {
+        font-size: 0.68rem;
+    }
+}
