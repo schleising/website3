@@ -12,8 +12,181 @@ document.addEventListener('readystatechange', event => {
         updateSidebarVisibility();
         setupMobileSidebarToggles();
         syncSidebarWidths();
+        setupHistoryModeNavigation();
     }
 });
+
+function normaliseFeedsCategoryValue(value) {
+    const trimmed = String(value || "").trim().toLowerCase();
+    return trimmed === "" ? "all" : trimmed;
+}
+
+function isCustomFeedsCategory(value) {
+    const category = normaliseFeedsCategoryValue(value);
+    return category !== "all" && category !== "saved" && category !== "recently-read";
+}
+
+function handleFeedsCategoryNavigation(event, destinationUrl) {
+    const currentUrl = new URL(window.location.href);
+    const currentPath = normalisePath(currentUrl.pathname);
+    const destinationPath = normalisePath(destinationUrl.pathname);
+    const currentCategory = normaliseFeedsCategoryValue(currentUrl.searchParams.get("category"));
+    const destinationCategory = normaliseFeedsCategoryValue(destinationUrl.searchParams.get("category"));
+    const isSamePath = currentPath === destinationPath;
+
+    if (destinationCategory === "all") {
+        if (isSamePath && isCustomFeedsCategory(currentCategory) && window.history.length > 1) {
+            event.preventDefault();
+            window.history.back();
+            return true;
+        }
+
+        event.preventDefault();
+        window.location.replace(destinationUrl.toString());
+        return true;
+    }
+
+    if (!isCustomFeedsCategory(destinationCategory)) {
+        return false;
+    }
+
+    // Keep one-step back from a custom category to All Feeds.
+    if (isSamePath && currentCategory === "all") {
+        return false;
+    }
+
+    event.preventDefault();
+    window.location.replace(destinationUrl.toString());
+    return true;
+}
+
+function setupHistoryModeNavigation() {
+    document.addEventListener("click", function(event) {
+        if (event.defaultPrevented || event.button !== 0) {
+            return;
+        }
+
+        if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
+            return;
+        }
+
+        const target = event.target;
+        if (!(target instanceof Element)) {
+            return;
+        }
+
+        const link = target.closest('a[data-history-mode][href]');
+        if (!(link instanceof HTMLAnchorElement)) {
+            return;
+        }
+
+        const historyMode = String(link.dataset.historyMode || "").trim();
+        if (historyMode === "") {
+            return;
+        }
+
+        if (link.target && link.target !== "_self") {
+            return;
+        }
+
+        if (link.hasAttribute("download")) {
+            return;
+        }
+
+        const rawHref = String(link.getAttribute("href") || "").trim();
+        if (rawHref === "" || rawHref.startsWith("#")) {
+            return;
+        }
+
+        if (
+            rawHref.startsWith("javascript:")
+            || rawHref.startsWith("mailto:")
+            || rawHref.startsWith("tel:")
+        ) {
+            return;
+        }
+
+        let destinationUrl;
+        try {
+            destinationUrl = new URL(rawHref, window.location.href);
+        } catch {
+            return;
+        }
+
+        if (destinationUrl.origin !== window.location.origin) {
+            return;
+        }
+
+        if (historyMode === "feeds-category") {
+            handleFeedsCategoryNavigation(event, destinationUrl);
+            return;
+        }
+
+        if (historyMode !== "replace") {
+            return;
+        }
+
+        event.preventDefault();
+        window.location.replace(destinationUrl.toString());
+    });
+
+    document.addEventListener("submit", function(event) {
+        if (event.defaultPrevented) {
+            return;
+        }
+
+        const form = event.target;
+        if (!(form instanceof HTMLFormElement)) {
+            return;
+        }
+
+        if (form.dataset.historyMode !== "replace") {
+            return;
+        }
+
+        const method = String(form.method || "get").trim().toLowerCase();
+        if (method !== "get") {
+            return;
+        }
+
+        if (form.target && form.target !== "" && form.target !== "_self") {
+            return;
+        }
+
+        event.preventDefault();
+
+        let actionUrl;
+        try {
+            actionUrl = new URL(form.getAttribute("action") || window.location.href, window.location.href);
+        } catch {
+            return;
+        }
+
+        if (actionUrl.origin !== window.location.origin) {
+            form.submit();
+            return;
+        }
+
+        actionUrl.search = "";
+
+        const searchParams = new URLSearchParams();
+        const formData = new FormData(form);
+        for (const [key, value] of formData.entries()) {
+            if (typeof value !== "string") {
+                continue;
+            }
+
+            searchParams.append(key, value);
+        }
+
+        const queryString = searchParams.toString();
+        if (queryString !== "") {
+            actionUrl.search = `?${queryString}`;
+        }
+
+        window.location.replace(actionUrl.toString());
+    });
+}
 
 function normalisePath(pathValue) {
     if (!pathValue) {

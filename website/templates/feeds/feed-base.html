@@ -8,7 +8,7 @@
 <link rel="shortcut icon" type="image/svg+xml" href="/icons/feeds/feeds-icon-any.svg?v1.0.1" />
 {% if is_web_app %}
 <link rel="apple-touch-icon" href="/icons/feeds/android-chrome-192x192.png?v1.0.1" />
-<link rel="manifest" href="{{ feeds_root_path }}manifest.webmanifest?v1.0.3" crossorigin="use-credentials" />
+<link rel="manifest" href="{{ feeds_root_path }}manifest.webmanifest?v1.0.4" crossorigin="use-credentials" />
 {% endif %}
 {% endblock %}
 
@@ -44,6 +44,7 @@
   href="{{ feeds_root_path }}?category=all"
   class="sub-level-nav feed-sidebar-link feed-category-link feed-category-shortcut{% if selected_category == 'all' %} is-current{% endif %}"
   {% if selected_category == 'all' %}aria-current="page"{% endif %}
+  data-history-mode="feeds-category"
   data-category-shortcut="all"
 >
   <span class="feed-category-count feed-category-unread-pill feed-category-unread-pill-all">{{ all_unread_count }}</span>
@@ -54,6 +55,7 @@
   href="{{ feeds_root_path }}?category={{ category_item.category_id }}"
   class="sub-level-nav feed-sidebar-link feed-category-link{% if selected_category == category_item.category_id %} is-current{% endif %}{% if category_item.muted %} is-muted{% endif %}"
   {% if selected_category == category_item.category_id %}aria-current="page"{% endif %}
+  data-history-mode="feeds-category"
   data-category-id="{{ category_item.category_id }}"
 >
   <span class="feed-category-count feed-category-unread-pill" style="--feed-category-accent: {{ category_item.color_hex }};">{{ category_item.unread_count }}</span>
