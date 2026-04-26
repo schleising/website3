@@ -1,15 +1,13 @@
 {% extends "base.html" %}
 
 {% block favicons %}
-{% if is_web_app|default(false) %}
 <link rel="icon" type="image/svg+xml" sizes="any" href="/icons/football/webapp/icon.svg?v1.0.4" />
 <link rel="icon" type="image/png" sizes="48x48" href="/icons/football/webapp/favicon-48x48.png?v1.0.4" />
 <link rel="icon" type="image/x-icon" href="/icons/football/webapp/favicon-48x48.ico?v1.0.4" />
 <link rel="apple-touch-icon" sizes="192x192" href="/icons/football/webapp/android-chrome-192x192.png?v1.0.4" />
+{% if is_web_app|default(false) %}
 <link rel="manifest" href="{{ football_root_path|default('/') }}manifest.webmanifest?v1.0.8" crossorigin="use-credentials" />
 <meta name="theme-color" content="#eef4ff">
-{% else %}
-{{ super() }}
 {% endif %}
 {% endblock %}
 
