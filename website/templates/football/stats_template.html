@@ -1,7 +1,8 @@
 {% extends "football/football-base.html" %}
 
 {% block football_head %}
-<link rel="stylesheet" href="/css/football/stats.css?v1.0.0">
+<link rel="stylesheet" href="/css/football/stats.css?v1.0.3">
+<script defer src="/js/football/stats_query_state.js?v1.0.2"></script>
 {% endblock %}
 
 {% block title %}<title>Football - Stats</title>{% endblock %}
@@ -19,7 +20,7 @@
     <h4 class="football-stats-heading">Query Builder</h4>
     <p class="football-stats-helper">Run aggregate, table, results, and head-to-head history queries from one screen.</p>
 
-    <form class="football-stats-form" method="get" action="{{ stats_url|default(football_root ~ 'stats/') }}">
+    <form id="football-stats-form" class="football-stats-form" method="get" action="{{ stats_url|default(football_root ~ 'stats/') }}">
       <div class="football-stats-filter-grid">
         <label class="football-stats-field" for="stats-season-start">
           <span>Season Start</span>
@@ -386,5 +387,20 @@
       </div>
     </section>
   </div>
+</div>
+
+<div
+  id="football-stats-query-modal"
+  class="football-stats-query-modal"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="football-stats-query-modal-title"
+  aria-hidden="true"
+>
+  <section class="football-stats-query-modal-panel site-card" aria-live="polite">
+    <span class="football-stats-query-spinner" aria-hidden="true"></span>
+    <h4 id="football-stats-query-modal-title">Running Stats Query</h4>
+    <p>Fetching football history data. Please wait...</p>
+  </section>
 </div>
 {% endblock %}

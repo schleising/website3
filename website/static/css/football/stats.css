@@ -6,6 +6,10 @@
     padding-bottom: var(--football-content-pad-space, 1.35rem);
 }
 
+body.football-stats-query-modal-open {
+    overflow: hidden;
+}
+
 .football-stats-filters {
     display: flex;
     flex-direction: column;
@@ -24,6 +28,80 @@
     margin: 0;
     color: var(--text-soft);
     font-size: 0.88rem;
+}
+
+.football-stats-query-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 72;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    background: rgba(8, 18, 34, 0.54);
+    backdrop-filter: blur(0.12rem);
+    -webkit-backdrop-filter: blur(0.12rem);
+}
+
+.football-stats-query-modal.is-visible {
+    display: flex;
+}
+
+.football-stats-query-modal-panel {
+    width: min(24rem, calc(100vw - 2rem));
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 1.05rem;
+    text-align: center;
+}
+
+.football-stats-query-modal-panel h4 {
+    margin: 0;
+    color: var(--brand-strong);
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+.football-stats-query-modal-panel p {
+    margin: 0;
+    color: var(--text-soft);
+    font-size: 0.86rem;
+}
+
+.football-stats-query-spinner {
+    width: 1.1rem;
+    height: 1.1rem;
+    border-radius: 50%;
+    border: 0.125rem solid rgba(57, 97, 143, 0.2);
+    border-top-color: rgba(57, 97, 143, 0.96);
+    animation: football-stats-query-spin 700ms linear infinite;
+}
+
+.football-stats-layout.is-query-running {
+    cursor: wait;
+}
+
+.football-stats-layout.is-query-running .football-stats-form {
+    pointer-events: none;
+    user-select: none;
+}
+
+.football-stats-layout.is-query-running .football-stats-filters {
+    opacity: 0.72;
+}
+
+.football-stats-reset.is-disabled {
+    pointer-events: none;
+    opacity: 0.62;
+}
+
+@keyframes football-stats-query-spin {
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 .football-stats-form {
@@ -241,6 +319,15 @@
     .football-stats-filters,
     .football-stats-panel {
         padding: 0.85rem 0.9rem;
+    }
+
+    .football-stats-query-modal {
+        padding: 0.8rem;
+    }
+
+    .football-stats-query-modal-panel {
+        width: min(22rem, calc(100vw - 1.25rem));
+        padding: 0.95rem;
     }
 
     .football-stats-filter-grid,
