@@ -42,7 +42,7 @@ pymdown-extensions==10.21.2
 pymongo==4.17.0
 PyQRCode==1.2.1
 python-jose==3.5.0
-python-multipart==0.0.26
+python-multipart==0.0.27
 pywebpush==2.3.0
 PyYAML==6.0.3
 requests==2.31.0
