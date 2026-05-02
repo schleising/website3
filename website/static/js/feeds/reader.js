@@ -435,6 +435,10 @@
                 return "";
             }
 
+            // Canonicalize article URLs for stable visited/history behavior.
+            parsed.search = "";
+            parsed.hash = "";
+
             return parsed.toString();
         } catch (_error) {
             return "";
