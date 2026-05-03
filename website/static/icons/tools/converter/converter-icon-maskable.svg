@@ -4,18 +4,17 @@
       <stop offset="0%" stop-color="#1f3f63" />
       <stop offset="100%" stop-color="#2f6f9f" />
     </linearGradient>
+    <marker id="converterMaskArrowHeadLight" viewBox="0 0 56 56" refX="0" refY="28" markerWidth="56" markerHeight="56" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0 7 L0 49 L49 28 Z" fill="#e8f4ff" />
+    </marker>
+    <marker id="converterMaskArrowHeadAccent" viewBox="0 0 56 56" refX="0" refY="28" markerWidth="56" markerHeight="56" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0 7 L0 49 L49 28 Z" fill="#9dd8ff" />
+    </marker>
   </defs>
 
   <rect width="512" height="512" fill="url(#converterMaskBg)" />
 
-  <rect x="116" y="116" width="280" height="280" rx="54" fill="#f4f9ff" stroke="#d6e6f6" stroke-width="12" />
-  <rect x="146" y="156" width="140" height="28" rx="14" fill="#d5e6f7" />
-  <rect x="146" y="202" width="92" height="22" rx="11" fill="#dbe9f8" />
-  <rect x="146" y="240" width="68" height="22" rx="11" fill="#dbe9f8" />
-
-  <circle cx="322" cy="224" r="52" fill="#e3effb" />
-  <circle cx="322" cy="224" r="28" fill="#9ec5ea" />
-
-  <path d="M260 300h80l-18-18a12 12 0 0 1 17-17l38 38a12 12 0 0 1 0 17l-38 38a12 12 0 0 1-17-17l18-18h-80a12 12 0 0 1 0-23z" fill="#18a96f" />
-  <path d="M252 341h-80l18 18a12 12 0 0 1-17 17l-38-38a12 12 0 0 1 0-17l38-38a12 12 0 0 1 17 17l-18 18h80a12 12 0 0 1 0 23z" fill="#4fb1ff" />
+  <circle cx="256" cy="256" r="144" fill="none" stroke="#e8f4ff" stroke-width="32" stroke-linecap="round" opacity="0.36" />
+  <path d="M193.8 193.8 A88 88 0 0 1 318.2 193.8" fill="none" stroke="#e8f4ff" stroke-width="28" stroke-linecap="round" marker-end="url(#converterMaskArrowHeadLight)" />
+  <path d="M318.2 318.2 A88 88 0 0 1 193.8 318.2" fill="none" stroke="#9dd8ff" stroke-width="28" stroke-linecap="round" marker-end="url(#converterMaskArrowHeadAccent)" />
 </svg>
