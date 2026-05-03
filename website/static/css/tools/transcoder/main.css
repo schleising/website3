@@ -1,81 +1,257 @@
+@import url("https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap");
+
+:root {
+    --bg-0: hsl(202, 38%, 97%);
+    --bg-1: hsl(197, 42%, 91%);
+    --panel: hsla(0, 0%, 100%, 0.84);
+    --panel-strong: hsla(0, 0%, 100%, 0.94);
+    --line: hsla(207, 24%, 32%, 0.16);
+    --text-main: hsl(216, 26%, 17%);
+    --text-subtle: hsl(216, 16%, 42%);
+    --accent: hsl(197, 71%, 43%);
+    --accent-strong: hsl(193, 80%, 33%);
+    --accent-soft: hsl(194, 54%, 93%);
+    --shadow-soft: 0 0.5rem 1.5rem hsla(208, 35%, 18%, 0.08);
+    --shadow-panel: 0 0.875rem 2.625rem hsla(208, 32%, 18%, 0.11);
+}
+
+html,
+body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+}
+
+html {
+    background-color: hsl(197, 42%, 91%);
+}
+
+body {
+    font-family: "Outfit", "Avenir Next", "Segoe UI", sans-serif;
+    color: var(--text-main);
+    background:
+        radial-gradient(130% 120% at 0% 0%, hsla(183, 55%, 70%, 0.28) 0%, transparent 58%),
+        radial-gradient(120% 120% at 100% 100%, hsla(201, 68%, 75%, 0.24) 0%, transparent 60%),
+        linear-gradient(170deg, var(--bg-0), var(--bg-1));
+}
+
 .outer {
+    box-sizing: border-box;
     display: flex;
     flex-direction: column;
-    justify-content: flex-start;
-    align-items: stretch;
-    height: 100vh;
-    padding: 0.25rem;
-    background-color: hsl(219, 79%, 96%);
+    min-height: 100%;
+    gap: 0.7rem;
+    max-width: 68rem;
+    margin: 0 auto;
+    padding: 0.78rem;
 }
 
 .header {
-    display: flex;
-    flex-direction: row;
-    justify-content: space-between;
-    padding: 0.25rem;
+    padding: 0.12rem 0.2rem;
+}
+
+.hero-kicker,
+.panel-kicker,
+.data-key,
+.progress-pill span {
+    font-size: 0.76rem;
+    font-weight: 700;
+    letter-spacing: 0.08rem;
+    text-transform: uppercase;
+}
+
+.hero-kicker,
+.panel-kicker {
+    margin: 0 0 0.18rem;
+    color: var(--accent-strong);
+}
+
+h1,
+h2,
+h3,
+p {
+    margin: 0;
+}
+
+h1,
+h2 {
+    font-family: "Space Grotesk", "Outfit", sans-serif;
+    line-height: 1.08;
+    letter-spacing: -0.02rem;
+}
+
+h1 {
+    font-size: clamp(1.5rem, 3vw, 2rem);
+}
+
+h2 {
+    font-size: 1.18rem;
+}
+
+.subtitle,
+.empty-state p,
+.data-key,
+.progress-pill span {
+    color: var(--text-subtle);
+}
+
+.subtitle {
+    margin-top: 0.26rem;
+    max-width: 42rem;
+    font-size: 0.92rem;
 }
 
 .container-border {
-    border: 0.075rem;
-    border-style: solid;
-    border-color: silver;
-    border-radius: 0.5rem;
+    border: 0.0625rem solid var(--line);
+    border-radius: 1rem;
+    background: linear-gradient(165deg, var(--panel-strong), var(--panel));
+    box-shadow: var(--shadow-panel);
+    backdrop-filter: blur(0.3125rem);
 }
 
-.details-container {
-    display: grid;
-    white-space: nowrap;
-    grid-template-columns: auto 1fr;
-    width: 100%;
-    overflow-y: scroll;
-    padding: 0.25rem 0;
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 0.24rem;
+    min-height: 14rem;
+    padding: 1.1rem;
 }
 
-.key-value-wrapper {
-    display: contents;
-}
-
-.key-value-wrapper:hover > * {
-    background-color: hsl(219, 79%, 79%);
-}
-
-.data-key {
-    padding: 0 0.25rem;
-    user-select: none;
-}
-
-.data-value {
-    padding: 0 0.25rem;
-    text-align: right;
-    user-select: none;
-}
-
-.data-value-left {
-    padding: 0 0.25rem;    
-    text-align: left;
-    user-select: none;
+.empty-state-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.16rem 0.56rem;
+    border-radius: 62.4375rem;
+    background: var(--accent-soft);
+    color: var(--accent-strong);
+    font-size: 0.74rem;
+    font-weight: 700;
+    letter-spacing: 0.05rem;
+    text-transform: uppercase;
 }
 
 .progress-area {
     display: none;
     flex-direction: column;
-    justify-content: flex-start;
+    gap: 0.75rem;
+    padding: 0.95rem;
+}
+
+.panel-header {
+    display: flex;
+    justify-content: space-between;
     align-items: flex-start;
-    background-color: hsl(219, 79%, 85%);
-    margin: 0.25rem;
-    margin-bottom: 0.5rem;
-    padding: 0.25rem;
+    gap: 0.8rem;
+}
+
+.progress-pill {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    min-width: 7.8rem;
+    padding: 0.52rem 0.7rem;
+    border-radius: 0.82rem;
+    background: linear-gradient(145deg, var(--accent), var(--accent-strong));
+    color: hsl(0, 0%, 100%);
+    box-shadow: var(--shadow-soft);
+}
+
+.progress-pill span {
+    color: hsla(0, 0%, 100%, 0.82);
+}
+
+.progress-pill strong {
+    font-family: "Space Grotesk", "Outfit", sans-serif;
+    font-size: 1.4rem;
+}
+
+.details-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(12.5rem, 1fr));
+    gap: 0.55rem;
+    width: 100%;
+}
+
+.key-value-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 0.16rem;
+    min-width: 0;
+    padding: 0.72rem 0.8rem;
+    border: 0.0625rem solid hsla(214, 28%, 34%, 0.14);
+    border-radius: 0.82rem;
+    background: linear-gradient(168deg, hsla(0, 0%, 100%, 0.9), hsla(194, 72%, 96%, 0.84));
+    transition: transform 150ms ease, box-shadow 170ms ease, border-color 170ms ease;
+}
+
+.key-value-wrapper:hover {
+    transform: translateY(-0.0625rem);
+    border-color: hsla(203, 86%, 46%, 0.28);
+    box-shadow: 0 0.5rem 1rem hsla(216, 45%, 20%, 0.12);
+}
+
+.data-value,
+.data-value-left {
+    min-width: 0;
+    font-size: 1rem;
+    font-weight: 700;
+    line-height: 1.25;
+    color: var(--text-main);
+    user-select: none;
+}
+
+.data-value-left {
+    text-align: left;
+    word-break: break-word;
 }
 
 .conversion-progress {
     display: flex;
-    flex-direction: row;
-    justify-content: flex-start;
-    align-items: center;
     width: 100%;
-    padding: 0.25rem;
 }
 
 #file-progress {
     width: 100%;
+    height: 0.9rem;
+    border: 0;
+    border-radius: 62.4375rem;
+    overflow: hidden;
+    background: hsla(208, 20%, 26%, 0.12);
+}
+
+#file-progress::-webkit-progress-bar {
+    background: hsla(208, 20%, 26%, 0.12);
+    border-radius: 62.4375rem;
+}
+
+#file-progress::-webkit-progress-value {
+    border-radius: 62.4375rem;
+    background: linear-gradient(90deg, hsl(193, 72%, 54%), hsl(151, 64%, 44%));
+}
+
+#file-progress::-moz-progress-bar {
+    border-radius: 62.4375rem;
+    background: linear-gradient(90deg, hsl(193, 72%, 54%), hsl(151, 64%, 44%));
+}
+
+@media screen and (max-width: 44rem) {
+    .outer {
+        padding: 0.52rem;
+    }
+
+    .panel-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .progress-pill {
+        align-items: flex-start;
+    }
+
+    .details-container {
+        grid-template-columns: 1fr;
+    }
 }

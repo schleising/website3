@@ -9,13 +9,38 @@
 {% endblock title %}
 
 {% block body %}
-<h1>Event Logger</h1>
-<div class="add-event container">
-  <label for="event">New Event:</label>
-  <input type="text" id="event" name="type" />
-  <button id="add-event">Add</button>
-</div>
-<div class="container log-area">
+<section class="page-hero">
+  <div class="hero-copy">
+    <p class="hero-kicker">Automation Journal</p>
+    <h1>Event Logger</h1>
+    <p class="subtitle">Track recurring jobs, stamp new events in one tap, and review the latest activity without leaving the dashboard.</p>
+  </div>
+  <div class="hero-stat">
+    <span class="hero-stat-label">Tracked events</span>
+    <strong class="hero-stat-value">{{ last_logs|length }}</strong>
+  </div>
+</section>
+
+<section class="container action-card">
+  <div class="section-copy">
+    <h2>Add A New Event Type</h2>
+    <p>Create a button for a new workflow, reminder, or manual checkpoint.</p>
+  </div>
+  <div class="add-event add-event-form">
+    <label for="event">Event name</label>
+    <input type="text" id="event" name="type" placeholder="e.g. Filter cleaned" />
+    <button id="add-event">Add Event</button>
+  </div>
+</section>
+
+<section class="container log-area">
+  <div class="section-heading">
+    <div>
+      <h2>Latest Activity</h2>
+      <p>Tap an event to write a fresh timestamp instantly.</p>
+    </div>
+  </div>
+  {% if last_logs %}
   <div class="log-grid">
     <h4 class="grid-header">Event</h4>
     <h4 class="grid-header">Last Logged</h4>
@@ -27,12 +52,18 @@
       {{ log.log_date }}{% if log.log_date != "Never" %}Z{% endif %}</p>
     <p class="count" data-type="{{ log.event }}" id="{{ log.event }}-count">{{ log.count }}</p>
     <div class="stats-link-container">
-      <a class="stats-link" href="/stats/{{ log.event }}/">≡</a>
-      <a class="stats-link">📊</a>
+      <a class="stats-link" href="/stats/{{ log.event }}/">Details</a>
+      <span class="stats-link stats-link-disabled" aria-hidden="true">Charts Soon</span>
     </div>
     {% endfor %}
   </div>
-</div>
+  {% else %}
+  <div class="empty-state">
+    <h3>No events yet</h3>
+    <p>Add your first event type above to start logging activity.</p>
+  </div>
+  {% endif %}
+</section>
 
 {% endblock body %}
 

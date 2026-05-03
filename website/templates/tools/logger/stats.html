@@ -9,20 +9,45 @@
 {% endblock title %}
 
 {% block body %}
-<h1>{{ event }} - Stats</h1>
-<div class="container log-area">
+<section class="page-hero page-hero-compact">
+  <div class="hero-copy">
+    <p class="hero-kicker">Logger History</p>
+    <h1>{{ event }} Stats</h1>
+    <p class="subtitle">Review the recorded history for this event type and tidy up entries when needed.</p>
+  </div>
+  <div class="hero-stat">
+    <span class="hero-stat-label">Log entries</span>
+    <strong class="hero-stat-value">{{ logs|length }}</strong>
+  </div>
+</section>
+
+<section class="container log-area">
+  <div class="section-heading">
+    <div>
+      <h2>Log History</h2>
+      <p>Entries are shown newest first.</p>
+    </div>
+    <a class="back-link" href="/">Back To Logger</a>
+  </div>
+  {% if logs %}
   <div class="stats-grid">
     <h4 class="grid-header">Log Time</h4>
-    <h4 class="grid-header">Edit</h4>
+    <h4 class="grid-header">Actions</h4>
     {% for log in logs %}
     <p class="log-time">{{ log.log_date }}Z</p>
     <div class="stats-link-container">
-      <button class="stats-button stats-edit-button" id="edit-{{ log.id }}" data-id="{{ log.id }}">✎</button>
-      <button class="stats-button stats-delete-button" id="delete-{{ log.id }}" data-id="{{ log.id }}">✕</button>
+      <button class="stats-button stats-edit-button" id="edit-{{ log.id }}" data-id="{{ log.id }}">Edit</button>
+      <button class="stats-button stats-delete-button" id="delete-{{ log.id }}" data-id="{{ log.id }}">Delete</button>
     </div>
     {% endfor %}
   </div>
-</div>
+  {% else %}
+  <div class="empty-state">
+    <h3>No logs recorded</h3>
+    <p>This event type has no entries yet.</p>
+  </div>
+  {% endif %}
+</section>
 
 {% endblock body %}
 

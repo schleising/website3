@@ -3,8 +3,9 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <meta name="theme-color" content="#d7edf7">
   <link type="text/css" rel="stylesheet" href="/css/tools/transcoder/reset.css?v1.1.0" />
-  <link type="text/css" rel="stylesheet" href="/css/tools/transcoder/main.css?v1.1.0" />
+  <link type="text/css" rel="stylesheet" href="/css/tools/transcoder/main.css?v1.2.0" />
   <script defer src="/js/tools/transcoder/scope.js?v1.1.0"></script>
   <script defer src="/js/tools/transcoder/transcoder.js?v1.1.1"></script>
   <script defer src="/js/utils/subscribe.js?v1.1.1"></script>
@@ -15,39 +16,51 @@
 </head>
 <body>
   <div class="outer">
-    <div class="header">
-      <h2>Transcode Details</h2>
-    </div>
-    <div class="no-transcode" id="no-transcode">
-      <h3>No transcode in progress</h3>
-    </div>
-    <div class="progress-area container-border" id="progress-area">
+    <header class="header">
+      <div class="hero-copy">
+        <p class="hero-kicker">Conversion Monitor</p>
+        <h1>Transcoder</h1>
+        <p class="subtitle">Watch the current conversion job with a cleaner live readout for file, speed, ETA, and completion.</p>
+      </div>
+    </header>
+    <section class="no-transcode empty-state container-border" id="no-transcode">
+      <span class="empty-state-badge">Idle</span>
+      <h2>No transcode in progress</h2>
+      <p>The live job card will appear here as soon as the next conversion starts.</p>
+    </section>
+    <section class="progress-area container-border" id="progress-area">
+      <div class="panel-header">
+        <div>
+          <p class="panel-kicker">Live Job</p>
+          <h2>Current Transcode</h2>
+        </div>
+        <div class="progress-pill">
+          <span>Progress</span>
+          <strong id="progress-value">0%</strong>
+        </div>
+      </div>
       <div class="details-container">
         <div class="key-value-wrapper">
-          <div class="data-key">Filename:</div>
+          <div class="data-key">Filename</div>
           <div class="data-value-left" id="filename"></div>
         </div>
         <div class="key-value-wrapper">
-          <div class="data-key">Speed:</div>
+          <div class="data-key">Speed</div>
           <div class="data-value-left" id="speed"></div>
         </div>
         <div class="key-value-wrapper">          
-          <div class="data-key">Time Remaining:</div>
+          <div class="data-key">Time Remaining</div>
           <div class="data-value-left" id="time-remaining"></div>
         </div>
         <div class="key-value-wrapper">
-          <div class="data-key">Estimated Finish Time:</div>
+          <div class="data-key">Estimated Finish Time</div>
           <div class="data-value-left" id="finish-time"></div>
-        </div>
-        <div class="key-value-wrapper">
-          <div class="data-key">Progress:</div>
-          <div class="data-value-left" id="progress-value">0%</div>
         </div>
       </div>
       <div class="conversion-progress">
         <progress id="file-progress" value="0" max="100"></progress>
       </div>
-    </div>
+    </section>
   </div>
 </body>
 </html>
