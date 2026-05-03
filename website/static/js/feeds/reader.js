@@ -1189,7 +1189,15 @@
      * @returns {boolean}
      */
     function shouldUseTouchScrollRead() {
-        return isTouchOnlyDevice;
+        if (!isTouchOnlyDevice) {
+            return false;
+        }
+
+        if (selectedCategory === "recently-read") {
+            return false;
+        }
+
+        return true;
     }
 
     /**
