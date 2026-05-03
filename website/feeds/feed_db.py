@@ -5,7 +5,7 @@ from datetime import UTC, datetime, timedelta
 import re
 from typing import Any, Literal, cast
 import xml.etree.ElementTree as ET
-from urllib.parse import urljoin, urlparse
+from urllib.parse import urljoin, urlparse, urlunparse
 
 import aiohttp
 from bson import ObjectId
@@ -117,7 +117,24 @@ def normalize_article_navigation_link(value: Any) -> str:
         return ""
 
     parsed = urlparse(normalized)
-    return parsed._replace(query="", fragment="").geturl()
+
+    scheme = parsed.scheme.lower()
+    hostname = (parsed.hostname or "").strip().lower()
+    if hostname == "":
+        return ""
+
+    try:
+        port = parsed.port
+    except ValueError:
+        return ""
+
+    if port is None or (scheme == "http" and port == 80) or (scheme == "https" and port == 443):
+        netloc = hostname
+    else:
+        netloc = f"{hostname}:{port}"
+
+    path = parsed.path or "/"
+    return urlunparse((scheme, netloc, path, parsed.params, "", ""))
 
 
 async def validate_feed_url(feed_url: str) -> tuple[str, str]:
@@ -1712,7 +1729,7 @@ async def list_cards_for_feed_ids(
             FeedArticleCard(
                 article_id=str(article_id),
                 title=str(article_doc.get("title", "Untitled")),
-                link=normalize_article_navigation_link(article_doc.get("link")),
+                link=normalize_article_navigation_link(article_doc.get("canonical_url") or article_doc.get("link")),
                 author=str(article_doc.get("author", "")).strip() or None,
                 summary_html=sanitize_html(
                     str(article_doc.get("summary_html", "")),
@@ -1854,7 +1871,7 @@ async def list_recently_read_cards(
             FeedArticleCard(
                 article_id=str(article_id),
                 title=str(article_doc.get("title", "Untitled")),
-                link=normalize_article_navigation_link(article_doc.get("link")),
+                link=normalize_article_navigation_link(article_doc.get("canonical_url") or article_doc.get("link")),
                 author=str(article_doc.get("author", "")).strip() or None,
                 summary_html=sanitize_html(
                     str(article_doc.get("summary_html", "")),
@@ -1988,7 +2005,7 @@ async def list_saved_cards(
             FeedArticleCard(
                 article_id=str(article_id),
                 title=str(article_doc.get("title", "Untitled")),
-                link=normalize_article_navigation_link(article_doc.get("link")),
+                link=normalize_article_navigation_link(article_doc.get("canonical_url") or article_doc.get("link")),
                 author=str(article_doc.get("author", "")).strip() or None,
                 summary_html=sanitize_html(
                     str(article_doc.get("summary_html", "")),
