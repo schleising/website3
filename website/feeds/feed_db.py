@@ -109,6 +109,17 @@ def normalize_article_link(value: Any) -> str:
     return normalized
 
 
+def normalize_article_navigation_link(value: Any) -> str:
+    """Return a canonical article URL for user navigation and visited-link matching."""
+
+    normalized = normalize_article_link(value)
+    if normalized == "":
+        return ""
+
+    parsed = urlparse(normalized)
+    return parsed._replace(query="", fragment="").geturl()
+
+
 async def validate_feed_url(feed_url: str) -> tuple[str, str]:
     """Validate a feed URL by fetching and parsing minimal XML metadata.
 
@@ -1701,7 +1712,7 @@ async def list_cards_for_feed_ids(
             FeedArticleCard(
                 article_id=str(article_id),
                 title=str(article_doc.get("title", "Untitled")),
-                link=normalize_article_link(article_doc.get("link")),
+                link=normalize_article_navigation_link(article_doc.get("link")),
                 author=str(article_doc.get("author", "")).strip() or None,
                 summary_html=sanitize_html(
                     str(article_doc.get("summary_html", "")),
@@ -1843,7 +1854,7 @@ async def list_recently_read_cards(
             FeedArticleCard(
                 article_id=str(article_id),
                 title=str(article_doc.get("title", "Untitled")),
-                link=normalize_article_link(article_doc.get("link")),
+                link=normalize_article_navigation_link(article_doc.get("link")),
                 author=str(article_doc.get("author", "")).strip() or None,
                 summary_html=sanitize_html(
                     str(article_doc.get("summary_html", "")),
@@ -1977,7 +1988,7 @@ async def list_saved_cards(
             FeedArticleCard(
                 article_id=str(article_id),
                 title=str(article_doc.get("title", "Untitled")),
-                link=normalize_article_link(article_doc.get("link")),
+                link=normalize_article_navigation_link(article_doc.get("link")),
                 author=str(article_doc.get("author", "")).strip() or None,
                 summary_html=sanitize_html(
                     str(article_doc.get("summary_html", "")),
