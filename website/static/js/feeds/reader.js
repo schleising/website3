@@ -110,6 +110,10 @@
 
     /** @type {boolean} */
     let touchScrollReadScheduled = false;
+    /** @type {boolean} */
+    let manualRefreshInFlight = false;
+    /** @type {HTMLButtonElement | null} */
+    let manualRefreshButton = null;
 
     /** @type {Intl.DateTimeFormat} */
     const articleTimeFormatter = new Intl.DateTimeFormat(undefined, {
@@ -1350,8 +1354,11 @@
      * Render article response payload into the DOM.
      *
      * @param {{ articles?: Array<Record<string, any>> }} payload
+     * @param {{ retainMissingCards?: boolean, scrollToTop?: boolean }} [options]
      */
-    function renderArticles(payload) {
+    function renderArticles(payload, options = {}) {
+        const retainMissingCards = options.retainMissingCards !== false;
+        const scrollToTop = options.scrollToTop === true;
         const incomingArticles = Array.isArray(payload.articles) ? payload.articles : [];
         const previousCards = getCards();
         const previousCardMap = new Map();
@@ -1381,7 +1388,9 @@
             incomingIdsInOrder.push(articleId);
         });
 
-        const retainedExistingIds = previousIdsInOrder.filter(articleId => !incomingById.has(articleId));
+        const retainedExistingIds = retainMissingCards
+            ? previousIdsInOrder.filter(articleId => !incomingById.has(articleId))
+            : [];
         const retainedIdSet = new Set(retainedExistingIds);
 
         // Trust backend ordering for incoming rows and only place retained cards
@@ -1461,6 +1470,9 @@
         if (finalIds.length === 0) {
             renderInlineEmptyHint();
             clearCardSelection();
+            if (scrollToTop) {
+                window.scrollTo({ top: 0, behavior: "auto" });
+            }
             return;
         }
 
@@ -1472,7 +1484,11 @@
             const selectedIdIndex = finalIds.indexOf(previousSelectedId);
             if (selectedIdIndex >= 0) {
                 setSelectedIndex(selectedIdIndex, { scrollIntoView: false });
-                window.scrollTo({ top: previousScrollY, behavior: "auto" });
+                if (scrollToTop) {
+                    window.scrollTo({ top: 0, behavior: "auto" });
+                } else {
+                    window.scrollTo({ top: previousScrollY, behavior: "auto" });
+                }
                 return;
             }
         }
@@ -1483,7 +1499,11 @@
         } else {
             clearCardSelection();
         }
-        window.scrollTo({ top: previousScrollY, behavior: "auto" });
+        if (scrollToTop) {
+            window.scrollTo({ top: 0, behavior: "auto" });
+        } else {
+            window.scrollTo({ top: previousScrollY, behavior: "auto" });
+        }
         scheduleTouchScrollReadCheck();
     }
 
@@ -2050,12 +2070,13 @@
      */
     async function refreshFeedData() {
         try {
+            const refreshLimit = Math.max(pageSize, getCards().length, getPagingRequestOffset());
             const [categoryResponse, articleResponse] = await Promise.all([
                 fetch(categoriesEndpoint, {
                     method: "GET",
                     cache: "no-store",
                 }),
-                fetch(buildArticlesUrl(0, Math.max(getCards().length, pageSize)), {
+                fetch(buildArticlesUrl(0, refreshLimit), {
                     method: "GET",
                     cache: "no-store",
                 }),
@@ -2071,10 +2092,90 @@
             ]);
 
             updateSidebarCounts(categoryPayload);
-            renderArticles(articlePayload);
+            // Manual refresh should rebuild the active list from server state.
+            renderArticles(articlePayload, {
+                retainMissingCards: false,
+                scrollToTop: true,
+            });
+
+            if (typeof articlePayload.has_more === "boolean") {
+                hasMorePages = articlePayload.has_more;
+            }
+
+            if (typeof articlePayload.next_offset === "number") {
+                nextOffset = Math.max(0, articlePayload.next_offset);
+            } else {
+                nextOffset = Math.max(0, getPagingRequestOffset());
+            }
+
+            refreshPagingSentinelObserver();
+            schedulePagePrefetchCheck();
         } catch (_error) {
             // Keep current state if refresh fails.
         }
+    }
+
+    /**
+     * Refresh current view contents without a full page reload.
+     *
+     * @returns {Promise<void>}
+     */
+    async function triggerManualRefresh() {
+        if (manualRefreshInFlight) {
+            return;
+        }
+
+        manualRefreshInFlight = true;
+        if (manualRefreshButton instanceof HTMLButtonElement) {
+            manualRefreshButton.disabled = true;
+        }
+
+        try {
+            await refreshFeedData();
+            await refreshVisibleCardStatuses();
+        } finally {
+            manualRefreshInFlight = false;
+            if (manualRefreshButton instanceof HTMLButtonElement) {
+                manualRefreshButton.disabled = false;
+            }
+        }
+    }
+
+    /**
+     * Add a touch-only header refresh button to the left of the menu button.
+     */
+    function installTouchHeaderRefreshButton() {
+        if (!isTouchOnlyDevice || manualRefreshButton instanceof HTMLButtonElement) {
+            return;
+        }
+
+        const rightMenuButton = document.getElementById("right-nav-toggle");
+        const leftMenuButton = document.getElementById("left-nav-toggle");
+        const menuButton = rightMenuButton instanceof HTMLButtonElement
+            ? rightMenuButton
+            : (leftMenuButton instanceof HTMLButtonElement ? leftMenuButton : null);
+
+        if (!(menuButton instanceof HTMLButtonElement)) {
+            return;
+        }
+
+        const container = menuButton.parentElement;
+        if (!(container instanceof HTMLElement)) {
+            return;
+        }
+
+        const refreshButton = document.createElement("button");
+        refreshButton.type = "button";
+        refreshButton.className = "mobile-nav-button feeds-refresh-mobile-button";
+        refreshButton.setAttribute("aria-label", "Refresh articles");
+        refreshButton.title = "Refresh articles";
+        refreshButton.textContent = "↻";
+        refreshButton.addEventListener("click", () => {
+            triggerManualRefresh();
+        });
+
+        container.insertBefore(refreshButton, menuButton);
+        manualRefreshButton = refreshButton;
     }
 
     /**
@@ -2363,6 +2464,13 @@
             return;
         }
 
+        const isSpaceKey = event.key === " " || event.key === "Spacebar" || event.code === "Space";
+        if (isSpaceKey) {
+            event.preventDefault();
+            triggerManualRefresh();
+            return;
+        }
+
         const cards = getCards();
         if (cards.length === 0) {
             return;
@@ -2386,13 +2494,33 @@
             return;
         }
 
-        if (event.key === "Enter" || event.key === " ") {
+        if (event.key === "Enter") {
             if (selectedIndex < 0) {
                 return;
             }
             event.preventDefault();
             const card = cards[selectedIndex];
             openAndMarkCard(card);
+            return;
+        }
+
+    }
+
+    /**
+     * Suppress browser keyup defaults for space to avoid scroll/click fallthrough.
+     *
+     * @param {KeyboardEvent} event
+     */
+    function onKeyUp(event) {
+        const target = /** @type {HTMLElement | null} */ (event.target instanceof HTMLElement ? event.target : null);
+        if (target && ["INPUT", "TEXTAREA", "SELECT", "BUTTON"].includes(target.tagName)) {
+            return;
+        }
+
+        const isSpaceKey = event.key === " " || event.key === "Spacebar" || event.code === "Space";
+        if (isSpaceKey) {
+            event.preventDefault();
+            event.stopPropagation();
         }
     }
 
@@ -2460,7 +2588,8 @@
         }
     });
 
-    document.addEventListener("keydown", onKeyDown);
+    document.addEventListener("keydown", onKeyDown, { capture: true });
+    document.addEventListener("keyup", onKeyUp, { capture: true });
 
     if (isTouchOnlyDevice) {
         window.addEventListener("scroll", scheduleTouchScrollReadCheck, { passive: true });
@@ -2468,6 +2597,7 @@
     }
 
     // Initialize card selection from SSR content and start polling.
+    installTouchHeaderRefreshButton();
     initializeArticleBadgeStateFromSsr();
     localizeTimeNodes(articleList);
     syncSidebarSelection();

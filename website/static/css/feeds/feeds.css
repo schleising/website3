@@ -97,6 +97,17 @@
     color: color-mix(in srgb, var(--text-soft), #7b8391 22%);
 }
 
+.feeds-refresh-mobile-button {
+    margin-right: 0.35rem;
+    font-size: 1.2rem;
+    font-weight: 600;
+}
+
+.feeds-refresh-mobile-button:disabled {
+    opacity: 0.75;
+    cursor: default;
+}
+
 .feed-article-card {
     --site-card-bg: linear-gradient(
         180deg,
