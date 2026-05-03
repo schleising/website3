@@ -958,7 +958,14 @@
             return;
         }
 
-        window.open(normalizedLink, "_blank", "noopener,noreferrer");
+        const anchor = document.createElement("a");
+        anchor.href = normalizedLink;
+        anchor.target = "_blank";
+        anchor.rel = "noopener";
+        anchor.referrerPolicy = "strict-origin-when-cross-origin";
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
     }
 
     /**
@@ -1287,6 +1294,7 @@
         titleLink.href = normalizeArticleLink(article.link) || "#";
         titleLink.target = "_blank";
         titleLink.rel = "noopener";
+        titleLink.referrerPolicy = "strict-origin-when-cross-origin";
         titleLink.textContent = String(article.title || "Untitled");
         title.appendChild(titleLink);
 
@@ -2406,6 +2414,7 @@
 
         if (target.closest(".feed-article-title a")) {
             markCardRead(card);
+            return;
         }
 
         const cards = getCards();

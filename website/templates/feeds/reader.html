@@ -107,7 +107,7 @@
       </header>
 
       <h5 class="feed-article-title">
-        <a href="{% if article_href and (article_href | lower) not in ['none', 'null', 'undefined'] %}{{ article_href }}{% else %}#{% endif %}" target="_blank" rel="noopener">{{ article.title }}</a>
+        <a href="{% if article_href and (article_href | lower) not in ['none', 'null', 'undefined'] %}{{ article_href }}{% else %}#{% endif %}" target="_blank" rel="noopener" referrerpolicy="strict-origin-when-cross-origin">{{ article.title }}</a>
       </h5>
 
       {% set article_media_url = (article.media_image_url or '') | trim %}
