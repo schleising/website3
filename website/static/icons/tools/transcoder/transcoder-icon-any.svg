@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="transcoderIconTitle transcoderIconDesc">
+  <title id="transcoderIconTitle">Transcoder web app icon</title>
+  <desc id="transcoderIconDesc">A clean transcoder symbol with a play triangle and exchange arrows on a feeds-style blue gradient background.</desc>
+  <defs>
+    <linearGradient id="transcoderBg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1f3f63" />
+      <stop offset="100%" stop-color="#2f6f9f" />
+    </linearGradient>
+  </defs>
+
+  <rect x="4" y="4" width="56" height="56" rx="12" fill="url(#transcoderBg)" />
+
+  <path d="M25 20.5l15 11.5-15 11.5z" fill="#e8f4ff" />
+
+  <path d="M18.5 24.5h17.2" fill="none" stroke="#9dd8ff" stroke-width="3.8" stroke-linecap="round" />
+  <path d="M32.2 21.1l5 3.4-5 3.4" fill="none" stroke="#9dd8ff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" />
+
+  <path d="M45.5 39.5H28.3" fill="none" stroke="#22b98a" stroke-width="3.8" stroke-linecap="round" />
+  <path d="M31.8 42.9l-5-3.4 5-3.4" fill="none" stroke="#22b98a" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" />
+</svg>

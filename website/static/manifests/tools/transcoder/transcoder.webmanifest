@@ -2,22 +2,40 @@
     "name": "Transcoder",
     "icons": [
         {
-            "src": "/icons/tools/transcoder/android-chrome-144x144.png",
+            "src": "/icons/tools/transcoder/android-chrome-144x144.png?v1.0.1",
             "sizes": "144x144",
             "type": "image/png",
             "purpose": "any"
         },
         {
-            "src": "/icons/tools/transcoder/android-chrome-192x192.png",
+            "src": "/icons/tools/transcoder/android-chrome-192x192.png?v1.0.1",
             "sizes": "192x192",
             "type": "image/png",
             "purpose": "any"
         },
         {
-            "src": "/icons/tools/transcoder/android-chrome-512x512.png",
+            "src": "/icons/tools/transcoder/android-chrome-512x512.png?v1.0.1",
             "sizes": "512x512",
             "type": "image/png",
             "purpose": "any"
+        },
+        {
+            "src": "/icons/tools/transcoder/android-chrome-maskable-512x512.png?v1.0.1",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "maskable"
+        },
+        {
+            "src": "/icons/tools/transcoder/transcoder-icon-any.svg?v1.0.1",
+            "sizes": "any",
+            "type": "image/svg+xml",
+            "purpose": "any"
+        },
+        {
+            "src": "/icons/tools/transcoder/transcoder-icon-maskable.svg?v1.0.1",
+            "sizes": "any",
+            "type": "image/svg+xml",
+            "purpose": "maskable"
         }
     ],
     "start_url": "/",

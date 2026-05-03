@@ -4,13 +4,23 @@
       <stop offset="0" stop-color="#193a61"/>
       <stop offset="1" stop-color="#366fa0"/>
     </linearGradient>
+    <linearGradient id="l-icon-bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1f3f63"/>
+      <stop offset="100%" stop-color="#2f6f9f"/>
+    </linearGradient>
   </defs>
   <rect width="320" height="180" rx="20" fill="url(#l-bg)"/>
   <circle cx="50" cy="26" r="60" fill="#ffffff" fill-opacity="0.08"/>
   <circle cx="286" cy="154" r="72" fill="#96c0e8" fill-opacity="0.1"/>
-  <rect x="126" y="60" width="68" height="60" rx="8" fill="#e8f3ff" stroke="#bfd8ef" stroke-width="2"/>
-  <path d="M142 76h36M142 88h30M142 100h24" fill="none" stroke="#5f8fbf" stroke-width="4" stroke-linecap="round"/>
-  <circle cx="170" cy="108" r="10" fill="#2f9a60"/>
-  <path d="M165 108l4 4 7-8" fill="none" stroke="#f7fbff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <g transform="translate(120 52) scale(1.25)">
+    <rect x="4" y="4" width="56" height="56" rx="12" fill="url(#l-icon-bg)"/>
+    <circle cx="21" cy="22" r="2.8" fill="#e8f4ff"/>
+    <path d="M27 22h17" fill="none" stroke="#e8f4ff" stroke-width="4" stroke-linecap="round"/>
+    <circle cx="21" cy="31" r="2.8" fill="#e8f4ff" opacity="0.82"/>
+    <path d="M27 31h13.5" fill="none" stroke="#e8f4ff" stroke-width="4" stroke-linecap="round" opacity="0.82"/>
+    <circle cx="21" cy="40.5" r="4.8" fill="#22b98a"/>
+    <path d="M18.8 40.5l1.7 1.8 3.7-4.1" fill="none" stroke="#f7fbff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M30 40.5h12.5" fill="none" stroke="#9dd8ff" stroke-width="4" stroke-linecap="round"/>
+  </g>
   <text x="160" y="160" text-anchor="middle" font-size="15" font-family="Segoe UI, Arial, sans-serif" fill="#e8f3ff">Logger</text>
 </svg>
