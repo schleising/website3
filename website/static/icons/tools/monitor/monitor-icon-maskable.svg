@@ -8,14 +8,12 @@
 
   <rect width="512" height="512" fill="url(#monitorMaskBg)" />
 
-  <path d="M256 128l128 88v132a44 44 0 0 1-44 44H172a44 44 0 0 1-44-44V216z" fill="#f4f9ff" stroke="#d6e6f6" stroke-width="12" />
-  <rect x="226" y="250" width="60" height="118" rx="24" fill="#e1eefb" stroke="#b8d1e9" stroke-width="8" />
+  <path d="M152 236l104-84 104 84v94a38 38 0 0 1-38 38H190a38 38 0 0 1-38-38z" fill="none" stroke="#e8f4ff" stroke-width="32" stroke-linecap="round" stroke-linejoin="round" />
+  <path d="M149 237l107-87 107 87" fill="none" stroke="#e8f4ff" stroke-width="24" stroke-linecap="round" stroke-linejoin="round" opacity="0.4" />
 
-  <rect x="166" y="260" width="46" height="94" rx="23" fill="#ebf5ff" />
-  <path d="M189 344a23 23 0 0 0 23-23v-31a23 23 0 1 0-46 0v31a23 23 0 0 0 23 23z" fill="#4fb1ff" />
+  <rect x="194" y="235" width="37" height="82" rx="18.5" fill="none" stroke="#e8f4ff" stroke-width="14" />
+  <circle cx="212.5" cy="335" r="26" fill="#4fb1ff" />
+  <path d="M212.5 250v71" fill="none" stroke="#4fb1ff" stroke-width="18" stroke-linecap="round" />
 
-  <path d="M322 348c19 0 34-15 34-33 0-28-34-65-34-65s-34 37-34 65c0 18 15 33 34 33z" fill="#22b98a" />
-
-  <rect x="166" y="176" width="180" height="28" rx="14" fill="#e2effb" />
-  <polyline points="174,189 202,181 230,189 258,179 286,187 334,176" fill="none" stroke="#4fb1ff" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" />
+  <path d="M305 337c20 0 35-15 35-33 0-25-35-58-35-58s-35 33-35 58c0 18 15 33 35 33z" fill="#22b98a" />
 </svg>
