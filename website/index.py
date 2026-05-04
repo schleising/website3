@@ -78,7 +78,7 @@ logging.basicConfig(
 # Set the base template location
 TEMPLATES = Jinja2Templates("/app/templates")
 
-WEBAPPS_CARD_IMAGE_VERSION = "1.0.3"
+WEBAPPS_CARD_IMAGE_VERSION = "1.0.4"
 
 
 def _webapp_image(filename: str) -> str:
