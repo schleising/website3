@@ -11,6 +11,10 @@
     --accent: hsl(197, 71%, 43%);
     --accent-strong: hsl(193, 80%, 33%);
     --accent-soft: hsl(194, 54%, 93%);
+    --filename-popup-bg: hsla(216, 26%, 15%, 0.96);
+    --filename-popup-border: hsla(214, 28%, 34%, 0.22);
+    --filename-popup-text: hsl(0, 0%, 100%);
+    --filename-popup-shadow: 0 0.625rem 1.375rem hsla(216, 45%, 16%, 0.35);
     --shadow-soft: 0 0.5rem 1.5rem hsla(208, 35%, 18%, 0.08);
     --shadow-panel: 0 0.875rem 2.625rem hsla(208, 32%, 18%, 0.11);
 }
@@ -187,6 +191,10 @@ h2 {
     transition: transform 150ms ease, box-shadow 170ms ease, border-color 170ms ease;
 }
 
+.key-value-wrapper-filename {
+    grid-column: 1 / -1;
+}
+
 .key-value-wrapper:hover {
     transform: translateY(-0.0625rem);
     border-color: hsla(203, 86%, 46%, 0.28);
@@ -206,6 +214,61 @@ h2 {
 .data-value-left {
     text-align: left;
     word-break: break-word;
+}
+
+.filename {
+    position: relative;
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    overflow: visible;
+    cursor: pointer;
+    word-break: normal;
+}
+
+.filename-text {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.filename::after {
+    content: attr(data-full-filename);
+    position: absolute;
+    left: 50%;
+    bottom: calc(100% + 0.34rem);
+    min-width: 0;
+    max-width: min(34rem, calc(100vw - 1rem));
+    width: max-content;
+    padding: 0.4rem 0.54rem;
+    border-radius: 0.5rem;
+    border: 0.0625rem solid var(--filename-popup-border);
+    background: var(--filename-popup-bg);
+    color: var(--filename-popup-text);
+    font-size: 0.78rem;
+    line-height: 1.2;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    box-shadow: var(--filename-popup-shadow);
+    z-index: 20;
+    opacity: 0;
+    pointer-events: none;
+    transform-origin: center bottom;
+    transform: translateX(-50%) translateY(0.1rem) scaleX(0.04);
+    transition:
+        opacity 160ms cubic-bezier(0.25, 0.8, 0.25, 1),
+        transform 280ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.filename:hover::after,
+.filename:focus-visible::after,
+.filename.filename-expanded::after {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scaleX(1);
 }
 
 .conversion-progress {
@@ -253,5 +316,9 @@ h2 {
 
     .details-container {
         grid-template-columns: 1fr;
+    }
+
+    .filename::after {
+        max-width: calc(100vw - 0.7rem);
     }
 }
