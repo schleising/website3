@@ -78,11 +78,8 @@ logging.basicConfig(
 # Set the base template location
 TEMPLATES = Jinja2Templates("/app/templates")
 
-WEBAPPS_CARD_IMAGE_VERSION = "1.0.4"
-
-
 def _webapp_image(filename: str) -> str:
-    return f"/images/webapps/{filename}?v{WEBAPPS_CARD_IMAGE_VERSION}"
+    return f"/images/webapps/{filename}"
 
 
 def _webapp(name: str, url: str, icon_svg: str) -> dict[str, str]:
@@ -105,10 +102,10 @@ WEBAPPS_AUTHENTICATED: list[dict[str, str]] = [
 WEBAPPS_TOOLS_ONLY: list[dict[str, str]] = [
     _webapp("Authentik", "https://auth.schleising.net", _webapp_image("authentik.svg")),
     _webapp("Bet", "https://bet.schleising.net", _webapp_image("bet.svg")),
-    _webapp("Converter", "https://converter.schleising.net", _webapp_image("converter.svg")),
-    _webapp("Logger", "https://logger.schleising.net", _webapp_image("logger.svg")),
-    _webapp("Monitor", "https://monitor.schleising.net", _webapp_image("monitor.svg")),
-    _webapp("Transcoder", "https://transcoder.schleising.net", _webapp_image("transcoder.svg")),
+    _webapp("Converter", "https://converter.schleising.net", _webapp_image("converter-20260504.svg")),
+    _webapp("Logger", "https://logger.schleising.net", _webapp_image("logger-20260504.svg")),
+    _webapp("Monitor", "https://monitor.schleising.net", _webapp_image("monitor-20260504.svg")),
+    _webapp("Transcoder", "https://transcoder.schleising.net", _webapp_image("transcoder-20260504.svg")),
     _webapp("SRM Monitor", "https://srm-monitor.schleising.net", _webapp_image("srm-monitor.svg")),
     _webapp("Overseerr", "https://overseerr.schleising.net", _webapp_image("overseerr.svg")),
     _webapp("Pi-hole", "https://pihole.schleising.net/admin/", _webapp_image("pihole.svg")),

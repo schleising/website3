@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Monitor maskable icon">
+  <defs>
+    <linearGradient id="monitorMaskBg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1f3f63" />
+      <stop offset="100%" stop-color="#2f6f9f" />
+    </linearGradient>
+  </defs>
+
+  <rect width="512" height="512" fill="url(#monitorMaskBg)" />
+
+  <path d="M152 236l104-84 104 84v94a38 38 0 0 1-38 38H190a38 38 0 0 1-38-38z" fill="none" stroke="#e8f4ff" stroke-width="32" stroke-linecap="round" stroke-linejoin="round" />
+  <path d="M149 237l107-87 107 87" fill="none" stroke="#e8f4ff" stroke-width="24" stroke-linecap="round" stroke-linejoin="round" opacity="0.4" />
+
+  <rect x="194" y="235" width="37" height="82" rx="18.5" fill="none" stroke="#e8f4ff" stroke-width="14" />
+  <circle cx="212.5" cy="335" r="26" fill="#4fb1ff" />
+  <path d="M212.5 250v71" fill="none" stroke="#4fb1ff" stroke-width="18" stroke-linecap="round" />
+
+  <path d="M305 337c20 0 35-15 35-33 0-25-35-58-35-58s-35 33-35 58c0 18 15 33 35 33z" fill="#22b98a" />
+</svg>

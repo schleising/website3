@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Logger maskable icon">
+  <defs>
+    <linearGradient id="loggerMaskBg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1f3f63" />
+      <stop offset="100%" stop-color="#2f6f9f" />
+    </linearGradient>
+  </defs>
+
+  <rect width="512" height="512" fill="url(#loggerMaskBg)" />
+
+  <circle cx="168" cy="176" r="22" fill="#e8f4ff" />
+  <path d="M216 176h136" fill="none" stroke="#e8f4ff" stroke-width="32" stroke-linecap="round" />
+
+  <circle cx="168" cy="248" r="22" fill="#e8f4ff" opacity="0.82" />
+  <path d="M216 248h108" fill="none" stroke="#e8f4ff" stroke-width="32" stroke-linecap="round" opacity="0.82" />
+
+  <circle cx="168" cy="324" r="38" fill="#22b98a" />
+  <path d="M151 324l13 14 29-32" fill="none" stroke="#f7fbff" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" />
+  <path d="M240 324h100" fill="none" stroke="#9dd8ff" stroke-width="32" stroke-linecap="round" />
+</svg>
