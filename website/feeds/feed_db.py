@@ -45,6 +45,10 @@ SUMMARY_ANCHOR_HREF_RE = re.compile(
     r'(?P<prefix>\bhref\s*=\s*)(?P<quote>["\']?)(?P<href>[^"\'\s>]+)(?P=quote)',
     re.IGNORECASE,
 )
+SUMMARY_ELEMENT_ID_RE = re.compile(
+    r'\bid\s*=\s*(?:"([^"]+)"|\'([^\']+)\'|([^\s"\'=<>`]+))',
+    re.IGNORECASE,
+)
 
 
 def utc_now() -> datetime:
@@ -189,6 +193,23 @@ def normalize_summary_document_fragment_links(summary_html: str | None, article_
     if article_parent_url is None:
         return summary_html
 
+    article_parent_host = urlparse(article_parent_url).hostname
+    summary_local_ids = {
+        unescape(
+            next(
+                value
+                for value in (
+                    id_match.group(1),
+                    id_match.group(2),
+                    id_match.group(3),
+                )
+                if value is not None
+            )
+        ).strip()
+        for id_match in SUMMARY_ELEMENT_ID_RE.finditer(summary_html)
+    }
+    summary_local_ids.discard("")
+
     def _replace(match: re.Match[str]) -> str:
         prefix = match.group("prefix")
         quote = match.group("quote")
@@ -203,7 +224,26 @@ def normalize_summary_document_fragment_links(summary_html: str | None, article_
             return match.group(0)
 
         normalized_href_parent = _normalize_fragment_parent_url(decoded_href, normalized_article_url)
-        if normalized_href_parent != article_parent_url:
+        should_collapse = normalized_href_parent == article_parent_url
+
+        if (
+            not should_collapse
+            and normalized_href_parent is not None
+            and article_parent_host is not None
+            and len(summary_local_ids) > 0
+        ):
+            parsed_href_parent = urlparse(normalized_href_parent)
+            href_host = parsed_href_parent.hostname
+            href_path = parsed_href_parent.path or "/"
+            if (
+                href_host is not None
+                and href_host == article_parent_host
+                and href_path == "/"
+                and unescape(parsed_href.fragment).strip() in summary_local_ids
+            ):
+                should_collapse = True
+
+        if not should_collapse:
             return match.group(0)
 
         fragment_href = f"#{parsed_href.fragment}"
