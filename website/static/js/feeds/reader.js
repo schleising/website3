@@ -148,6 +148,7 @@
         "pre",
         "span",
         "strong",
+        "sup",
         "summary",
         "table",
         "tbody",

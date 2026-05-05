@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 from datetime import UTC, datetime, timedelta
+from html import unescape
 import re
 from typing import Any, Literal, cast
 import xml.etree.ElementTree as ET
@@ -39,6 +40,11 @@ READ_VISIBILITY_WINDOW = timedelta(minutes=2)
 RECENTLY_READ_WINDOW = timedelta(days=7)
 FEED_VALIDATION_MAX_REDIRECTS = 5
 FEED_VALIDATION_REDIRECT_STATUSES = {301, 302, 303, 307, 308}
+
+SUMMARY_ANCHOR_HREF_RE = re.compile(
+    r'(?P<prefix>\bhref\s*=\s*)(?P<quote>["\']?)(?P<href>[^"\'\s>]+)(?P=quote)',
+    re.IGNORECASE,
+)
 
 
 def utc_now() -> datetime:
@@ -135,6 +141,99 @@ def normalize_article_navigation_link(value: Any) -> str:
 
     path = parsed.path or "/"
     return urlunparse((scheme, netloc, path, parsed.params, "", ""))
+
+
+def _normalize_fragment_parent_url(value: str, source_url: str) -> str | None:
+    """Return canonical parent document URL for fragment-link comparisons."""
+
+    resolved = urljoin(source_url, value)
+    parsed = urlparse(resolved)
+
+    scheme = parsed.scheme.lower()
+    if scheme not in {"http", "https"}:
+        return None
+
+    hostname = (parsed.hostname or "").strip().lower()
+    if hostname == "":
+        return None
+
+    try:
+        port = parsed.port
+    except ValueError:
+        return None
+
+    if port is None or (scheme == "http" and port == 80) or (scheme == "https" and port == 443):
+        netloc = hostname
+    else:
+        netloc = f"{hostname}:{port}"
+
+    path = parsed.path or "/"
+    if path != "/":
+        path = path.rstrip("/") or "/"
+
+    # Queries are not relevant for local in-document footnote anchors.
+    return urlunparse((scheme, netloc, path, "", "", ""))
+
+
+def normalize_summary_document_fragment_links(summary_html: str | None, article_url: str) -> str | None:
+    """Collapse same-document absolute fragment links back to local anchors."""
+
+    if summary_html is None or summary_html == "":
+        return summary_html
+
+    normalized_article_url = normalize_article_navigation_link(article_url)
+    if normalized_article_url == "":
+        return summary_html
+
+    article_parent_url = _normalize_fragment_parent_url(normalized_article_url, normalized_article_url)
+    if article_parent_url is None:
+        return summary_html
+
+    def _replace(match: re.Match[str]) -> str:
+        prefix = match.group("prefix")
+        quote = match.group("quote")
+        raw_href = match.group("href")
+        decoded_href = unescape(raw_href).strip()
+
+        if decoded_href == "" or decoded_href.startswith("#"):
+            return match.group(0)
+
+        parsed_href = urlparse(decoded_href)
+        if parsed_href.fragment == "":
+            return match.group(0)
+
+        normalized_href_parent = _normalize_fragment_parent_url(decoded_href, normalized_article_url)
+        if normalized_href_parent != article_parent_url:
+            return match.group(0)
+
+        fragment_href = f"#{parsed_href.fragment}"
+        if quote == "":
+            return f"{prefix}{fragment_href}"
+
+        return f"{prefix}{quote}{fragment_href}{quote}"
+
+    return SUMMARY_ANCHOR_HREF_RE.sub(_replace, summary_html)
+
+
+def build_article_summary_html(article_doc: dict[str, Any]) -> str | None:
+    """Return sanitized summary HTML with same-document fragment links normalized."""
+
+    raw_summary_html = article_doc.get("summary_html")
+    if raw_summary_html is None:
+        return None
+
+    normalized_summary_html = normalize_summary_document_fragment_links(
+        str(raw_summary_html),
+        str(article_doc.get("canonical_url") or article_doc.get("link") or ""),
+    )
+
+    if normalized_summary_html is None or normalized_summary_html == "":
+        return None
+
+    return sanitize_html(
+        normalized_summary_html,
+        allow_inline_styles=True,
+    )
 
 
 async def validate_feed_url(feed_url: str) -> tuple[str, str]:
@@ -1731,12 +1830,7 @@ async def list_cards_for_feed_ids(
                 title=str(article_doc.get("title", "Untitled")),
                 link=normalize_article_navigation_link(article_doc.get("canonical_url") or article_doc.get("link")),
                 author=str(article_doc.get("author", "")).strip() or None,
-                summary_html=sanitize_html(
-                    str(article_doc.get("summary_html", "")),
-                    allow_inline_styles=True,
-                )
-                if article_doc.get("summary_html")
-                else None,
+                summary_html=build_article_summary_html(article_doc),
                 media_image_url=normalize_article_link(article_doc.get("media_image_url")) or None,
                 published_at=article_doc.get("published_at"),
                 feed_title=source_title,
@@ -1873,12 +1967,7 @@ async def list_recently_read_cards(
                 title=str(article_doc.get("title", "Untitled")),
                 link=normalize_article_navigation_link(article_doc.get("canonical_url") or article_doc.get("link")),
                 author=str(article_doc.get("author", "")).strip() or None,
-                summary_html=sanitize_html(
-                    str(article_doc.get("summary_html", "")),
-                    allow_inline_styles=True,
-                )
-                if article_doc.get("summary_html")
-                else None,
+                summary_html=build_article_summary_html(article_doc),
                 media_image_url=normalize_article_link(article_doc.get("media_image_url")) or None,
                 published_at=article_doc.get("published_at"),
                 feed_title=source_title,
@@ -2007,12 +2096,7 @@ async def list_saved_cards(
                 title=str(article_doc.get("title", "Untitled")),
                 link=normalize_article_navigation_link(article_doc.get("canonical_url") or article_doc.get("link")),
                 author=str(article_doc.get("author", "")).strip() or None,
-                summary_html=sanitize_html(
-                    str(article_doc.get("summary_html", "")),
-                    allow_inline_styles=True,
-                )
-                if article_doc.get("summary_html")
-                else None,
+                summary_html=build_article_summary_html(article_doc),
                 media_image_url=normalize_article_link(article_doc.get("media_image_url")) or None,
                 published_at=article_doc.get("published_at"),
                 feed_title=source_title,

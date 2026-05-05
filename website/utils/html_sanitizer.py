@@ -26,6 +26,7 @@ ALLOWED_TAGS = sorted(
             "li",
             "strong",
             "em",
+            "sup",
             "table",
             "thead",
             "tbody",
