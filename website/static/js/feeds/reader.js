@@ -455,6 +455,40 @@
     }
 
     /**
+     * Return safe media-image URL text while preserving query params.
+     *
+     * @param {unknown} value
+     * @returns {string}
+     */
+    function normalizeMediaImageUrl(value) {
+        if (typeof value !== "string") {
+            return "";
+        }
+
+        const normalized = value.trim();
+        if (normalized === "") {
+            return "";
+        }
+
+        const lowered = normalized.toLowerCase();
+        if (lowered === "none" || lowered === "null" || lowered === "undefined") {
+            return "";
+        }
+
+        try {
+            const parsed = new URL(normalized);
+            if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+                return "";
+            }
+
+            parsed.hash = "";
+            return parsed.toString();
+        } catch (_error) {
+            return "";
+        }
+    }
+
+    /**
      * Return whether an HTML attribute URL value uses an allowed safe scheme.
      *
      * @param {string} value
@@ -1318,7 +1352,7 @@
         card.appendChild(header);
         card.appendChild(title);
 
-        const mediaImageUrl = normalizeArticleLink(article.media_image_url);
+        const mediaImageUrl = normalizeMediaImageUrl(article.media_image_url);
         if (mediaImageUrl !== "") {
             const media = document.createElement("figure");
             media.className = "feed-article-media";
