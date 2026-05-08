@@ -19,7 +19,7 @@ Decisions captured for this proposal:
 - Enrollment: passkey is required during signup.
 - Recovery: admin/manual recovery only.
 - Legacy migration trigger: users are migrated the next time they access the site with a valid token, or when they attempt login.
-- Login shape in phase 1: username-first.
+- Login shape in phase 1: username-less, discoverable passkey login with automatic prompt.
 - Credential storage: embedded credentials in `user_collection`.
 - `can_use_tools` remains part of the user model, defaults to `false`, and is changed directly in the database only.
 - Phase 1 scope: signup + login ceremonies only (no passkey management page yet).
@@ -108,9 +108,8 @@ sequenceDiagram
   participant CH as Challenge Store
   participant DB as user_collection
 
-  U->>UI: Enter email and choose "Sign in with passkey"
-  UI->>API: POST /account/webauthn/authenticate/begin (username, csrf)
-  API->>DB: Lookup user + credential IDs
+  U->>UI: Open login page
+  UI->>API: POST /account/webauthn/authenticate/begin (csrf)
   API->>CH: Create challenge (authenticate, expiresAt)
   CH-->>API: challenge + challenge_id
   API-->>UI: PublicKeyCredentialRequestOptions
@@ -119,6 +118,7 @@ sequenceDiagram
   UI->>API: POST /account/webauthn/authenticate/complete (assertion, challenge_id, csrf)
   API->>CH: Load and consume challenge (single-use)
   CH-->>API: Challenge valid
+  API->>DB: Resolve user by credential ID
   API->>API: Verify rpId, origin, signature, signCount
   API->>DB: Update credential signCount and last_used_at
   API->>API: Create JWT and set token cookie
@@ -210,7 +210,7 @@ Behavior:
 
 5. Rate limiting and abuse controls
 - Reuse existing signup anti-bot and IP rate limiting patterns.
-- Add login ceremony throttle per username and per client IP.
+- Add login ceremony throttle per credential attempt and per client IP.
 
 ## 8. Dependency Strategy
 
@@ -227,8 +227,9 @@ Either option is a code library dependency, not a website dependency.
 ## 9. UX Proposal (Phase 1)
 
 Login page:
-- Email field + "Sign in with passkey" primary action.
-- Username-first flow for every phase 1 login ceremony.
+- No username input required.
+- Trigger passkey request automatically when the page loads.
+- Provide a visible "Try passkey again" action if the first prompt is canceled.
 - No password action in the phase 1 user flow.
 
 Create account page:
@@ -278,7 +279,7 @@ Browser checks:
 ## 13. Review Decisions Confirmed
 
 1. Existing password-only users are migrated the next time they access the site with a valid token or attempt login.
-2. Phase 1 uses username-first login.
+2. Phase 1 uses username-less automatic passkey login.
 3. Passkey credentials are stored as an embedded list in `user_collection`.
 4. Allowed production hostnames are `schleising.net` and `*.schleising.net`.
 5. `can_use_tools` remains a user field, default `false`, changed only via direct database update.

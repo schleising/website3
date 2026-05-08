@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 
 {% block scripts %}
-<script defer src="/js/account/passkeys.js?v1.0.0"></script>
+<script defer src="/js/account/passkeys.js?v1.0.1"></script>
 {% endblock %}
 
 {% block head %}
@@ -23,21 +23,17 @@
   {% elif result == 'migration_required' %}
     <h5>Your account must be migrated to passkeys before login.</h5>
   {% endif %}
-  <p>Please enter your email and sign in with your passkey.</p>
+  <p>Use your passkey to sign in. The passkey prompt should open automatically.</p>
   <p>If you do not have an account, please <a href="/account/create/">create one</a></p>
 </div>
 <form class="row g-3" id="passkey-login-form" data-passkey-flow="login" novalidate>
   <input type="hidden" name="next" value="{{ next_path|default('') }}">
   <input type="hidden" name="csrf_token" value="{{ request.state.csrf_token|default('') }}">
-  <div class="col-md-6">
-    <label for="username" class="form-label">Email</label>
-    <input name="username" id="username" class="form-control" type="email" placeholder="name@example.com" autocomplete="username webauthn" required>
+  <div class="col-12">
+    <button type="submit" class="btn btn-primary" id="passkey-login-submit">Try passkey again</button>
   </div>
   <div class="col-12">
-    <button type="submit" class="btn btn-primary" id="passkey-login-submit">Sign in with passkey</button>
-  </div>
-  <div class="col-12">
-    <a id="passkey-migrate-link" class="btn btn-outline-secondary d-none" href="/account/migrate/">Migrate existing account</a>
+    <a id="passkey-migrate-link" class="btn btn-outline-secondary" href="/account/migrate/">Migrate existing account</a>
   </div>
   <div class="col-12">
     <p id="passkey-status" class="account-status" role="status" aria-live="polite"></p>

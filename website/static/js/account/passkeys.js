@@ -169,7 +169,8 @@
     return false;
   }
 
-  async function runLogin(form) {
+  async function runLogin(form, options) {
+    const runOptions = options || {};
     const statusElement = form.querySelector("#passkey-status");
     const submitButton = form.querySelector("#passkey-login-submit");
     const migrationLink = form.querySelector("#passkey-migrate-link");
@@ -181,18 +182,14 @@
       return;
     }
 
-    if (username === "") {
-      setStatus(statusElement, "Please enter your email.", true);
-      return;
-    }
-
-    setBusy(submitButton, true, "Starting passkey...");
+    const busyMessage = runOptions.autoStart ? "Opening passkey prompt..." : "Starting passkey...";
+    setBusy(submitButton, true, busyMessage);
     setStatus(statusElement, "", false);
 
     try {
       const begin = await postJson(
         "/account/webauthn/authenticate/begin/",
-        { username, next_path: nextPath || null },
+        { username: username === "" ? null : username, next_path: nextPath || null },
         csrfToken,
       );
 
@@ -410,12 +407,16 @@
       return;
     }
 
+    if (form.dataset.passkeyFlow === "login") {
+      void runLogin(form, { autoStart: true });
+    }
+
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
 
       const flow = form.dataset.passkeyFlow;
       if (flow === "login") {
-        await runLogin(form);
+        await runLogin(form, { autoStart: false });
       } else if (flow === "register") {
         await runRegistration(form);
       } else if (flow === "migrate") {

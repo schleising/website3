@@ -69,7 +69,7 @@ class PasskeyRegisterCompletePayload(BaseModel):
 
 
 class PasskeyAuthBeginPayload(BaseModel):
-    username: str
+    username: str | None = None
     next_path: str | None = None
 
 
@@ -334,6 +334,27 @@ def _passkey_credential_by_id(user: UserInDB, credential_id: str) -> PasskeyCred
         if credential.credential_id == credential_id:
             return credential
     return None
+
+
+async def _user_in_db_by_credential_id(credential_id: str) -> UserInDB | None:
+    if user_collection is None:
+        return None
+
+    user_document = await user_collection.find_one(
+        {
+            "passkey_credentials": {
+                "$elemMatch": {
+                    "credential_id": credential_id,
+                    "revoked": {"$ne": True},
+                }
+            }
+        }
+    )
+
+    if user_document is None:
+        return None
+
+    return UserInDB.model_validate(user_document)
 
 
 def _credential_id_from_payload(credential_payload: dict[str, Any]) -> str | None:
@@ -713,47 +734,50 @@ async def webauthn_authenticate_begin(
     payload: PasskeyAuthBeginPayload,
     _: None = Depends(validate_csrf),
 ):
-    username = _normalise_username(payload.username)
-    user_in_db = await get_user_in_db(username)
+    username = _normalise_username(payload.username or "")
 
-    if user_in_db is None:
-        return JSONResponse(
-            {"status": "error", "reason": "login_failed"},
-            status_code=status.HTTP_400_BAD_REQUEST,
-        )
+    credential_ids: list[str] = []
+    if username != "":
+        user_in_db = await get_user_in_db(username)
 
-    if user_in_db.disabled:
-        return JSONResponse(
-            {"status": "error", "reason": "login_failed"},
-            status_code=status.HTTP_400_BAD_REQUEST,
-        )
-
-    if not is_user_passkey_enrolled(user_in_db):
-        if is_user_passkey_migration_required(user_in_db):
+        if user_in_db is None:
             return JSONResponse(
-                {
-                    "status": "error",
-                    "reason": "migration_required",
-                    "migration_url": _migration_url(username, _safe_next_path(payload.next_path), "migration_required"),
-                },
-                status_code=status.HTTP_409_CONFLICT,
+                {"status": "error", "reason": "login_failed"},
+                status_code=status.HTTP_400_BAD_REQUEST,
             )
 
-        return JSONResponse(
-            {"status": "error", "reason": "login_failed"},
-            status_code=status.HTTP_400_BAD_REQUEST,
-        )
+        if user_in_db.disabled:
+            return JSONResponse(
+                {"status": "error", "reason": "login_failed"},
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
 
-    credential_ids = [
-        credential.credential_id
-        for credential in _active_passkey_credentials(user_in_db)
-    ]
+        if not is_user_passkey_enrolled(user_in_db):
+            if is_user_passkey_migration_required(user_in_db):
+                return JSONResponse(
+                    {
+                        "status": "error",
+                        "reason": "migration_required",
+                        "migration_url": _migration_url(username, _safe_next_path(payload.next_path), "migration_required"),
+                    },
+                    status_code=status.HTTP_409_CONFLICT,
+                )
 
-    if len(credential_ids) == 0:
-        return JSONResponse(
-            {"status": "error", "reason": "login_failed"},
-            status_code=status.HTTP_400_BAD_REQUEST,
-        )
+            return JSONResponse(
+                {"status": "error", "reason": "login_failed"},
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+
+        credential_ids = [
+            credential.credential_id
+            for credential in _active_passkey_credentials(user_in_db)
+        ]
+
+        if len(credential_ids) == 0:
+            return JSONResponse(
+                {"status": "error", "reason": "login_failed"},
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
 
     rp_id, origin = webauthn_context_for_request(request)
     options = authentication_options_as_dict(rp_id=rp_id, credential_ids=credential_ids)
@@ -798,18 +822,22 @@ async def webauthn_authenticate_complete(
             status_code=status.HTTP_400_BAD_REQUEST,
         )
 
-    username = str(challenge_doc.get("username") or "")
-    user_in_db = await get_user_in_db(username)
-    if user_in_db is None or user_in_db.disabled:
-        return JSONResponse(
-            {"status": "error", "reason": "login_failed"},
-            status_code=status.HTTP_400_BAD_REQUEST,
-        )
-
     credential_id = _credential_id_from_payload(payload.credential)
     if credential_id is None:
         return JSONResponse(
             {"status": "error", "reason": "credential_invalid"},
+            status_code=status.HTTP_400_BAD_REQUEST,
+        )
+
+    challenge_username = str(challenge_doc.get("username") or "")
+    if challenge_username != "":
+        user_in_db = await get_user_in_db(challenge_username)
+    else:
+        user_in_db = await _user_in_db_by_credential_id(credential_id)
+
+    if user_in_db is None or user_in_db.disabled:
+        return JSONResponse(
+            {"status": "error", "reason": "login_failed"},
             status_code=status.HTTP_400_BAD_REQUEST,
         )
 
@@ -847,7 +875,7 @@ async def webauthn_authenticate_complete(
 
     await user_collection.update_one(
         {
-            "username": username,
+            "username": user_in_db.username,
             "passkey_credentials.credential_id": credential_id,
         },
         {
@@ -858,7 +886,7 @@ async def webauthn_authenticate_complete(
         },
     )
 
-    user = await get_user(username)
+    user = await get_user(user_in_db.username)
     if user is None:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
