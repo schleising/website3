@@ -3,6 +3,7 @@ import logging
 from typing import Any, Dict, Optional, cast
 
 from fastapi import Depends, Request, status
+from fastapi.responses import JSONResponse
 from starlette.requests import HTTPConnection
 
 from fastapi.security import OAuth2
@@ -83,7 +84,10 @@ class CookieOAuth2PasswordBearer(OAuth2):
 oauth2_scheme = CookieOAuth2PasswordBearer(tokenUrl="/account/token")
 
 
-def verify_password(plain_password: str, hashed_password: str) -> bool:
+def verify_password(plain_password: str, hashed_password: str | None) -> bool:
+    if not isinstance(hashed_password, str) or hashed_password.strip() == "":
+        return False
+
     return bcrypt.checkpw(
         plain_password.encode("utf-8"), hashed_password.encode("utf-8")
     )
@@ -138,6 +142,25 @@ async def authenticate_user(username: str, password: str) -> User | None:
     else:
         # Return the valid User without the hashed password
         return User.model_validate(user)
+
+
+def is_user_passkey_enrolled(user: User | UserInDB | None) -> bool:
+    if user is None:
+        return False
+
+    credentials = getattr(user, "passkey_credentials", [])
+    if not isinstance(credentials, list):
+        return False
+
+    return len(credentials) > 0
+
+
+def is_user_passkey_migration_required(user: UserInDB | None) -> bool:
+    if user is None:
+        return False
+
+    has_legacy_password = isinstance(user.hashed_password, str) and user.hashed_password.strip() != ""
+    return has_legacy_password and not is_user_passkey_enrolled(user)
 
 
 def create_access_token(data: dict, expires_delta: timedelta | None = None):
@@ -255,30 +278,36 @@ async def create_new_user(
         return None
 
 
-def get_login_response(user: User, url: str, request: Request) -> RedirectResponse:
+def _resolve_target_url(url: str) -> str:
+    return (
+        url
+        if url.startswith("/") or url.startswith("https://") or url.startswith("http://")
+        else f"/account/{url}"
+    )
+
+
+def _create_access_token_for_user(user: User) -> str:
     # If the user is valid, create a JWT token
     access_token_expires = (
         timedelta(seconds=user.token_expiry) if user.token_expiry is not None else None
     )
 
-    # Create the token
-    access_token = create_access_token(
+    return create_access_token(
         data={"sub": user.username}, expires_delta=access_token_expires
     )
 
-    # Create a redirect response to the login success page
-    target_url = (
-        url
-        if url.startswith("/") or url.startswith("https://") or url.startswith("http://")
-        else f"/account/{url}"
-    )
-    response = RedirectResponse(target_url, status_code=status.HTTP_303_SEE_OTHER)
 
+def _clear_existing_token_variants(response) -> None:
     # Clear host-only and shared-domain token variants before setting a fresh token.
     response.delete_cookie(key="token", path="/")
     response.delete_cookie(key="token", path="/", domain=".schleising.net")
 
-    # Set a cookie on the response with the contents as the JWT token
+
+def _set_login_cookie(response, user: User, request: Request) -> None:
+    access_token = _create_access_token_for_user(user)
+
+    _clear_existing_token_variants(response)
+
     cookie_kwargs: dict[str, Any] = {
         "key": "token",
         "max_age": user.token_expiry,
@@ -294,5 +323,25 @@ def get_login_response(user: User, url: str, request: Request) -> RedirectRespon
 
     response.set_cookie(**cookie_kwargs)
 
-    # Return the reponse
+
+def get_login_response(user: User, url: str, request: Request) -> RedirectResponse:
+    target_url = _resolve_target_url(url)
+    response = RedirectResponse(target_url, status_code=status.HTTP_303_SEE_OTHER)
+    _set_login_cookie(response, user, request)
+
+    # Return the response
+    return response
+
+
+def get_login_json_response(user: User, url: str, request: Request) -> JSONResponse:
+    target_url = _resolve_target_url(url)
+    response = JSONResponse(
+        {
+            "status": "ok",
+            "redirect_url": target_url,
+        }
+    )
+    _set_login_cookie(response, user, request)
+
+    # Return the response
     return response

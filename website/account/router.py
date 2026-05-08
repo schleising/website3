@@ -1,17 +1,40 @@
-from urllib.parse import urlencode, urlparse
-from collections import deque
-from time import time
-from typing import Any
+from __future__ import annotations
 
-from fastapi import APIRouter, Request, Depends, status
+from collections import deque
+from datetime import UTC, datetime, timedelta
+from secrets import token_bytes, token_urlsafe
+from time import time
+from urllib.parse import urlencode, urlparse
+from typing import Any, Mapping
+
+from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.security import OAuth2PasswordRequestForm
-from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
+from pydantic import BaseModel
+from pymongo import ASCENDING, ReturnDocument
+from pymongo.errors import DuplicateKeyError
 from starlette.responses import RedirectResponse, Response
 
-from .admin import authenticate_user, create_new_user, get_login_response
+from . import user_collection, webauthn_challenge_collection
+from .admin import (
+    authenticate_user,
+    get_login_json_response,
+    get_user,
+    get_user_in_db,
+    is_user_passkey_enrolled,
+    is_user_passkey_migration_required,
+)
 from .csrf import validate_csrf
-from .user_model import User, CreateUserForm
+from .passkeys import (
+    authentication_options_as_dict,
+    bytes_to_b64url,
+    registration_options_as_dict,
+    verify_authentication_response_payload,
+    verify_registration_response_payload,
+    webauthn_context_for_request,
+)
+from .user_model import PasskeyCredential, User, UserInDB
 from ..utils.cookie_policy import cookie_domain_for_request
 
 # Set the Jinja template location
@@ -24,8 +47,48 @@ SIGNUP_WINDOW_SECONDS = 15 * 60
 SIGNUP_MAX_ATTEMPTS_PER_WINDOW = 6
 SIGNUP_MIN_FORM_FILL_SECONDS = 2.5
 SIGNUP_MAX_FORM_AGE_SECONDS = 2 * 60 * 60
+WEBAUTHN_CHALLENGE_TTL_SECONDS = 5 * 60
+
+_webauthn_challenge_indexes_ready = False
 
 signup_attempts_by_ip: dict[str, deque[float]] = {}
+
+
+class PasskeyRegisterBeginPayload(BaseModel):
+    firstname: str
+    lastname: str
+    username: str
+    website: str = ""
+    form_loaded_at: str = ""
+
+
+class PasskeyRegisterCompletePayload(BaseModel):
+    challenge_id: str
+    credential: dict[str, Any]
+    next_path: str | None = None
+
+
+class PasskeyAuthBeginPayload(BaseModel):
+    username: str
+    next_path: str | None = None
+
+
+class PasskeyAuthCompletePayload(BaseModel):
+    challenge_id: str
+    credential: dict[str, Any]
+    next_path: str | None = None
+
+
+class PasskeyMigrateBeginPayload(BaseModel):
+    username: str | None = None
+    password: str | None = None
+    next_path: str | None = None
+
+
+class PasskeyMigrateCompletePayload(BaseModel):
+    challenge_id: str
+    credential: dict[str, Any]
+    next_path: str | None = None
 
 
 def _delete_auth_cookie(response: Response, request: Request) -> None:
@@ -73,14 +136,14 @@ def _record_signup_attempt(request: Request) -> None:
     attempts.append(now_ts)
 
 
-def _is_bot_like_create_submission(form_data: CreateUserForm) -> bool:
+def _is_bot_like_create_submission(website: str, form_loaded_at: str) -> bool:
     # Honeypot should stay empty for human users.
-    if form_data.website.strip() != "":
+    if website.strip() != "":
         return True
 
     now_ts = time()
     try:
-        loaded_at = float(form_data.form_loaded_at)
+        loaded_at = float(form_loaded_at)
     except (TypeError, ValueError):
         return True
 
@@ -91,6 +154,10 @@ def _is_bot_like_create_submission(form_data: CreateUserForm) -> bool:
         return True
 
     return False
+
+
+def _normalise_username(raw_username: str) -> str:
+    return raw_username.strip().lower()
 
 
 def _safe_next_path(raw_next: str | None) -> str | None:
@@ -154,12 +221,165 @@ def _is_web_app_login_target(next_target: str | None) -> bool:
 
     parsed = urlparse(candidate)
     host = (parsed.hostname or "").lower()
-    path = parsed.path or "/"
-
     if host in {"feeds.schleising.net", "football.schleising.net"}:
         return True
 
     return False
+
+
+async def _ensure_webauthn_challenge_indexes() -> None:
+    global _webauthn_challenge_indexes_ready
+
+    if _webauthn_challenge_indexes_ready:
+        return
+
+    if webauthn_challenge_collection is None:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Challenge storage is unavailable.",
+        )
+
+    await webauthn_challenge_collection.create_index("challenge_id", unique=True)
+    await webauthn_challenge_collection.create_index("expires_at", expireAfterSeconds=0)
+    await webauthn_challenge_collection.create_index(
+        [("username", ASCENDING), ("flow", ASCENDING), ("consumed", ASCENDING)]
+    )
+
+    _webauthn_challenge_indexes_ready = True
+
+
+async def _store_webauthn_challenge(
+    *,
+    username: str,
+    flow: str,
+    challenge: str,
+    rp_id: str,
+    origin: str,
+    context: dict[str, Any],
+) -> str:
+    await _ensure_webauthn_challenge_indexes()
+
+    if webauthn_challenge_collection is None:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Challenge storage is unavailable.",
+        )
+
+    now = datetime.now(tz=UTC)
+    expires_at = now + timedelta(seconds=WEBAUTHN_CHALLENGE_TTL_SECONDS)
+
+    for _ in range(3):
+        challenge_id = token_urlsafe(24)
+        challenge_document = {
+            "challenge_id": challenge_id,
+            "username": username,
+            "flow": flow,
+            "challenge": challenge,
+            "rp_id": rp_id,
+            "origin": origin,
+            "context": context,
+            "created_at": now,
+            "expires_at": expires_at,
+            "consumed": False,
+        }
+
+        try:
+            await webauthn_challenge_collection.insert_one(challenge_document)
+            return challenge_id
+        except DuplicateKeyError:
+            continue
+
+    raise HTTPException(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        detail="Unable to create challenge record.",
+    )
+
+
+async def _consume_webauthn_challenge(challenge_id: str, flow: str) -> Mapping[str, Any] | None:
+    if webauthn_challenge_collection is None:
+        return None
+
+    now = datetime.now(tz=UTC)
+
+    return await webauthn_challenge_collection.find_one_and_update(
+        {
+            "challenge_id": challenge_id,
+            "flow": flow,
+            "consumed": False,
+            "expires_at": {"$gt": now},
+        },
+        {"$set": {"consumed": True, "consumed_at": now}},
+        return_document=ReturnDocument.AFTER,
+    )
+
+
+def _challenge_context_value(challenge_doc: Mapping[str, Any], key: str) -> str | None:
+    context = challenge_doc.get("context")
+    if not isinstance(context, dict):
+        return None
+
+    value = context.get(key)
+    if isinstance(value, str) and value.strip() != "":
+        return value
+
+    return None
+
+
+def _active_passkey_credentials(user: UserInDB) -> list[PasskeyCredential]:
+    return [credential for credential in user.passkey_credentials if not credential.revoked]
+
+
+def _passkey_credential_by_id(user: UserInDB, credential_id: str) -> PasskeyCredential | None:
+    for credential in _active_passkey_credentials(user):
+        if credential.credential_id == credential_id:
+            return credential
+    return None
+
+
+def _credential_id_from_payload(credential_payload: dict[str, Any]) -> str | None:
+    credential_id = credential_payload.get("id")
+    if isinstance(credential_id, str) and credential_id.strip() != "":
+        return credential_id.strip()
+
+    raw_id = credential_payload.get("rawId")
+    if isinstance(raw_id, str) and raw_id.strip() != "":
+        return raw_id.strip()
+
+    return None
+
+
+def _registration_transports(credential_payload: dict[str, Any]) -> list[str]:
+    response_payload = credential_payload.get("response")
+    if not isinstance(response_payload, dict):
+        return []
+
+    transports = response_payload.get("transports")
+    if not isinstance(transports, list):
+        return []
+
+    values: list[str] = []
+    for item in transports:
+        if isinstance(item, str):
+            candidate = item.strip()
+            if candidate != "":
+                values.append(candidate)
+
+    return values
+
+
+def _build_display_name(firstname: str, lastname: str, username: str) -> str:
+    parts = [firstname.strip(), lastname.strip()]
+    joined = " ".join(part for part in parts if part != "")
+    return joined if joined != "" else username
+
+
+def _migration_url(username: str | None, next_path: str | None, result: str) -> str:
+    params: list[tuple[str, str]] = [("result", result)]
+    if username:
+        params.append(("username", username))
+    if next_path:
+        params.append(("next", next_path))
+    return f"/account/migrate/?{urlencode(params)}"
 
 
 @account_router.get("/login", response_class=HTMLResponse)
@@ -172,6 +392,13 @@ async def get_login_page(
     next_path = _safe_next_path(next)
     hide_left_sidebar = _is_web_app_login_target(next)
 
+    request_user = getattr(request.state, "user", None)
+    if isinstance(request_user, User) and not is_user_passkey_enrolled(request_user):
+        return RedirectResponse(
+            _migration_url(request_user.username, next_path, "migration_required"),
+            status_code=status.HTTP_303_SEE_OTHER,
+        )
+
     # Render the login page
     return TEMPLATES.TemplateResponse(
         request,
@@ -181,6 +408,37 @@ async def get_login_page(
             "result": result,
             "next_path": next_path,
             "render_left_sidebar": not hide_left_sidebar,
+        },
+    )
+
+
+@account_router.get("/migrate", response_class=HTMLResponse)
+@account_router.get("/migrate/", response_class=HTMLResponse)
+async def get_migrate_page(
+    request: Request,
+    result: str | None = None,
+    username: str | None = None,
+    next: str | None = None,
+):
+    next_path = _safe_next_path(next)
+
+    request_user = getattr(request.state, "user", None)
+    if isinstance(request_user, User) and not is_user_passkey_enrolled(request_user):
+        session_migration = True
+        prefilled_username = request_user.username
+    else:
+        session_migration = False
+        prefilled_username = _normalise_username(username or "")
+
+    return TEMPLATES.TemplateResponse(
+        request,
+        "account/migrate.html",
+        {
+            "request": request,
+            "result": result,
+            "username": prefilled_username,
+            "next_path": next_path,
+            "session_migration": session_migration,
         },
     )
 
@@ -215,8 +473,10 @@ async def login(
     raw_next = submitted_next if isinstance(submitted_next, str) else None
     next_path = _safe_next_path(raw_next)
 
+    username = _normalise_username(form_data.username)
+
     # Check the username and password, if valid the user will be returned, if not it will be None
-    user = await authenticate_user(form_data.username, form_data.password)
+    user = await authenticate_user(username, form_data.password)
 
     if user is None:
         # If the user has not beee authenticated, redirect back to the lgin page
@@ -228,14 +488,19 @@ async def login(
         # Return the redirect response
         return response
 
-    # Get the login response
-    if raw_next is not None and raw_next.strip() != "" and next_path is None:
-        redirect_target = "/"
-    else:
-        redirect_target = next_path or "/account/login_success/"
-    response = get_login_response(user, redirect_target, request)
+    user_in_db = await get_user_in_db(username)
+    if is_user_passkey_migration_required(user_in_db):
+        return RedirectResponse(
+            _migration_url(username, next_path, "migration_required"),
+            status_code=status.HTTP_303_SEE_OTHER,
+        )
 
-    # Return the response
+    # Password login is disabled once passkey support is enabled.
+    response = RedirectResponse(
+        _build_login_url("passkey_required", next_path),
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
+    _delete_auth_cookie(response, request)
     return response
 
 
@@ -266,44 +531,516 @@ async def get_create_page(request: Request, result: str | None = None):
 @account_router.post("/create_user")
 @account_router.post("/create_user/")
 async def create_user(
+    _: None = Depends(validate_csrf),
+):
+    # Password signup is replaced by passkey ceremonies.
+    return RedirectResponse(
+        "/account/create/?result=passkey_required",
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
+@account_router.post("/webauthn/register/begin")
+@account_router.post("/webauthn/register/begin/")
+async def webauthn_register_begin(
     request: Request,
-    form_data: CreateUserForm = Depends(),
+    payload: PasskeyRegisterBeginPayload,
     _: None = Depends(validate_csrf),
 ):
     if _is_signup_rate_limited(request):
-        return RedirectResponse(
-            "/account/create/?result=create_failed",
-            status_code=status.HTTP_303_SEE_OTHER,
+        return JSONResponse(
+            {"status": "error", "reason": "rate_limited"},
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
         )
 
     _record_signup_attempt(request)
 
-    if _is_bot_like_create_submission(form_data):
-        return RedirectResponse(
-            "/account/create/?result=create_failed",
-            status_code=status.HTTP_303_SEE_OTHER,
+    if _is_bot_like_create_submission(payload.website, payload.form_loaded_at):
+        return JSONResponse(
+            {"status": "error", "reason": "create_failed"},
+            status_code=status.HTTP_400_BAD_REQUEST,
         )
 
-    # Try to create the new user
-    user = await create_new_user(
-        form_data.firstname, form_data.lastname, form_data.username, form_data.password
+    username = _normalise_username(payload.username)
+    firstname = payload.firstname.strip()
+    lastname = payload.lastname.strip()
+
+    if username == "" or firstname == "" or lastname == "":
+        return JSONResponse(
+            {"status": "error", "reason": "invalid_input"},
+            status_code=status.HTTP_400_BAD_REQUEST,
+        )
+
+    existing_user = await get_user_in_db(username)
+    if existing_user is not None:
+        return JSONResponse(
+            {"status": "error", "reason": "username_taken"},
+            status_code=status.HTTP_409_CONFLICT,
+        )
+
+    rp_id, origin = webauthn_context_for_request(request)
+    user_handle_b64url = bytes_to_b64url(token_bytes(32))
+
+    options = registration_options_as_dict(
+        rp_id=rp_id,
+        username=username,
+        display_name=_build_display_name(firstname, lastname, username),
+        user_handle_b64url=user_handle_b64url,
+        exclude_credential_ids=[],
     )
 
-    if user is not None:
-        # Set the user as the Request,state,user object
-        request.state.user = user
-
-        # Get the login response
-        response = get_login_response(user, "create_success/", request)
-
-        # Return the response
-        return response
-    else:
-        # Redirect to the create page
-        return RedirectResponse(
-            "/account/create/?result=create_failed",
-            status_code=status.HTTP_303_SEE_OTHER,
+    challenge = options.get("challenge")
+    if not isinstance(challenge, str) or challenge.strip() == "":
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Registration challenge generation failed.",
         )
+
+    challenge_id = await _store_webauthn_challenge(
+        username=username,
+        flow="register",
+        challenge=challenge,
+        rp_id=rp_id,
+        origin=origin,
+        context={
+            "firstname": firstname,
+            "lastname": lastname,
+            "username": username,
+            "user_handle_b64url": user_handle_b64url,
+        },
+    )
+
+    return JSONResponse(
+        {
+            "status": "ok",
+            "challenge_id": challenge_id,
+            "public_key": options,
+        }
+    )
+
+
+@account_router.post("/webauthn/register/complete")
+@account_router.post("/webauthn/register/complete/")
+async def webauthn_register_complete(
+    request: Request,
+    payload: PasskeyRegisterCompletePayload,
+    _: None = Depends(validate_csrf),
+):
+    challenge_doc = await _consume_webauthn_challenge(payload.challenge_id, "register")
+    if challenge_doc is None:
+        return JSONResponse(
+            {"status": "error", "reason": "challenge_invalid"},
+            status_code=status.HTTP_400_BAD_REQUEST,
+        )
+
+    try:
+        registration_verification = verify_registration_response_payload(
+            credential=payload.credential,
+            challenge_b64url=str(challenge_doc["challenge"]),
+            rp_id=str(challenge_doc["rp_id"]),
+            origin=str(challenge_doc["origin"]),
+        )
+    except Exception:
+        return JSONResponse(
+            {"status": "error", "reason": "verification_failed"},
+            status_code=status.HTTP_400_BAD_REQUEST,
+        )
+
+    firstname = _challenge_context_value(challenge_doc, "firstname")
+    lastname = _challenge_context_value(challenge_doc, "lastname")
+    username = _challenge_context_value(challenge_doc, "username")
+    user_handle_b64url = _challenge_context_value(challenge_doc, "user_handle_b64url")
+
+    if (
+        firstname is None
+        or lastname is None
+        or username is None
+        or user_handle_b64url is None
+    ):
+        return JSONResponse(
+            {"status": "error", "reason": "challenge_invalid"},
+            status_code=status.HTTP_400_BAD_REQUEST,
+        )
+
+    new_credential = PasskeyCredential(
+        credential_id=bytes_to_b64url(registration_verification.credential_id),
+        public_key=bytes_to_b64url(registration_verification.credential_public_key),
+        sign_count=int(registration_verification.sign_count or 0),
+        transports=_registration_transports(payload.credential),
+        last_used_at=datetime.now(tz=UTC),
+    )
+
+    if user_collection is None:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="User storage is unavailable.",
+        )
+
+    new_user = UserInDB(
+        first_name=firstname,
+        last_name=lastname,
+        username=username,
+        disabled=False,
+        hashed_password=None,
+        user_handle_b64url=user_handle_b64url,
+        passkey_credentials=[new_credential],
+    )
+
+    try:
+        await user_collection.insert_one(new_user.model_dump())
+    except DuplicateKeyError:
+        return JSONResponse(
+            {"status": "error", "reason": "username_taken"},
+            status_code=status.HTTP_409_CONFLICT,
+        )
+
+    user = await get_user(username)
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Could not load newly created user.",
+        )
+
+    next_path = _safe_next_path(payload.next_path)
+    redirect_target = next_path or "/account/create_success/"
+    return get_login_json_response(user, redirect_target, request)
+
+
+@account_router.post("/webauthn/authenticate/begin")
+@account_router.post("/webauthn/authenticate/begin/")
+async def webauthn_authenticate_begin(
+    request: Request,
+    payload: PasskeyAuthBeginPayload,
+    _: None = Depends(validate_csrf),
+):
+    username = _normalise_username(payload.username)
+    user_in_db = await get_user_in_db(username)
+
+    if user_in_db is None:
+        return JSONResponse(
+            {"status": "error", "reason": "login_failed"},
+            status_code=status.HTTP_400_BAD_REQUEST,
+        )
+
+    if user_in_db.disabled:
+        return JSONResponse(
+            {"status": "error", "reason": "login_failed"},
+            status_code=status.HTTP_400_BAD_REQUEST,
+        )
+
+    if not is_user_passkey_enrolled(user_in_db):
+        if is_user_passkey_migration_required(user_in_db):
+            return JSONResponse(
+                {
+                    "status": "error",
+                    "reason": "migration_required",
+                    "migration_url": _migration_url(username, _safe_next_path(payload.next_path), "migration_required"),
+                },
+                status_code=status.HTTP_409_CONFLICT,
+            )
+
+        return JSONResponse(
+            {"status": "error", "reason": "login_failed"},
+            status_code=status.HTTP_400_BAD_REQUEST,
+        )
+
+    credential_ids = [
+        credential.credential_id
+        for credential in _active_passkey_credentials(user_in_db)
+    ]
+
+    if len(credential_ids) == 0:
+        return JSONResponse(
+            {"status": "error", "reason": "login_failed"},
+            status_code=status.HTTP_400_BAD_REQUEST,
+        )
+
+    rp_id, origin = webauthn_context_for_request(request)
+    options = authentication_options_as_dict(rp_id=rp_id, credential_ids=credential_ids)
+
+    challenge = options.get("challenge")
+    if not isinstance(challenge, str) or challenge.strip() == "":
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Authentication challenge generation failed.",
+        )
+
+    next_path = _safe_next_path(payload.next_path)
+    challenge_id = await _store_webauthn_challenge(
+        username=username,
+        flow="authenticate",
+        challenge=challenge,
+        rp_id=rp_id,
+        origin=origin,
+        context={"next_path": next_path or ""},
+    )
+
+    return JSONResponse(
+        {
+            "status": "ok",
+            "challenge_id": challenge_id,
+            "public_key": options,
+        }
+    )
+
+
+@account_router.post("/webauthn/authenticate/complete")
+@account_router.post("/webauthn/authenticate/complete/")
+async def webauthn_authenticate_complete(
+    request: Request,
+    payload: PasskeyAuthCompletePayload,
+    _: None = Depends(validate_csrf),
+):
+    challenge_doc = await _consume_webauthn_challenge(payload.challenge_id, "authenticate")
+    if challenge_doc is None:
+        return JSONResponse(
+            {"status": "error", "reason": "challenge_invalid"},
+            status_code=status.HTTP_400_BAD_REQUEST,
+        )
+
+    username = str(challenge_doc.get("username") or "")
+    user_in_db = await get_user_in_db(username)
+    if user_in_db is None or user_in_db.disabled:
+        return JSONResponse(
+            {"status": "error", "reason": "login_failed"},
+            status_code=status.HTTP_400_BAD_REQUEST,
+        )
+
+    credential_id = _credential_id_from_payload(payload.credential)
+    if credential_id is None:
+        return JSONResponse(
+            {"status": "error", "reason": "credential_invalid"},
+            status_code=status.HTTP_400_BAD_REQUEST,
+        )
+
+    credential = _passkey_credential_by_id(user_in_db, credential_id)
+    if credential is None:
+        return JSONResponse(
+            {"status": "error", "reason": "credential_invalid"},
+            status_code=status.HTTP_400_BAD_REQUEST,
+        )
+
+    try:
+        authentication_verification = verify_authentication_response_payload(
+            credential=payload.credential,
+            challenge_b64url=str(challenge_doc["challenge"]),
+            rp_id=str(challenge_doc["rp_id"]),
+            origin=str(challenge_doc["origin"]),
+            credential_public_key_b64url=credential.public_key,
+            credential_current_sign_count=credential.sign_count,
+        )
+    except Exception:
+        return JSONResponse(
+            {"status": "error", "reason": "verification_failed"},
+            status_code=status.HTTP_400_BAD_REQUEST,
+        )
+
+    if user_collection is None:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="User storage is unavailable.",
+        )
+
+    new_sign_count = int(
+        getattr(authentication_verification, "new_sign_count", credential.sign_count)
+    )
+
+    await user_collection.update_one(
+        {
+            "username": username,
+            "passkey_credentials.credential_id": credential_id,
+        },
+        {
+            "$set": {
+                "passkey_credentials.$.sign_count": new_sign_count,
+                "passkey_credentials.$.last_used_at": datetime.now(tz=UTC),
+            }
+        },
+    )
+
+    user = await get_user(username)
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Could not load authenticated user.",
+        )
+
+    next_path = _safe_next_path(payload.next_path)
+    challenge_next = _challenge_context_value(challenge_doc, "next_path")
+    redirect_target = next_path or challenge_next or "/account/login_success/"
+    return get_login_json_response(user, redirect_target, request)
+
+
+@account_router.post("/webauthn/migrate/begin")
+@account_router.post("/webauthn/migrate/begin/")
+async def webauthn_migrate_begin(
+    request: Request,
+    payload: PasskeyMigrateBeginPayload,
+    _: None = Depends(validate_csrf),
+):
+    request_user = getattr(request.state, "user", None)
+
+    user_in_db: UserInDB | None = None
+    if isinstance(request_user, User) and not is_user_passkey_enrolled(request_user):
+        user_in_db = await get_user_in_db(request_user.username)
+    else:
+        username = _normalise_username(payload.username or "")
+        password = payload.password or ""
+
+        if username == "" or password == "":
+            return JSONResponse(
+                {"status": "error", "reason": "credentials_required"},
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+
+        auth_user = await authenticate_user(username, password)
+        if auth_user is None:
+            return JSONResponse(
+                {"status": "error", "reason": "migration_failed"},
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+
+        user_in_db = await get_user_in_db(auth_user.username)
+
+    if user_in_db is None:
+        return JSONResponse(
+            {"status": "error", "reason": "migration_failed"},
+            status_code=status.HTTP_400_BAD_REQUEST,
+        )
+
+    if is_user_passkey_enrolled(user_in_db):
+        return JSONResponse(
+            {"status": "error", "reason": "already_enrolled"},
+            status_code=status.HTTP_409_CONFLICT,
+        )
+
+    rp_id, origin = webauthn_context_for_request(request)
+    user_handle_b64url = user_in_db.user_handle_b64url or bytes_to_b64url(token_bytes(32))
+
+    options = registration_options_as_dict(
+        rp_id=rp_id,
+        username=user_in_db.username,
+        display_name=_build_display_name(
+            user_in_db.first_name,
+            user_in_db.last_name,
+            user_in_db.username,
+        ),
+        user_handle_b64url=user_handle_b64url,
+        exclude_credential_ids=[],
+    )
+
+    challenge = options.get("challenge")
+    if not isinstance(challenge, str) or challenge.strip() == "":
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Migration challenge generation failed.",
+        )
+
+    next_path = _safe_next_path(payload.next_path)
+    challenge_id = await _store_webauthn_challenge(
+        username=user_in_db.username,
+        flow="migrate",
+        challenge=challenge,
+        rp_id=rp_id,
+        origin=origin,
+        context={
+            "user_handle_b64url": user_handle_b64url,
+            "next_path": next_path or "",
+        },
+    )
+
+    return JSONResponse(
+        {
+            "status": "ok",
+            "challenge_id": challenge_id,
+            "public_key": options,
+        }
+    )
+
+
+@account_router.post("/webauthn/migrate/complete")
+@account_router.post("/webauthn/migrate/complete/")
+async def webauthn_migrate_complete(
+    request: Request,
+    payload: PasskeyMigrateCompletePayload,
+    _: None = Depends(validate_csrf),
+):
+    challenge_doc = await _consume_webauthn_challenge(payload.challenge_id, "migrate")
+    if challenge_doc is None:
+        return JSONResponse(
+            {"status": "error", "reason": "challenge_invalid"},
+            status_code=status.HTTP_400_BAD_REQUEST,
+        )
+
+    username = str(challenge_doc.get("username") or "")
+    user_in_db = await get_user_in_db(username)
+    if user_in_db is None:
+        return JSONResponse(
+            {"status": "error", "reason": "migration_failed"},
+            status_code=status.HTTP_400_BAD_REQUEST,
+        )
+
+    if is_user_passkey_enrolled(user_in_db):
+        return JSONResponse(
+            {"status": "error", "reason": "already_enrolled"},
+            status_code=status.HTTP_409_CONFLICT,
+        )
+
+    try:
+        registration_verification = verify_registration_response_payload(
+            credential=payload.credential,
+            challenge_b64url=str(challenge_doc["challenge"]),
+            rp_id=str(challenge_doc["rp_id"]),
+            origin=str(challenge_doc["origin"]),
+        )
+    except Exception:
+        return JSONResponse(
+            {"status": "error", "reason": "verification_failed"},
+            status_code=status.HTTP_400_BAD_REQUEST,
+        )
+
+    user_handle_b64url = _challenge_context_value(challenge_doc, "user_handle_b64url")
+    if user_handle_b64url is None:
+        user_handle_b64url = user_in_db.user_handle_b64url or bytes_to_b64url(token_bytes(32))
+
+    new_credential = PasskeyCredential(
+        credential_id=bytes_to_b64url(registration_verification.credential_id),
+        public_key=bytes_to_b64url(registration_verification.credential_public_key),
+        sign_count=int(registration_verification.sign_count or 0),
+        transports=_registration_transports(payload.credential),
+        last_used_at=datetime.now(tz=UTC),
+    )
+
+    if user_collection is None:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="User storage is unavailable.",
+        )
+
+    await user_collection.update_one(
+        {"username": username},
+        {
+            "$set": {
+                "user_handle_b64url": user_handle_b64url,
+                "hashed_password": None,
+            },
+            "$push": {
+                "passkey_credentials": new_credential.model_dump(),
+            },
+        },
+    )
+
+    user = await get_user(username)
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Could not load migrated user.",
+        )
+
+    next_path = _safe_next_path(payload.next_path)
+    challenge_next = _challenge_context_value(challenge_doc, "next_path")
+    redirect_target = next_path or challenge_next or "/"
+    return get_login_json_response(user, redirect_target, request)
 
 
 @account_router.get("/create_success", response_class=HTMLResponse)

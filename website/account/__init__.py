@@ -8,3 +8,6 @@ mongodb.set_database('web_database')
 
 # Set the collection in use
 user_collection = mongodb.get_collection('user_collection')
+
+# Store short-lived WebAuthn ceremony challenges.
+webauthn_challenge_collection = mongodb.get_collection('webauthn_challenges')

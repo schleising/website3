@@ -1,18 +1,19 @@
 import logging
 import os
 from contextlib import asynccontextmanager
+from urllib.parse import urlencode
 
 from starlette.types import ASGIApp, Receive, Scope, Send
 
 from fastapi import FastAPI, Request, Depends
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.exceptions import RequestValidationError
 from fastapi.templating import Jinja2Templates
 
 from .database.database import Database
 
 from .account.router import account_router
-from .account.admin import get_current_active_user
+from .account.admin import get_current_active_user, get_current_user, is_user_passkey_enrolled
 from .account.csrf import CSRF_COOKIE_NAME, ensure_csrf_token
 from .utils.cookie_policy import cookie_domain_for_request
 
@@ -157,6 +158,22 @@ trusted_proxy_list = [
 app.add_middleware(RealIPMiddleware, trusted_proxies=trusted_proxy_list)
 
 
+def _is_passkey_migration_exempt_path(path: str) -> bool:
+    exempt_prefixes = (
+        "/account/migrate",
+        "/account/webauthn/",
+        "/account/logout",
+        "/account/token",
+    )
+
+    return any(path.startswith(prefix) for prefix in exempt_prefixes)
+
+
+def _build_migration_redirect_target(path: str, query: str) -> str:
+    next_path = path if query == "" else f"{path}?{query}"
+    return f"/account/migrate/?{urlencode({'result': 'migration_required', 'next': next_path})}"
+
+
 @app.middleware("http")
 async def csrf_cookie_middleware(request: Request, call_next):
     csrf_token = ensure_csrf_token(request)
@@ -181,6 +198,31 @@ async def csrf_cookie_middleware(request: Request, call_next):
         response.set_cookie(**cookie_kwargs)
 
     return response
+
+
+@app.middleware("http")
+async def passkey_migration_middleware(request: Request, call_next):
+    path = request.url.path
+    if _is_passkey_migration_exempt_path(path):
+        return await call_next(request)
+
+    token = request.cookies.get("token")
+    if token:
+        current_user = await get_current_user(token)
+        if current_user is not None and not is_user_passkey_enrolled(current_user):
+            target = _build_migration_redirect_target(path, request.url.query)
+            if request.method.upper() in {"GET", "HEAD"}:
+                return RedirectResponse(target, status_code=303)
+
+            return JSONResponse(
+                {
+                    "detail": "passkey migration required",
+                    "migration_url": target,
+                },
+                status_code=428,
+            )
+
+    return await call_next(request)
 
 # Include the account router
 app.include_router(account_router)

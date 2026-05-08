@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block scripts %}
+<script defer src="/js/account/passkeys.js?v1.0.0"></script>
+{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="/css/account/account.css?v1.2.0">
+{% block title %}<title>Migrate Account</title>{% endblock %}
+{% endblock %}
+
+{% block header %}
+<h3 class="header-text">Migrate Account</h3>
+{% endblock %}
+
+{% block content %}
+<div id="login-text">
+  <h3>Migrate To Passkey</h3>
+  {% if result == 'migration_required' %}
+    <h5>Passkey enrollment is required before continuing.</h5>
+  {% elif result == 'migration_failed' %}
+    <h5>Migration failed. Please try again.</h5>
+  {% endif %}
+  <p>This account still uses a legacy password. Complete this one-time migration to continue.</p>
+</div>
+
+<form class="row g-3" id="passkey-migrate-form" data-passkey-flow="migrate" novalidate>
+  <input type="hidden" name="csrf_token" value="{{ request.state.csrf_token|default('') }}">
+  <input type="hidden" name="next" value="{{ next_path|default('') }}">
+  <input type="hidden" name="session_migration" value="{{ 'true' if session_migration else 'false' }}">
+
+  <div class="col-md-6">
+    <label for="username" class="form-label">Email</label>
+    <input
+      name="username"
+      id="username"
+      class="form-control"
+      type="email"
+      placeholder="name@example.com"
+      autocomplete="username"
+      value="{{ username|default('') }}"
+      {% if session_migration %}readonly{% endif %}
+      required
+    >
+  </div>
+
+  <div class="col-md-6" {% if session_migration %}style="display:none;"{% endif %}>
+    <label for="password" class="form-label">Password</label>
+    <input
+      name="password"
+      id="password"
+      class="form-control"
+      type="password"
+      autocomplete="current-password"
+      {% if not session_migration %}required{% endif %}
+    >
+  </div>
+
+  <div class="col-12">
+    <button type="submit" class="btn btn-primary" id="passkey-migrate-submit">Enroll passkey and finish migration</button>
+  </div>
+
+  <div class="col-12">
+    <p id="passkey-status" class="account-status" role="status" aria-live="polite"></p>
+  </div>
+</form>
+{% endblock %}
+
+{% block footer %}
+<footer>Migrate Account</footer>
+{% endblock %}

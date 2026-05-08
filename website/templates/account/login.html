@@ -1,10 +1,11 @@
 {% extends "base.html" %}
 
 {% block scripts %}
+<script defer src="/js/account/passkeys.js?v1.0.0"></script>
 {% endblock %}
 
 {% block head %}
-<link rel="stylesheet" href="/css/account/account.css?v1.1.0">
+<link rel="stylesheet" href="/css/account/account.css?v1.2.0">
 {% block title %}<title>Login</title>{% endblock %}
 {% endblock %}
 
@@ -16,24 +17,30 @@
 <div id="login-text">
   <h3>Login</h3>
   {% if result == 'login_failed' %}
-    <h5>Email or Password incorrect</h5>
+    <h5>Login failed</h5>
+  {% elif result == 'passkey_required' %}
+    <h5>Password login is disabled. Use a passkey.</h5>
+  {% elif result == 'migration_required' %}
+    <h5>Your account must be migrated to passkeys before login.</h5>
   {% endif %}
-  <p>Please enter your email address and password</p>
+  <p>Please enter your email and sign in with your passkey.</p>
   <p>If you do not have an account, please <a href="/account/create/">create one</a></p>
 </div>
-<form class="row g-3" method="post" action="/account/token/">
+<form class="row g-3" id="passkey-login-form" data-passkey-flow="login" novalidate>
   <input type="hidden" name="next" value="{{ next_path|default('') }}">
   <input type="hidden" name="csrf_token" value="{{ request.state.csrf_token|default('') }}">
   <div class="col-md-6">
     <label for="username" class="form-label">Email</label>
-    <input name="username" id="username" class="form-control" type="email" placeholder="name@example.com" autocomplete="email" required>
-  </div>
-  <div class="col-md-6">
-    <label for="password" class="form-label">Password</label>
-    <input name="password" id="password" class="form-control" type="password" autocomplete="current-password" required>
+    <input name="username" id="username" class="form-control" type="email" placeholder="name@example.com" autocomplete="username webauthn" required>
   </div>
   <div class="col-12">
-    <button type="submit" class="btn btn-primary">Submit</button>
+    <button type="submit" class="btn btn-primary" id="passkey-login-submit">Sign in with passkey</button>
+  </div>
+  <div class="col-12">
+    <a id="passkey-migrate-link" class="btn btn-outline-secondary d-none" href="/account/migrate/">Migrate existing account</a>
+  </div>
+  <div class="col-12">
+    <p id="passkey-status" class="account-status" role="status" aria-live="polite"></p>
   </div>
 </form>
 {% endblock %}
