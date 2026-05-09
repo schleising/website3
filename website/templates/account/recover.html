@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block scripts %}
+<script defer src="/js/account/passkeys.js?v1.1.0"></script>
+{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="/css/account/account.css?v1.2.0">
+{% block title %}<title>Recover Account</title>{% endblock %}
+{% endblock %}
+
+{% block header %}
+<h3 class="header-text">Recover Account</h3>
+{% endblock %}
+
+{% block content %}
+<div id="login-text">
+  <h3>Recover Account</h3>
+  {% if result == 'recovery_link_invalid' %}
+    <h5>The recovery link is invalid or expired. Request a new one.</h5>
+  {% endif %}
+  <p>Enter your verified email to receive a one-time 15-minute recovery link.</p>
+</div>
+
+<form class="row g-3" id="recovery-email-form" data-passkey-flow="recovery-email" novalidate>
+  <input type="hidden" name="csrf_token" value="{{ request.state.csrf_token|default('') }}">
+
+  <div class="col-md-6">
+    <label for="username" class="form-label">Email</label>
+    <input name="username" id="username" class="form-control" type="email" placeholder="name@example.com" autocomplete="email" required>
+  </div>
+
+  <div class="col-12">
+    <button type="submit" class="btn btn-primary" id="recovery-email-submit">Send recovery link</button>
+  </div>
+
+  <div class="col-12">
+    <p id="passkey-status" class="account-status" role="status" aria-live="polite"></p>
+  </div>
+</form>
+{% endblock %}
+
+{% block footer %}
+<footer>Recover Account</footer>
+{% endblock %}

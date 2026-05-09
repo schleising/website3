@@ -3,6 +3,8 @@ services:
     build: fastapi
     depends_on:
       - mongodb
+    env_file:
+      - .env
     volumes:
       - ./website:/app:ro
     ports:

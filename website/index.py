@@ -161,6 +161,8 @@ app.add_middleware(RealIPMiddleware, trusted_proxies=trusted_proxy_list)
 def _is_passkey_migration_exempt_path(path: str) -> bool:
     exempt_prefixes = (
         "/account/migrate",
+        "/account/recover",
+        "/account/email/",
         "/account/webauthn/",
         "/account/logout",
         "/account/token",

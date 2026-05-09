@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block scripts %}
+<script defer src="/js/account/passkeys.js?v1.1.0"></script>
+{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="/css/account/account.css?v1.2.0">
+{% block title %}<title>Recover Passkey</title>{% endblock %}
+{% endblock %}
+
+{% block header %}
+<h3 class="header-text">Recover Passkey</h3>
+{% endblock %}
+
+{% block content %}
+<div id="login-text">
+  <h3>Recovery Link Verified</h3>
+  <p>Enroll a new passkey. Existing passkeys will be revoked after successful recovery.</p>
+</div>
+
+<form class="row g-3" id="recovery-register-form" data-passkey-flow="recovery-register" novalidate>
+  <input type="hidden" name="csrf_token" value="{{ request.state.csrf_token|default('') }}">
+  <input type="hidden" name="recovery_session_token" value="{{ recovery_session_token|default('') }}">
+  <input type="hidden" name="username" value="{{ username|default('') }}">
+
+  <div class="col-12">
+    <button type="submit" class="btn btn-primary" id="recovery-register-submit">Enroll new passkey</button>
+  </div>
+
+  <div class="col-12">
+    <p id="passkey-status" class="account-status" role="status" aria-live="polite"></p>
+  </div>
+</form>
+{% endblock %}
+
+{% block footer %}
+<footer>Recover Passkey</footer>
+{% endblock %}

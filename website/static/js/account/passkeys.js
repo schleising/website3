@@ -118,6 +118,16 @@
         return "Please complete all required fields.";
       case "verification_failed":
         return "Passkey verification failed.";
+      case "email_sent":
+        return "If the email exists and is eligible, a link has been sent.";
+      case "email_send_failed":
+        return "Unable to send email right now. Please try again.";
+      case "email_link_invalid":
+        return "Verification link is invalid or expired. Request a new one.";
+      case "recovery_link_invalid":
+        return "Recovery link is invalid or expired. Request a new one.";
+      case "email_verification_required":
+        return "Verify your email first, then continue with passkey setup.";
       case "challenge_invalid":
         return "This passkey request expired. Please try again.";
       case "login_failed":
@@ -320,6 +330,230 @@
     }
   }
 
+  async function runSignupEmailRequest(form) {
+    const statusElement = form.querySelector("#passkey-status");
+    const submitButton = form.querySelector("#signup-email-submit");
+    const csrfToken = form.querySelector("input[name='csrf_token']")?.value || "";
+    const firstname = form.querySelector("input[name='firstname']")?.value?.trim() || "";
+    const lastname = form.querySelector("input[name='lastname']")?.value?.trim() || "";
+    const username = form.querySelector("input[name='username']")?.value?.trim() || "";
+    const website = form.querySelector("input[name='website']")?.value || "";
+    const formLoadedAt = form.querySelector("input[name='form_loaded_at']")?.value || "";
+
+    if (firstname === "" || lastname === "" || username === "") {
+      setStatus(statusElement, "Please complete all required fields.", true);
+      return;
+    }
+
+    setBusy(submitButton, true, "Sending verification email...");
+    setStatus(statusElement, "", false);
+
+    try {
+      const result = await postJson(
+        "/account/email/signup/request/",
+        {
+          firstname,
+          lastname,
+          username,
+          website,
+          form_loaded_at: formLoadedAt,
+        },
+        csrfToken,
+      );
+
+      if (!result.ok || !result.data) {
+        const reason = result.data?.reason || "email_send_failed";
+        setStatus(statusElement, statusTextForReason(reason), true);
+        return;
+      }
+
+      setStatus(
+        statusElement,
+        "Verification email sent. Open the link in your inbox to continue passkey setup.",
+        false,
+      );
+    } catch (error) {
+      setStatus(statusElement, "Unable to send verification email right now.", true);
+    } finally {
+      setBusy(submitButton, false, "");
+    }
+  }
+
+  async function runVerifiedSignupRegistration(form) {
+    const statusElement = form.querySelector("#passkey-status");
+    const submitButton = form.querySelector("#verified-signup-submit");
+    const csrfToken = form.querySelector("input[name='csrf_token']")?.value || "";
+    const signupSessionToken = form.querySelector("input[name='signup_session_token']")?.value || "";
+
+    if (!requirePasskeySupport(statusElement)) {
+      return;
+    }
+
+    if (signupSessionToken === "") {
+      setStatus(statusElement, "Signup verification session is missing.", true);
+      return;
+    }
+
+    setBusy(submitButton, true, "Starting passkey setup...");
+    setStatus(statusElement, "", false);
+
+    try {
+      const begin = await postJson(
+        "/account/webauthn/register-from-email/begin/",
+        { signup_session_token: signupSessionToken },
+        csrfToken,
+      );
+
+      if (!begin.ok || !begin.data || begin.data.status !== "ok") {
+        const reason = begin.data?.reason || "email_link_invalid";
+        setStatus(statusElement, statusTextForReason(reason), true);
+        return;
+      }
+
+      const credential = await navigator.credentials.create({
+        publicKey: normaliseRegistrationOptions(begin.data.public_key),
+      });
+
+      if (!credential) {
+        setStatus(statusElement, "Passkey prompt was cancelled.", true);
+        return;
+      }
+
+      const complete = await postJson(
+        "/account/webauthn/register/complete/",
+        {
+          challenge_id: begin.data.challenge_id,
+          credential: credentialToJson(credential),
+        },
+        csrfToken,
+      );
+
+      if (!complete.ok || !complete.data || complete.data.status !== "ok") {
+        const reason = complete.data?.reason || "verification_failed";
+        setStatus(statusElement, statusTextForReason(reason), true);
+        return;
+      }
+
+      if (typeof complete.data.redirect_url === "string" && complete.data.redirect_url !== "") {
+        window.location.assign(complete.data.redirect_url);
+        return;
+      }
+
+      window.location.assign("/account/create_success/");
+    } catch (error) {
+      setStatus(statusElement, "Passkey registration failed. Please try again.", true);
+    } finally {
+      setBusy(submitButton, false, "");
+    }
+  }
+
+  async function runRecoveryEmailRequest(form) {
+    const statusElement = form.querySelector("#passkey-status");
+    const submitButton = form.querySelector("#recovery-email-submit");
+    const csrfToken = form.querySelector("input[name='csrf_token']")?.value || "";
+    const username = form.querySelector("input[name='username']")?.value?.trim() || "";
+
+    if (username === "") {
+      setStatus(statusElement, "Please enter your email.", true);
+      return;
+    }
+
+    setBusy(submitButton, true, "Sending recovery email...");
+    setStatus(statusElement, "", false);
+
+    try {
+      const result = await postJson(
+        "/account/email/recovery/request/",
+        { username },
+        csrfToken,
+      );
+
+      if (!result.ok || !result.data) {
+        const reason = result.data?.reason || "email_send_failed";
+        setStatus(statusElement, statusTextForReason(reason), true);
+        return;
+      }
+
+      setStatus(
+        statusElement,
+        "If the account exists, a recovery link has been sent. Check your inbox.",
+        false,
+      );
+    } catch (error) {
+      setStatus(statusElement, "Unable to send recovery email right now.", true);
+    } finally {
+      setBusy(submitButton, false, "");
+    }
+  }
+
+  async function runRecoveryRegistration(form) {
+    const statusElement = form.querySelector("#passkey-status");
+    const submitButton = form.querySelector("#recovery-register-submit");
+    const csrfToken = form.querySelector("input[name='csrf_token']")?.value || "";
+    const recoverySessionToken = form.querySelector("input[name='recovery_session_token']")?.value || "";
+
+    if (!requirePasskeySupport(statusElement)) {
+      return;
+    }
+
+    if (recoverySessionToken === "") {
+      setStatus(statusElement, "Recovery session is missing.", true);
+      return;
+    }
+
+    setBusy(submitButton, true, "Starting passkey recovery...");
+    setStatus(statusElement, "", false);
+
+    try {
+      const begin = await postJson(
+        "/account/webauthn/recovery/begin/",
+        { recovery_session_token: recoverySessionToken },
+        csrfToken,
+      );
+
+      if (!begin.ok || !begin.data || begin.data.status !== "ok") {
+        const reason = begin.data?.reason || "recovery_link_invalid";
+        setStatus(statusElement, statusTextForReason(reason), true);
+        return;
+      }
+
+      const credential = await navigator.credentials.create({
+        publicKey: normaliseRegistrationOptions(begin.data.public_key),
+      });
+
+      if (!credential) {
+        setStatus(statusElement, "Passkey prompt was cancelled.", true);
+        return;
+      }
+
+      const complete = await postJson(
+        "/account/webauthn/recovery/complete/",
+        {
+          challenge_id: begin.data.challenge_id,
+          credential: credentialToJson(credential),
+        },
+        csrfToken,
+      );
+
+      if (!complete.ok || !complete.data || complete.data.status !== "ok") {
+        const reason = complete.data?.reason || "verification_failed";
+        setStatus(statusElement, statusTextForReason(reason), true);
+        return;
+      }
+
+      if (typeof complete.data.redirect_url === "string" && complete.data.redirect_url !== "") {
+        window.location.assign(complete.data.redirect_url);
+        return;
+      }
+
+      window.location.assign("/account/login_success/");
+    } catch (error) {
+      setStatus(statusElement, "Recovery passkey setup failed. Please try again.", true);
+    } finally {
+      setBusy(submitButton, false, "");
+    }
+  }
+
   async function runMigration(form) {
     const statusElement = form.querySelector("#passkey-status");
     const submitButton = form.querySelector("#passkey-migrate-submit");
@@ -417,8 +651,16 @@
       const flow = form.dataset.passkeyFlow;
       if (flow === "login") {
         await runLogin(form, { autoStart: false });
+      } else if (flow === "signup-email") {
+        await runSignupEmailRequest(form);
+      } else if (flow === "register-verified") {
+        await runVerifiedSignupRegistration(form);
       } else if (flow === "register") {
         await runRegistration(form);
+      } else if (flow === "recovery-email") {
+        await runRecoveryEmailRequest(form);
+      } else if (flow === "recovery-register") {
+        await runRecoveryRegistration(form);
       } else if (flow === "migrate") {
         await runMigration(form);
       }

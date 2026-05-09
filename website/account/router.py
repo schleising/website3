@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import logging
 from collections import deque
 from datetime import UTC, datetime, timedelta
+from hashlib import sha256
 from secrets import token_bytes, token_urlsafe
 from time import time
 from urllib.parse import urlencode, urlparse
@@ -16,7 +18,7 @@ from pymongo import ASCENDING, ReturnDocument
 from pymongo.errors import DuplicateKeyError
 from starlette.responses import RedirectResponse, Response
 
-from . import user_collection, webauthn_challenge_collection
+from . import email_link_token_collection, user_collection, webauthn_challenge_collection
 from .admin import (
     authenticate_user,
     get_login_json_response,
@@ -26,6 +28,7 @@ from .admin import (
     is_user_passkey_migration_required,
 )
 from .csrf import validate_csrf
+from .emailer import send_email
 from .passkeys import (
     authentication_options_as_dict,
     bytes_to_b64url,
@@ -42,16 +45,26 @@ TEMPLATES = Jinja2Templates("/app/templates")
 
 # Create an account router
 account_router = APIRouter(prefix="/account")
+logger = logging.getLogger(__name__)
 
 SIGNUP_WINDOW_SECONDS = 15 * 60
 SIGNUP_MAX_ATTEMPTS_PER_WINDOW = 6
 SIGNUP_MIN_FORM_FILL_SECONDS = 2.5
 SIGNUP_MAX_FORM_AGE_SECONDS = 2 * 60 * 60
 WEBAUTHN_CHALLENGE_TTL_SECONDS = 5 * 60
+EMAIL_LINK_TTL_SECONDS = 15 * 60
+EMAIL_LINK_MAX_PER_IP_WINDOW = 5
+EMAIL_LINK_MAX_PER_EMAIL_WINDOW = 5
+EMAIL_LINK_MAX_PER_EMAIL_PER_DAY = 20
+CANONICAL_LINK_BASE_URL = "https://schleising.net"
 
 _webauthn_challenge_indexes_ready = False
+_email_link_token_indexes_ready = False
 
 signup_attempts_by_ip: dict[str, deque[float]] = {}
+email_link_attempts_by_ip: dict[str, deque[float]] = {}
+email_link_attempts_by_email: dict[str, deque[float]] = {}
+email_link_daily_counts_by_email: dict[str, tuple[str, int]] = {}
 
 
 class PasskeyRegisterBeginPayload(BaseModel):
@@ -86,6 +99,38 @@ class PasskeyMigrateBeginPayload(BaseModel):
 
 
 class PasskeyMigrateCompletePayload(BaseModel):
+    challenge_id: str
+    credential: dict[str, Any]
+    next_path: str | None = None
+
+
+class SignupEmailRequestPayload(BaseModel):
+    firstname: str
+    lastname: str
+    username: str
+    website: str = ""
+    form_loaded_at: str = ""
+
+
+class VerifiedSignupRegisterBeginPayload(BaseModel):
+    signup_session_token: str
+
+
+class VerifiedSignupRegisterCompletePayload(BaseModel):
+    challenge_id: str
+    credential: dict[str, Any]
+    next_path: str | None = None
+
+
+class RecoveryEmailRequestPayload(BaseModel):
+    username: str
+
+
+class RecoveryRegisterBeginPayload(BaseModel):
+    recovery_session_token: str
+
+
+class RecoveryRegisterCompletePayload(BaseModel):
     challenge_id: str
     credential: dict[str, Any]
     next_path: str | None = None
@@ -403,6 +448,195 @@ def _migration_url(username: str | None, next_path: str | None, result: str) -> 
     return f"/account/migrate/?{urlencode(params)}"
 
 
+def _token_hash(token: str) -> str:
+    return sha256(token.encode("utf-8")).hexdigest()
+
+
+def _canonical_link(path: str, token: str) -> str:
+    base = CANONICAL_LINK_BASE_URL.rstrip("/")
+    return f"{base}{path}?{urlencode({'token': token})}"
+
+
+def _email_link_window_key(now_utc: datetime) -> str:
+    return now_utc.strftime("%Y-%m-%d")
+
+
+def _record_email_link_attempt(ip: str, username: str) -> None:
+    now_ts = time()
+
+    ip_attempts = email_link_attempts_by_ip.setdefault(ip, deque())
+    _prune_signup_attempts(now_ts, ip_attempts)
+    ip_attempts.append(now_ts)
+
+    email_attempts = email_link_attempts_by_email.setdefault(username, deque())
+    _prune_signup_attempts(now_ts, email_attempts)
+    email_attempts.append(now_ts)
+
+    now_utc = datetime.now(tz=UTC)
+    day_key = _email_link_window_key(now_utc)
+    existing = email_link_daily_counts_by_email.get(username)
+
+    if existing is None or existing[0] != day_key:
+        email_link_daily_counts_by_email[username] = (day_key, 1)
+    else:
+        email_link_daily_counts_by_email[username] = (day_key, existing[1] + 1)
+
+
+def _is_email_link_rate_limited(ip: str, username: str) -> bool:
+    now_ts = time()
+
+    ip_attempts = email_link_attempts_by_ip.setdefault(ip, deque())
+    _prune_signup_attempts(now_ts, ip_attempts)
+    if len(ip_attempts) >= EMAIL_LINK_MAX_PER_IP_WINDOW:
+        return True
+
+    email_attempts = email_link_attempts_by_email.setdefault(username, deque())
+    _prune_signup_attempts(now_ts, email_attempts)
+    if len(email_attempts) >= EMAIL_LINK_MAX_PER_EMAIL_WINDOW:
+        return True
+
+    now_utc = datetime.now(tz=UTC)
+    day_key = _email_link_window_key(now_utc)
+    existing = email_link_daily_counts_by_email.get(username)
+    if existing is None:
+        return False
+
+    if existing[0] != day_key:
+        return False
+
+    return existing[1] >= EMAIL_LINK_MAX_PER_EMAIL_PER_DAY
+
+
+async def _ensure_email_link_token_indexes() -> None:
+    global _email_link_token_indexes_ready
+
+    if _email_link_token_indexes_ready:
+        return
+
+    if email_link_token_collection is None:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Email token storage is unavailable.",
+        )
+
+    await email_link_token_collection.create_index("token_hash", unique=True)
+    await email_link_token_collection.create_index("expires_at", expireAfterSeconds=0)
+    await email_link_token_collection.create_index(
+        [("username", ASCENDING), ("flow", ASCENDING), ("consumed", ASCENDING)]
+    )
+
+    _email_link_token_indexes_ready = True
+
+
+async def _store_email_link_token(
+    *,
+    username: str,
+    flow: str,
+    context: dict[str, Any],
+    ttl_seconds: int = EMAIL_LINK_TTL_SECONDS,
+) -> str:
+    await _ensure_email_link_token_indexes()
+
+    if email_link_token_collection is None:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Email token storage is unavailable.",
+        )
+
+    now = datetime.now(tz=UTC)
+    expires_at = now + timedelta(seconds=ttl_seconds)
+
+    for _ in range(3):
+        plain_token = token_urlsafe(32)
+        token_document = {
+            "token_hash": _token_hash(plain_token),
+            "username": username,
+            "flow": flow,
+            "context": context,
+            "created_at": now,
+            "expires_at": expires_at,
+            "consumed": False,
+        }
+
+        try:
+            await email_link_token_collection.insert_one(token_document)
+            return plain_token
+        except DuplicateKeyError:
+            continue
+
+    raise HTTPException(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        detail="Unable to create email token.",
+    )
+
+
+async def _consume_email_link_token(token: str, flow: str) -> Mapping[str, Any] | None:
+    if email_link_token_collection is None:
+        return None
+
+    now = datetime.now(tz=UTC)
+    return await email_link_token_collection.find_one_and_update(
+        {
+            "token_hash": _token_hash(token),
+            "flow": flow,
+            "consumed": False,
+            "expires_at": {"$gt": now},
+        },
+        {
+            "$set": {
+                "consumed": True,
+                "consumed_at": now,
+            }
+        },
+        return_document=ReturnDocument.AFTER,
+    )
+
+
+async def _send_signup_verification_email(
+    *,
+    username: str,
+    firstname: str,
+    verify_token: str,
+) -> None:
+    verify_link = _canonical_link("/account/email/verify-signup/", verify_token)
+    greeting_name = firstname if firstname != "" else "there"
+    await send_email(
+        username,
+        "Verify your Schleising Website signup",
+        (
+            f"Hello {greeting_name},\n\n"
+            "Please verify your email to continue creating your account.\n"
+            f"This link is valid for 15 minutes and can be used once:\n\n{verify_link}\n\n"
+            "If you did not request this, you can ignore this email."
+        ),
+    )
+
+
+async def _send_recovery_request_email(*, username: str, recovery_token: str) -> None:
+    recovery_link = _canonical_link("/account/email/verify-recovery/", recovery_token)
+    await send_email(
+        username,
+        "Passkey recovery requested",
+        (
+            "A request was made to recover access and register a new passkey.\n"
+            "If this was you, use the one-time link below within 15 minutes:\n\n"
+            f"{recovery_link}\n\n"
+            "If this was not you, ignore this email and consider reviewing account security."
+        ),
+    )
+
+
+async def _send_recovery_completed_email(*, username: str) -> None:
+    await send_email(
+        username,
+        "Passkey recovery completed",
+        (
+            "A new passkey was successfully enrolled and prior passkeys were revoked.\n"
+            "If you did not perform this action, contact support immediately."
+        ),
+    )
+
+
 @account_router.get("/login", response_class=HTMLResponse)
 @account_router.get("/login/", response_class=HTMLResponse)
 async def get_login_page(
@@ -554,11 +788,256 @@ async def get_create_page(request: Request, result: str | None = None):
 async def create_user(
     _: None = Depends(validate_csrf),
 ):
-    # Password signup is replaced by passkey ceremonies.
+    # Password signup is replaced by email verification + passkey ceremonies.
     return RedirectResponse(
-        "/account/create/?result=passkey_required",
+        "/account/create/?result=email_verification_required",
         status_code=status.HTTP_303_SEE_OTHER,
     )
+
+
+@account_router.get("/recover", response_class=HTMLResponse)
+@account_router.get("/recover/", response_class=HTMLResponse)
+async def get_recover_page(request: Request, result: str | None = None):
+    return TEMPLATES.TemplateResponse(
+        request,
+        "account/recover.html",
+        {
+            "request": request,
+            "result": result,
+        },
+    )
+
+
+@account_router.get("/email/verify-signup", response_class=HTMLResponse)
+@account_router.get("/email/verify-signup/", response_class=HTMLResponse)
+async def verify_signup_email_link(request: Request, token: str | None = None):
+    token_value = (token or "").strip()
+    if token_value == "":
+        return TEMPLATES.TemplateResponse(
+            request,
+            "account/create.html",
+            {
+                "request": request,
+                "result": "email_link_invalid",
+                "form_loaded_at": f"{time():.6f}",
+            },
+        )
+
+    consumed = await _consume_email_link_token(token_value, "signup_verify")
+    if consumed is None:
+        return TEMPLATES.TemplateResponse(
+            request,
+            "account/create.html",
+            {
+                "request": request,
+                "result": "email_link_invalid",
+                "form_loaded_at": f"{time():.6f}",
+            },
+        )
+
+    firstname = _challenge_context_value(consumed, "firstname") or ""
+    lastname = _challenge_context_value(consumed, "lastname") or ""
+    username = _challenge_context_value(consumed, "username")
+
+    if username is None:
+        return TEMPLATES.TemplateResponse(
+            request,
+            "account/create.html",
+            {
+                "request": request,
+                "result": "email_link_invalid",
+                "form_loaded_at": f"{time():.6f}",
+            },
+        )
+
+    signup_session_token = await _store_email_link_token(
+        username=username,
+        flow="signup_session",
+        context={
+            "firstname": firstname,
+            "lastname": lastname,
+            "username": username,
+        },
+    )
+
+    return TEMPLATES.TemplateResponse(
+        request,
+        "account/verify_signup.html",
+        {
+            "request": request,
+            "firstname": firstname,
+            "lastname": lastname,
+            "username": username,
+            "signup_session_token": signup_session_token,
+        },
+    )
+
+
+@account_router.get("/email/verify-recovery", response_class=HTMLResponse)
+@account_router.get("/email/verify-recovery/", response_class=HTMLResponse)
+async def verify_recovery_email_link(request: Request, token: str | None = None):
+    token_value = (token or "").strip()
+    if token_value == "":
+        return RedirectResponse(
+            "/account/recover/?result=recovery_link_invalid",
+            status_code=status.HTTP_303_SEE_OTHER,
+        )
+
+    consumed = await _consume_email_link_token(token_value, "recovery_verify")
+    if consumed is None:
+        return RedirectResponse(
+            "/account/recover/?result=recovery_link_invalid",
+            status_code=status.HTTP_303_SEE_OTHER,
+        )
+
+    username = _challenge_context_value(consumed, "username")
+    if username is None:
+        return RedirectResponse(
+            "/account/recover/?result=recovery_link_invalid",
+            status_code=status.HTTP_303_SEE_OTHER,
+        )
+
+    user_in_db = await get_user_in_db(username)
+    if user_in_db is None:
+        return RedirectResponse(
+            "/account/recover/?result=recovery_link_invalid",
+            status_code=status.HTTP_303_SEE_OTHER,
+        )
+
+    recovery_session_token = await _store_email_link_token(
+        username=username,
+        flow="recovery_session",
+        context={"username": username},
+    )
+
+    return TEMPLATES.TemplateResponse(
+        request,
+        "account/recover_verify.html",
+        {
+            "request": request,
+            "username": username,
+            "recovery_session_token": recovery_session_token,
+        },
+    )
+
+
+@account_router.post("/email/signup/request")
+@account_router.post("/email/signup/request/")
+async def request_signup_email_verification(
+    request: Request,
+    payload: SignupEmailRequestPayload,
+    _: None = Depends(validate_csrf),
+):
+    username = _normalise_username(payload.username)
+    firstname = payload.firstname.strip()
+    lastname = payload.lastname.strip()
+
+    ip = _client_ip(request)
+    if _is_email_link_rate_limited(ip, username):
+        return JSONResponse(
+            {
+                "status": "ok",
+                "reason": "email_sent",
+            }
+        )
+
+    _record_email_link_attempt(ip, username)
+
+    if _is_bot_like_create_submission(payload.website, payload.form_loaded_at):
+        return JSONResponse(
+            {
+                "status": "ok",
+                "reason": "email_sent",
+            }
+        )
+
+    if firstname == "" or lastname == "" or username == "":
+        return JSONResponse(
+            {"status": "error", "reason": "invalid_input"},
+            status_code=status.HTTP_400_BAD_REQUEST,
+        )
+
+    existing_user = await get_user_in_db(username)
+    if existing_user is not None:
+        # Neutral response to avoid account enumeration.
+        return JSONResponse(
+            {
+                "status": "ok",
+                "reason": "email_sent",
+            }
+        )
+
+    verify_token = await _store_email_link_token(
+        username=username,
+        flow="signup_verify",
+        context={
+            "firstname": firstname,
+            "lastname": lastname,
+            "username": username,
+        },
+    )
+
+    try:
+        await _send_signup_verification_email(
+            username=username,
+            firstname=firstname,
+            verify_token=verify_token,
+        )
+    except Exception:
+        logger.exception("Failed to send signup verification email for %s", username)
+        return JSONResponse(
+            {"status": "error", "reason": "email_send_failed"},
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
+
+    return JSONResponse({"status": "ok", "reason": "email_sent"})
+
+
+@account_router.post("/email/recovery/request")
+@account_router.post("/email/recovery/request/")
+async def request_recovery_email_verification(
+    request: Request,
+    payload: RecoveryEmailRequestPayload,
+    _: None = Depends(validate_csrf),
+):
+    username = _normalise_username(payload.username)
+
+    if username == "":
+        return JSONResponse(
+            {"status": "error", "reason": "invalid_input"},
+            status_code=status.HTTP_400_BAD_REQUEST,
+        )
+
+    ip = _client_ip(request)
+    if _is_email_link_rate_limited(ip, username):
+        return JSONResponse(
+            {"status": "ok", "reason": "email_sent"}
+        )
+
+    _record_email_link_attempt(ip, username)
+
+    user_in_db = await get_user_in_db(username)
+    if user_in_db is None:
+        return JSONResponse(
+            {"status": "ok", "reason": "email_sent"}
+        )
+
+    recovery_token = await _store_email_link_token(
+        username=username,
+        flow="recovery_verify",
+        context={"username": username},
+    )
+
+    try:
+        await _send_recovery_request_email(username=username, recovery_token=recovery_token)
+    except Exception:
+        logger.exception("Failed to send recovery email for %s", username)
+        return JSONResponse(
+            {"status": "error", "reason": "email_send_failed"},
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
+
+    return JSONResponse({"status": "ok", "reason": "email_sent"})
 
 
 @account_router.post("/webauthn/register/begin")
@@ -568,27 +1047,35 @@ async def webauthn_register_begin(
     payload: PasskeyRegisterBeginPayload,
     _: None = Depends(validate_csrf),
 ):
-    if _is_signup_rate_limited(request):
-        return JSONResponse(
-            {"status": "error", "reason": "rate_limited"},
-            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-        )
+    return JSONResponse(
+        {
+            "status": "error",
+            "reason": "email_verification_required",
+        }
+    )
 
-    _record_signup_attempt(request)
 
-    if _is_bot_like_create_submission(payload.website, payload.form_loaded_at):
+@account_router.post("/webauthn/register-from-email/begin")
+@account_router.post("/webauthn/register-from-email/begin/")
+async def webauthn_register_from_email_begin(
+    request: Request,
+    payload: VerifiedSignupRegisterBeginPayload,
+    _: None = Depends(validate_csrf),
+):
+    consumed = await _consume_email_link_token(payload.signup_session_token, "signup_session")
+    if consumed is None:
         return JSONResponse(
-            {"status": "error", "reason": "create_failed"},
+            {"status": "error", "reason": "email_link_invalid"},
             status_code=status.HTTP_400_BAD_REQUEST,
         )
 
-    username = _normalise_username(payload.username)
-    firstname = payload.firstname.strip()
-    lastname = payload.lastname.strip()
+    firstname = _challenge_context_value(consumed, "firstname")
+    lastname = _challenge_context_value(consumed, "lastname")
+    username = _challenge_context_value(consumed, "username")
 
-    if username == "" or firstname == "" or lastname == "":
+    if firstname is None or lastname is None or username is None:
         return JSONResponse(
-            {"status": "error", "reason": "invalid_input"},
+            {"status": "error", "reason": "email_link_invalid"},
             status_code=status.HTTP_400_BAD_REQUEST,
         )
 
@@ -724,6 +1211,165 @@ async def webauthn_register_complete(
 
     next_path = _safe_next_path(payload.next_path)
     redirect_target = next_path or "/account/create_success/"
+    return get_login_json_response(user, redirect_target, request)
+
+
+@account_router.post("/webauthn/recovery/begin")
+@account_router.post("/webauthn/recovery/begin/")
+async def webauthn_recovery_begin(
+    request: Request,
+    payload: RecoveryRegisterBeginPayload,
+    _: None = Depends(validate_csrf),
+):
+    consumed = await _consume_email_link_token(payload.recovery_session_token, "recovery_session")
+    if consumed is None:
+        return JSONResponse(
+            {"status": "error", "reason": "recovery_link_invalid"},
+            status_code=status.HTTP_400_BAD_REQUEST,
+        )
+
+    username = _challenge_context_value(consumed, "username")
+    if username is None:
+        return JSONResponse(
+            {"status": "error", "reason": "recovery_link_invalid"},
+            status_code=status.HTTP_400_BAD_REQUEST,
+        )
+
+    user_in_db = await get_user_in_db(username)
+    if user_in_db is None or user_in_db.disabled:
+        return JSONResponse(
+            {"status": "error", "reason": "recovery_link_invalid"},
+            status_code=status.HTTP_400_BAD_REQUEST,
+        )
+
+    rp_id, origin = webauthn_context_for_request(request)
+    user_handle_b64url = user_in_db.user_handle_b64url or bytes_to_b64url(token_bytes(32))
+
+    options = registration_options_as_dict(
+        rp_id=rp_id,
+        username=user_in_db.username,
+        display_name=_build_display_name(
+            user_in_db.first_name,
+            user_in_db.last_name,
+            user_in_db.username,
+        ),
+        user_handle_b64url=user_handle_b64url,
+        exclude_credential_ids=[],
+    )
+
+    challenge = options.get("challenge")
+    if not isinstance(challenge, str) or challenge.strip() == "":
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Recovery challenge generation failed.",
+        )
+
+    challenge_id = await _store_webauthn_challenge(
+        username=user_in_db.username,
+        flow="recovery",
+        challenge=challenge,
+        rp_id=rp_id,
+        origin=origin,
+        context={
+            "username": user_in_db.username,
+            "user_handle_b64url": user_handle_b64url,
+        },
+    )
+
+    return JSONResponse(
+        {
+            "status": "ok",
+            "challenge_id": challenge_id,
+            "public_key": options,
+        }
+    )
+
+
+@account_router.post("/webauthn/recovery/complete")
+@account_router.post("/webauthn/recovery/complete/")
+async def webauthn_recovery_complete(
+    request: Request,
+    payload: RecoveryRegisterCompletePayload,
+    _: None = Depends(validate_csrf),
+):
+    challenge_doc = await _consume_webauthn_challenge(payload.challenge_id, "recovery")
+    if challenge_doc is None:
+        return JSONResponse(
+            {"status": "error", "reason": "challenge_invalid"},
+            status_code=status.HTTP_400_BAD_REQUEST,
+        )
+
+    username = str(challenge_doc.get("username") or "")
+    user_in_db = await get_user_in_db(username)
+    if user_in_db is None:
+        return JSONResponse(
+            {"status": "error", "reason": "recovery_failed"},
+            status_code=status.HTTP_400_BAD_REQUEST,
+        )
+
+    try:
+        registration_verification = verify_registration_response_payload(
+            credential=payload.credential,
+            challenge_b64url=str(challenge_doc["challenge"]),
+            rp_id=str(challenge_doc["rp_id"]),
+            origin=str(challenge_doc["origin"]),
+        )
+    except Exception:
+        return JSONResponse(
+            {"status": "error", "reason": "verification_failed"},
+            status_code=status.HTTP_400_BAD_REQUEST,
+        )
+
+    user_handle_b64url = _challenge_context_value(challenge_doc, "user_handle_b64url")
+    if user_handle_b64url is None:
+        user_handle_b64url = user_in_db.user_handle_b64url or bytes_to_b64url(token_bytes(32))
+
+    new_credential = PasskeyCredential(
+        credential_id=bytes_to_b64url(registration_verification.credential_id),
+        public_key=bytes_to_b64url(registration_verification.credential_public_key),
+        sign_count=int(registration_verification.sign_count or 0),
+        transports=_registration_transports(payload.credential),
+        last_used_at=datetime.now(tz=UTC),
+    )
+
+    if user_collection is None:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="User storage is unavailable.",
+        )
+
+    revoked_credentials = [
+        credential.model_copy(update={"revoked": True})
+        for credential in user_in_db.passkey_credentials
+    ]
+    updated_credentials = revoked_credentials + [new_credential]
+
+    await user_collection.update_one(
+        {"username": username},
+        {
+            "$set": {
+                "user_handle_b64url": user_handle_b64url,
+                "passkey_credentials": [credential.model_dump() for credential in updated_credentials],
+                "hashed_password": None,
+            },
+        },
+    )
+
+    try:
+        await _send_recovery_completed_email(username=username)
+    except Exception:
+        # Do not block recovery completion on notification delivery failure.
+        logger.exception("Failed to send recovery completion notification for %s", username)
+
+    user = await get_user(username)
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Could not load recovered user.",
+        )
+
+    next_path = _safe_next_path(payload.next_path)
+    redirect_target = next_path or "/account/login_success/"
     return get_login_json_response(user, redirect_target, request)
 
 

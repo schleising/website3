@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block scripts %}
+<script defer src="/js/account/passkeys.js?v1.1.0"></script>
+{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="/css/account/account.css?v1.2.0">
+{% block title %}<title>Verify Signup</title>{% endblock %}
+{% endblock %}
+
+{% block header %}
+<h3 class="header-text">Verify Signup</h3>
+{% endblock %}
+
+{% block content %}
+<div id="login-text">
+  <h3>Email Verified</h3>
+  <p>Thanks, your email is verified. Complete passkey setup to finish account creation.</p>
+</div>
+
+<form class="row g-3" id="verified-signup-register-form" data-passkey-flow="register-verified" novalidate>
+  <input type="hidden" name="csrf_token" value="{{ request.state.csrf_token|default('') }}">
+  <input type="hidden" name="signup_session_token" value="{{ signup_session_token|default('') }}">
+
+  <div class="col-md-6">
+    <label for="firstname" class="form-label">First Name</label>
+    <input name="firstname" id="firstname" class="form-control" type="text" value="{{ firstname|default('') }}" readonly>
+  </div>
+  <div class="col-md-6">
+    <label for="lastname" class="form-label">Last Name</label>
+    <input name="lastname" id="lastname" class="form-control" type="text" value="{{ lastname|default('') }}" readonly>
+  </div>
+  <div class="col-md-6">
+    <label for="username" class="form-label">Email</label>
+    <input name="username" id="username" class="form-control" type="email" value="{{ username|default('') }}" readonly>
+  </div>
+
+  <div class="col-12">
+    <button type="submit" class="btn btn-primary" id="verified-signup-submit">Create account with passkey</button>
+  </div>
+  <div class="col-12">
+    <p id="passkey-status" class="account-status" role="status" aria-live="polite"></p>
+  </div>
+</form>
+{% endblock %}
+
+{% block footer %}
+<footer>Verify Signup</footer>
+{% endblock %}

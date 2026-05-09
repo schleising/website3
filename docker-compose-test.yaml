@@ -13,6 +13,8 @@ services:
     build: fastapi
     depends_on:
       - mongodb
+    env_file:
+      - .env
     volumes:
       - ./website:/app:ro
       - ./test/config/website_db_server.txt:/app/database/db_server.txt:ro

@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 
 {% block scripts %}
-<script defer src="/js/account/passkeys.js?v1.0.1"></script>
+<script defer src="/js/account/passkeys.js?v1.1.0"></script>
 {% endblock %}
 {% block head %}
 <link rel="stylesheet" href="/css/account/account.css?v1.2.0">
@@ -17,12 +17,14 @@
   <h3>Create Account</h3>
   {% if result == 'create_failed' %}
     <h5>User Creation Failed</h5>
-  {% elif result == 'passkey_required' %}
-    <h5>Password signup is disabled. Use passkey registration.</h5>
+  {% elif result == 'email_verification_required' %}
+    <h5>Email verification is required before passkey setup.</h5>
+  {% elif result == 'email_link_invalid' %}
+    <h5>The verification link is invalid or expired. Request a new one.</h5>
   {% endif %}
-  <p>Please enter your details and register a passkey to create an account.</p>
+  <p>Enter your details and request a one-time email verification link.</p>
 </div>
-<form class="row g-3" id="passkey-register-form" data-passkey-flow="register" novalidate>
+<form class="row g-3" id="signup-email-form" data-passkey-flow="signup-email" novalidate>
   <input type="hidden" name="csrf_token" value="{{ request.state.csrf_token|default('') }}">
   <input type="hidden" name="form_loaded_at" value="{{ form_loaded_at|default('') }}">
   <div style="position:absolute;left:-10000px;top:auto;width:1px;height:1px;overflow:hidden;" aria-hidden="true">
@@ -49,7 +51,7 @@
     <input name="username" id="username" class="form-control" type="email" placeholder="name@example.com" autocomplete="email" required>
   </div>
   <div class="col-12">
-    <button type="submit" class="btn btn-primary" id="passkey-register-submit">Create account with passkey</button>
+    <button type="submit" class="btn btn-primary" id="signup-email-submit">Send verification email</button>
   </div>
   <div class="col-12">
     <p id="passkey-status" class="account-status" role="status" aria-live="polite"></p>
