@@ -285,6 +285,64 @@
     padding-top: 0.15rem;
 }
 
+.user-delete-dialog {
+    padding: 0;
+    border: 0;
+    border-radius: 1rem;
+    background: transparent;
+    max-width: min(28rem, calc(100vw - 2rem));
+    width: 100%;
+}
+
+.user-delete-dialog::backdrop {
+    background: rgba(18, 30, 48, 0.52);
+    backdrop-filter: blur(0.15rem);
+}
+
+.user-delete-dialog-panel {
+    display: grid;
+    gap: 0.9rem;
+    padding: 1.1rem 1.15rem;
+    border: 0.0625rem solid rgba(198, 214, 235, 0.95);
+    border-top: 0.2rem solid rgba(189, 74, 80, 0.6);
+    border-radius: 1rem;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.99) 0%, rgba(246, 249, 253, 0.99) 100%);
+    box-shadow: 0 1.1rem 2.2rem rgba(15, 25, 41, 0.22);
+}
+
+.user-delete-dialog-eyebrow {
+    margin: 0;
+    color: #8c1f26;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.04rem;
+    text-transform: uppercase;
+}
+
+.user-delete-dialog-title {
+    margin: 0;
+    color: var(--text);
+    font-size: 1.25rem;
+    font-weight: 700;
+}
+
+.user-delete-dialog-copy {
+    margin: 0;
+    color: var(--text-soft);
+    line-height: 1.55;
+}
+
+.user-delete-dialog-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.7rem;
+    justify-content: end;
+}
+
+.user-delete-dialog-actions form {
+    display: flex;
+}
+
 @media screen and (max-width: 56rem) {
     .user-card-body {
         grid-template-columns: 1fr;
@@ -310,8 +368,16 @@
         padding: 0.8rem;
     }
 
+    .user-delete-dialog-panel {
+        padding: 1rem;
+    }
+
     .user-field-grid,
     .user-facts {
         grid-template-columns: 1fr;
+    }
+
+    .user-delete-dialog-actions {
+        justify-content: start;
     }
 }

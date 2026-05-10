@@ -3,7 +3,11 @@
 {% block title %}<title>User Management</title>{% endblock %}
 
 {% block head %}
-<link rel="stylesheet" href="/css/account/user-management.css?v1.0.2">
+<link rel="stylesheet" href="/css/account/user-management.css?v1.0.3">
+{% endblock %}
+
+{% block scripts %}
+<script defer src="/js/account/user-management.js?v1.0.0"></script>
 {% endblock %}
 
 {% set render_right_sidebar = false %}
@@ -134,22 +138,42 @@
             </div>
           </form>
 
-          <form
-            class="user-delete-form"
-            method="post"
-            action="/account/users/delete/"
-            onsubmit="return window.confirm('Delete {{ user.username }}? This cannot be undone.');"
-          >
-            <input type="hidden" name="csrf_token" value="{{ request.state.csrf_token|default('') }}">
-            <input type="hidden" name="username" value="{{ user.username }}">
-            <button class="btn btn-outline-danger" type="submit">Delete User</button>
-          </form>
+          <div class="user-delete-form">
+            <button
+              class="btn btn-outline-danger"
+              type="button"
+              data-user-delete-trigger
+              data-username="{{ user.username }}"
+            >
+              Delete User
+            </button>
+          </div>
         </section>
       </div>
     </article>
     {% endfor %}
   </section>
   {% endif %}
+
+  <dialog class="user-delete-dialog" id="user-delete-dialog">
+    <div class="user-delete-dialog-panel">
+      <p class="user-delete-dialog-eyebrow">Confirm Deletion</p>
+      <h2 class="user-delete-dialog-title">Delete user account?</h2>
+      <p class="user-delete-dialog-copy">
+        You are about to permanently delete
+        <strong id="user-delete-dialog-username">this user</strong>.
+        This action cannot be undone.
+      </p>
+      <div class="user-delete-dialog-actions">
+        <button class="btn btn-outline-secondary" id="user-delete-cancel-button" type="button">Cancel</button>
+        <form id="user-delete-confirm-form" method="post" action="/account/users/delete/">
+          <input type="hidden" name="csrf_token" value="{{ request.state.csrf_token|default('') }}">
+          <input type="hidden" id="user-delete-username-input" name="username" value="">
+          <button class="btn btn-outline-danger" type="submit">Delete User</button>
+        </form>
+      </div>
+    </div>
+  </dialog>
 </section>
 {% endblock %}
 
