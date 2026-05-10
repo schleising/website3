@@ -276,12 +276,17 @@
     color: var(--text);
     font-size: 1rem;
     font-weight: 700;
-    word-break: break-word;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
 }
 
 .media-card-path {
     font-size: 0.84rem;
     line-height: 1.35;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
 }
 
 .media-status-list {

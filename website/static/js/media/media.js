@@ -222,10 +222,12 @@
             const title = document.createElement("h5");
             title.className = "media-card-title";
             title.textContent = file.display_name || file.filename || "Unknown";
+            title.title = file.display_name || file.filename || "Unknown";
 
             const path = document.createElement("p");
             path.className = "media-card-path";
             path.textContent = file.parent_directory || file.filename || "";
+            path.title = file.parent_directory || file.filename || "";
 
             titleWrap.append(title, path);
 
