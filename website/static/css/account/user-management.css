@@ -1,0 +1,274 @@
+.user-management-page {
+    display: grid;
+    gap: 0.9rem;
+}
+
+.user-management-hero,
+.user-summary-card,
+.user-card,
+.user-management-empty-state {
+    --site-card-border-color: color-mix(in srgb, var(--line), #ffffff 18%);
+    --site-card-top-accent: rgba(58, 101, 153, 0.78);
+}
+
+.user-management-hero,
+.user-management-empty-state,
+.user-card {
+    padding: 1rem 1.05rem;
+}
+
+.user-management-eyebrow,
+.user-card-eyebrow,
+.user-summary-label,
+.user-field span,
+.user-fact dt,
+.user-empty-title {
+    letter-spacing: 0.02rem;
+}
+
+.user-management-eyebrow,
+.user-card-eyebrow {
+    margin: 0;
+    color: var(--brand);
+    font-size: 0.82rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.user-management-title,
+.user-card-title,
+.user-empty-title {
+    margin: 0;
+    color: var(--text);
+    font-weight: 700;
+}
+
+.user-management-title {
+    font-size: 1.7rem;
+}
+
+.user-card-title,
+.user-empty-title {
+    font-size: 1.2rem;
+}
+
+.user-management-intro,
+.user-empty-copy {
+    margin: 0;
+    color: var(--text-soft);
+    font-size: 0.98rem;
+    line-height: 1.55;
+    max-width: 46rem;
+}
+
+.user-management-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+    gap: 0.75rem;
+}
+
+.user-summary-card {
+    display: grid;
+    gap: 0.3rem;
+    padding: 0.8rem 0.9rem;
+}
+
+.user-summary-label,
+.user-field span,
+.user-fact dt {
+    color: var(--text-soft);
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.user-summary-value {
+    color: var(--text);
+    font-size: 1.45rem;
+    font-weight: 700;
+}
+
+.user-management-directory {
+    display: grid;
+    gap: 0.85rem;
+}
+
+.user-card {
+    display: grid;
+    gap: 0.9rem;
+}
+
+.user-card-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: start;
+    justify-content: space-between;
+    gap: 0.8rem;
+}
+
+.user-card-badges {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: end;
+    gap: 0.45rem;
+}
+
+.user-badge {
+    display: inline-flex;
+    align-items: center;
+    min-height: 2rem;
+    padding: 0.25rem 0.7rem;
+    border: 0.0625rem solid rgba(166, 189, 214, 0.95);
+    border-radius: 999rem;
+    background: rgba(255, 255, 255, 0.9);
+    color: var(--text);
+    font-size: 0.82rem;
+    font-weight: 600;
+}
+
+.user-badge.is-active {
+    border-color: rgba(44, 136, 85, 0.26);
+    background: rgba(237, 248, 241, 0.98);
+    color: #205f3b;
+}
+
+.user-badge.is-disabled {
+    border-color: rgba(189, 74, 80, 0.28);
+    background: rgba(252, 240, 241, 0.98);
+    color: #8c1f26;
+}
+
+.user-badge.is-tools {
+    border-color: rgba(39, 89, 148, 0.24);
+    background: rgba(238, 245, 253, 0.98);
+    color: #204f84;
+}
+
+.user-badge.is-standard {
+    color: var(--text-soft);
+}
+
+.user-badge.is-current-user {
+    border-color: rgba(178, 142, 38, 0.28);
+    background: rgba(255, 248, 228, 0.98);
+    color: #8a6713;
+}
+
+.user-facts {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+    gap: 0.7rem;
+    margin: 0;
+}
+
+.user-fact {
+    display: grid;
+    gap: 0.2rem;
+    padding: 0.75rem 0.8rem;
+    border: 0.0625rem solid rgba(197, 214, 235, 0.9);
+    border-radius: 0.8rem;
+    background: rgba(255, 255, 255, 0.82);
+}
+
+.user-fact dd {
+    margin: 0;
+    color: var(--text);
+    font-size: 0.96rem;
+    font-weight: 600;
+    line-height: 1.45;
+}
+
+.user-fact-handle dd {
+    overflow-wrap: anywhere;
+}
+
+.user-edit-form {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+    gap: 0.8rem;
+    align-items: end;
+}
+
+.user-field {
+    display: grid;
+    gap: 0.3rem;
+}
+
+.user-field input {
+    min-height: 2.6rem;
+    padding: 0.65rem 0.75rem;
+    border: 0.0625rem solid rgba(167, 189, 214, 0.95);
+    border-radius: 0.7rem;
+    background: #ffffff;
+    color: var(--text);
+    font: inherit;
+}
+
+.user-field input:focus,
+.user-checkbox-field:focus-within {
+    outline: 0.125rem solid rgba(61, 110, 166, 0.18);
+    outline-offset: 0.0625rem;
+}
+
+.user-checkbox-field {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    min-height: 2.6rem;
+    padding: 0.7rem 0.8rem;
+    border: 0.0625rem solid rgba(197, 214, 235, 0.9);
+    border-radius: 0.8rem;
+    background: rgba(255, 255, 255, 0.85);
+    color: var(--text);
+    font-size: 0.94rem;
+    font-weight: 600;
+}
+
+.user-checkbox-field input {
+    width: 1rem;
+    height: 1rem;
+    margin: 0;
+}
+
+.user-card-actions,
+.user-delete-form {
+    display: flex;
+    align-items: center;
+}
+
+.user-card-actions {
+    justify-content: start;
+}
+
+.user-delete-form {
+    justify-content: end;
+}
+
+@media screen and (max-width: 56rem) {
+    .user-card-badges {
+        justify-content: start;
+    }
+
+    .user-delete-form {
+        justify-content: start;
+    }
+}
+
+@media screen and (max-width: 42rem) {
+    .user-management-title {
+        font-size: 1.45rem;
+    }
+
+    .user-management-hero,
+    .user-management-empty-state,
+    .user-card {
+        padding: 0.9rem;
+    }
+
+    .user-edit-form {
+        grid-template-columns: 1fr;
+    }
+
+    .user-facts {
+        grid-template-columns: 1fr;
+    }
+}

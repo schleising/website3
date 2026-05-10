@@ -9,7 +9,7 @@ from time import time
 from urllib.parse import urlencode, urlparse
 from typing import Any, Mapping
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, Form, HTTPException, Request, status
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.templating import Jinja2Templates
@@ -21,6 +21,7 @@ from starlette.responses import RedirectResponse, Response
 from . import email_link_token_collection, user_collection, webauthn_challenge_collection
 from .admin import (
     authenticate_user,
+    get_login_response,
     get_login_json_response,
     get_user,
     get_user_in_db,
@@ -38,6 +39,7 @@ from .passkeys import (
     webauthn_context_for_request,
 )
 from .user_model import PasskeyCredential, User, UserInDB
+from ..utils.user_management_access import require_user_management_access
 from ..utils.cookie_policy import cookie_domain_for_request
 
 # Set the Jinja template location
@@ -203,6 +205,96 @@ def _is_bot_like_create_submission(website: str, form_loaded_at: str) -> bool:
 
 def _normalise_username(raw_username: str) -> str:
     return raw_username.strip().lower()
+
+
+def _user_has_legacy_password(user: UserInDB) -> bool:
+    return isinstance(user.hashed_password, str) and user.hashed_password.strip() != ""
+
+
+def _format_user_management_timestamp(value: datetime | None) -> str:
+    if value is None:
+        return "Never"
+
+    return value.astimezone(UTC).strftime("%Y-%m-%d %H:%M UTC")
+
+
+def _format_user_management_token_expiry(seconds: int | None) -> str:
+    if seconds is None:
+        return "Default"
+
+    if seconds < 60:
+        return f"{seconds} seconds"
+
+    if seconds < 60 * 60:
+        minutes = seconds // 60
+        return f"{minutes} minute{'s' if minutes != 1 else ''}"
+
+    if seconds < 60 * 60 * 24:
+        hours = seconds // (60 * 60)
+        return f"{hours} hour{'s' if hours != 1 else ''}"
+
+    days = seconds // (60 * 60 * 24)
+    return f"{days} day{'s' if days != 1 else ''}"
+
+
+def _build_user_management_auth_label(user: UserInDB) -> str:
+    active_passkey_count = len(
+        [credential for credential in user.passkey_credentials if not credential.revoked]
+    )
+    has_legacy_password = _user_has_legacy_password(user)
+
+    if active_passkey_count > 0 and has_legacy_password:
+        return "Passkeys and legacy password"
+    if active_passkey_count > 0:
+        return "Passkeys enabled"
+    if has_legacy_password:
+        return "Legacy password only"
+    return "No active credentials"
+
+
+def _build_user_management_row(
+    user: UserInDB, current_username: str | None
+) -> dict[str, Any]:
+    active_passkeys = [
+        credential for credential in user.passkey_credentials if not credential.revoked
+    ]
+    revoked_passkey_count = len(user.passkey_credentials) - len(active_passkeys)
+    last_passkey_used = max(
+        (
+            credential.last_used_at
+            for credential in active_passkeys
+            if credential.last_used_at is not None
+        ),
+        default=None,
+    )
+    full_name = f"{user.first_name} {user.last_name}".strip() or user.username
+
+    return {
+        "username": user.username,
+        "first_name": user.first_name,
+        "last_name": user.last_name,
+        "full_name": full_name,
+        "disabled": user.disabled,
+        "can_use_tools": user.can_use_tools,
+        "token_expiry_label": _format_user_management_token_expiry(user.token_expiry),
+        "auth_mode_label": _build_user_management_auth_label(user),
+        "passkey_count": len(active_passkeys),
+        "revoked_passkey_count": revoked_passkey_count,
+        "last_passkey_used": _format_user_management_timestamp(last_passkey_used),
+        "user_handle": user.user_handle_b64url or "Not set",
+        "is_current_user": current_username == user.username,
+    }
+
+
+def _build_user_management_summary(users: list[UserInDB]) -> dict[str, int]:
+    return {
+        "total_users": len(users),
+        "tools_users": len([user for user in users if user.can_use_tools]),
+        "disabled_users": len([user for user in users if user.disabled]),
+        "legacy_password_users": len(
+            [user for user in users if _user_has_legacy_password(user)]
+        ),
+    }
 
 
 def _safe_next_path(raw_next: str | None) -> str | None:
@@ -1715,6 +1807,146 @@ async def webauthn_migrate_complete(
     challenge_next = _challenge_context_value(challenge_doc, "next_path")
     redirect_target = next_path or challenge_next or "/"
     return get_login_json_response(user, redirect_target, request)
+
+
+@account_router.get("/users", response_class=HTMLResponse)
+@account_router.get("/users/", response_class=HTMLResponse)
+async def user_management_page(request: Request):
+    require_user_management_access(request)
+
+    if user_collection is None:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="User storage is unavailable.",
+        )
+
+    request_user = getattr(request.state, "user", None)
+    current_username = request_user.username if isinstance(request_user, User) else None
+    user_documents = await user_collection.find({}).sort("username", ASCENDING).to_list(
+        length=None
+    )
+    users = [UserInDB.model_validate(document) for document in user_documents]
+
+    return TEMPLATES.TemplateResponse(
+        request,
+        "account/users.html",
+        {
+            "request": request,
+            "summary": _build_user_management_summary(users),
+            "users": [
+                _build_user_management_row(user, current_username) for user in users
+            ],
+        },
+    )
+
+
+@account_router.post("/users/update")
+@account_router.post("/users/update/")
+async def update_managed_user(
+    request: Request,
+    username: str = Form(...),
+    first_name: str = Form(...),
+    last_name: str = Form(...),
+    can_use_tools: str | None = Form(default=None),
+    disabled: str | None = Form(default=None),
+    _: None = Depends(validate_csrf),
+):
+    require_user_management_access(request)
+
+    if user_collection is None:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="User storage is unavailable.",
+        )
+
+    target_username = _normalise_username(username)
+    first_name_value = first_name.strip()
+    last_name_value = last_name.strip()
+
+    if target_username == "":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Username is required.",
+        )
+
+    if first_name_value == "" or last_name_value == "":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="First and last name are required.",
+        )
+
+    updated_document = await user_collection.find_one_and_update(
+        {"username": target_username},
+        {
+            "$set": {
+                "first_name": first_name_value,
+                "last_name": last_name_value,
+                "can_use_tools": can_use_tools is not None,
+                "disabled": disabled is not None,
+            }
+        },
+        return_document=ReturnDocument.AFTER,
+    )
+
+    if updated_document is None:
+        return RedirectResponse("/account/users/", status_code=status.HTTP_303_SEE_OTHER)
+
+    updated_user = User.model_validate(updated_document)
+    request_user = getattr(request.state, "user", None)
+    is_current_user = (
+        isinstance(request_user, User) and request_user.username == target_username
+    )
+
+    if not is_current_user:
+        return RedirectResponse("/account/users/", status_code=status.HTTP_303_SEE_OTHER)
+
+    if updated_user.disabled:
+        response = RedirectResponse("/", status_code=status.HTTP_303_SEE_OTHER)
+        _delete_auth_cookie(response, request)
+        return response
+
+    target_url = "/account/users/" if updated_user.can_use_tools else "/"
+    return get_login_response(updated_user, target_url, request)
+
+
+@account_router.post("/users/delete")
+@account_router.post("/users/delete/")
+async def delete_managed_user(
+    request: Request,
+    username: str = Form(...),
+    _: None = Depends(validate_csrf),
+):
+    require_user_management_access(request)
+
+    if user_collection is None:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="User storage is unavailable.",
+        )
+
+    target_username = _normalise_username(username)
+    if target_username == "":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Username is required.",
+        )
+
+    deleted_document = await user_collection.find_one_and_delete(
+        {"username": target_username}
+    )
+
+    request_user = getattr(request.state, "user", None)
+    is_current_user = (
+        deleted_document is not None
+        and isinstance(request_user, User)
+        and request_user.username == target_username
+    )
+    if is_current_user:
+        response = RedirectResponse("/", status_code=status.HTTP_303_SEE_OTHER)
+        _delete_auth_cookie(response, request)
+        return response
+
+    return RedirectResponse("/account/users/", status_code=status.HTTP_303_SEE_OTHER)
 
 
 @account_router.get("/create_success", response_class=HTMLResponse)
