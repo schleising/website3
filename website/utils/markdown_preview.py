@@ -4,6 +4,7 @@ import re
 
 
 _MARKDOWN_TABLE_DIVIDER_RE = re.compile(r"^\s*\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)+\|?\s*$")
+_MARKDOWN_FENCE_RE = re.compile(r"^\s*(```+|~~~+)\s*([^\s`~]*)\s*$")
 
 
 def build_markdown_preview(text: str, max_length: int = 220) -> str:
@@ -27,6 +28,42 @@ def build_markdown_preview(text: str, max_length: int = 220) -> str:
     if clipped == "":
         clipped = plain_text[:max_length].strip()
     return f"{clipped}..."
+
+
+def extract_first_mermaid_preview(text: str) -> str | None:
+    lines = text.splitlines()
+    line_index = 0
+
+    while line_index < len(lines):
+        line = lines[line_index]
+        fence_match = _MARKDOWN_FENCE_RE.match(line)
+
+        if fence_match is None:
+            line_index += 1
+            continue
+
+        fence_marker = fence_match.group(1)
+        fence_char = fence_marker[0]
+        language = fence_match.group(2).strip().lower()
+        line_index += 1
+        fenced_lines: list[str] = []
+
+        while line_index < len(lines):
+            current_line = lines[line_index]
+            closing_match = re.match(rf"^\s*{re.escape(fence_char)}{{{len(fence_marker)},}}\s*$", current_line)
+            if closing_match is not None:
+                break
+
+            fenced_lines.append(current_line)
+            line_index += 1
+
+        if language == "mermaid":
+            mermaid_text = "\n".join(fenced_lines).strip()
+            return mermaid_text or None
+
+        line_index += 1
+
+    return None
 
 
 def _strip_non_preview_markdown_blocks(text: str) -> str:

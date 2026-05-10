@@ -5,7 +5,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
 from .blog import get_blog_list, get_blog_by_id, get_blog_html, get_blog_author
-from ..utils.markdown_preview import build_markdown_preview
+from ..utils.markdown_preview import build_markdown_preview, extract_first_mermaid_preview
 
 TEMPLATES = Jinja2Templates("/app/templates")
 
@@ -19,8 +19,12 @@ async def get_aircraft_page(request: Request):
 
     card_authors = await gather(*(get_blog_author(blog) for blog in blog_list)) if blog_list else []
     blog_cards = []
+    has_mermaid_previews = False
     for blog, (first_name, last_name) in zip(blog_list, card_authors):
         preview_text = build_markdown_preview(blog.text)
+        mermaid_preview = extract_first_mermaid_preview(blog.text)
+        if mermaid_preview is not None:
+            has_mermaid_previews = True
         blog_cards.append(
             {
                 "id": str(blog.id),
@@ -28,6 +32,7 @@ async def get_aircraft_page(request: Request):
                 "last_updated": blog.last_updated,
                 "author": _display_author(first_name, last_name),
                 "preview_text": preview_text,
+                "mermaid_preview": mermaid_preview,
             }
         )
 
@@ -44,6 +49,7 @@ async def get_aircraft_page(request: Request):
             "last_name": "",
             "is_blog_index": True,
             "blog_cards": blog_cards,
+            "has_mermaid_previews": has_mermaid_previews,
         },
     )
 
@@ -76,6 +82,7 @@ async def get_blog_page(request: Request, blog_id: str):
             "last_name": last_name,
             "is_blog_index": False,
             "blog_cards": [],
+            "has_mermaid_previews": False,
         },
     )
 

@@ -2,13 +2,13 @@
 
 {% block head %}
 <link rel="stylesheet" href="/css/right-nav.css?v1.1.0">
-<link rel="stylesheet" href="/css/blog/blog.css?v1.2.2">
+<link rel="stylesheet" href="/css/blog/blog.css?v1.2.3">
 <link rel="stylesheet" href="/css/markdown/markdown.css?v1.1.0">
 <link rel="stylesheet" href="/css/markdown/styles.css?v1.1.0">
 {% block scripts %}
-{% if not is_blog_index|default(false) %}
+{% if not is_blog_index|default(false) or has_mermaid_previews|default(false) %}
 <script defer src="https://cdn.jsdelivr.net/npm/mermaid@9/dist/mermaid.min.js"></script>
-<script defer src="/js/blog/blog.js?v1.1.0"></script>
+<script defer src="/js/blog/blog.js?v1.1.1"></script>
 {% endif %}
 {% endblock %}
 {% block title %}<title>{% if is_blog_index|default(false) %}Blog Index{% elif blog_entry != None %}{{ blog_entry.title }}{% else %}Blog{% endif %}</title>{% endblock %}
@@ -27,9 +27,12 @@
   {% if blog_cards|length > 0 %}
   <div class="blog-card-grid">
     {% for card in blog_cards %}
-    <a class="blog-card site-card" href="/blog/{{ card.id }}/" aria-label="Open blog post: {{ card.title }}">
+    <a class="blog-card site-card{% if card.mermaid_preview %} has-mermaid-preview{% endif %}" href="/blog/{{ card.id }}/" aria-label="Open blog post: {{ card.title }}">
       <h4 class="blog-card-title">{{ card.title }}</h4>
       <p class="blog-card-meta">{{ card.last_updated.strftime('%d %b %Y') }} | {{ card.author }}</p>
+      {% if card.mermaid_preview %}
+      <div class="blog-card-mermaid" aria-hidden="true" data-mermaid-definition="{{ card.mermaid_preview }}"></div>
+      {% endif %}
       <p class="blog-card-preview">{{ card.preview_text }}</p>
       <span class="blog-card-link">Read post</span>
     </a>

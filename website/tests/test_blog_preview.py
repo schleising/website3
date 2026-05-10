@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import unittest
 
-from website.utils.markdown_preview import build_markdown_preview
+from website.utils.markdown_preview import build_markdown_preview, extract_first_mermaid_preview
 
 
 class BlogPreviewTests(unittest.TestCase):
@@ -31,6 +31,31 @@ League positions tightened after the weekend fixtures.
         )
 
         self.assertEqual(preview, "League positions tightened after the weekend fixtures.")
+
+    def test_extract_first_mermaid_preview_returns_first_mermaid_block(self) -> None:
+        preview = extract_first_mermaid_preview(
+            """```python
+print('ignore')
+```
+
+```mermaid
+graph TD
+    Home --> Blog
+```
+
+```mermaid
+graph TD
+    Ignore --> Second
+```
+"""
+        )
+
+        self.assertEqual(preview, "graph TD\n    Home --> Blog")
+
+    def test_extract_first_mermaid_preview_returns_none_when_missing(self) -> None:
+        preview = extract_first_mermaid_preview("# Title\n\nNo diagram here.")
+
+        self.assertIsNone(preview)
 
 
 if __name__ == "__main__":

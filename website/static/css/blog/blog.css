@@ -67,6 +67,48 @@
     flex: 1 1 auto;
 }
 
+.blog-card.has-mermaid-preview {
+    min-height: 14rem;
+}
+
+.blog-card-mermaid {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 7rem;
+    margin: 0.1rem 0 0.15rem;
+    padding: 0.5rem;
+    border: 0.0625rem solid color-mix(in srgb, var(--line), #ffffff 26%);
+    border-radius: 0.7rem;
+    background: linear-gradient(
+        180deg,
+        color-mix(in srgb, var(--surface), #ffffff 38%) 0%,
+        color-mix(in srgb, var(--surface-soft), #ffffff 22%) 100%
+    );
+    box-shadow: inset 0 0.06rem 0 rgba(255, 255, 255, 0.4);
+    overflow: hidden;
+    pointer-events: none;
+}
+
+.blog-card-mermaid svg {
+    display: block;
+    width: 100%;
+    height: auto;
+    max-height: 7rem;
+}
+
+.blog-card-mermaid:not(.is-rendered) {
+    position: relative;
+}
+
+.blog-card-mermaid:not(.is-rendered)::before {
+    content: "Diagram preview";
+    color: var(--text-soft);
+    font-size: 0.82rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+}
+
 .blog-card-link {
     align-self: flex-start;
     font-weight: 600;
