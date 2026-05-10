@@ -13,6 +13,10 @@
     const csrfToken = root.dataset.csrfToken || "";
 
     const filterForm = document.getElementById("media-filter-form");
+    const filterPanel = document.querySelector(".media-panel");
+    const filterToggle = document.getElementById("media-filter-toggle");
+    const filterToggleIcon = document.getElementById("media-filter-toggle-icon");
+    const filterContent = document.getElementById("media-filter-content");
     const deletedSelect = document.getElementById("media-filter-deleted");
     const conversionRequiredSelect = document.getElementById("media-filter-conversion-required");
     const convertingSelect = document.getElementById("media-filter-converting");
@@ -40,6 +44,65 @@
         openFilename: "",
         requestVersion: 0,
     };
+
+    function applyFilterPanelState(isCollapsed) {
+        if (!(filterPanel instanceof HTMLElement) || !(filterContent instanceof HTMLElement)) {
+            return;
+        }
+
+        filterPanel.classList.toggle("collapsed", isCollapsed);
+
+        if (filterToggle instanceof HTMLElement) {
+            filterToggle.setAttribute("aria-expanded", String(!isCollapsed));
+        }
+
+        if (filterToggleIcon instanceof HTMLElement) {
+            filterToggleIcon.textContent = isCollapsed ? "▼" : "▲";
+        }
+
+        if (isCollapsed) {
+            filterContent.style.maxHeight = "0px";
+        } else {
+            filterContent.style.maxHeight = filterContent.scrollHeight + "px";
+        }
+    }
+
+    function initialiseFilterPanel() {
+        if (
+            !(filterPanel instanceof HTMLElement) ||
+            !(filterToggle instanceof HTMLElement) ||
+            !(filterContent instanceof HTMLElement)
+        ) {
+            return;
+        }
+
+        filterToggle.addEventListener("click", () => {
+            applyFilterPanelState(!filterPanel.classList.contains("collapsed"));
+        });
+
+        filterToggle.addEventListener("keydown", event => {
+            if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                applyFilterPanelState(!filterPanel.classList.contains("collapsed"));
+            }
+        });
+
+        applyFilterPanelState(filterPanel.classList.contains("collapsed"));
+
+        if (root.dataset.autoCollapseFilters === "true") {
+            window.requestAnimationFrame(() => {
+                window.requestAnimationFrame(() => {
+                    applyFilterPanelState(true);
+                });
+            });
+        }
+
+        window.addEventListener("resize", () => {
+            if (!filterPanel.classList.contains("collapsed")) {
+                filterContent.style.maxHeight = filterContent.scrollHeight + "px";
+            }
+        });
+    }
 
     function normalizeFilterValue(value) {
         return value === "true" || value === "false" ? value : "any";
@@ -607,6 +670,7 @@
     if (filterForm instanceof HTMLFormElement) {
         filterForm.addEventListener("submit", event => {
             event.preventDefault();
+            applyFilterPanelState(true);
             void loadFiles();
         });
     }
@@ -635,6 +699,7 @@
         }
     });
 
+    initialiseFilterPanel();
     applyFiltersFromUrl();
     void loadFiles();
 })();
