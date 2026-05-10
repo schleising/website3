@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Converter notification badge">
+  <defs>
+    <marker id="converterBadgeArrowHead" viewBox="0 0 10 10" refX="0" refY="5" markerWidth="10" markerHeight="10" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0 1 L0 9 L9 5 Z" fill="#FFFFFF" />
+    </marker>
+  </defs>
+
+  <circle cx="32" cy="32" r="24.5" fill="none" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round" />
+  <path d="M21.04 21.04 A15.5 15.5 0 0 1 42.96 21.04" fill="none" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round" marker-end="url(#converterBadgeArrowHead)" />
+  <path d="M42.96 42.96 A15.5 15.5 0 0 1 21.04 42.96" fill="none" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round" marker-end="url(#converterBadgeArrowHead)" />
+</svg>
