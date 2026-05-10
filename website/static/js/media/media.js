@@ -211,7 +211,7 @@
 
         state.files.forEach(file => {
             const card = document.createElement("article");
-            card.className = "media-card";
+            card.className = "media-card site-card";
 
             const header = document.createElement("div");
             header.className = "media-card-header";
