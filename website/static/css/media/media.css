@@ -404,9 +404,11 @@
 
 .media-detail-dialog {
     display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
     gap: 0.8rem;
     max-height: min(90vh, 56rem);
     padding: 0.95rem;
+    overflow: hidden;
 }
 
 .media-detail-header,
@@ -421,6 +423,7 @@
 .media-detail-body {
     display: grid;
     gap: 0.8rem;
+    min-height: 0;
     overflow: auto;
     padding-right: 0.15rem;
 }
