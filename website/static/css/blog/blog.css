@@ -73,6 +73,69 @@
     color: var(--brand-strong);
 }
 
+#blog-view table {
+    width: 100%;
+    margin: 0.4rem 0 1rem;
+    border-collapse: separate;
+    border-spacing: 0;
+    border: 0.0625rem solid color-mix(in srgb, var(--line), #ffffff 18%);
+    border-radius: 0.65rem;
+    overflow: hidden;
+    background: linear-gradient(
+        180deg,
+        color-mix(in srgb, var(--surface), #ffffff 34%) 0%,
+        color-mix(in srgb, var(--surface-soft), #ffffff 14%) 100%
+    );
+    box-shadow:
+        0 0.35rem 0.9rem rgba(18, 37, 61, 0.08),
+        inset 0 0.06rem 0 rgba(255, 255, 255, 0.35);
+}
+
+#blog-view caption {
+    caption-side: top;
+    text-align: left;
+    margin-bottom: 0.4rem;
+    color: var(--text-soft);
+    font-size: 0.84rem;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+}
+
+#blog-view table :is(th, td) {
+    padding: 0.52rem 0.7rem;
+    border-right: 0.0625rem solid color-mix(in srgb, var(--line), #ffffff 28%);
+    border-bottom: 0.0625rem solid color-mix(in srgb, var(--line), #ffffff 24%);
+    text-align: left;
+    vertical-align: top;
+}
+
+#blog-view table :is(th, td):last-child {
+    border-right: 0;
+}
+
+#blog-view table thead th,
+#blog-view table tr:first-child th {
+    color: color-mix(in srgb, var(--brand-strong), #1f3c5f 12%);
+    font-weight: 700;
+    background: linear-gradient(
+        180deg,
+        color-mix(in srgb, var(--brand-soft), #ffffff 62%) 0%,
+        color-mix(in srgb, var(--brand-soft), #ffffff 74%) 100%
+    );
+}
+
+#blog-view table tbody tr:nth-child(even) td {
+    background: color-mix(in srgb, var(--surface-soft), #ffffff 22%);
+}
+
+#blog-view table tbody tr:hover td {
+    background: color-mix(in srgb, var(--brand-soft), #ffffff 76%);
+}
+
+#blog-view table tr:last-child :is(th, td) {
+    border-bottom: 0;
+}
+
 .blog-card:hover .blog-card-link,
 .blog-card:focus-visible .blog-card-link {
     color: var(--brand);
@@ -80,6 +143,17 @@
 }
 
 @media screen and (max-width: 40rem) {
+    #blog-view table {
+        display: block;
+        max-width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    #blog-view table :is(th, td) {
+        white-space: nowrap;
+    }
+
     .blog-card-grid {
         grid-template-columns: 1fr;
     }
