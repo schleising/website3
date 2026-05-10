@@ -83,6 +83,10 @@
 {% if request.state.user != None and request.state.user.can_use_tools %}
 <a href="{{ feeds_root_path }}admin/" class="sub-level-nav feed-sidebar-link{% if feed_page_mode == 'admin' %} is-current{% endif %}" {% if feed_page_mode == 'admin' %}aria-current="page"{% endif %}>Admin</a>
 {% endif %}
+{% set show_left_sidebar = render_left_sidebar if render_left_sidebar is defined else true %}
+{% if not show_left_sidebar and request.state.user != None %}
+<a href="https://www.schleising.net/account/logout/" class="sub-level-nav feed-sidebar-link">Logout</a>
+{% endif %}
 {% endblock %}
 
 {% block footer %}

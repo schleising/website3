@@ -81,6 +81,10 @@
 	</form>
 </section>
 {% endif %}
+{% set show_left_sidebar = render_left_sidebar if render_left_sidebar is defined else true %}
+{% if not show_left_sidebar and request.state.user != None %}
+<a href="https://www.schleising.net/account/logout/" class="sub-level-nav">Logout</a>
+{% endif %}
 {% endblock %}
 {% block footer %}
 <footer>Data sourced from <a href="https://www.football-data.org/" class="link-light" target="_blank">football-data.org</a></footer>
