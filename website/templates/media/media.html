@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+
+{% block title %}<title>Media Manager</title>{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="/css/media/media.css?v1.0.0">
+<script defer src="/js/media/media.js?v1.0.0"></script>
+{% endblock %}
+
+{% block header %}
+<h3 class="header-text no-margin">Media Manager</h3>
+{% endblock %}
+
+{% block sidebar %}
+<a class="sub-level-nav is-current" href="/media/" aria-current="page">Media Manager</a>
+{% endblock %}
+
+{% block content %}
+<section
+  id="media-manager-root"
+  class="media-manager-page"
+  data-list-endpoint="/media/api/files/"
+  data-detail-endpoint="/media/api/files/detail/"
+  data-queue-endpoint="/media/api/files/queue/"
+  data-restart-endpoint="/media/api/files/restart-error/"
+  data-csrf-token="{{ request.state.csrf_token|default('') }}"
+>
+  <section class="media-hero" aria-label="Media manager overview">
+    <div class="media-hero-copy">
+      <p class="media-eyebrow">Main Website</p>
+      <h4 class="media-hero-title">Manage queued and failed media conversion records</h4>
+      <p class="media-hero-text">
+        Filter the <strong>media_collection</strong> records by queue and error state, inspect full metadata on demand,
+        and take the two operational actions you asked for: queueing unconverted items and clearing conversion errors.
+      </p>
+    </div>
+    <div class="media-hero-note">
+      <span class="media-hero-note-label">Access</span>
+      <span class="media-hero-note-value">This page is only visible and available when <strong>can_use_tools</strong> is enabled.</span>
+    </div>
+  </section>
+
+  <section class="media-panel" aria-label="Filters and summary">
+    <form id="media-filter-form" class="media-filter-form">
+      <label class="media-filter-field" for="media-filter-conversion-required">
+        <span>Conversion Required</span>
+        <select id="media-filter-conversion-required" name="conversion_required">
+          <option value="any">Any</option>
+          <option value="true">True</option>
+          <option value="false">False</option>
+        </select>
+      </label>
+
+      <label class="media-filter-field" for="media-filter-conversion-error">
+        <span>Conversion Error</span>
+        <select id="media-filter-conversion-error" name="conversion_error">
+          <option value="any">Any</option>
+          <option value="true">True</option>
+          <option value="false">False</option>
+        </select>
+      </label>
+
+      <div class="media-filter-actions">
+        <button type="submit" class="media-button media-button-primary">Apply Filters</button>
+        <button type="button" class="media-button media-button-secondary" id="media-refresh-button">Refresh</button>
+      </div>
+    </form>
+
+    <div class="media-summary-grid" aria-label="Filtered result summary">
+      <article class="media-summary-card">
+        <span class="media-summary-label">Matching Records</span>
+        <strong class="media-summary-value" id="media-summary-total">0</strong>
+      </article>
+      <article class="media-summary-card">
+        <span class="media-summary-label">Displayed</span>
+        <strong class="media-summary-value" id="media-summary-displayed">0</strong>
+      </article>
+      <article class="media-summary-card">
+        <span class="media-summary-label">Conversion Errors</span>
+        <strong class="media-summary-value" id="media-summary-errors">0</strong>
+      </article>
+      <article class="media-summary-card">
+        <span class="media-summary-label">Queueable</span>
+        <strong class="media-summary-value" id="media-summary-queueable">0</strong>
+      </article>
+    </div>
+
+    <div class="media-status-banner" id="media-status-banner" hidden></div>
+  </section>
+
+  <section class="media-results-shell" aria-label="Media results">
+    <div class="media-results-header">
+      <div>
+        <h4 class="media-results-title">Files</h4>
+        <p class="media-results-subtitle" id="media-results-subtitle">Loading media records.</p>
+      </div>
+    </div>
+
+    <div class="media-card-grid" id="media-card-grid"></div>
+    <div class="media-empty-state" id="media-empty-state" hidden>No files matched the current filters.</div>
+  </section>
+
+  <div class="media-loading-overlay" id="media-loading-overlay" hidden>
+    <div class="media-loading-panel" role="status" aria-live="polite">
+      <span class="media-loading-spinner" aria-hidden="true"></span>
+      <span id="media-loading-text">Loading media files...</span>
+    </div>
+  </div>
+
+  <div class="media-detail-overlay" id="media-detail-overlay" hidden>
+    <div class="media-detail-dialog" role="dialog" aria-modal="true" aria-labelledby="media-detail-title">
+      <div class="media-detail-header">
+        <div>
+          <p class="media-eyebrow">Media Record</p>
+          <h4 class="media-detail-title" id="media-detail-title">Details</h4>
+        </div>
+        <button type="button" class="media-button media-button-icon" id="media-detail-close-button" aria-label="Close media details">Close</button>
+      </div>
+      <div class="media-detail-body" id="media-detail-body"></div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block footer %}
+Media Manager
+{% endblock %}

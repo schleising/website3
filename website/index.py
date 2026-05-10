@@ -27,6 +27,7 @@ from .football.router import football_router
 from .football.football_db import initialise_teams_cache
 
 from .feeds.router import feeds_router
+from .media.router import media_router
 
 from .tools.router import tools_router
 
@@ -243,6 +244,9 @@ app.include_router(football_router)
 
 # Include the feeds router
 app.include_router(feeds_router)
+
+# Include the media router
+app.include_router(media_router)
 
 # Include the tools router
 app.include_router(tools_router)
