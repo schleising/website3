@@ -1,4 +1,3 @@
-import re
 from asyncio import gather
 
 from fastapi import APIRouter, Request
@@ -6,6 +5,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
 from .blog import get_blog_list, get_blog_by_id, get_blog_html, get_blog_author
+from ..utils.markdown_preview import build_markdown_preview
 
 TEMPLATES = Jinja2Templates("/app/templates")
 
@@ -20,7 +20,7 @@ async def get_aircraft_page(request: Request):
     card_authors = await gather(*(get_blog_author(blog) for blog in blog_list)) if blog_list else []
     blog_cards = []
     for blog, (first_name, last_name) in zip(blog_list, card_authors):
-        preview_text = _markdown_preview(blog.text)
+        preview_text = build_markdown_preview(blog.text)
         blog_cards.append(
             {
                 "id": str(blog.id),
@@ -85,25 +85,3 @@ def _display_author(first_name: str, last_name: str) -> str:
     if full_name != "":
         return full_name
     return "Unknown Author"
-
-
-def _markdown_preview(text: str, max_length: int = 220) -> str:
-    if text.strip() == "":
-        return "No preview available."
-
-    plain_text = re.sub(r"`{1,3}[^`]*`{1,3}", " ", text)
-    plain_text = re.sub(r"!\[[^\]]*\]\([^\)]*\)", " ", plain_text)
-    plain_text = re.sub(r"\[[^\]]*\]\([^\)]*\)", " ", plain_text)
-    plain_text = re.sub(r"^[#>\-\*\s]+", "", plain_text, flags=re.MULTILINE)
-    plain_text = re.sub(r"\s+", " ", plain_text).strip()
-
-    if plain_text == "":
-        return "No preview available."
-
-    if len(plain_text) <= max_length:
-        return plain_text
-
-    clipped = plain_text[:max_length].rsplit(" ", 1)[0].strip()
-    if clipped == "":
-        clipped = plain_text[:max_length].strip()
-    return f"{clipped}..."
