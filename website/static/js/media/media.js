@@ -42,6 +42,54 @@
         return value === "true" || value === "false" ? value : "any";
     }
 
+    function currentFilterState() {
+        return {
+            conversionRequired: normalizeFilterValue(
+                conversionRequiredSelect instanceof HTMLSelectElement
+                    ? conversionRequiredSelect.value
+                    : "any"
+            ),
+            conversionError: normalizeFilterValue(
+                conversionErrorSelect instanceof HTMLSelectElement
+                    ? conversionErrorSelect.value
+                    : "any"
+            ),
+        };
+    }
+
+    function applyFiltersFromUrl() {
+        const params = new URLSearchParams(window.location.search);
+        const conversionRequired = normalizeFilterValue(params.get("conversion_required") || "any");
+        const conversionError = normalizeFilterValue(params.get("conversion_error") || "any");
+
+        if (conversionRequiredSelect instanceof HTMLSelectElement) {
+            conversionRequiredSelect.value = conversionRequired;
+        }
+
+        if (conversionErrorSelect instanceof HTMLSelectElement) {
+            conversionErrorSelect.value = conversionError;
+        }
+    }
+
+    function syncUrlToFilters() {
+        const url = new URL(window.location.href);
+        const { conversionRequired, conversionError } = currentFilterState();
+
+        if (conversionRequired === "any") {
+            url.searchParams.delete("conversion_required");
+        } else {
+            url.searchParams.set("conversion_required", conversionRequired);
+        }
+
+        if (conversionError === "any") {
+            url.searchParams.delete("conversion_error");
+        } else {
+            url.searchParams.set("conversion_error", conversionError);
+        }
+
+        window.history.replaceState({}, "", url);
+    }
+
     function setLoading(isLoading, message) {
         if (!(loadingOverlay instanceof HTMLElement) || !(loadingText instanceof HTMLElement)) {
             return;
@@ -447,8 +495,7 @@
 
         try {
             const url = new URL(listEndpoint, window.location.origin);
-            const conversionRequired = normalizeFilterValue(conversionRequiredSelect instanceof HTMLSelectElement ? conversionRequiredSelect.value : "any");
-            const conversionError = normalizeFilterValue(conversionErrorSelect instanceof HTMLSelectElement ? conversionErrorSelect.value : "any");
+            const { conversionRequired, conversionError } = currentFilterState();
 
             if (conversionRequired !== "any") {
                 url.searchParams.set("conversion_required", conversionRequired);
@@ -462,6 +509,8 @@
             if (requestVersion !== state.requestVersion) {
                 return;
             }
+
+            syncUrlToFilters();
 
             state.files = Array.isArray(payload.files) ? payload.files : [];
             state.totalCount = Number(payload.total_count || state.files.length);
@@ -511,5 +560,6 @@
         }
     });
 
+    applyFiltersFromUrl();
     void loadFiles();
 })();

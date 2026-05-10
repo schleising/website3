@@ -4,7 +4,7 @@
 
 {% block head %}
 <link rel="stylesheet" href="/css/media/media.css?v1.0.4">
-<script defer src="/js/media/media.js?v1.0.3"></script>
+<script defer src="/js/media/media.js?v1.0.4"></script>
 {% endblock %}
 
 {% block header %}
@@ -12,7 +12,13 @@
 {% endblock %}
 
 {% block sidebar %}
-<a class="sub-level-nav is-current" href="/media/" aria-current="page">Media Manager</a>
+{% set current_required = request.query_params.get('conversion_required', 'any') %}
+{% set current_error = request.query_params.get('conversion_error', 'any') %}
+<a class="sub-level-nav{% if current_required == 'any' and current_error == 'any' %} is-current{% endif %}" href="/media/"{% if current_required == 'any' and current_error == 'any' %} aria-current="page"{% endif %}>All Media</a>
+<a class="sub-level-nav{% if current_required == 'false' and current_error == 'any' %} is-current{% endif %}" href="/media/?conversion_required=false"{% if current_required == 'false' and current_error == 'any' %} aria-current="page"{% endif %}>Not Queued</a>
+<a class="sub-level-nav{% if current_required == 'true' and current_error == 'any' %} is-current{% endif %}" href="/media/?conversion_required=true"{% if current_required == 'true' and current_error == 'any' %} aria-current="page"{% endif %}>Queued</a>
+<a class="sub-level-nav{% if current_required == 'any' and current_error == 'true' %} is-current{% endif %}" href="/media/?conversion_error=true"{% if current_required == 'any' and current_error == 'true' %} aria-current="page"{% endif %}>Conversion Errors</a>
+<a class="sub-level-nav{% if current_required == 'false' and current_error == 'true' %} is-current{% endif %}" href="/media/?conversion_required=false&conversion_error=true"{% if current_required == 'false' and current_error == 'true' %} aria-current="page"{% endif %}>Errors Not Queued</a>
 {% endblock %}
 
 {% block content %}
