@@ -67,8 +67,8 @@
             {% if request.state.user != None %}
             <a class="sub-level-nav{% if current_section == 'markdown' %} is-current{% endif %}" href="/markdown/"{% if current_section == 'markdown' %} aria-current="page"{% endif %}>Markdown Editor</a>
             {% if request.state.user.can_use_tools %}
-            <a class="sub-level-nav{% if is_user_management_page %} is-current{% endif %}" href="/account/users/"{% if is_user_management_page %} aria-current="page"{% endif %}>Users</a>
             <a class="sub-level-nav{% if current_section == 'media' %} is-current{% endif %}" href="/media/"{% if current_section == 'media' %} aria-current="page"{% endif %}>Media</a>
+            <a class="sub-level-nav{% if is_user_management_page %} is-current{% endif %}" href="/account/users/"{% if is_user_management_page %} aria-current="page"{% endif %}>Users</a>
             {% endif %}
             <a class="sub-level-nav{% if is_logout_page %} is-current{% endif %}" href="/account/logout/"{% if is_logout_page %} aria-current="page"{% endif %}>Logout</a>
             {% else %}
