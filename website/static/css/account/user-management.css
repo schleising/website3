@@ -94,7 +94,7 @@
 
 .user-card {
     display: grid;
-    gap: 0.9rem;
+    gap: 1rem;
 }
 
 .user-card-header {
@@ -110,6 +110,32 @@
     flex-wrap: wrap;
     justify-content: end;
     gap: 0.45rem;
+}
+
+.user-card-body {
+    display: grid;
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+    gap: 0.95rem;
+    align-items: stretch;
+}
+
+.user-card-panel {
+    display: grid;
+    align-content: start;
+    gap: 0.8rem;
+    height: 100%;
+    min-width: 0;
+    padding: 0.9rem;
+    border: 0.0625rem solid rgba(197, 214, 235, 0.9);
+    border-radius: 0.85rem;
+    background: rgba(255, 255, 255, 0.76);
+}
+
+.user-section-title {
+    margin: 0;
+    color: var(--text);
+    font-size: 0.98rem;
+    font-weight: 700;
 }
 
 .user-badge {
@@ -155,18 +181,20 @@
 
 .user-facts {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 0.7rem;
     margin: 0;
 }
 
 .user-fact {
     display: grid;
-    gap: 0.2rem;
+    align-content: start;
+    gap: 0.22rem;
+    min-height: 5.2rem;
     padding: 0.75rem 0.8rem;
     border: 0.0625rem solid rgba(197, 214, 235, 0.9);
     border-radius: 0.8rem;
-    background: rgba(255, 255, 255, 0.82);
+    background: rgba(248, 251, 255, 0.94);
 }
 
 .user-fact dd {
@@ -183,9 +211,15 @@
 
 .user-edit-form {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
     gap: 0.8rem;
-    align-items: end;
+    align-content: start;
+    min-height: 100%;
+}
+
+.user-field-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.8rem;
 }
 
 .user-field {
@@ -204,9 +238,15 @@
 }
 
 .user-field input:focus,
+.user-field input:focus-visible,
 .user-checkbox-field:focus-within {
     outline: 0.125rem solid rgba(61, 110, 166, 0.18);
     outline-offset: 0.0625rem;
+}
+
+.user-toggle-list {
+    display: grid;
+    gap: 0.7rem;
 }
 
 .user-checkbox-field {
@@ -240,15 +280,17 @@
 }
 
 .user-delete-form {
-    justify-content: end;
+    justify-content: start;
+    margin-top: auto;
+    padding-top: 0.15rem;
 }
 
 @media screen and (max-width: 56rem) {
-    .user-card-badges {
-        justify-content: start;
+    .user-card-body {
+        grid-template-columns: 1fr;
     }
 
-    .user-delete-form {
+    .user-card-badges {
         justify-content: start;
     }
 }
@@ -264,10 +306,11 @@
         padding: 0.9rem;
     }
 
-    .user-edit-form {
-        grid-template-columns: 1fr;
+    .user-card-panel {
+        padding: 0.8rem;
     }
 
+    .user-field-grid,
     .user-facts {
         grid-template-columns: 1fr;
     }

@@ -3,17 +3,13 @@
 {% block title %}<title>User Management</title>{% endblock %}
 
 {% block head %}
-<link rel="stylesheet" href="/css/account/user-management.css?v1.0.0">
+<link rel="stylesheet" href="/css/account/user-management.css?v1.0.2">
 {% endblock %}
+
+{% set render_right_sidebar = false %}
 
 {% block header %}
 <h3 class="header-text no-margin">User Management</h3>
-{% endblock %}
-
-{% block sidebar %}
-<a class="sub-level-nav is-current" href="/account/users/" aria-current="page">Users</a>
-<a class="sub-level-nav" href="/media/">Media</a>
-<a class="sub-level-nav" href="/webapps/">Webapps</a>
 {% endblock %}
 
 {% block content %}
@@ -72,72 +68,84 @@
         </div>
       </div>
 
-      <dl class="user-facts">
-        <div class="user-fact">
-          <dt>Token Expiry</dt>
-          <dd>{{ user.token_expiry_label }}</dd>
-        </div>
-        <div class="user-fact">
-          <dt>Authentication</dt>
-          <dd>{{ user.auth_mode_label }}</dd>
-        </div>
-        <div class="user-fact">
-          <dt>Active Passkeys</dt>
-          <dd>{{ user.passkey_count }}</dd>
-        </div>
-        <div class="user-fact">
-          <dt>Revoked Passkeys</dt>
-          <dd>{{ user.revoked_passkey_count }}</dd>
-        </div>
-        <div class="user-fact">
-          <dt>Last Passkey Use</dt>
-          <dd>{{ user.last_passkey_used }}</dd>
-        </div>
-        <div class="user-fact user-fact-handle">
-          <dt>User Handle</dt>
-          <dd>{{ user.user_handle }}</dd>
-        </div>
-      </dl>
+      <div class="user-card-body">
+        <section class="user-card-panel user-card-panel-facts" aria-label="{{ user.username }} account details">
+          <h3 class="user-section-title">Account Details</h3>
+          <dl class="user-facts">
+            <div class="user-fact">
+              <dt>Token Expiry</dt>
+              <dd>{{ user.token_expiry_label }}</dd>
+            </div>
+            <div class="user-fact">
+              <dt>Authentication</dt>
+              <dd>{{ user.auth_mode_label }}</dd>
+            </div>
+            <div class="user-fact">
+              <dt>Active Passkeys</dt>
+              <dd>{{ user.passkey_count }}</dd>
+            </div>
+            <div class="user-fact">
+              <dt>Revoked Passkeys</dt>
+              <dd>{{ user.revoked_passkey_count }}</dd>
+            </div>
+            <div class="user-fact">
+              <dt>Last Passkey Use</dt>
+              <dd>{{ user.last_passkey_used }}</dd>
+            </div>
+            <div class="user-fact user-fact-handle">
+              <dt>User Handle</dt>
+              <dd>{{ user.user_handle }}</dd>
+            </div>
+          </dl>
+        </section>
 
-      <form class="user-edit-form" method="post" action="/account/users/update/">
-        <input type="hidden" name="csrf_token" value="{{ request.state.csrf_token|default('') }}">
-        <input type="hidden" name="username" value="{{ user.username }}">
+        <section class="user-card-panel user-card-panel-actions" aria-label="{{ user.username }} management actions">
+          <h3 class="user-section-title">Edit User</h3>
+          <form class="user-edit-form" method="post" action="/account/users/update/">
+            <input type="hidden" name="csrf_token" value="{{ request.state.csrf_token|default('') }}">
+            <input type="hidden" name="username" value="{{ user.username }}">
 
-        <label class="user-field" for="first-name-{{ loop.index }}">
-          <span>First Name</span>
-          <input id="first-name-{{ loop.index }}" name="first_name" type="text" value="{{ user.first_name }}" required>
-        </label>
+            <div class="user-field-grid">
+              <label class="user-field" for="first-name-{{ loop.index }}">
+                <span>First Name</span>
+                <input id="first-name-{{ loop.index }}" name="first_name" type="text" value="{{ user.first_name }}" required>
+              </label>
 
-        <label class="user-field" for="last-name-{{ loop.index }}">
-          <span>Last Name</span>
-          <input id="last-name-{{ loop.index }}" name="last_name" type="text" value="{{ user.last_name }}" required>
-        </label>
+              <label class="user-field" for="last-name-{{ loop.index }}">
+                <span>Last Name</span>
+                <input id="last-name-{{ loop.index }}" name="last_name" type="text" value="{{ user.last_name }}" required>
+              </label>
+            </div>
 
-        <label class="user-checkbox-field" for="can-use-tools-{{ loop.index }}">
-          <input id="can-use-tools-{{ loop.index }}" name="can_use_tools" type="checkbox" {% if user.can_use_tools %}checked{% endif %}>
-          <span>Allow access to internal tools</span>
-        </label>
+            <div class="user-toggle-list">
+              <label class="user-checkbox-field" for="can-use-tools-{{ loop.index }}">
+                <input id="can-use-tools-{{ loop.index }}" name="can_use_tools" type="checkbox" {% if user.can_use_tools %}checked{% endif %}>
+                <span>Allow access to internal tools</span>
+              </label>
 
-        <label class="user-checkbox-field" for="disabled-{{ loop.index }}">
-          <input id="disabled-{{ loop.index }}" name="disabled" type="checkbox" {% if user.disabled %}checked{% endif %}>
-          <span>Disable this account</span>
-        </label>
+              <label class="user-checkbox-field" for="disabled-{{ loop.index }}">
+                <input id="disabled-{{ loop.index }}" name="disabled" type="checkbox" {% if user.disabled %}checked{% endif %}>
+                <span>Disable this account</span>
+              </label>
+            </div>
 
-        <div class="user-card-actions">
-          <button class="btn btn-primary" type="submit">Save Changes</button>
-        </div>
-      </form>
+            <div class="user-card-actions">
+              <button class="btn btn-primary" type="submit">Save Changes</button>
+            </div>
+          </form>
 
-      <form
-        class="user-delete-form"
-        method="post"
-        action="/account/users/delete/"
-        onsubmit="return window.confirm('Delete {{ user.username }}? This cannot be undone.');"
-      >
-        <input type="hidden" name="csrf_token" value="{{ request.state.csrf_token|default('') }}">
-        <input type="hidden" name="username" value="{{ user.username }}">
-        <button class="btn btn-outline-danger" type="submit">Delete User</button>
-      </form>
+          <form
+            class="user-delete-form"
+            method="post"
+            action="/account/users/delete/"
+            onsubmit="return window.confirm('Delete {{ user.username }}? This cannot be undone.');"
+          >
+            <input type="hidden" name="csrf_token" value="{{ request.state.csrf_token|default('') }}">
+            <input type="hidden" name="username" value="{{ user.username }}">
+            <button class="btn btn-outline-danger" type="submit">Delete User</button>
+          </form>
+        </section>
+      </div>
     </article>
     {% endfor %}
   </section>
