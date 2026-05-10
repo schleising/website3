@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block title %}<title>403 Forbidden</title>{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="/css/error-pages.css?v1.0.0">
+{% endblock %}
+
+{% set render_right_sidebar = false %}
+{% set page_path = request.url.path %}
+
+{% block header %}
+<h3 class="header-text no-margin">Access Denied</h3>
+{% endblock %}
+
+{% block content %}
+<section class="error-page" aria-label="403 page">
+  <article class="site-card error-hero-card">
+    <p class="error-code-label">403</p>
+    <h1 class="error-title">You do not have permission to view this page.</h1>
+    <p class="error-message">
+      Access to
+      <span class="error-path">{{ page_path }}</span>
+      is restricted for your current account or session.
+    </p>
+    <div class="error-actions">
+      <a class="btn btn-primary" href="/">Return Home</a>
+      {% if request.state.user != None %}
+      <a class="btn btn-outline-primary error-secondary-action" href="/webapps/">Browse Webapps</a>
+      {% else %}
+      <a class="btn btn-outline-primary error-secondary-action" href="/account/login/?next={{ page_path|urlencode }}">Login</a>
+      {% endif %}
+    </div>
+  </article>
+</section>
+{% endblock %}
+
+{% block footer %}
+&copy; 2026 Steve's Website. All rights reserved.
+{% endblock %}

@@ -7,6 +7,7 @@
 {% endblock %}
 
 {% set render_right_sidebar = false %}
+{% set page_path = display_path|default(request.url.path) %}
 
 {% block header %}
 <h3 class="header-text no-margin">Page Not Found</h3>
@@ -14,7 +15,6 @@
 
 {% block content %}
 <section class="error-page" aria-label="404 page">
-  {% set page_path = display_path|default(request.url.path) %}
   <article class="site-card error-hero-card">
     <p class="error-code-label">404</p>
     <h1 class="error-title">This page does not exist.</h1>

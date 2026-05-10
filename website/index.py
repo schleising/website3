@@ -305,15 +305,42 @@ async def validation_exception_handler(request, exc):
 
 @app.exception_handler(StarletteHTTPException)
 async def http_exception_handler(request: Request, exc: StarletteHTTPException):
-    if exc.status_code == 404 and _should_render_html_error(request):
-        return _error_template_response(
-            request,
-            "404.html",
-            {},
-            status_code=404,
-        )
+    if _should_render_html_error(request):
+        if exc.status_code == 403:
+            return _error_template_response(
+                request,
+                "403.html",
+                {},
+                status_code=403,
+            )
+
+        if exc.status_code == 404:
+            return _error_template_response(
+                request,
+                "404.html",
+                {},
+                status_code=404,
+            )
 
     return await fastapi_http_exception_handler(request, exc)
+
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception):
+    logging.exception("Unhandled application error", exc_info=exc)
+
+    if _should_render_html_error(request):
+        return _error_template_response(
+            request,
+            "500.html",
+            {},
+            status_code=500,
+        )
+
+    return JSONResponse(
+        {"detail": "Internal Server Error"},
+        status_code=500,
+    )
 
 
 # Gets the homepage
