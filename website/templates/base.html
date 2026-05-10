@@ -28,6 +28,7 @@
 
 <body>
   {% set show_left_sidebar = render_left_sidebar if render_left_sidebar is defined else true %}
+  {% set show_right_sidebar = render_right_sidebar if render_right_sidebar is defined else true %}
   <div id="outer">
     <div id="header">
         {% if show_left_sidebar %}
@@ -39,9 +40,11 @@
           {% block header %}
           {% endblock %}
         </div>
+        {% if show_right_sidebar %}
         <div class="header-mobile-action right-mobile-action" aria-label="Mobile navigation controls">
           <button type="button" class="mobile-nav-button" id="right-nav-toggle" aria-label="Open side menu" aria-controls="right-sidebar-menu" aria-expanded="false">▼</button>
         </div>
+        {% endif %}
     </div>
     <div id="main">
         {% if show_left_sidebar %}
@@ -76,6 +79,7 @@
         {% block content %}
         {% endblock %}
       </div>
+        {% if show_right_sidebar %}
         <div class="sidebar right-sidebar" id="right-sidebar-menu">
         <div class="main-nav right-nav">
           <div class="sub-level-nav-container right-align">
@@ -84,6 +88,7 @@
           </div>
         </div>
       </div>
+      {% endif %}
     </div>
     <div id="footer">
       {% block footer %}

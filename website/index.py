@@ -6,9 +6,11 @@ from urllib.parse import urlencode
 from starlette.types import ASGIApp, Receive, Scope, Send
 
 from fastapi import FastAPI, Request, Depends
+from fastapi.exception_handlers import http_exception_handler as fastapi_http_exception_handler
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.exceptions import RequestValidationError
 from fastapi.templating import Jinja2Templates
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from .database.database import Database
 
@@ -79,6 +81,37 @@ logging.basicConfig(
 
 # Set the base template location
 TEMPLATES = Jinja2Templates("/app/templates")
+
+
+def _ensure_request_state_defaults(request: Request) -> None:
+    if not hasattr(request.state, "user"):
+        request.state.user = None
+
+
+def _should_render_html_error(request: Request) -> bool:
+    if request.method.upper() not in {"GET", "HEAD"}:
+        return False
+
+    if request.headers.get("x-requested-with", "").lower() == "xmlhttprequest":
+        return False
+
+    accept = request.headers.get("accept", "")
+    return "text/html" in accept or "application/xhtml+xml" in accept
+
+
+def _error_template_response(
+    request: Request,
+    template_name: str,
+    context: dict[str, object],
+    status_code: int,
+) -> HTMLResponse:
+    _ensure_request_state_defaults(request)
+    return TEMPLATES.TemplateResponse(
+        request,
+        template_name,
+        {"request": request, **context},
+        status_code=status_code,
+    )
 
 def _webapp_image(filename: str) -> str:
     return f"/images/webapps/{filename}"
@@ -254,12 +287,25 @@ app.include_router(tools_router)
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request, exc):
-    return TEMPLATES.TemplateResponse(
+    return _error_template_response(
         request,
         "error.html",
-        {"request": request, "error_str": str(exc)},
+        {"error_str": str(exc)},
         status_code=400,
     )
+
+
+@app.exception_handler(StarletteHTTPException)
+async def http_exception_handler(request: Request, exc: StarletteHTTPException):
+    if exc.status_code == 404 and _should_render_html_error(request):
+        return _error_template_response(
+            request,
+            "404.html",
+            {},
+            status_code=404,
+        )
+
+    return await fastapi_http_exception_handler(request, exc)
 
 
 # Gets the homepage

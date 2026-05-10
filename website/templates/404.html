@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block title %}<title>404 Not Found</title>{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="/css/error-pages.css?v1.0.0">
+{% endblock %}
+
+{% set render_right_sidebar = false %}
+
+{% block header %}
+<h3 class="header-text no-margin">Page Not Found</h3>
+{% endblock %}
+
+{% block content %}
+<section class="error-page" aria-label="404 page">
+  <article class="site-card error-hero-card">
+    <p class="error-code-label">404</p>
+    <h1 class="error-title">This page does not exist.</h1>
+    <p class="error-message">
+      The requested path
+      <span class="error-path">{{ request.url.path }}</span>
+      could not be found.
+    </p>
+    <div class="error-actions">
+      <a class="btn btn-primary" href="/">Return Home</a>
+      <a class="btn btn-outline-primary error-secondary-action" href="/webapps/">Browse Webapps</a>
+    </div>
+  </article>
+</section>
+{% endblock %}
+
+{% block sidebar %}
+<a class="sub-level-nav" href="/">Home</a>
+<a class="sub-level-nav" href="/webapps/">Webapps</a>
+<a class="sub-level-nav" href="/football/table/">Football</a>
+<a class="sub-level-nav" href="/aircraft/">OpenSky Database</a>
+<a class="sub-level-nav" href="/blog/">Blog</a>
+{% if request.state.user != None %}
+<a class="sub-level-nav" href="/feeds/">Feeds</a>
+{% else %}
+<a class="sub-level-nav" href="/account/login/?next={{ request.url.path|urlencode }}">Login</a>
+{% endif %}
+{% endblock %}
+
+{% block footer %}
+&copy; 2026 Steve's Website. All rights reserved.
+{% endblock %}

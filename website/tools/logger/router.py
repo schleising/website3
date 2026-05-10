@@ -5,7 +5,7 @@ from typing import Annotated
 
 from bson import ObjectId
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 
@@ -245,12 +245,7 @@ async def stats(event_type: str, request: Request):
 async def charts(event_type: str, request: Request):
     logging.info(f"Logger charts page requested for {event_type}")
 
-    # Return a 404 response
-    return JSONResponse(
-        content={"error": "Not found"},
-        status_code=404,
-        headers={"Content-Type": "application/json"},
-    )
+    raise HTTPException(status_code=404, detail="Not Found")
 
 
 # Handler for an edit event type request
