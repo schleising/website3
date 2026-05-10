@@ -33,7 +33,9 @@
       {% if card.mermaid_preview %}
       <div class="blog-card-mermaid" aria-hidden="true" data-mermaid-definition="{{ card.mermaid_preview }}"></div>
       {% endif %}
+      {% if card.preview_text != 'No preview available.' or not card.mermaid_preview %}
       <p class="blog-card-preview">{{ card.preview_text }}</p>
+      {% endif %}
       <span class="blog-card-link">Read post</span>
     </a>
     {% endfor %}
