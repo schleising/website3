@@ -14,12 +14,13 @@
 
 {% block content %}
 <section class="error-page" aria-label="404 page">
+  {% set page_path = display_path|default(request.url.path) %}
   <article class="site-card error-hero-card">
     <p class="error-code-label">404</p>
     <h1 class="error-title">This page does not exist.</h1>
     <p class="error-message">
       The requested path
-      <span class="error-path">{{ request.url.path }}</span>
+      <span class="error-path">{{ page_path }}</span>
       could not be found.
     </p>
     <div class="error-actions">
@@ -39,7 +40,7 @@
 {% if request.state.user != None %}
 <a class="sub-level-nav" href="/feeds/">Feeds</a>
 {% else %}
-<a class="sub-level-nav" href="/account/login/?next={{ request.url.path|urlencode }}">Login</a>
+<a class="sub-level-nav" href="/account/login/?next={{ page_path|urlencode }}">Login</a>
 {% endif %}
 {% endblock %}
 

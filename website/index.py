@@ -113,6 +113,14 @@ def _error_template_response(
         status_code=status_code,
     )
 
+
+def _request_path_with_query(request: Request) -> str:
+    path = request.url.path if request.url.path != "" else "/"
+    query = request.url.query
+    if query == "":
+        return path
+    return f"{path}?{query}"
+
 def _webapp_image(filename: str) -> str:
     return f"/images/webapps/{filename}"
 
@@ -332,4 +340,16 @@ async def webapps_page(request: Request):
             "is_logged_in": is_logged_in,
             "can_use_tools": can_use_tools,
         },
+    )
+
+
+@app.get("/__nginx_404__", response_class=HTMLResponse, include_in_schema=False)
+async def nginx_404_page(request: Request):
+    original_uri = request.headers.get("x-original-uri") or _request_path_with_query(request)
+
+    return _error_template_response(
+        request,
+        "404.html",
+        {"display_path": original_uri},
+        status_code=404,
     )
