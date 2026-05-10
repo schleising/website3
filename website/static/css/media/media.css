@@ -354,6 +354,21 @@
     gap: 0.45rem;
 }
 
+.media-card-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.45rem;
+}
+
+.media-card-actions .media-button {
+    width: 100%;
+}
+
+.media-card-action-secondary,
+.media-card-action-primary-full {
+    grid-column: 1 / -1;
+}
+
 .media-empty-state {
     padding: 1.8rem 1rem;
     text-align: center;
@@ -475,14 +490,22 @@ body.media-modal-open {
     }
 
     .media-filter-actions,
-    .media-card-actions,
     .media-detail-actions {
         flex-direction: column;
+    }
+
+    .media-card-actions {
+        grid-template-columns: 1fr;
     }
 
     .media-button,
     .media-filter-field .site-select,
     .media-filter-field .site-select-trigger {
         width: 100%;
+    }
+
+    .media-card-action-secondary,
+    .media-card-action-primary-full {
+        grid-column: auto;
     }
 }

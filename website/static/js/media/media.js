@@ -263,32 +263,38 @@
 
             const detailsButton = document.createElement("button");
             detailsButton.type = "button";
-            detailsButton.className = "media-button media-button-secondary";
+            detailsButton.className = "media-button media-button-secondary media-card-action-primary";
             detailsButton.textContent = "View details";
             detailsButton.addEventListener("click", () => {
                 void openDetails(file.filename || "");
             });
             actions.appendChild(detailsButton);
 
-            const queueButton = document.createElement("button");
-            queueButton.type = "button";
-            queueButton.className = "media-button media-button-primary";
-            queueButton.textContent = "Queue file";
-            queueButton.disabled = !file.can_queue;
-            queueButton.addEventListener("click", () => {
-                void runAction(queueEndpoint, file.filename || "", "File queued for conversion.");
-            });
-            actions.appendChild(queueButton);
+            if (file.can_queue) {
+                const queueButton = document.createElement("button");
+                queueButton.type = "button";
+                queueButton.className = "media-button media-button-primary media-card-action-primary";
+                queueButton.textContent = "Queue file";
+                queueButton.addEventListener("click", () => {
+                    void runAction(queueEndpoint, file.filename || "", "File queued for conversion.");
+                });
+                actions.appendChild(queueButton);
+            }
 
-            const restartButton = document.createElement("button");
-            restartButton.type = "button";
-            restartButton.className = "media-button media-button-danger";
-            restartButton.textContent = "Clear error";
-            restartButton.disabled = !file.can_restart_error;
-            restartButton.addEventListener("click", () => {
-                void runAction(restartEndpoint, file.filename || "", "Conversion error cleared.");
-            });
-            actions.appendChild(restartButton);
+            if (file.can_restart_error) {
+                const restartButton = document.createElement("button");
+                restartButton.type = "button";
+                restartButton.className = "media-button media-button-danger media-card-action-secondary";
+                restartButton.textContent = "Clear error";
+                restartButton.addEventListener("click", () => {
+                    void runAction(restartEndpoint, file.filename || "", "Conversion error cleared.");
+                });
+                actions.appendChild(restartButton);
+            }
+
+            if (!file.can_queue) {
+                detailsButton.classList.add("media-card-action-primary-full");
+            }
 
             card.append(header, facts, actions);
             cardGrid.appendChild(card);
