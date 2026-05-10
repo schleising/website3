@@ -62,14 +62,20 @@ async def media_manager(request: Request) -> HTMLResponse:
 @media_router.get("/api/files/")
 async def get_media_files(
     request: Request,
+    deleted: bool | None = Query(default=None),
     conversion_required: bool | None = Query(default=None),
+    converting: bool | None = Query(default=None),
+    converted: bool | None = Query(default=None),
     conversion_error: bool | None = Query(default=None),
     limit: int = Query(default=200, ge=1, le=500),
 ) -> dict[str, Any]:
     require_media_access(request)
 
     return await media_database.list_media_files(
+        deleted=deleted,
         conversion_required=conversion_required,
+        converting=converting,
+        converted=converted,
         conversion_error=conversion_error,
         limit=limit,
     )

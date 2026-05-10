@@ -167,16 +167,25 @@ class MediaDatabase:
 
     async def list_media_files(
         self,
+        deleted: bool | None = None,
         conversion_required: bool | None = None,
+        converting: bool | None = None,
+        converted: bool | None = None,
         conversion_error: bool | None = None,
         limit: int = 200,
     ) -> dict[str, Any]:
         if media_collection is None:
             return {"total_count": 0, "files": []}
 
-        query: dict[str, Any] = {"deleted": False}
+        query: dict[str, Any] = {}
+        if deleted is not None:
+            query["deleted"] = deleted
         if conversion_required is not None:
             query["conversion_required"] = conversion_required
+        if converting is not None:
+            query["converting"] = converting
+        if converted is not None:
+            query["converted"] = converted
         if conversion_error is not None:
             query["conversion_error"] = conversion_error
 

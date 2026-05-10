@@ -13,7 +13,10 @@
     const csrfToken = root.dataset.csrfToken || "";
 
     const filterForm = document.getElementById("media-filter-form");
+    const deletedSelect = document.getElementById("media-filter-deleted");
     const conversionRequiredSelect = document.getElementById("media-filter-conversion-required");
+    const convertingSelect = document.getElementById("media-filter-converting");
+    const convertedSelect = document.getElementById("media-filter-converted");
     const conversionErrorSelect = document.getElementById("media-filter-conversion-error");
     const refreshButton = document.getElementById("media-refresh-button");
     const statusBanner = document.getElementById("media-status-banner");
@@ -44,10 +47,25 @@
 
     function currentFilterState() {
         return {
+            deleted: normalizeFilterValue(
+                deletedSelect instanceof HTMLSelectElement
+                    ? deletedSelect.value
+                    : "false"
+            ),
             conversionRequired: normalizeFilterValue(
                 conversionRequiredSelect instanceof HTMLSelectElement
                     ? conversionRequiredSelect.value
                     : "any"
+            ),
+            converting: normalizeFilterValue(
+                convertingSelect instanceof HTMLSelectElement
+                    ? convertingSelect.value
+                    : "any"
+            ),
+            converted: normalizeFilterValue(
+                convertedSelect instanceof HTMLSelectElement
+                    ? convertedSelect.value
+                    : "false"
             ),
             conversionError: normalizeFilterValue(
                 conversionErrorSelect instanceof HTMLSelectElement
@@ -59,11 +77,26 @@
 
     function applyFiltersFromUrl() {
         const params = new URLSearchParams(window.location.search);
+        const deleted = normalizeFilterValue(params.get("deleted") || "false");
         const conversionRequired = normalizeFilterValue(params.get("conversion_required") || "any");
+        const converting = normalizeFilterValue(params.get("converting") || "any");
+        const converted = normalizeFilterValue(params.get("converted") || "false");
         const conversionError = normalizeFilterValue(params.get("conversion_error") || "any");
+
+        if (deletedSelect instanceof HTMLSelectElement) {
+            deletedSelect.value = deleted;
+        }
 
         if (conversionRequiredSelect instanceof HTMLSelectElement) {
             conversionRequiredSelect.value = conversionRequired;
+        }
+
+        if (convertingSelect instanceof HTMLSelectElement) {
+            convertingSelect.value = converting;
+        }
+
+        if (convertedSelect instanceof HTMLSelectElement) {
+            convertedSelect.value = converted;
         }
 
         if (conversionErrorSelect instanceof HTMLSelectElement) {
@@ -73,12 +106,36 @@
 
     function syncUrlToFilters() {
         const url = new URL(window.location.href);
-        const { conversionRequired, conversionError } = currentFilterState();
+        const {
+            deleted,
+            conversionRequired,
+            converting,
+            converted,
+            conversionError,
+        } = currentFilterState();
+
+        if (deleted === "false") {
+            url.searchParams.delete("deleted");
+        } else {
+            url.searchParams.set("deleted", deleted);
+        }
 
         if (conversionRequired === "any") {
             url.searchParams.delete("conversion_required");
         } else {
             url.searchParams.set("conversion_required", conversionRequired);
+        }
+
+        if (converting === "any") {
+            url.searchParams.delete("converting");
+        } else {
+            url.searchParams.set("converting", converting);
+        }
+
+        if (converted === "false") {
+            url.searchParams.delete("converted");
+        } else {
+            url.searchParams.set("converted", converted);
         }
 
         if (conversionError === "any") {
@@ -495,10 +552,28 @@
 
         try {
             const url = new URL(listEndpoint, window.location.origin);
-            const { conversionRequired, conversionError } = currentFilterState();
+            const {
+                deleted,
+                conversionRequired,
+                converting,
+                converted,
+                conversionError,
+            } = currentFilterState();
+
+            if (deleted !== "any") {
+                url.searchParams.set("deleted", deleted);
+            }
 
             if (conversionRequired !== "any") {
                 url.searchParams.set("conversion_required", conversionRequired);
+            }
+
+            if (converting !== "any") {
+                url.searchParams.set("converting", converting);
+            }
+
+            if (converted !== "any") {
+                url.searchParams.set("converted", converted);
             }
 
             if (conversionError !== "any") {
