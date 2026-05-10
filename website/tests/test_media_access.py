@@ -42,7 +42,7 @@ class MediaAccessTests(unittest.TestCase):
         with self.assertRaises(HTTPException) as raised:
             require_media_access(request)
 
-        self.assertEqual(raised.exception.status_code, 403)
+        self.assertEqual(raised.exception.status_code, 404)
 
     def test_require_media_access_allows_authorized_request(self) -> None:
         request = self._request(SimpleNamespace(can_use_tools=True))

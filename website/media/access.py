@@ -12,12 +12,12 @@ def request_can_use_media(request: Request) -> bool:
 
 
 def require_media_access(request: Request) -> None:
-    """Raise 403 when the current request user lacks media manager access."""
+    """Raise 404 when the current request user lacks media manager access."""
 
     if request_can_use_media(request):
         return
 
     raise HTTPException(
-        status_code=status.HTTP_403_FORBIDDEN,
-        detail="Media manager is only available to tool-enabled users.",
+        status_code=status.HTTP_404_NOT_FOUND,
+        detail="Not Found",
     )
