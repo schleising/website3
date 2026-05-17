@@ -999,6 +999,84 @@
     }
 
     /**
+     * Sync a subscription row's truncation toggle state.
+     *
+     * @param {HTMLElement} row
+     * @param {boolean} truncateOnDisplay
+     */
+    function syncSubscriptionRowTruncateToggle(row, truncateOnDisplay) {
+        row.dataset.truncateOnDisplay = truncateOnDisplay ? "true" : "false";
+
+        const truncateToggle = row.querySelector(".feed-subscription-truncate-toggle");
+        if (truncateToggle instanceof HTMLInputElement) {
+            truncateToggle.checked = truncateOnDisplay;
+        }
+    }
+
+    /**
+     * Apply a subscription update response back into the table row.
+     *
+     * @param {HTMLElement} row
+     * @param {Record<string, any>} payload
+     * @param {{ subscriptionId?: string, feedUrl?: string, categoryId?: string, sourceTitle?: string, truncateOnDisplay?: boolean }} [fallback]
+     */
+    function applySubscriptionRowUpdate(row, payload, fallback = {}) {
+        const updatedUrl = String(payload.normalized_url || fallback.feedUrl || "").trim();
+        const updatedCategoryId = String(payload.category_id || fallback.categoryId || "").trim();
+        const updatedSubscriptionId = String(
+            payload.subscription_id || fallback.subscriptionId || row.dataset.subscriptionId || ""
+        ).trim();
+        const updatedSourceTitle = String(payload.source_title || fallback.sourceTitle || "").trim();
+        const updatedTruncateOnDisplay = typeof payload.truncate_on_display === "boolean"
+            ? payload.truncate_on_display
+            : Boolean(fallback.truncateOnDisplay);
+
+        row.dataset.subscriptionId = updatedSubscriptionId;
+
+        const rowUrlInput = row.querySelector(".feed-subscription-url-input");
+        if (rowUrlInput instanceof HTMLInputElement) {
+            rowUrlInput.value = updatedUrl;
+        }
+
+        const rowCategorySelect = row.querySelector(".feed-subscription-category-select");
+        if (rowCategorySelect instanceof HTMLSelectElement) {
+            rowCategorySelect.value = updatedCategoryId;
+        }
+
+        syncSubscriptionRowUrlLink(row, updatedUrl);
+        syncSubscriptionRowChip(row, updatedCategoryId);
+        syncSubscriptionRowTruncateToggle(row, updatedTruncateOnDisplay);
+
+        if (updatedSourceTitle === "") {
+            return;
+        }
+
+        const rowTitleCell = row.querySelector(".feed-subscription-title-cell");
+        if (rowTitleCell instanceof HTMLElement) {
+            rowTitleCell.textContent = updatedSourceTitle;
+            rowTitleCell.title = updatedSourceTitle;
+        }
+
+        const editButton = row.querySelector(".feed-subscription-edit-button");
+        if (editButton instanceof HTMLButtonElement) {
+            editButton.setAttribute("aria-label", `Edit subscription ${updatedSourceTitle}`);
+        }
+
+        const deleteButton = row.querySelector(".feed-subscription-delete-button");
+        if (deleteButton instanceof HTMLButtonElement) {
+            deleteButton.setAttribute("aria-label", `Delete subscription ${updatedSourceTitle}`);
+        }
+
+        const truncateToggle = row.querySelector(".feed-subscription-truncate-toggle");
+        if (truncateToggle instanceof HTMLInputElement) {
+            truncateToggle.setAttribute(
+                "aria-label",
+                `Limit displayed summaries from ${updatedSourceTitle} to five paragraphs`
+            );
+        }
+    }
+
+    /**
      * Toggle subscription edit popup visibility.
      *
      * @param {boolean} isOpen
@@ -1098,6 +1176,10 @@
         const subscriptionId = subscriptionEditIdInput.value.trim();
         const feedUrl = subscriptionEditUrlInput.value.trim();
         const categoryId = subscriptionEditCategorySelect.value.trim();
+        const rowTruncateToggle = activeSubscriptionRow.querySelector(".feed-subscription-truncate-toggle");
+        const truncateOnDisplay = rowTruncateToggle instanceof HTMLInputElement
+            ? rowTruncateToggle.checked
+            : false;
 
         if (subscriptionId === "" || feedUrl === "" || categoryId === "") {
             setStatus("Subscription URL and category are required.", true);
@@ -1111,51 +1193,86 @@
             const payload = await requestJson(endpoint, "POST", {
                 feed_url: feedUrl,
                 category_id: categoryId,
+                truncate_on_display: truncateOnDisplay,
             });
-
-            const updatedUrl = String(payload.normalized_url || feedUrl).trim();
-            const updatedCategoryId = String(payload.category_id || categoryId).trim();
-            const updatedSubscriptionId = String(payload.subscription_id || subscriptionId).trim();
-            const updatedSourceTitle = String(payload.source_title || "").trim();
-
-            const row = activeSubscriptionRow;
-            row.dataset.subscriptionId = updatedSubscriptionId;
-
-            const rowUrlInput = row.querySelector(".feed-subscription-url-input");
-            if (rowUrlInput instanceof HTMLInputElement) {
-                rowUrlInput.value = updatedUrl;
-            }
-
-            const rowCategorySelect = row.querySelector(".feed-subscription-category-select");
-            if (rowCategorySelect instanceof HTMLSelectElement) {
-                rowCategorySelect.value = updatedCategoryId;
-            }
-
-            syncSubscriptionRowUrlLink(row, updatedUrl);
-            syncSubscriptionRowChip(row, updatedCategoryId);
-
-            if (updatedSourceTitle !== "") {
-                const rowTitleCell = row.querySelector(".feed-subscription-title-cell");
-                if (rowTitleCell instanceof HTMLElement) {
-                    rowTitleCell.textContent = updatedSourceTitle;
-                }
-
-                const editButton = row.querySelector(".feed-subscription-edit-button");
-                if (editButton instanceof HTMLButtonElement) {
-                    editButton.setAttribute("aria-label", `Edit subscription ${updatedSourceTitle}`);
-                }
-
-                const deleteButton = row.querySelector(".feed-subscription-delete-button");
-                if (deleteButton instanceof HTMLButtonElement) {
-                    deleteButton.setAttribute("aria-label", `Delete subscription ${updatedSourceTitle}`);
-                }
-            }
+            applySubscriptionRowUpdate(activeSubscriptionRow, payload, {
+                subscriptionId,
+                feedUrl,
+                categoryId,
+                truncateOnDisplay,
+            });
 
             closeSubscriptionEditPopup();
             setStatus("Subscription updated.");
             await refreshSidebarCounts();
         } catch (error) {
             setStatus(error instanceof Error ? error.message : "Unable to update subscription.", true);
+        }
+    }
+
+    /**
+     * Handle per-row truncation toggle changes.
+     *
+     * @param {Event} event
+     */
+    async function onSubscriptionTruncateChange(event) {
+        const target = /** @type {HTMLInputElement | null} */ (
+            event.target instanceof HTMLInputElement ? event.target : null
+        );
+        if (!(target instanceof HTMLInputElement) || !target.classList.contains("feed-subscription-truncate-toggle")) {
+            return;
+        }
+
+        const row = target.closest(".feed-subscription-row");
+        if (!(row instanceof HTMLElement)) {
+            return;
+        }
+
+        const subscriptionId = String(row.dataset.subscriptionId || "").trim();
+        const rowUrlInput = row.querySelector(".feed-subscription-url-input");
+        const rowCategorySelect = row.querySelector(".feed-subscription-category-select");
+        if (
+            subscriptionId === ""
+            || !(rowUrlInput instanceof HTMLInputElement)
+            || !(rowCategorySelect instanceof HTMLSelectElement)
+        ) {
+            target.checked = !target.checked;
+            return;
+        }
+
+        const feedUrl = rowUrlInput.value.trim();
+        const categoryId = rowCategorySelect.value.trim();
+        const truncateOnDisplay = target.checked;
+        if (feedUrl === "" || categoryId === "") {
+            target.checked = !truncateOnDisplay;
+            setStatus("Subscription URL and category are required.", true);
+            return;
+        }
+
+        target.disabled = true;
+        setStatus(truncateOnDisplay ? "Enabling feed truncation..." : "Disabling feed truncation...");
+
+        try {
+            const endpoint = buildSubscriptionEndpoint(subscriptionUpdateTemplate, subscriptionId);
+            const payload = await requestJson(endpoint, "POST", {
+                feed_url: feedUrl,
+                category_id: categoryId,
+                truncate_on_display: truncateOnDisplay,
+            });
+
+            applySubscriptionRowUpdate(row, payload, {
+                subscriptionId,
+                feedUrl,
+                categoryId,
+                truncateOnDisplay,
+            });
+            setStatus(truncateOnDisplay ? "Feed truncation enabled." : "Feed truncation disabled.");
+            await refreshSidebarCounts();
+        } catch (error) {
+            syncSubscriptionRowTruncateToggle(row, !truncateOnDisplay);
+            setStatus(error instanceof Error ? error.message : "Unable to update feed truncation.", true);
+        } finally {
+            target.disabled = false;
         }
     }
 
@@ -1701,6 +1818,9 @@
 
     if (subscriptionTableWrap) {
         subscriptionTableWrap.addEventListener("click", onSubscriptionActionClick);
+        subscriptionTableWrap.addEventListener("change", event => {
+            void onSubscriptionTruncateChange(event);
+        });
         initializeSubscriptionRows();
     }
 

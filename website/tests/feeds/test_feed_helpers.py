@@ -138,14 +138,14 @@ class FeedHelperTests(unittest.TestCase):
 
 
 class TruncateHtmlToParagraphsTests(unittest.TestCase):
-    def test_returns_unchanged_when_three_or_fewer_paragraphs(self) -> None:
-        html = "<p>One</p><p>Two</p><p>Three</p>"
+    def test_returns_unchanged_when_five_or_fewer_paragraphs(self) -> None:
+        html = "<p>One</p><p>Two</p><p>Three</p><p>Four</p><p>Five</p>"
         self.assertEqual(truncate_html_to_paragraphs(html), html)
 
-    def test_truncates_after_third_paragraph(self) -> None:
-        html = "<p>One</p><p>Two</p><p>Three</p><p>Four</p><p>Five</p>"
+    def test_truncates_after_fifth_paragraph(self) -> None:
+        html = "<p>One</p><p>Two</p><p>Three</p><p>Four</p><p>Five</p><p>Six</p>"
         result = truncate_html_to_paragraphs(html)
-        self.assertEqual(result, "<p>One</p><p>Two</p><p>Three</p>")
+        self.assertEqual(result, "<p>One</p><p>Two</p><p>Three</p><p>Four</p><p>Five</p>")
 
     def test_returns_unchanged_when_no_paragraphs(self) -> None:
         html = "<div>No paragraphs here</div>"
@@ -156,9 +156,9 @@ class TruncateHtmlToParagraphsTests(unittest.TestCase):
         self.assertEqual(truncate_html_to_paragraphs(html, max_paragraphs=2), "<p>A</p><p>B</p>")
 
     def test_case_insensitive_close_tag(self) -> None:
-        html = "<p>One</P><p>Two</P><p>Three</P><p>Four</P>"
+        html = "<p>One</P><p>Two</P><p>Three</P><p>Four</P><p>Five</P><p>Six</P>"
         result = truncate_html_to_paragraphs(html)
-        self.assertEqual(result, "<p>One</P><p>Two</P><p>Three</P>")
+        self.assertEqual(result, "<p>One</P><p>Two</P><p>Three</P><p>Four</P><p>Five</P>")
 
 
 if __name__ == "__main__":

@@ -154,7 +154,7 @@ def deterministic_category_color(category_name: str) -> str:
     return palette[index]
 
 
-def truncate_html_to_paragraphs(html: str, max_paragraphs: int = 3) -> str:
+def truncate_html_to_paragraphs(html: str, max_paragraphs: int = 5) -> str:
     """Return HTML truncated to at most *max_paragraphs* paragraph elements.
 
     Counts closing ``</p>`` tags and slices after the Nth one so the result

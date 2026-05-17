@@ -40,6 +40,7 @@ READ_VISIBILITY_WINDOW = timedelta(minutes=2)
 RECENTLY_READ_WINDOW = timedelta(days=7)
 FEED_VALIDATION_MAX_REDIRECTS = 5
 FEED_VALIDATION_REDIRECT_STATUSES = {301, 302, 303, 307, 308}
+TRUNCATED_SUMMARY_PARAGRAPH_LIMIT = 5
 
 SUMMARY_ANCHOR_HREF_RE = re.compile(
     r'(?P<prefix>\bhref\s*=\s*)(?P<quote>["\']?)(?P<href>[^"\'\s>]+)(?P=quote)',
@@ -255,8 +256,12 @@ def normalize_summary_document_fragment_links(summary_html: str | None, article_
     return SUMMARY_ANCHOR_HREF_RE.sub(_replace, summary_html)
 
 
-def build_article_summary_html(article_doc: dict[str, Any]) -> str | None:
-    """Return sanitized summary HTML with same-document fragment links normalized."""
+def build_article_summary_html(
+    article_doc: dict[str, Any],
+    *,
+    truncate_on_display: bool = False,
+) -> str | None:
+    """Return sanitized summary HTML, optionally truncated for display."""
 
     raw_summary_html = article_doc.get("summary_html")
     if raw_summary_html is None:
@@ -275,7 +280,13 @@ def build_article_summary_html(article_doc: dict[str, Any]) -> str | None:
         allow_inline_styles=True,
     )
 
-    return feed_utils.truncate_html_to_paragraphs(sanitized)
+    if not truncate_on_display:
+        return sanitized
+
+    return feed_utils.truncate_html_to_paragraphs(
+        sanitized,
+        max_paragraphs=TRUNCATED_SUMMARY_PARAGRAPH_LIMIT,
+    )
 
 
 async def validate_feed_url(feed_url: str) -> tuple[str, str]:
@@ -983,6 +994,7 @@ async def create_or_update_subscription(
         "user_id": user_id,
         "feed_id": source_doc["_id"],
         "category_id": category_doc.id,
+        "truncate_on_display": False,
         "created_at": utc_now(),
         "updated_at": utc_now(),
     }
@@ -1026,6 +1038,7 @@ async def update_subscription_details(
     normalized_url: str,
     source_title: str,
     category_id: str,
+    truncate_on_display: bool,
 ) -> dict[str, Any] | None:
     """Update an existing user subscription URL and category."""
 
@@ -1064,6 +1077,7 @@ async def update_subscription_details(
             {
                 "$set": {
                     "category_id": category_doc.id,
+                    "truncate_on_display": truncate_on_display,
                     "updated_at": now,
                 }
             },
@@ -1082,6 +1096,7 @@ async def update_subscription_details(
                 "$set": {
                     "feed_id": source_doc["_id"],
                     "category_id": category_doc.id,
+                    "truncate_on_display": truncate_on_display,
                     "updated_at": now,
                 }
             },
@@ -1165,6 +1180,7 @@ async def list_user_subscription_rows(user_id: str) -> list[dict[str, Any]]:
                 "category_name": category.name,
                 "category_color_hex": category.color_hex,
                 "category_muted": category.muted,
+                "truncate_on_display": bool(sub.get("truncate_on_display")),
             }
         )
 
@@ -1440,6 +1456,11 @@ async def get_article_list(
         for sub in subscriptions
         if "feed_id" in sub and "category_id" in sub
     }
+    truncated_feed_ids = {
+        sub["feed_id"]
+        for sub in subscriptions
+        if isinstance(sub.get("feed_id"), ObjectId) and bool(sub.get("truncate_on_display"))
+    }
 
     categories_by_id = {
         category.id: category for category in categories if category.id is not None
@@ -1450,6 +1471,7 @@ async def get_article_list(
             user_id=user_id,
             categories_by_id=categories_by_id,
             feed_to_category=feed_to_category,
+            truncated_feed_ids=truncated_feed_ids,
             offset=normalized_offset,
             limit=normalized_limit,
         )
@@ -1468,6 +1490,7 @@ async def get_article_list(
             user_id=user_id,
             categories_by_id=categories_by_id,
             feed_to_category=feed_to_category,
+            truncated_feed_ids=truncated_feed_ids,
             offset=normalized_offset,
             limit=normalized_limit,
         )
@@ -1537,6 +1560,7 @@ async def get_article_list(
         allowed_feed_ids=allowed_feed_ids,
         categories_by_id=categories_by_id,
         feed_to_category=feed_to_category,
+        truncated_feed_ids=truncated_feed_ids,
         read_state_ids=read_state_ids,
         recent_read_state_ids=recent_read_state_ids,
         status_filter=normalized_status,
@@ -1755,6 +1779,7 @@ async def list_cards_for_feed_ids(
     allowed_feed_ids: list[ObjectId],
     categories_by_id: dict[ObjectId, FeedCategoryDocument],
     feed_to_category: dict[ObjectId, ObjectId],
+    truncated_feed_ids: set[ObjectId],
     read_state_ids: set[ObjectId],
     recent_read_state_ids: set[ObjectId],
     status_filter: str,
@@ -1872,7 +1897,10 @@ async def list_cards_for_feed_ids(
                 title=str(article_doc.get("title", "Untitled")),
                 link=normalize_article_navigation_link(article_doc.get("canonical_url") or article_doc.get("link")),
                 author=str(article_doc.get("author", "")).strip() or None,
-                summary_html=build_article_summary_html(article_doc),
+                summary_html=build_article_summary_html(
+                    article_doc,
+                    truncate_on_display=feed_id in truncated_feed_ids,
+                ),
                 media_image_url=normalize_article_link(article_doc.get("media_image_url")) or None,
                 published_at=article_doc.get("published_at"),
                 feed_title=source_title,
@@ -1893,6 +1921,7 @@ async def list_recently_read_cards(
     user_id: str,
     categories_by_id: dict[ObjectId, FeedCategoryDocument],
     feed_to_category: dict[ObjectId, ObjectId],
+    truncated_feed_ids: set[ObjectId],
     offset: int,
     limit: int,
 ) -> tuple[list[FeedArticleCard], bool]:
@@ -2009,7 +2038,10 @@ async def list_recently_read_cards(
                 title=str(article_doc.get("title", "Untitled")),
                 link=normalize_article_navigation_link(article_doc.get("canonical_url") or article_doc.get("link")),
                 author=str(article_doc.get("author", "")).strip() or None,
-                summary_html=build_article_summary_html(article_doc),
+                summary_html=build_article_summary_html(
+                    article_doc,
+                    truncate_on_display=feed_id in truncated_feed_ids,
+                ),
                 media_image_url=normalize_article_link(article_doc.get("media_image_url")) or None,
                 published_at=article_doc.get("published_at"),
                 feed_title=source_title,
@@ -2030,6 +2062,7 @@ async def list_saved_cards(
     user_id: str,
     categories_by_id: dict[ObjectId, FeedCategoryDocument],
     feed_to_category: dict[ObjectId, ObjectId],
+    truncated_feed_ids: set[ObjectId],
     offset: int,
     limit: int,
 ) -> tuple[list[FeedArticleCard], bool]:
@@ -2138,7 +2171,10 @@ async def list_saved_cards(
                 title=str(article_doc.get("title", "Untitled")),
                 link=normalize_article_navigation_link(article_doc.get("canonical_url") or article_doc.get("link")),
                 author=str(article_doc.get("author", "")).strip() or None,
-                summary_html=build_article_summary_html(article_doc),
+                summary_html=build_article_summary_html(
+                    article_doc,
+                    truncate_on_display=feed_id in truncated_feed_ids,
+                ),
                 media_image_url=normalize_article_link(article_doc.get("media_image_url")) or None,
                 published_at=article_doc.get("published_at"),
                 feed_title=source_title,

@@ -95,11 +95,17 @@
           <div class="feed-subscription-title-cell" role="columnheader">Feed</div>
           <div class="feed-subscription-url-cell" role="columnheader">URL</div>
           <div class="feed-subscription-category-cell" role="columnheader">Category</div>
+          <div class="feed-subscription-truncate-cell" role="columnheader">Truncate</div>
           <div class="feed-subscription-actions-cell" role="columnheader">Actions</div>
         </div>
 
         {% for subscription in subscriptions %}
-        <div class="feed-subscription-row feed-subscription-grid-row" data-subscription-id="{{ subscription.subscription_id }}" role="row">
+        <div
+          class="feed-subscription-row feed-subscription-grid-row"
+          data-subscription-id="{{ subscription.subscription_id }}"
+          data-truncate-on-display="{{ 'true' if subscription.truncate_on_display else 'false' }}"
+          role="row"
+        >
           <div class="feed-subscription-title-cell" role="cell" title="{{ subscription.source_title }}">{{ subscription.source_title }}</div>
           <div class="feed-subscription-url-cell" role="cell">
             <a
@@ -133,6 +139,20 @@
               </option>
               {% endfor %}
             </select>
+          </div>
+          <div class="feed-subscription-truncate-cell" role="cell">
+            <label
+              class="feed-subscription-toggle"
+              title="Limit displayed summaries from {{ subscription.source_title }} to five paragraphs"
+            >
+              <input
+                type="checkbox"
+                class="feed-subscription-truncate-toggle"
+                aria-label="Limit displayed summaries from {{ subscription.source_title }} to five paragraphs"
+                {% if subscription.truncate_on_display %}checked{% endif %}
+              >
+              <span class="feed-subscription-toggle-track" aria-hidden="true"></span>
+            </label>
           </div>
           <div class="feed-subscription-actions-cell" role="cell">
             <div class="feed-subscription-actions">

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from typing import Annotated, Literal
+from typing import Any, Annotated, Literal
 
 from bson import ObjectId
 from pydantic import BaseModel, ConfigDict, Field
@@ -78,6 +78,7 @@ class UserFeedSubscriptionDocument(BaseModel):
     user_id: str
     feed_id: PyObjectId
     category_id: PyObjectId
+    truncate_on_display: bool = False
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
@@ -192,10 +193,11 @@ class FeedSubscriptionCreateResponse(BaseModel):
 
 
 class FeedSubscriptionUpdateRequest(BaseModel):
-    """Subscription update payload for URL/category changes."""
+    """Subscription update payload for URL/category/truncation changes."""
 
     feed_url: str
     category_id: str
+    truncate_on_display: bool = False
 
 
 class FeedSubscriptionUpdateResponse(BaseModel):
@@ -207,6 +209,7 @@ class FeedSubscriptionUpdateResponse(BaseModel):
     normalized_url: str
     source_title: str
     source_image_url: str | None = None
+    truncate_on_display: bool = False
 
 
 class FeedSubscriptionDeleteResponse(BaseModel):
@@ -257,7 +260,7 @@ class FeedSettingsViewModel(BaseModel):
     """Settings page model with user subscriptions and categories."""
 
     categories: list[FeedCategorySummary]
-    subscriptions: list[dict[str, str]]
+    subscriptions: list[dict[str, Any]]
 
 
 class FeedAdminFeedRow(BaseModel):

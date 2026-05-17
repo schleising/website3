@@ -439,6 +439,7 @@ async def update_subscription(
         normalized_url=normalized_url,
         source_title=source_title,
         category_id=payload.category_id,
+        truncate_on_display=payload.truncate_on_display,
     )
 
     if updated_doc is None:
@@ -453,6 +454,7 @@ async def update_subscription(
         category_id=str(updated_doc["category_id"]),
         normalized_url=normalized_url,
         source_title=source_title,
+        truncate_on_display=bool(updated_doc.get("truncate_on_display")),
     )
 
 
