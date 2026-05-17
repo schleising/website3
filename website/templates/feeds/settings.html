@@ -25,7 +25,19 @@
       <input id="feed-url-input" name="feed_url" type="url" required placeholder="https://example.com/feed.xml">
 
       <label for="feed-category-input">Category</label>
-      <input id="feed-category-input" name="category_name" type="text" required placeholder="Technology">
+      <input
+        id="feed-category-input"
+        name="category_name"
+        type="text"
+        list="feed-category-suggestions"
+        required
+        placeholder="Technology"
+      >
+      <datalist id="feed-category-suggestions">
+        {% for category_item in categories %}
+        <option value="{{ category_item.name }}"></option>
+        {% endfor %}
+      </datalist>
 
       <button type="submit" class="btn btn-primary">Add Feed</button>
     </form>
