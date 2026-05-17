@@ -154,6 +154,30 @@ def deterministic_category_color(category_name: str) -> str:
     return palette[index]
 
 
+def truncate_html_to_paragraphs(html: str, max_paragraphs: int = 3) -> str:
+    """Return HTML truncated to at most *max_paragraphs* paragraph elements.
+
+    Counts closing ``</p>`` tags and slices after the Nth one so the result
+    always ends at a complete paragraph boundary.  HTML with fewer than
+    *max_paragraphs* paragraphs is returned unchanged.
+    """
+
+    close_tag = "</p>"
+    close_tag_lower = close_tag.lower()
+    html_lower = html.lower()
+
+    pos = 0
+    found = 0
+    while found < max_paragraphs:
+        idx = html_lower.find(close_tag_lower, pos)
+        if idx == -1:
+            return html
+        pos = idx + len(close_tag)
+        found += 1
+
+    return html[:pos]
+
+
 def parse_opml_entries(opml_bytes: bytes) -> tuple[list[tuple[str, str, str]], list[str]]:
     """Parse OPML bytes into tuples of (feed_url, title, category_name)."""
 

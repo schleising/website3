@@ -30,6 +30,7 @@ is_public_http_url = feed_utils.is_public_http_url
 normalize_color_hex = feed_utils.normalize_color_hex
 normalize_feed_url = feed_utils.normalize_feed_url
 parse_opml_entries = feed_utils.parse_opml_entries
+truncate_html_to_paragraphs = feed_utils.truncate_html_to_paragraphs
 
 
 class FeedHelperTests(unittest.TestCase):
@@ -134,6 +135,30 @@ class FeedHelperTests(unittest.TestCase):
 
         self.assertEqual(errors, [])
         self.assertEqual(entries, [("https://example.com/feed.xml", "Example Feed", "Tech")])
+
+
+class TruncateHtmlToParagraphsTests(unittest.TestCase):
+    def test_returns_unchanged_when_three_or_fewer_paragraphs(self) -> None:
+        html = "<p>One</p><p>Two</p><p>Three</p>"
+        self.assertEqual(truncate_html_to_paragraphs(html), html)
+
+    def test_truncates_after_third_paragraph(self) -> None:
+        html = "<p>One</p><p>Two</p><p>Three</p><p>Four</p><p>Five</p>"
+        result = truncate_html_to_paragraphs(html)
+        self.assertEqual(result, "<p>One</p><p>Two</p><p>Three</p>")
+
+    def test_returns_unchanged_when_no_paragraphs(self) -> None:
+        html = "<div>No paragraphs here</div>"
+        self.assertEqual(truncate_html_to_paragraphs(html), html)
+
+    def test_custom_max_paragraphs(self) -> None:
+        html = "<p>A</p><p>B</p><p>C</p><p>D</p>"
+        self.assertEqual(truncate_html_to_paragraphs(html, max_paragraphs=2), "<p>A</p><p>B</p>")
+
+    def test_case_insensitive_close_tag(self) -> None:
+        html = "<p>One</P><p>Two</P><p>Three</P><p>Four</P>"
+        result = truncate_html_to_paragraphs(html)
+        self.assertEqual(result, "<p>One</P><p>Two</P><p>Three</P>")
 
 
 if __name__ == "__main__":

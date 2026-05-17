@@ -270,10 +270,12 @@ def build_article_summary_html(article_doc: dict[str, Any]) -> str | None:
     if normalized_summary_html is None or normalized_summary_html == "":
         return None
 
-    return sanitize_html(
+    sanitized = sanitize_html(
         normalized_summary_html,
         allow_inline_styles=True,
     )
+
+    return feed_utils.truncate_html_to_paragraphs(sanitized)
 
 
 async def validate_feed_url(feed_url: str) -> tuple[str, str]:
