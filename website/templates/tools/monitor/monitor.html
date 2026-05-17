@@ -20,7 +20,7 @@
 
 <body>
   <div class="outer">
-    <div class="header">
+    <header class="header">
       <div class="header-top">
         <h1>Home Monitor</h1>
         <button id="theme-toggle-button" class="theme-switch" type="button" aria-label="Toggle dark mode" aria-pressed="false" title="Toggle dark mode">
@@ -49,8 +49,8 @@
         </button>
       </div>
       <p class="subtitle">Live temperature and humidity readings with rolling charts.</p>
-    </div>
-    <div class="charts">
+    </header>
+    <main class="charts">
       {% for data in sensor_data.data %}
       <div class="data-container" id="data-container-{{ data.device_id }}">
         <div class="data">
@@ -71,7 +71,7 @@
         </div>
       </div>
       {% endfor %}
-    </div>
+    </main>
   </div>
 </body>
 

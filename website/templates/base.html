@@ -53,7 +53,7 @@
   {% set show_left_sidebar = render_left_sidebar if render_left_sidebar is defined else true %}
   {% set show_right_sidebar = render_right_sidebar if render_right_sidebar is defined else true %}
   <div id="outer">
-    <div id="header">
+    <header id="header">
         {% if show_left_sidebar %}
         <div class="header-mobile-action left-mobile-action">
           <button type="button" class="mobile-nav-button" id="left-nav-toggle" aria-label="Open main menu" aria-controls="left-sidebar-menu" aria-expanded="false">☰</button>
@@ -68,11 +68,11 @@
           <button type="button" class="mobile-nav-button" id="right-nav-toggle" aria-label="Open side menu" aria-controls="right-sidebar-menu" aria-expanded="false">▼</button>
         </div>
         {% endif %}
-    </div>
-    <div id="main">
+    </header>
+    <main id="main">
         {% if show_left_sidebar %}
-        <div class="sidebar left-sidebar" id="left-sidebar-menu">
-        <div class="main-nav">
+        <aside class="sidebar left-sidebar" id="left-sidebar-menu">
+        <nav class="main-nav" aria-label="Primary navigation">
           <div class="top-level-nav">☰</div>
           <div class="sub-level-nav-container">
             {% set current_path = request.url.path %}
@@ -98,28 +98,28 @@
             <a class="sub-level-nav{% if current_section == 'account' %} is-current{% endif %}" href="/account/login/?next={{ request.url.path|urlencode }}"{% if current_section == 'account' %} aria-current="page"{% endif %}>Login</a>
             {% endif %}
           </div>
-        </div>
-      </div>
+        </nav>
+      </aside>
       {% endif %}
       <div id="content">
         {% block content %}
         {% endblock %}
       </div>
         {% if show_right_sidebar %}
-        <div class="sidebar right-sidebar" id="right-sidebar-menu">
-        <div class="main-nav right-nav">
+        <aside class="sidebar right-sidebar" id="right-sidebar-menu">
+        <nav class="main-nav right-nav" aria-label="Secondary navigation">
           <div class="sub-level-nav-container right-align">
             {% block sidebar %}
             {% endblock %}
           </div>
-        </div>
-      </div>
+        </nav>
+      </aside>
       {% endif %}
-    </div>
-    <div id="footer">
+    </main>
+    <footer id="footer">
       {% block footer %}
       {% endblock %}
-    </div>
+    </footer>
   </div>
 </body>
 
