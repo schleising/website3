@@ -26,9 +26,16 @@
     const articleStatusesEndpoint = root.dataset.articleStatusesEndpoint || "/feeds/api/articles/statuses/";
 
     /** @type {HTMLElement} */
-    const scrollContainer = document.documentElement;
+    const scrollContainer = (() => {
+        const contentContainer = root.closest("#content");
+        if (contentContainer instanceof HTMLElement) {
+            return contentContainer;
+        }
+
+        return document.documentElement;
+    })();
     /** @type {boolean} */
-    const useElementScrollContainer = false;
+    const useElementScrollContainer = scrollContainer !== document.documentElement;
 
     const categoriesEndpoint = root.dataset.categoriesEndpoint || "/feeds/api/categories/";
     /** @type {string} */
@@ -112,6 +119,8 @@
     let touchScrollReadScheduled = false;
     /** @type {boolean} */
     let manualRefreshInFlight = false;
+    /** @type {number} */
+    let suppressTouchScrollReadUntilMs = 0;
     /** @type {HTMLButtonElement | null} */
     let manualRefreshButton = null;
 
@@ -1232,11 +1241,58 @@
             return false;
         }
 
+        if (Date.now() < suppressTouchScrollReadUntilMs) {
+            return false;
+        }
+
+        if (manualRefreshInFlight) {
+            return false;
+        }
+
         if (selectedCategory === "recently-read") {
             return false;
         }
 
         return true;
+    }
+
+    /**
+     * Return current document scroll offset for viewport-based reader mode.
+     *
+     * @returns {number}
+     */
+    function getViewportScrollTop() {
+        if (useElementScrollContainer) {
+            return scrollContainer.scrollTop;
+        }
+
+        const scrollingElement = document.scrollingElement;
+        if (scrollingElement instanceof HTMLElement) {
+            return Math.max(0, scrollingElement.scrollTop);
+        }
+
+        return Math.max(
+            0,
+            window.scrollY,
+            document.documentElement.scrollTop,
+            document.body ? document.body.scrollTop : 0,
+        );
+    }
+
+    /**
+     * Set active reader viewport scroll position.
+     *
+     * @param {number} top
+     */
+    function setReaderViewportScrollTop(top) {
+        const normalizedTop = Math.max(0, Number(top) || 0);
+
+        if (useElementScrollContainer) {
+            scrollContainer.scrollTop = normalizedTop;
+            return;
+        }
+
+        window.scrollTo({ top: normalizedTop, behavior: "auto" });
     }
 
     /**
@@ -1411,7 +1467,7 @@
         const previousCardMap = new Map();
         const previousIdsInOrder = [];
         const previousSelectedId = getSelectedArticleId();
-        const previousScrollY = window.scrollY;
+        const previousScrollY = getViewportScrollTop();
 
         previousCards.forEach(card => {
             const articleId = getCardArticleId(card);
@@ -1518,7 +1574,7 @@
             renderInlineEmptyHint();
             clearCardSelection();
             if (scrollToTop) {
-                window.scrollTo({ top: 0, behavior: "auto" });
+                setReaderViewportScrollTop(0);
             }
             return;
         }
@@ -1532,9 +1588,9 @@
             if (selectedIdIndex >= 0) {
                 setSelectedIndex(selectedIdIndex, { scrollIntoView: false });
                 if (scrollToTop) {
-                    window.scrollTo({ top: 0, behavior: "auto" });
+                    setReaderViewportScrollTop(0);
                 } else {
-                    window.scrollTo({ top: previousScrollY, behavior: "auto" });
+                    setReaderViewportScrollTop(previousScrollY);
                 }
                 return;
             }
@@ -1547,9 +1603,9 @@
             clearCardSelection();
         }
         if (scrollToTop) {
-            window.scrollTo({ top: 0, behavior: "auto" });
+            setReaderViewportScrollTop(0);
         } else {
-            window.scrollTo({ top: previousScrollY, behavior: "auto" });
+            setReaderViewportScrollTop(previousScrollY);
         }
         scheduleTouchScrollReadCheck();
     }
@@ -2177,11 +2233,19 @@
             manualRefreshButton.disabled = true;
         }
 
+        // Refresh interactions should reset viewport without auto-marking cards read.
+        suppressTouchScrollReadUntilMs = Date.now() + 2200;
+        setReaderViewportScrollTop(0);
+
         try {
             await refreshFeedData();
             await refreshVisibleCardStatuses();
         } finally {
             manualRefreshInFlight = false;
+            suppressTouchScrollReadUntilMs = Math.max(
+                suppressTouchScrollReadUntilMs,
+                Date.now() + 700,
+            );
             if (manualRefreshButton instanceof HTMLButtonElement) {
                 manualRefreshButton.disabled = false;
             }
@@ -2639,7 +2703,12 @@
     document.addEventListener("keyup", onKeyUp, { capture: true });
 
     if (isTouchOnlyDevice) {
-        window.addEventListener("scroll", scheduleTouchScrollReadCheck, { passive: true });
+        if (useElementScrollContainer) {
+            scrollContainer.addEventListener("scroll", scheduleTouchScrollReadCheck, { passive: true });
+        } else {
+            window.addEventListener("scroll", scheduleTouchScrollReadCheck, { passive: true });
+        }
+
         window.addEventListener("touchmove", scheduleTouchScrollReadCheck, { passive: true });
     }
 
