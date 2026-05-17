@@ -77,7 +77,7 @@
         </div>
         <div class="team">
           <div class="team-and-badge">
-            <img class="team-badge" src="{{ match.home_team.local_crest }}"></img>
+            <img class="team-badge" src="{{ match.home_team.local_crest }}" alt="{{ match.home_team.short_name }} crest"></img>
             <a class="team-name" href="{{ football_root }}matches/team/{{ match.home_team.id }}/?season={{ selected_season_key|default(current_season_key)|default('') }}">{{ match.home_team.short_name }}</a>
           </div>
           {% if live_matches %}
@@ -92,7 +92,7 @@
         </div>
         <div class="team">
           <div class="team-and-badge">
-            <img class="team-badge" src="{{ match.away_team.local_crest }}"></img>
+            <img class="team-badge" src="{{ match.away_team.local_crest }}" alt="{{ match.away_team.short_name }} crest"></img>
             <a class="team-name" href="{{ football_root }}matches/team/{{ match.away_team.id }}/?season={{ selected_season_key|default(current_season_key)|default('') }}">{{ match.away_team.short_name }}</a>
           </div>
           {% if live_matches %}
@@ -141,7 +141,7 @@
     </div>
     <div class="team">
       <div class="team-and-badge">
-        <img class="team-badge" src="{{ match.home_team.local_crest }}"></img>
+        <img class="team-badge" src="{{ match.home_team.local_crest }}" alt="{{ match.home_team.short_name }} crest"></img>
         <a class="team-name" href="{{ football_root }}matches/team/{{ match.home_team.id }}/?season={{ selected_season_key|default(current_season_key)|default('') }}">{{ match.home_team.short_name }}</a>
       </div>
       {% if live_matches %}
@@ -156,7 +156,7 @@
     </div>
     <div class="team">
       <div class="team-and-badge">
-        <img class="team-badge" src="{{ match.away_team.local_crest }}"></img>
+        <img class="team-badge" src="{{ match.away_team.local_crest }}" alt="{{ match.away_team.short_name }} crest"></img>
         <a class="team-name" href="{{ football_root }}matches/team/{{ match.away_team.id }}/?season={{ selected_season_key|default(current_season_key)|default('') }}">{{ match.away_team.short_name }}</a>
       </div>
       {% if live_matches %}

@@ -84,7 +84,7 @@
         </div>
         <div class="row-data data table-cell" role="cell">
           <div class="team-and-badge">
-            <img class="team-badge" src="{{ table_item.team.local_crest }}"></img>
+            <img class="team-badge" src="{{ table_item.team.local_crest }}" alt="{{ table_item.team.short_name }} crest"></img>
             <a class="team-name" href="{{ football_root }}matches/team/{{ table_item.team.id }}/?season={{ selected_season_key|default(current_season_key)|default('') }}">{{ table_item.team.short_name }}</a>
           </div>
         </div>

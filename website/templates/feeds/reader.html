@@ -113,7 +113,7 @@
       {% set article_media_url = (article.media_image_url or '') | trim %}
       {% if article_media_url and (article_media_url | lower) not in ['none', 'null', 'undefined'] %}
       <figure class="feed-article-media">
-        <img src="{{ article_media_url }}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" />
+        <img src="{{ article_media_url }}" alt="{{ article.title }} article image" loading="lazy" decoding="async" referrerpolicy="no-referrer" />
       </figure>
       {% endif %}
 
