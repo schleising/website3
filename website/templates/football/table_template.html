@@ -4,7 +4,7 @@
 <link rel="stylesheet" href="/css/table.css?v1.8.9">
 {% block football_scripts %}
 {% if is_current_season|default(false) %}
-<script defer src="/js/football/table_live.js?v1.8.20"></script>
+<script defer src="/js/football/table_live.js?v1.8.21"></script>
 {% endif %}
 {% endblock %}
 {% block title %}<title>Football - {{ title }}</title>{% endblock %}
@@ -59,7 +59,7 @@
       {% set relegation_cutoff = table_list|length - 2 %}
       {% for table_item in table_list %}
       <article
-        class="data-row{% if is_current_season|default(false) %}{% if table_item.position <= 5 %} table-zone-ucl{% elif table_item.position == 6 %} table-zone-uel{% elif table_item.position == 7 %} table-zone-uecl{% elif table_item.position >= relegation_cutoff %} table-zone-relegation{% endif %}{% endif %}"
+        class="data-row{% if is_current_season|default(false) %}{% if table_item.position <= 5 %} table-zone-ucl{% elif table_item.position <= 7 %} table-zone-uel{% elif table_item.position == 8 %} table-zone-uecl{% elif table_item.position >= relegation_cutoff %} table-zone-relegation{% endif %}{% endif %}"
         role="row"
         data-team-id="{{ table_item.team.id }}"
         data-position="{{ table_item.position }}"

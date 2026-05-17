@@ -201,12 +201,12 @@ function updateSeasonZoneClasses(row, position, teamCount) {
         return;
     }
 
-    if (position === 6) {
+    if (position <= 7) {
         row.classList.add("table-zone-uel");
         return;
     }
 
-    if (position === 7) {
+    if (position === 8) {
         row.classList.add("table-zone-uecl");
         return;
     }
