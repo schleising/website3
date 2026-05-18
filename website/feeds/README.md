@@ -490,6 +490,27 @@ sequenceDiagram
 	3. Include all user subscriptions and category associations, including muted categories and category colors where supported by reader extensions.
 	4. Sort categories and feeds for stable output so repeated exports are diff-friendly.
 
+#### 5.5 Search API Extension Plan
+
+1. Add a dedicated Search page route:
+	1. `GET /feeds/search/` renders the reader-style card list shell for search results.
+	2. This page reuses the same card rendering model and pagination semantics as category pages.
+2. Extend article listing API semantics:
+	1. `GET /feeds/api/articles` adds optional `search` query parameter.
+	2. Search scope is limited to feeds visible to the currently logged-in reader (user subscriptions only).
+	3. When `search` is present, default status mode is `all` unless explicitly overridden.
+	4. Response payload remains `FeedArticleListResponse` so frontend rendering stays identical to category pages.
+3. Search fields:
+	1. Article title.
+	2. Article body text (derived from summary/body content).
+4. Search matching (clarification of matching mode question):
+	1. Initial matching mode is case-insensitive substring matching.
+	2. Example: query `climate` matches `Climate`, `climate`, and `microclimate`.
+	3. Phrase/proximity/advanced operators are explicitly out of scope for the first iteration and can be added later.
+5. Query safety and performance safeguards:
+	1. Sanitize and length-limit incoming `search` query values.
+	2. Start with simple matching, then introduce indexed/text-search optimization if profiling indicates need.
+
 ### 6. Frontend UX and Interaction Design
 
 #### 6.1 Navigation and Access
@@ -574,6 +595,25 @@ sequenceDiagram
 3. Keep JavaScript modules small and page-scoped to limit surface area.
 4. All JavaScript functions include JSDoc with typed params and return values.
 5. All JavaScript user input and API responses are validated and sanitized before use.
+
+#### 6.7 Search Page UX Plan
+
+1. Add a dedicated `Search` entry to the right menu.
+2. Search page behavior:
+	1. Presents results using the same article card layout and interaction model as category pages.
+	2. Supports the same paging model (`offset`, `limit`, `has_more`, `next_offset`).
+	3. Supports live refresh behavior consistent with the reader polling approach.
+3. Search controls:
+	1. A search input is shown on the dedicated Search page.
+	2. A clear/reset action returns the page to an empty search state.
+	3. Search state is represented in URL query parameters to support refresh/share/back behavior.
+4. Result semantics:
+	1. Results are constrained to the logged-in user's subscribed feeds.
+	2. Results include both read and unread items by default (`all` status intent).
+	3. Feed/category metadata remains visible on cards so context is preserved.
+5. Navigation expectations:
+	1. Search navigation follows existing browser-history behavior for non-category pages.
+	2. Existing category back-navigation rules remain unchanged.
 
 ```mermaid
 sequenceDiagram
