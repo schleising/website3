@@ -30,7 +30,7 @@
 {% if is_web_app %}
   <script defer src="/js/feeds/pwa.js?v1.0.1"></script>
 {% endif %}
-<script defer src="/js/feeds/sidebar.js?v1.0.10"></script>
+<script defer src="/js/feeds/sidebar.js?v1.0.11"></script>
 {% if feed_page_mode == "reader" %}
   <script defer src="/js/feeds/reader.js?v1.0.81"></script>
 {% elif feed_page_mode == "settings" %}
@@ -73,6 +73,7 @@
   href="{{ feeds_root_path }}?category=saved"
   class="sub-level-nav feed-sidebar-link feed-category-link feed-category-shortcut{% if selected_category == 'saved' %} is-current{% endif %}"
   {% if selected_category == 'saved' %}aria-current="page"{% endif %}
+  data-history-mode="feeds-category"
   data-category-shortcut="saved"
 >
   <span class="feed-category-count feed-category-unread-pill feed-category-unread-pill-all">{{ saved_count }}</span>
@@ -82,6 +83,7 @@
 href="{{ feeds_root_path }}?category=recently-read"
 class="sub-level-nav feed-sidebar-link feed-category-link feed-category-shortcut{% if selected_category == 'recently-read' %} is-current{% endif %}"
 {% if selected_category == 'recently-read' %}aria-current="page"{% endif %}
+data-history-mode="feeds-category"
 data-category-shortcut="recently-read"
 >
 <span class="feed-category-name">Recently Read</span>

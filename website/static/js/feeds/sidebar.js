@@ -190,6 +190,7 @@
             feeds.forEach(feed => {
                 const feedLink = document.createElement("a");
                 feedLink.className = "feed-sidebar-link feed-sidebar-feed-link";
+                feedLink.dataset.historyMode = "feeds-category";
                 feedLink.dataset.feedId = feed.feed_id;
                 feedLink.dataset.categoryKey = categoryKey;
                 feedLink.href = buildReaderHref(categoryKey, feed.feed_id);
@@ -208,7 +209,7 @@
                     if (currentCategory === categoryKey && currentFeedId !== "" && currentFeedId === feed.feed_id) {
                         event.preventDefault();
                         setExpanded(categoryKey);
-                        window.location.assign(clearHref);
+                        window.location.replace(clearHref);
                     }
                 });
 

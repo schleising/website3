@@ -13,6 +13,7 @@ document.addEventListener('readystatechange', event => {
         setupMobileSidebarToggles();
         syncSidebarWidths();
         setupHistoryModeNavigation();
+        setupFeedsAllBackNavigationBoundary();
     }
 });
 
@@ -26,37 +27,143 @@ function isCustomFeedsCategory(value) {
     return category !== "all" && category !== "saved" && category !== "recently-read";
 }
 
-function handleFeedsCategoryNavigation(event, destinationUrl) {
-    const currentUrl = new URL(window.location.href);
-    const currentPath = normalisePath(currentUrl.pathname);
-    const destinationPath = normalisePath(destinationUrl.pathname);
-    const currentCategory = normaliseFeedsCategoryValue(currentUrl.searchParams.get("category"));
-    const destinationCategory = normaliseFeedsCategoryValue(destinationUrl.searchParams.get("category"));
-    const isSamePath = currentPath === destinationPath;
+function getFeedsRootPathFromDom() {
+    const groupsNode = document.getElementById("feeds-sidebar-feed-groups");
+    if (!(groupsNode instanceof HTMLScriptElement)) {
+        return null;
+    }
 
-    // Preserve normal browser history when navigating between different feeds pages
-    // (for example Stats -> Reader), and only customize behavior for in-page category switches.
-    if (!isSamePath) {
+    const rawRootPath = String(groupsNode.dataset.feedsRootPath || "").trim();
+    if (rawRootPath === "") {
+        return null;
+    }
+
+    return normalisePath(rawRootPath);
+}
+
+function getFeedsPageContext(urlValue) {
+    const feedsRootPath = getFeedsRootPathFromDom();
+    if (feedsRootPath === null) {
+        return null;
+    }
+
+    let targetUrl;
+    try {
+        targetUrl = urlValue instanceof URL
+            ? urlValue
+            : new URL(String(urlValue || ""), window.location.href);
+    } catch {
+        return null;
+    }
+
+    const targetPath = normalisePath(targetUrl.pathname);
+    const settingsPath = feedsRootPath === "/" ? "/settings" : `${feedsRootPath}/settings`;
+    const statsPath = feedsRootPath === "/" ? "/stats" : `${feedsRootPath}/stats`;
+    const adminPath = feedsRootPath === "/" ? "/admin" : `${feedsRootPath}/admin`;
+
+    if (targetPath === feedsRootPath) {
+        return {
+            pageType: "reader",
+            category: normaliseFeedsCategoryValue(targetUrl.searchParams.get("category")),
+        };
+    }
+
+    if (targetPath === settingsPath) {
+        return {
+            pageType: "settings",
+            category: "",
+        };
+    }
+
+    if (targetPath === statsPath) {
+        return {
+            pageType: "stats",
+            category: "",
+        };
+    }
+
+    if (targetPath === adminPath) {
+        return {
+            pageType: "admin",
+            category: "",
+        };
+    }
+
+    return null;
+}
+
+function setupFeedsAllBackNavigationBoundary() {
+    const allFeedsBoundaryStateKey = "__feedsAllBoundary";
+
+    const currentContext = getFeedsPageContext(window.location.href);
+    if (!currentContext || currentContext.pageType !== "reader" || currentContext.category !== "all") {
+        return;
+    }
+
+    const currentState = window.history.state;
+    const hasBoundaryState = Boolean(
+        currentState
+        && typeof currentState === "object"
+        && currentState[allFeedsBoundaryStateKey] === true
+    );
+
+    if (!hasBoundaryState) {
+        const boundaryState = currentState && typeof currentState === "object"
+            ? { ...currentState }
+            : {};
+        boundaryState[allFeedsBoundaryStateKey] = true;
+        window.history.pushState(boundaryState, "", window.location.href);
+    }
+
+    window.addEventListener("popstate", function(event) {
+        const popContext = getFeedsPageContext(window.location.href);
+        if (!popContext || popContext.pageType !== "reader" || popContext.category !== "all") {
+            return;
+        }
+
+        const popState = event.state;
+        const popHasBoundaryState = Boolean(
+            popState
+            && typeof popState === "object"
+            && popState[allFeedsBoundaryStateKey] === true
+        );
+
+        if (popHasBoundaryState) {
+            return;
+        }
+
+        const boundaryState = popState && typeof popState === "object"
+            ? { ...popState }
+            : {};
+        boundaryState[allFeedsBoundaryStateKey] = true;
+        window.history.pushState(boundaryState, "", window.location.href);
+    });
+}
+
+function handleFeedsCategoryNavigation(event, destinationUrl) {
+    const currentContext = getFeedsPageContext(window.location.href);
+    const destinationContext = getFeedsPageContext(destinationUrl);
+
+    if (!currentContext || !destinationContext || destinationContext.pageType !== "reader") {
         return false;
     }
 
+    const destinationCategory = destinationContext.category;
+
     if (destinationCategory === "all") {
-        // Never use history.back here because the previous entry may be a different
-        // feeds page (for example stats/settings/admin), which causes surprising jumps.
         event.preventDefault();
         window.location.replace(destinationUrl.toString());
         return true;
     }
 
-    if (!isCustomFeedsCategory(destinationCategory)) {
+    const currentIsReaderAll = currentContext.pageType === "reader" && currentContext.category === "all";
+    if (currentIsReaderAll) {
+        // Allow a normal push from All Feeds so browser Back returns to All Feeds.
         return false;
     }
 
-    // Keep one-step back from a custom category to All Feeds.
-    if (isSamePath && currentCategory === "all") {
-        return false;
-    }
-
+    // Entering any category/saved/recently-read view from non-All context should
+    // replace history so Back from that view returns to All Feeds.
     event.preventDefault();
     window.location.replace(destinationUrl.toString());
     return true;

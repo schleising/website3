@@ -114,6 +114,9 @@ Design goals and implementation preferences are documented separately under `## 
 93. Reader live-state synchronization shall run on a 2-second polling interval.
 94. Category order shall be user-persisted via an explicit reorder API endpoint.
 95. Feed admin status APIs shall be restricted to authenticated tool-enabled users.
+96. The All Feeds reader view shall be treated as the navigation root/end-point for feed-category history mode; when the user is on All Feeds, no additional in-app Back target shall be introduced by category-link handling.
+97. From any category reader view (including Saved and Recently Read), in-app Back behavior shall return to All Feeds.
+98. From Stats, Settings, or Admin pages, Back navigation shall follow normal browser history to the previously visited page.
 
 ## Design
 
