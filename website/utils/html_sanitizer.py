@@ -1,4 +1,5 @@
 from importlib import import_module
+import re
 from typing import Any
 
 bleach: Any = import_module("bleach")
@@ -82,8 +83,15 @@ SAFE_INLINE_STYLE_SANITIZER = bleach_css_sanitizer.CSSSanitizer(
 
 ALLOWED_PROTOCOLS = ["http", "https", "mailto", "data"]
 
+EMPTY_INLINE_EMPHASIS_TAG_RE = re.compile(
+    r"<(?:em|i|strong|b)\b[^>]*>\s*</(?:em|i|strong|b)>",
+    re.IGNORECASE,
+)
+
 
 def sanitize_html(html: str, allow_inline_styles: bool = False) -> str:
+    normalized_html = EMPTY_INLINE_EMPHASIS_TAG_RE.sub(" ", str(html or ""))
+
     clean_kwargs: dict[str, Any] = {
         "tags": ALLOWED_TAGS,
         "attributes": ALLOWED_ATTRIBUTES_WITH_STYLE if allow_inline_styles else ALLOWED_ATTRIBUTES,
@@ -94,4 +102,4 @@ def sanitize_html(html: str, allow_inline_styles: bool = False) -> str:
     if allow_inline_styles:
         clean_kwargs["css_sanitizer"] = SAFE_INLINE_STYLE_SANITIZER
 
-    return bleach.clean(html, **clean_kwargs)
+    return bleach.clean(normalized_html, **clean_kwargs)

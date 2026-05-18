@@ -661,6 +661,8 @@
 
 .feed-article-summary :is(i, em) {
     font-style: italic;
+    font-kerning: normal;
+    text-rendering: optimizeLegibility;
 }
 
 .feed-article-summary :is(b, strong) {
