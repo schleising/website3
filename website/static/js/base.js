@@ -13,6 +13,7 @@ document.addEventListener('readystatechange', event => {
         setupMobileSidebarToggles();
         syncSidebarWidths();
         setupHistoryModeNavigation();
+        setupSidebarHoverStateReset();
         setupFeedsAllBackNavigationBoundary();
     }
 });
@@ -137,6 +138,53 @@ function setupFeedsAllBackNavigationBoundary() {
             : {};
         boundaryState[allFeedsBoundaryStateKey] = true;
         window.history.pushState(boundaryState, "", window.location.href);
+    });
+}
+
+function setupSidebarHoverStateReset() {
+    const suppressHoverClassName = "suppress-sidebar-hover";
+    let isSuppressed = false;
+
+    function removeReleaseListeners() {
+        window.removeEventListener("pointermove", releaseSuppressedHoverState);
+        window.removeEventListener("mousemove", releaseSuppressedHoverState);
+        window.removeEventListener("pointerdown", releaseSuppressedHoverState);
+        window.removeEventListener("touchstart", releaseSuppressedHoverState);
+        window.removeEventListener("keydown", releaseSuppressedHoverState);
+    }
+
+    function releaseSuppressedHoverState() {
+        if (!isSuppressed) {
+            return;
+        }
+
+        isSuppressed = false;
+        document.documentElement.classList.remove(suppressHoverClassName);
+        removeReleaseListeners();
+    }
+
+    function suppressHoverUntilPointerInteraction() {
+        isSuppressed = true;
+        document.documentElement.classList.add(suppressHoverClassName);
+        removeReleaseListeners();
+
+        window.addEventListener("pointermove", releaseSuppressedHoverState, { passive: true });
+        window.addEventListener("mousemove", releaseSuppressedHoverState, { passive: true });
+        window.addEventListener("pointerdown", releaseSuppressedHoverState, { passive: true });
+        window.addEventListener("touchstart", releaseSuppressedHoverState, { passive: true });
+        window.addEventListener("keydown", releaseSuppressedHoverState);
+    }
+
+    window.addEventListener("pageshow", function(event) {
+        if (!event.persisted) {
+            return;
+        }
+
+        suppressHoverUntilPointerInteraction();
+    });
+
+    window.addEventListener("popstate", function() {
+        suppressHoverUntilPointerInteraction();
     });
 }
 

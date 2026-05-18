@@ -1717,6 +1717,12 @@ body.feed-category-color-popup-open {
     transform: translateX(0.0625rem);
 }
 
+html.suppress-sidebar-hover .right-sidebar .feed-sidebar-feed-link:hover:not(.is-current):not([aria-current="page"]) {
+    color: var(--text-soft);
+    background-color: transparent;
+    transform: none;
+}
+
 .right-sidebar .feed-sidebar-feed-link.is-current,
 .right-sidebar .feed-sidebar-feed-link[aria-current="page"] {
     color: var(--brand-strong);

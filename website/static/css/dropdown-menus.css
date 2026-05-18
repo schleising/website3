@@ -41,6 +41,12 @@ a.sub-level-nav {
     transform: translateX(0.0625rem);
 }
 
+html.suppress-sidebar-hover .right-sidebar .sub-level-nav:hover:not(.is-current):not([aria-current="page"]) {
+    color: var(--text-soft);
+    background-color: transparent;
+    transform: none;
+}
+
 .sidebar .sub-level-nav.is-current,
 .sidebar .sub-level-nav[aria-current="page"] {
     color: var(--brand-strong);
