@@ -2415,7 +2415,7 @@
     }
 
     /**
-     * Sync read/unread state for currently rendered cards without replacing/removing cards.
+     * Sync read/unread state for currently rendered cards.
      *
      * @returns {Promise<void>}
      */
@@ -2462,6 +2462,8 @@
                     .filter(([articleId]) => articleId !== "")
             );
 
+            let removedAnyCard = false;
+
             cards.forEach(card => {
                 const articleId = getCardArticleId(card);
                 if (articleId === "") {
@@ -2488,10 +2490,28 @@
 
                 const isRead = Boolean(status.isRead);
                 const isSaved = Boolean(status.isSaved);
-                if (isRead) {
-                    sessionReadArticleIds.add(articleId);
-                } else if (!isRead) {
+                if (!isRead) {
                     sessionReadArticleIds.delete(articleId);
+                }
+
+                const locallyReadInSession = sessionReadArticleIds.has(articleId);
+                const shouldRemoveForRemoteRead = (
+                    selectedStatus === "unread"
+                    && isRead
+                    && !locallyReadInSession
+                );
+
+                if (shouldRemoveForRemoteRead) {
+                    if (selectedIndex >= 0) {
+                        const selectedCards = getCards();
+                        if (selectedCards[selectedIndex] === card) {
+                            clearCardSelection();
+                        }
+                    }
+
+                    card.remove();
+                    removedAnyCard = true;
+                    return;
                 }
 
                 const statusReadAt = String(status.readAt || "").trim();
@@ -2520,6 +2540,18 @@
                 }
                 setCardNewBadge(card, !isRead && newUnreadArticleIds.has(articleId));
             });
+
+            if (removedAnyCard) {
+                if (getCards().length === 0) {
+                    renderInlineEmptyHint();
+                    clearCardSelection();
+                } else {
+                    articleList.classList.remove("is-empty");
+                    refreshPagingSentinelObserver();
+                }
+
+                schedulePagePrefetchCheck();
+            }
         } catch (_error) {
             // Keep existing card states when status sync fails.
         }
