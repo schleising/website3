@@ -1654,10 +1654,16 @@ body.feed-category-color-popup-open {
     cursor: pointer;
     margin: 0;
     padding: 0 0.35rem;
-    font-size: 0.98rem;
+    font-size: 0.75rem;
     line-height: 1;
     border-radius: 0.6rem;
     touch-action: manipulation;
+}
+
+@media screen and (max-width: 52rem) {
+    .right-sidebar .feed-sidebar-expand-toggle {
+        font-size: 0.98rem;
+    }
 }
 
 .right-sidebar .feed-sidebar-expand-toggle span {
