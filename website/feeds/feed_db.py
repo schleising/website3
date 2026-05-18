@@ -2892,6 +2892,17 @@ async def get_sidebar_visible_feed_ids_by_group(
     return visible_by_group
 
 
+async def get_sidebar_feed_groups_for_reader(user_id: str) -> dict[str, Any]:
+    """Return live sidebar feed groups for reader pages."""
+
+    subscription_rows = await list_user_subscription_rows(user_id)
+    visible_feed_ids_by_group = await get_sidebar_visible_feed_ids_by_group(user_id=user_id)
+    return build_sidebar_feed_groups(
+        subscription_rows,
+        visible_feed_ids_by_group=visible_feed_ids_by_group,
+    )
+
+
 async def get_feed_reader_context(
     user_id: str,
     category_filter: str,
@@ -2914,18 +2925,12 @@ async def get_feed_reader_context(
         offset=0,
         limit=10,
     )
-    subscription_rows = await list_user_subscription_rows(user_id)
-    visible_feed_ids_by_group = await get_sidebar_visible_feed_ids_by_group(user_id=user_id)
-
     return {
         "categories": categories_payload.categories,
         "all_unread_count": categories_payload.all_unread_count,
         "recently_read_count": categories_payload.recently_read_count,
         "saved_count": categories_payload.saved_count,
-        "sidebar_feed_groups": build_sidebar_feed_groups(
-            subscription_rows,
-            visible_feed_ids_by_group=visible_feed_ids_by_group,
-        ),
+        "sidebar_feed_groups": await get_sidebar_feed_groups_for_reader(user_id),
         "articles": article_payload.articles,
         "selected_category": category_filter,
         "selected_feed_id": str(feed_filter or "").strip(),

@@ -107,126 +107,201 @@
         });
     }
 
-    /** @type {NodeListOf<HTMLAnchorElement>} */
-    const categoryLinks = document.querySelectorAll(
-        ".right-sidebar a.feed-category-link[data-category-shortcut], .right-sidebar a.feed-category-link[data-category-id]"
-    );
+    function readExpandedCategoryFromRows() {
+        const expandedRow = disclosureRows.find(
+            row => row.toggle.classList.contains("is-expanded") && row.panel.hidden === false
+        );
 
-    categoryLinks.forEach(link => {
-        const shortcut = String(link.dataset.categoryShortcut || "").trim();
-        const categoryId = String(link.dataset.categoryId || "").trim();
-        const categoryKey = shortcut || categoryId;
-        if (categoryKey === "") {
-            return;
-        }
+        return expandedRow ? expandedRow.key : "";
+    }
 
-        const feeds = feedsForCategoryKey(categoryKey)
-            .map(feed => ({
-                feed_id: String(feed.feed_id || "").trim(),
-                title: String(feed.title || "").trim(),
-            }))
-            .filter(feed => feed.feed_id !== "" && feed.title !== "");
-        const hasFeeds = feeds.length > 0;
+    function clearSidebarPanels() {
+        const existingPanels = document.querySelectorAll(".right-sidebar .feed-sidebar-feed-panel");
+        existingPanels.forEach(panel => {
+            panel.remove();
+        });
 
-        const toggleControl = document.createElement("span");
-        toggleControl.className = "feed-sidebar-expand-toggle";
-        if (!hasFeeds) {
-            toggleControl.classList.add("is-disabled");
-        }
-        toggleControl.setAttribute("role", "button");
-        toggleControl.setAttribute("tabindex", hasFeeds ? "0" : "-1");
-        toggleControl.setAttribute("aria-disabled", hasFeeds ? "false" : "true");
-        toggleControl.setAttribute("aria-expanded", "false");
-        toggleControl.setAttribute("aria-label", `Show feeds in ${categoryKey}`);
-        toggleControl.innerHTML = "<span aria-hidden=\"true\">▼</span>";
+        const existingToggles = document.querySelectorAll(".right-sidebar .feed-sidebar-expand-toggle");
+        existingToggles.forEach(toggle => {
+            toggle.remove();
+        });
 
-        link.classList.add("feed-category-link-expandable");
-        link.appendChild(toggleControl);
+        const expandableCategoryLinks = document.querySelectorAll(
+            ".right-sidebar a.feed-category-link.feed-category-link-expandable"
+        );
+        expandableCategoryLinks.forEach(link => {
+            link.classList.remove("feed-category-link-expandable");
+        });
 
-        const panel = document.createElement("div");
-        panel.className = "feed-sidebar-feed-panel";
-        panel.hidden = true;
+        disclosureRows.length = 0;
+    }
 
-        const list = document.createElement("div");
-        list.className = "feed-sidebar-feed-list";
+    function renderSidebarPanels(options = {}) {
+        const preserveExpanded = options.preserveExpanded !== false;
+        const preferredExpandedCategory = preserveExpanded
+            ? (readExpandedCategoryFromRows() || readExpandedCategory())
+            : readExpandedCategory();
 
-        feeds.forEach(feed => {
-            const feedLink = document.createElement("a");
-            feedLink.className = "feed-sidebar-link feed-sidebar-feed-link";
-            feedLink.dataset.feedId = feed.feed_id;
-            feedLink.dataset.categoryKey = categoryKey;
-            feedLink.href = buildReaderHref(categoryKey, feed.feed_id);
-            feedLink.textContent = middleEllipsis(feed.title, maxFeedLabelChars());
-            feedLink.title = feed.title;
+        clearSidebarPanels();
 
-            const clearHref = buildReaderHref(categoryKey, "");
-            feedLink.dataset.clearHref = clearHref;
+        /** @type {NodeListOf<HTMLAnchorElement>} */
+        const categoryLinks = document.querySelectorAll(
+            ".right-sidebar a.feed-category-link[data-category-shortcut], .right-sidebar a.feed-category-link[data-category-id]"
+        );
 
-            if (currentCategory === categoryKey && currentFeedId !== "" && currentFeedId === feed.feed_id) {
-                feedLink.classList.add("is-current");
-                feedLink.setAttribute("aria-current", "page");
+        categoryLinks.forEach(link => {
+            const shortcut = String(link.dataset.categoryShortcut || "").trim();
+            const categoryId = String(link.dataset.categoryId || "").trim();
+            const categoryKey = shortcut || categoryId;
+            if (categoryKey === "") {
+                return;
             }
 
-            feedLink.addEventListener("click", event => {
+            const feeds = feedsForCategoryKey(categoryKey)
+                .map(feed => ({
+                    feed_id: String(feed.feed_id || "").trim(),
+                    title: String(feed.title || "").trim(),
+                }))
+                .filter(feed => feed.feed_id !== "" && feed.title !== "");
+            const hasFeeds = feeds.length > 0;
+
+            const toggleControl = document.createElement("span");
+            toggleControl.className = "feed-sidebar-expand-toggle";
+            if (!hasFeeds) {
+                toggleControl.classList.add("is-disabled");
+            }
+            toggleControl.setAttribute("role", "button");
+            toggleControl.setAttribute("tabindex", hasFeeds ? "0" : "-1");
+            toggleControl.setAttribute("aria-disabled", hasFeeds ? "false" : "true");
+            toggleControl.setAttribute("aria-expanded", "false");
+            toggleControl.setAttribute("aria-label", `Show feeds in ${categoryKey}`);
+            toggleControl.innerHTML = "<span aria-hidden=\"true\">▼</span>";
+
+            link.classList.add("feed-category-link-expandable");
+            link.appendChild(toggleControl);
+
+            const panel = document.createElement("div");
+            panel.className = "feed-sidebar-feed-panel";
+            panel.hidden = true;
+
+            const list = document.createElement("div");
+            list.className = "feed-sidebar-feed-list";
+
+            feeds.forEach(feed => {
+                const feedLink = document.createElement("a");
+                feedLink.className = "feed-sidebar-link feed-sidebar-feed-link";
+                feedLink.dataset.feedId = feed.feed_id;
+                feedLink.dataset.categoryKey = categoryKey;
+                feedLink.href = buildReaderHref(categoryKey, feed.feed_id);
+                feedLink.textContent = middleEllipsis(feed.title, maxFeedLabelChars());
+                feedLink.title = feed.title;
+
+                const clearHref = buildReaderHref(categoryKey, "");
+                feedLink.dataset.clearHref = clearHref;
+
                 if (currentCategory === categoryKey && currentFeedId !== "" && currentFeedId === feed.feed_id) {
-                    event.preventDefault();
-                    setExpanded(categoryKey);
-                    window.location.assign(clearHref);
+                    feedLink.classList.add("is-current");
+                    feedLink.setAttribute("aria-current", "page");
                 }
+
+                feedLink.addEventListener("click", event => {
+                    if (currentCategory === categoryKey && currentFeedId !== "" && currentFeedId === feed.feed_id) {
+                        event.preventDefault();
+                        setExpanded(categoryKey);
+                        window.location.assign(clearHref);
+                    }
+                });
+
+                list.appendChild(feedLink);
             });
 
-            list.appendChild(feedLink);
+            panel.appendChild(list);
+
+            const parent = link.parentElement;
+            if (!(parent instanceof HTMLElement)) {
+                return;
+            }
+
+            parent.insertBefore(panel, link.nextSibling);
+
+            const onToggle = event => {
+                if (!hasFeeds) {
+                    return;
+                }
+
+                event.preventDefault();
+                event.stopPropagation();
+                const shouldExpand = panel.hidden;
+                if (shouldExpand) {
+                    setExpanded(categoryKey);
+                } else {
+                    setExpanded("");
+                }
+            };
+
+            toggleControl.addEventListener("click", onToggle);
+            toggleControl.addEventListener("keydown", event => {
+                if (event.key !== "Enter" && event.key !== " ") {
+                    return;
+                }
+
+                onToggle(event);
+            });
+
+            disclosureRows.push({
+                key: categoryKey,
+                toggle: toggleControl,
+                panel,
+                enabled: hasFeeds,
+            });
         });
 
-        panel.appendChild(list);
-
-        const parent = link.parentElement;
-        if (!(parent instanceof HTMLElement)) {
+        if (currentFeedId !== "") {
+            setExpanded(currentCategory);
             return;
         }
 
-        parent.insertBefore(panel, link.nextSibling);
-
-        const onToggle = event => {
-            if (!hasFeeds) {
+        if (preferredExpandedCategory !== "") {
+            const hasPreferredCategory = disclosureRows.some(
+                row => row.key === preferredExpandedCategory
+            );
+            if (hasPreferredCategory) {
+                setExpanded(preferredExpandedCategory);
                 return;
             }
+        }
 
-            event.preventDefault();
-            event.stopPropagation();
-            const shouldExpand = panel.hidden;
-            if (shouldExpand) {
-                setExpanded(categoryKey);
-            } else {
-                setExpanded("");
-            }
-        };
+        setExpanded("");
+    }
 
-        toggleControl.addEventListener("click", onToggle);
-        toggleControl.addEventListener("keydown", event => {
-            if (event.key !== "Enter" && event.key !== " ") {
-                return;
-            }
+    function applySidebarGroupUpdate(nextGroups) {
+        if (!nextGroups || typeof nextGroups !== "object") {
+            return;
+        }
 
-            onToggle(event);
-        });
+        sidebarGroups = nextGroups;
+        try {
+            dataNode.textContent = JSON.stringify(nextGroups);
+        } catch (_error) {
+            // Ignore serialization issues for in-memory updates.
+        }
 
-        disclosureRows.push({
-            key: categoryKey,
-            toggle: toggleControl,
-            panel,
-            enabled: hasFeeds,
-        });
+        renderSidebarPanels({ preserveExpanded: true });
+    }
+
+    window.addEventListener("feeds:sidebar-groups-updated", event => {
+        const detail = event && typeof event === "object" ? event.detail : null;
+        if (!detail || typeof detail !== "object") {
+            return;
+        }
+
+        const incomingGroups = detail.sidebarFeedGroups;
+        if (!incomingGroups || typeof incomingGroups !== "object") {
+            return;
+        }
+
+        applySidebarGroupUpdate(incomingGroups);
     });
 
-    const storedExpandedCategory = readExpandedCategory();
-
-    if (currentFeedId !== "") {
-        setExpanded(currentCategory);
-    } else if (storedExpandedCategory !== "") {
-        const hasStoredCategory = disclosureRows.some(row => row.key === storedExpandedCategory);
-        if (hasStoredCategory) {
-            setExpanded(storedExpandedCategory);
-        }
-    }
+    renderSidebarPanels({ preserveExpanded: true });
 })();

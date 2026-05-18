@@ -40,6 +40,7 @@
     const useElementScrollContainer = scrollContainer !== document.documentElement;
 
     const categoriesEndpoint = root.dataset.categoriesEndpoint || "/feeds/api/categories/";
+    const sidebarFeedGroupsEndpoint = root.dataset.sidebarFeedGroupsEndpoint || "/feeds/api/sidebar-feed-groups/";
     /** @type {string} */
     const markOpenEndpointTemplate = root.dataset.markOpenEndpointTemplate || "";
     /** @type {string} */
@@ -1132,7 +1133,7 @@
 
             setCardReadAppearance(card, true, new Date().toISOString());
             setCardNewBadge(card, false);
-            await refreshSidebarCounts();
+            await refreshSidebarMeta();
             schedulePagePrefetchCheck();
         } finally {
             pendingReadIds.delete(articleId);
@@ -1193,7 +1194,7 @@
                 }
             }
 
-            await refreshSidebarCounts();
+            await refreshSidebarMeta();
             schedulePagePrefetchCheck();
         } finally {
             pendingUnreadIds.delete(articleId);
@@ -1237,7 +1238,7 @@
             }
 
             setCardSavedAppearance(card, true, new Date().toISOString());
-            await refreshSidebarCounts();
+            await refreshSidebarMeta();
             schedulePagePrefetchCheck();
         } finally {
             pendingSaveIds.delete(articleId);
@@ -1281,7 +1282,7 @@
             }
 
             setCardSavedAppearance(card, false);
-            await refreshSidebarCounts();
+            await refreshSidebarMeta();
             schedulePagePrefetchCheck();
         } finally {
             pendingUnsaveIds.delete(articleId);
@@ -2262,6 +2263,23 @@
     }
 
     /**
+     * Broadcast latest sidebar feed-group payload for sidebar.js to re-render.
+     *
+     * @param {Record<string, any>} payload
+     */
+    function broadcastSidebarFeedGroups(payload) {
+        if (!payload || typeof payload !== "object") {
+            return;
+        }
+
+        window.dispatchEvent(new CustomEvent("feeds:sidebar-groups-updated", {
+            detail: {
+                sidebarFeedGroups: payload,
+            },
+        }));
+    }
+
+    /**
      * Refresh sidebar counts only.
      *
      * @returns {Promise<void>}
@@ -2284,6 +2302,42 @@
     }
 
     /**
+     * Refresh sidebar feed groups for category expanders.
+     *
+     * @returns {Promise<void>}
+     */
+    async function refreshSidebarFeedGroups() {
+        try {
+            const response = await fetch(sidebarFeedGroupsEndpoint, {
+                method: "GET",
+                cache: "no-store",
+            });
+            if (!response.ok) {
+                return;
+            }
+
+            const payload = await response.json();
+            if (payload && typeof payload === "object") {
+                broadcastSidebarFeedGroups(payload);
+            }
+        } catch (_error) {
+            // Keep existing sidebar groups when refresh fails.
+        }
+    }
+
+    /**
+     * Refresh both sidebar counts and expandable feed groups.
+     *
+     * @returns {Promise<void>}
+     */
+    async function refreshSidebarMeta() {
+        await Promise.all([
+            refreshSidebarCounts(),
+            refreshSidebarFeedGroups(),
+        ]);
+    }
+
+    /**
      * Refresh categories and article list from API.
      *
      * @returns {Promise<void>}
@@ -2291,8 +2345,12 @@
     async function refreshFeedData() {
         try {
             const refreshLimit = Math.max(pageSize, getCards().length, getPagingRequestOffset());
-            const [categoryResponse, articleResponse] = await Promise.all([
+            const [categoryResponse, sidebarGroupsResponse, articleResponse] = await Promise.all([
                 fetch(categoriesEndpoint, {
+                    method: "GET",
+                    cache: "no-store",
+                }),
+                fetch(sidebarFeedGroupsEndpoint, {
                     method: "GET",
                     cache: "no-store",
                 }),
@@ -2306,12 +2364,16 @@
                 return;
             }
 
-            const [categoryPayload, articlePayload] = await Promise.all([
+            const [categoryPayload, sidebarGroupsPayload, articlePayload] = await Promise.all([
                 categoryResponse.json(),
+                sidebarGroupsResponse.ok ? sidebarGroupsResponse.json() : Promise.resolve(null),
                 articleResponse.json(),
             ]);
 
             updateSidebarCounts(categoryPayload);
+            if (sidebarGroupsPayload && typeof sidebarGroupsPayload === "object") {
+                broadcastSidebarFeedGroups(sidebarGroupsPayload);
+            }
             // Manual refresh should rebuild the active list from server state.
             renderArticles(articlePayload, {
                 retainMissingCards: false,
@@ -2707,7 +2769,7 @@
      */
     async function refreshLiveReaderState() {
         await Promise.all([
-            refreshSidebarCounts(),
+            refreshSidebarMeta(),
             refreshVisibleCardStatuses(),
         ]);
         await refreshHeadArticlesIfNeeded();

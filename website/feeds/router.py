@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile, status
@@ -20,6 +20,7 @@ from .feed_db import (
     get_feed_admin_context,
     get_feed_reader_context,
     get_feed_settings_context,
+    get_sidebar_feed_groups_for_reader,
     get_feed_stats,
     get_feed_stats_context,
     list_feed_admin_rows,
@@ -322,6 +323,21 @@ async def get_categories(request: Request) -> FeedCategoryListResponse:
 
     username = _require_logged_in_user(request)
     return await get_categories_with_counts(username)
+
+
+@feeds_router.get(
+    "/api/sidebar-feed-groups",
+    response_model=dict[str, Any],
+)
+@feeds_router.get(
+    "/api/sidebar-feed-groups/",
+    response_model=dict[str, Any],
+)
+async def get_sidebar_feed_groups(request: Request) -> dict[str, Any]:
+    """Return live sidebar feed groups for all category expanders."""
+
+    username = _require_logged_in_user(request)
+    return await get_sidebar_feed_groups_for_reader(username)
 
 
 @feeds_router.get(
