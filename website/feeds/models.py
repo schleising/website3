@@ -125,6 +125,7 @@ class FeedArticleCard(BaseModel):
     """Article card payload used by feed-reader UI rendering."""
 
     article_id: str
+    feed_id: str
     title: str
     link: str
     author: str | None = None

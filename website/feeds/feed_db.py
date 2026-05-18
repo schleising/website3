@@ -1933,6 +1933,7 @@ async def list_cards_for_feed_ids(
         cards.append(
             FeedArticleCard(
                 article_id=str(article_id),
+                feed_id=str(feed_id),
                 title=str(article_doc.get("title", "Untitled")),
                 link=normalize_article_navigation_link(article_doc.get("canonical_url") or article_doc.get("link")),
                 author=str(article_doc.get("author", "")).strip() or None,
@@ -2084,6 +2085,7 @@ async def list_recently_read_cards(
         cards.append(
             FeedArticleCard(
                 article_id=str(article_id),
+                feed_id=str(feed_id),
                 title=str(article_doc.get("title", "Untitled")),
                 link=normalize_article_navigation_link(article_doc.get("canonical_url") or article_doc.get("link")),
                 author=str(article_doc.get("author", "")).strip() or None,
@@ -2227,6 +2229,7 @@ async def list_saved_cards(
         cards.append(
             FeedArticleCard(
                 article_id=str(article_id),
+                feed_id=str(feed_id),
                 title=str(article_doc.get("title", "Untitled")),
                 link=normalize_article_navigation_link(article_doc.get("canonical_url") or article_doc.get("link")),
                 author=str(article_doc.get("author", "")).strip() or None,
@@ -2666,11 +2669,33 @@ async def export_opml(user_id: str) -> str:
     return ET.tostring(root, encoding="utf-8", xml_declaration=True).decode("utf-8")
 
 
-def build_sidebar_feed_groups(subscription_rows: list[dict[str, Any]]) -> dict[str, Any]:
+def build_sidebar_feed_groups(
+    subscription_rows: list[dict[str, Any]],
+    visible_feed_ids_by_group: dict[str, set[str]] | None = None,
+) -> dict[str, Any]:
     """Build feed groups for expandable sidebar sections."""
 
     all_feeds: list[dict[str, str]] = []
+    saved_feeds: list[dict[str, str]] = []
+    recently_read_feeds: list[dict[str, str]] = []
     categories: dict[str, list[dict[str, str]]] = {}
+
+    use_group_filters = isinstance(visible_feed_ids_by_group, dict)
+    all_visible = (
+        visible_feed_ids_by_group.get("all", set())
+        if use_group_filters
+        else None
+    )
+    saved_visible = (
+        visible_feed_ids_by_group.get("saved", set())
+        if use_group_filters
+        else None
+    )
+    recently_read_visible = (
+        visible_feed_ids_by_group.get("recently-read", set())
+        if use_group_filters
+        else None
+    )
 
     for row in subscription_rows:
         feed_id = str(row.get("feed_id", "")).strip()
@@ -2685,21 +2710,186 @@ def build_sidebar_feed_groups(subscription_rows: list[dict[str, Any]]) -> dict[s
             "title": title,
             "category_id": category_id,
         }
-        all_feeds.append(item)
+
+        if not isinstance(all_visible, set) or feed_id in all_visible:
+            all_feeds.append(item)
+
+        if not isinstance(saved_visible, set) or feed_id in saved_visible:
+            saved_feeds.append(item)
+
+        if not isinstance(recently_read_visible, set) or feed_id in recently_read_visible:
+            recently_read_feeds.append(item)
 
         if category_id != "":
-            categories.setdefault(category_id, []).append(item)
+            category_visible = (
+                visible_feed_ids_by_group.get(category_id, set())
+                if use_group_filters
+                else None
+            )
+            if not isinstance(category_visible, set) or feed_id in category_visible:
+                categories.setdefault(category_id, []).append(item)
 
     all_feeds.sort(key=lambda item: item["title"].lower())
+    saved_feeds.sort(key=lambda item: item["title"].lower())
+    recently_read_feeds.sort(key=lambda item: item["title"].lower())
     for category_feed_items in categories.values():
         category_feed_items.sort(key=lambda item: item["title"].lower())
 
     return {
         "all": all_feeds,
-        "saved": all_feeds,
-        "recently-read": all_feeds,
+        "saved": saved_feeds,
+        "recently-read": recently_read_feeds,
         "categories": categories,
     }
+
+
+async def get_sidebar_visible_feed_ids_by_group(
+    user_id: str,
+) -> dict[str, set[str]]:
+    """Return visible feed IDs for each sidebar group, independent of selected category.
+
+    Category/all groups are based on unread availability so expanders align with category
+    unread counts. Saved and recently-read groups use their respective state filters.
+    """
+
+    if (
+        user_feed_subscriptions_collection is None
+        or feed_articles_collection is None
+        or user_article_states_collection is None
+    ):
+        return {
+            "all": set(),
+            "saved": set(),
+            "recently-read": set(),
+        }
+
+    subscriptions = await list_user_subscription_docs(user_id)
+
+    all_feed_ids = [
+        sub["feed_id"]
+        for sub in subscriptions
+        if isinstance(sub.get("feed_id"), ObjectId)
+    ]
+    if len(all_feed_ids) == 0:
+        return {
+            "all": set(),
+            "saved": set(),
+            "recently-read": set(),
+        }
+
+    # Track category membership per feed, including duplicate subscriptions.
+    feed_id_to_category_ids: dict[str, set[str]] = {}
+    for sub in subscriptions:
+        feed_id = sub.get("feed_id")
+        category_id = sub.get("category_id")
+        if not isinstance(feed_id, ObjectId) or not isinstance(category_id, ObjectId):
+            continue
+
+        feed_id_str = str(feed_id)
+        category_id_str = str(category_id)
+        feed_id_to_category_ids.setdefault(feed_id_str, set()).add(category_id_str)
+
+    threshold = recently_read_cutoff()
+
+    recently_read_pipeline: list[dict[str, Any]] = [
+        {
+            "$match": {
+                "user_id": user_id,
+                "is_read": True,
+                "read_at": {"$gte": threshold},
+            }
+        },
+        {
+            "$lookup": {
+                "from": feed_articles_collection.name,
+                "let": {"article_id": "$article_id"},
+                "pipeline": [
+                    {"$match": {"$expr": {"$eq": ["$_id", "$$article_id"]}}},
+                    {
+                        "$match": {
+                            "is_deleted": False,
+                            "feed_id": {"$in": all_feed_ids},
+                        }
+                    },
+                    {"$project": {"feed_id": 1}},
+                ],
+                "as": "article_docs",
+            }
+        },
+        {"$unwind": "$article_docs"},
+        {"$group": {"_id": "$article_docs.feed_id"}},
+    ]
+
+    recently_read_feed_ids = {
+        str(doc.get("_id"))
+        async for doc in user_article_states_collection.aggregate(recently_read_pipeline)
+        if isinstance(doc.get("_id"), ObjectId)
+    }
+
+    saved_pipeline: list[dict[str, Any]] = [
+        {
+            "$match": {
+                "user_id": user_id,
+                "is_saved": True,
+            }
+        },
+        {
+            "$lookup": {
+                "from": feed_articles_collection.name,
+                "let": {"article_id": "$article_id"},
+                "pipeline": [
+                    {"$match": {"$expr": {"$eq": ["$_id", "$$article_id"]}}},
+                    {
+                        "$match": {
+                            "is_deleted": False,
+                            "feed_id": {"$in": all_feed_ids},
+                        }
+                    },
+                    {"$project": {"feed_id": 1}},
+                ],
+                "as": "article_docs",
+            }
+        },
+        {"$unwind": "$article_docs"},
+        {"$group": {"_id": "$article_docs.feed_id"}},
+    ]
+
+    saved_feed_ids = {
+        str(doc.get("_id"))
+        async for doc in user_article_states_collection.aggregate(saved_pipeline)
+        if isinstance(doc.get("_id"), ObjectId)
+    }
+
+    query: dict[str, Any] = {
+        "feed_id": {"$in": all_feed_ids},
+        "is_deleted": False,
+    }
+
+    read_state_ids = await get_read_article_id_set(user_id)
+    if len(read_state_ids) > 0:
+        query["_id"] = {"$nin": list(read_state_ids)}
+
+    visible_feed_ids = await feed_articles_collection.distinct("feed_id", query)
+    all_visible_feed_ids = {
+        str(feed_id)
+        for feed_id in visible_feed_ids
+        if isinstance(feed_id, ObjectId)
+    }
+
+    visible_by_group: dict[str, set[str]] = {
+        "all": all_visible_feed_ids,
+        "saved": saved_feed_ids,
+        "recently-read": recently_read_feed_ids,
+    }
+
+    for feed_id_str, category_ids in feed_id_to_category_ids.items():
+        if feed_id_str not in all_visible_feed_ids:
+            continue
+
+        for category_id in category_ids:
+            visible_by_group.setdefault(category_id, set()).add(feed_id_str)
+
+    return visible_by_group
 
 
 async def get_feed_reader_context(
@@ -2725,13 +2915,17 @@ async def get_feed_reader_context(
         limit=10,
     )
     subscription_rows = await list_user_subscription_rows(user_id)
+    visible_feed_ids_by_group = await get_sidebar_visible_feed_ids_by_group(user_id=user_id)
 
     return {
         "categories": categories_payload.categories,
         "all_unread_count": categories_payload.all_unread_count,
         "recently_read_count": categories_payload.recently_read_count,
         "saved_count": categories_payload.saved_count,
-        "sidebar_feed_groups": build_sidebar_feed_groups(subscription_rows),
+        "sidebar_feed_groups": build_sidebar_feed_groups(
+            subscription_rows,
+            visible_feed_ids_by_group=visible_feed_ids_by_group,
+        ),
         "articles": article_payload.articles,
         "selected_category": category_filter,
         "selected_feed_id": str(feed_filter or "").strip(),

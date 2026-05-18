@@ -23,16 +23,16 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 {% endif %}
-<link rel="stylesheet" href="/css/feeds/feeds.css?v1.0.85">
+<link rel="stylesheet" href="/css/feeds/feeds.css?v1.0.87">
 {% endblock %}
 
 {% block scripts %}
 {% if is_web_app %}
   <script defer src="/js/feeds/pwa.js?v1.0.1"></script>
 {% endif %}
-<script defer src="/js/feeds/sidebar.js?v1.0.6"></script>
+<script defer src="/js/feeds/sidebar.js?v1.0.9"></script>
 {% if feed_page_mode == "reader" %}
-  <script defer src="/js/feeds/reader.js?v1.0.79"></script>
+  <script defer src="/js/feeds/reader.js?v1.0.80"></script>
 {% elif feed_page_mode == "settings" %}
 <script defer src="/js/feeds/settings.js?v1.0.25"></script>
 {% elif feed_page_mode == "stats" %}

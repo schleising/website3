@@ -38,7 +38,7 @@
         return window.matchMedia("(max-width: 52rem)").matches ? 22 : 30;
     }
 
-    /** @type {Array<{ key: string, toggle: HTMLElement, panel: HTMLElement }>} */
+    /** @type {Array<{ key: string, toggle: HTMLElement, panel: HTMLElement, enabled: boolean }>} */
     const disclosureRows = [];
 
     function readExpandedCategory() {
@@ -94,10 +94,12 @@
     }
 
     function setExpanded(activeKey) {
-        writeExpandedCategory(activeKey);
+        const activeRow = disclosureRows.find(row => row.key === activeKey);
+        const resolvedActiveKey = (activeRow && activeRow.enabled) ? activeKey : "";
+        writeExpandedCategory(resolvedActiveKey);
 
         disclosureRows.forEach(row => {
-            const isActive = row.key === activeKey;
+            const isActive = row.enabled && row.key === resolvedActiveKey;
             row.toggle.classList.toggle("is-expanded", isActive);
             row.toggle.setAttribute("aria-expanded", isActive ? "true" : "false");
             row.panel.hidden = !isActive;
@@ -124,15 +126,16 @@
                 title: String(feed.title || "").trim(),
             }))
             .filter(feed => feed.feed_id !== "" && feed.title !== "");
-
-        if (feeds.length === 0) {
-            return;
-        }
+        const hasFeeds = feeds.length > 0;
 
         const toggleControl = document.createElement("span");
         toggleControl.className = "feed-sidebar-expand-toggle";
+        if (!hasFeeds) {
+            toggleControl.classList.add("is-disabled");
+        }
         toggleControl.setAttribute("role", "button");
-        toggleControl.setAttribute("tabindex", "0");
+        toggleControl.setAttribute("tabindex", hasFeeds ? "0" : "-1");
+        toggleControl.setAttribute("aria-disabled", hasFeeds ? "false" : "true");
         toggleControl.setAttribute("aria-expanded", "false");
         toggleControl.setAttribute("aria-label", `Show feeds in ${categoryKey}`);
         toggleControl.innerHTML = "<span aria-hidden=\"true\">▼</span>";
@@ -185,6 +188,10 @@
         parent.insertBefore(panel, link.nextSibling);
 
         const onToggle = event => {
+            if (!hasFeeds) {
+                return;
+            }
+
             event.preventDefault();
             event.stopPropagation();
             const shouldExpand = panel.hidden;
@@ -208,6 +215,7 @@
             key: categoryKey,
             toggle: toggleControl,
             panel,
+            enabled: hasFeeds,
         });
     });
 

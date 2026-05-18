@@ -1408,6 +1408,7 @@
         const card = document.createElement("article");
         card.className = "feed-article-card site-card";
         card.dataset.articleId = String(article.article_id || "");
+        card.dataset.feedId = String(article.feed_id || "");
         card.dataset.articleLink = normalizeArticleLink(article.link);
         card.dataset.isRead = Boolean(article.is_read) ? "true" : "false";
         card.dataset.isSaved = Boolean(article.is_saved) ? "true" : "false";
