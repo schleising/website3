@@ -1,11 +1,11 @@
 {% extends "base.html" %}
 
 {% block head %}
-<link rel="stylesheet" href="/css/markdown/markdown.css?v1.1.0">
+<link rel="stylesheet" href="/css/markdown/markdown.css?v1.2.0">
 <link rel="stylesheet" href="/css/markdown/styles.css?v1.1.0">
 {% block scripts %}
 <script defer src="https://cdn.jsdelivr.net/npm/mermaid@9/dist/mermaid.min.js"></script>
-<script defer src="/js/markdown/markdown.js?v1.1.0"></script>
+<script defer src="/js/markdown/markdown.js?v1.2.0"></script>
 {% endblock %}
 {% block title %}<title>Markdown Editor</title>{% endblock %}
 {% endblock %}
@@ -36,15 +36,13 @@
   </div>
 </div>
 
-<div class="position-fixed bottom-0 end-0 p-3" id="toast-container">
-  <div id="saveToast" class="toast hide" role="alert" aria-live="assertive" aria-atomic="true">
-    <div class="toast-header">
-      <!-- <img src="..." class="rounded me-2" alt="..."> -->
-      <strong class="me-auto">Saving Data</strong>
-      <!-- <small>11 mins ago</small> -->
-      <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+<div class="markdown-toast-container" id="toast-container">
+  <div id="saveToast" class="markdown-toast" role="alert" aria-live="assertive" aria-atomic="true" aria-hidden="true">
+    <div class="markdown-toast-header">
+      <strong class="markdown-toast-title">Saving Data</strong>
+      <button type="button" class="markdown-toast-close" id="saveToastClose" aria-label="Close"></button>
     </div>
-    <div class="toast-body" id="toast-body">
+    <div class="markdown-toast-body" id="toast-body">
       Data Saved OK
     </div>
   </div>

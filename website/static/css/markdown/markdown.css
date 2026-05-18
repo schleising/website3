@@ -65,6 +65,113 @@ textarea.markdown {
     height: 100%;
 }
 
+.markdown-toast-container {
+    position: fixed;
+    right: 1rem;
+    bottom: 1rem;
+    z-index: 11;
+    pointer-events: none;
+}
+
+.markdown-toast {
+    min-width: min(22rem, calc(100vw - 2rem));
+    background: rgba(24, 35, 56, 0.97);
+    color: #f8fbff;
+    border: 0.0625rem solid rgba(224, 236, 251, 0.2);
+    border-radius: 0.8rem;
+    box-shadow: 0 0.75rem 1.75rem rgba(22, 39, 63, 0.24);
+    opacity: 0;
+    transform: translateY(0.55rem);
+    transition: opacity 140ms ease, transform 140ms ease;
+    pointer-events: auto;
+}
+
+.markdown-toast[aria-hidden="true"] {
+    visibility: hidden;
+}
+
+.markdown-toast.is-visible {
+    opacity: 1;
+    transform: translateY(0);
+    visibility: visible;
+}
+
+.markdown-toast-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 0.9rem;
+    border-bottom: 0.0625rem solid rgba(224, 236, 251, 0.15);
+}
+
+.markdown-toast-title {
+    margin: 0;
+    margin-right: auto;
+    font-size: 0.95rem;
+}
+
+.markdown-toast-close {
+    position: relative;
+    width: 2rem;
+    height: 2rem;
+    border: none;
+    border-radius: 0.5rem;
+    background: transparent;
+    cursor: pointer;
+}
+
+.markdown-toast-close::before,
+.markdown-toast-close::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 1rem;
+    height: 0.125rem;
+    background: rgba(248, 251, 255, 0.88);
+    transform-origin: center;
+}
+
+.markdown-toast-close::before {
+    transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.markdown-toast-close::after {
+    transform: translate(-50%, -50%) rotate(-45deg);
+}
+
+.markdown-toast-close:hover,
+.markdown-toast-close:focus-visible {
+    background: rgba(255, 255, 255, 0.12);
+    outline: none;
+}
+
+.markdown-toast-body {
+    padding: 0.8rem 0.9rem;
+}
+
+.markdown-blog-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.markdown-blog-link {
+    display: block;
+    padding: 0.45rem 0.6rem;
+    border-radius: 0.55rem;
+    color: var(--brand);
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.markdown-blog-link:hover,
+.markdown-blog-link:focus-visible {
+    background: rgba(77, 123, 177, 0.12);
+    color: var(--brand-strong);
+    outline: none;
+}
+
 @media screen and (max-width: 40rem) {
     #markdown-header {
         flex-direction: column;

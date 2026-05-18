@@ -11,6 +11,7 @@ var url;
 
 // Variable for the Data Saved toast
 var saveToast;
+var saveToastHideTimeout;
 
 let loadButton = document.getElementById("load-button");
 let saveButton = document.getElementById("save-button");
@@ -133,6 +134,35 @@ function updateMarkdown(data) {
     }
 };
 
+function createToastController(toastElement, closeButton) {
+    function hideToast() {
+        if (!toastElement) {
+            return;
+        }
+
+        toastElement.classList.remove("is-visible");
+        toastElement.setAttribute("aria-hidden", "true");
+    }
+
+    function showToast() {
+        if (!toastElement) {
+            return;
+        }
+
+        clearTimeout(saveToastHideTimeout);
+        toastElement.classList.add("is-visible");
+        toastElement.setAttribute("aria-hidden", "false");
+        saveToastHideTimeout = window.setTimeout(hideToast, 2500);
+    }
+
+    closeButton?.addEventListener("click", hideToast);
+
+    return {
+        show: showToast,
+        hide: hideToast,
+    };
+}
+
 function updateBlogList(data) {
     // Get the array of blog IDs
     blogArray = data.blog_ids;
@@ -149,7 +179,7 @@ function updateBlogList(data) {
 
     // Create a nav element, add the class list and add it to the div
     navEl = document.createElement("nav");
-    navEl.classList.add("nav", "flex-column");
+    navEl.classList.add("markdown-blog-nav");
     blogEl.appendChild(navEl);
 
     blogArray.forEach(element => {
@@ -157,7 +187,7 @@ function updateBlogList(data) {
         linkEl = document.createElement("a");
 
         // Set the class list
-        linkEl.classList.add("nav-link", "link-secondary", "navbar-link");
+        linkEl.classList.add("markdown-blog-link", "navbar-link");
 
         // Set the ID
         linkEl.id = element.id;
@@ -262,7 +292,8 @@ document.addEventListener('readystatechange', event => {
 
         // Get the toast object
         var saveToastEl = document.getElementById('saveToast')
-        saveToast = bootstrap.Toast.getOrCreateInstance(saveToastEl) // Returns a Bootstrap toast instance
+        var saveToastCloseEl = document.getElementById('saveToastClose')
+        saveToast = createToastController(saveToastEl, saveToastCloseEl)
 
         // Initialise mermaid
         mermaid.mermaidAPI.initialize({startOnLoad:true})
