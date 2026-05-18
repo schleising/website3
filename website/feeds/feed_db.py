@@ -51,6 +51,9 @@ FEED_ARTICLE_TEXT_INDEX_KEYS: list[tuple[str, str]] = [
     ("title", "text"),
     ("summary_html", "text"),
 ]
+SEARCH_TERM_IRREGULAR_VARIANTS: dict[str, tuple[str, ...]] = {
+    "run": ("run", "runs", "running", "ran"),
+}
 
 _feed_article_text_index_available_cache: bool | None = None
 _feed_article_text_index_checked_at: datetime | None = None
@@ -84,6 +87,151 @@ def normalize_article_search_query(search_query: str | None) -> str:
     return normalized[:SEARCH_QUERY_MAX_LENGTH]
 
 
+def parse_article_search_components(search_query: str) -> list[tuple[str, str]]:
+    """Parse normalized search text into ordered term/phrase components."""
+
+    components: list[tuple[str, str]] = []
+    seen_components: set[tuple[str, str]] = set()
+
+    for match in re.finditer(r'"([^"]+)"|(\S+)', search_query):
+        phrase_group = match.group(1)
+        token_group = match.group(2)
+
+        if isinstance(phrase_group, str):
+            normalized_phrase = " ".join(phrase_group.strip().split()).casefold()
+            if normalized_phrase == "":
+                continue
+
+            phrase_component = ("phrase", normalized_phrase)
+            if phrase_component in seen_components:
+                continue
+
+            seen_components.add(phrase_component)
+            components.append(phrase_component)
+            continue
+
+        if not isinstance(token_group, str):
+            continue
+
+        for token in re.findall(r"[A-Za-z0-9]+", token_group):
+            normalized_token = token.casefold().strip()
+            if normalized_token == "":
+                continue
+
+            token_component = ("term", normalized_token)
+            if token_component in seen_components:
+                continue
+
+            seen_components.add(token_component)
+            components.append(token_component)
+
+    return components
+
+
+def _is_cvc_search_term(term: str) -> bool:
+    """Return True when a term ends in consonant-vowel-consonant."""
+
+    if len(term) < 3 or not term.isalpha():
+        return False
+
+    vowels = "aeiou"
+    if term[-1] in vowels or term[-1] in {"w", "x", "y"}:
+        return False
+
+    return term[-2] in vowels and term[-3] not in vowels
+
+
+def build_search_term_variants(term: str) -> set[str]:
+    """Generate inflection-aware variants for one unquoted search term."""
+
+    normalized_term = str(term or "").casefold().strip()
+    if normalized_term == "":
+        return set()
+
+    variants: set[str] = {normalized_term}
+    irregular_forms = SEARCH_TERM_IRREGULAR_VARIANTS.get(normalized_term)
+    if isinstance(irregular_forms, tuple):
+        variants.update(form.casefold().strip() for form in irregular_forms if str(form).strip() != "")
+
+    if not normalized_term.isalpha():
+        return variants
+
+    if normalized_term.endswith("y") and len(normalized_term) > 2 and normalized_term[-2] not in "aeiou":
+        variants.add(f"{normalized_term[:-1]}ies")
+    elif normalized_term.endswith(("s", "x", "z", "ch", "sh", "o")):
+        variants.add(f"{normalized_term}es")
+    else:
+        variants.add(f"{normalized_term}s")
+
+    if normalized_term.endswith("e") and len(normalized_term) > 2:
+        variants.add(f"{normalized_term[:-1]}ing")
+        variants.add(f"{normalized_term}d")
+    else:
+        variants.add(f"{normalized_term}ing")
+        variants.add(f"{normalized_term}ed")
+
+    if normalized_term.endswith("y") and len(normalized_term) > 2 and normalized_term[-2] not in "aeiou":
+        variants.add(f"{normalized_term[:-1]}ied")
+
+    if _is_cvc_search_term(normalized_term):
+        doubled_term = f"{normalized_term}{normalized_term[-1]}"
+        variants.add(f"{doubled_term}ing")
+        variants.add(f"{doubled_term}ed")
+
+    if normalized_term.endswith("f") and len(normalized_term) > 1:
+        variants.add(f"{normalized_term[:-1]}ves")
+    elif normalized_term.endswith("fe") and len(normalized_term) > 2:
+        variants.add(f"{normalized_term[:-2]}ves")
+
+    return {value for value in variants if value != ""}
+
+
+def build_search_component_regex(component_kind: str, component_value: str) -> str:
+    """Return regex pattern for one parsed search component."""
+
+    normalized_value = str(component_value or "").strip()
+    if normalized_value == "":
+        return ""
+
+    if component_kind == "phrase":
+        phrase_tokens = [
+            token.casefold()
+            for token in re.findall(r"[A-Za-z0-9]+", normalized_value)
+            if token.strip() != ""
+        ]
+        if len(phrase_tokens) == 0:
+            return ""
+        if len(phrase_tokens) == 1:
+            return rf"\b{re.escape(phrase_tokens[0])}\b"
+
+        return rf"\b{'\\s+'.join(re.escape(token) for token in phrase_tokens)}\b"
+
+    term_variants = sorted(
+        {re.escape(value) for value in build_search_term_variants(normalized_value)},
+        key=len,
+        reverse=True,
+    )
+    if len(term_variants) == 0:
+        return rf"\b{re.escape(normalized_value.casefold())}\b"
+
+    return rf"\b(?:{'|'.join(term_variants)})\b"
+
+
+def build_search_component_field_filter(component_kind: str, component_value: str) -> dict[str, Any] | None:
+    """Build a title/summary filter for one parsed search component."""
+
+    component_regex = build_search_component_regex(component_kind, component_value)
+    if component_regex == "":
+        return None
+
+    return {
+        "$or": [
+            {"title": {"$regex": component_regex, "$options": "i"}},
+            {"summary_html": {"$regex": component_regex, "$options": "i"}},
+        ]
+    }
+
+
 def build_article_fallback_search_filter(search_query: str | None) -> dict[str, Any] | None:
     """Return a minimal regex fallback when full-text search is unavailable."""
 
@@ -91,8 +239,8 @@ def build_article_fallback_search_filter(search_query: str | None) -> dict[str, 
     if normalized == "":
         return None
 
-    terms = [token.casefold() for token in re.findall(r"[A-Za-z0-9]+", normalized)]
-    if len(terms) == 0:
+    components = parse_article_search_components(normalized)
+    if len(components) == 0:
         escaped = re.escape(normalized)
         return {
             "$or": [
@@ -101,24 +249,23 @@ def build_article_fallback_search_filter(search_query: str | None) -> dict[str, 
             ]
         }
 
-    unique_terms = list(dict.fromkeys(terms))
-    per_term_filters: list[dict[str, Any]] = []
-    for term in unique_terms:
-        term_regex = rf"\b{re.escape(term)}\b"
-        per_term_filters.append(
-            {
-                "$or": [
-                    {"title": {"$regex": term_regex, "$options": "i"}},
-                    {"summary_html": {"$regex": term_regex, "$options": "i"}},
-                ]
-            }
+    component_filters = [
+        component_filter
+        for component_filter in (
+            build_search_component_field_filter(component_kind, component_value)
+            for component_kind, component_value in components
         )
+        if isinstance(component_filter, dict)
+    ]
 
-    if len(per_term_filters) == 1:
-        return per_term_filters[0]
+    if len(component_filters) == 0:
+        return None
+
+    if len(component_filters) == 1:
+        return component_filters[0]
 
     return {
-        "$and": per_term_filters,
+        "$and": component_filters,
     }
 
 
@@ -129,12 +276,35 @@ def build_article_text_search_filter(search_query: str | None) -> dict[str, Any]
     if normalized == "":
         return None
 
-    return {
+    components = parse_article_search_components(normalized)
+
+    text_query_filter: dict[str, Any] = {
         "$text": {
             "$search": normalized,
             "$caseSensitive": False,
             "$diacriticSensitive": False,
         }
+    }
+
+    # Mongo $text defaults to OR across space-delimited terms; enforce default
+    # AND semantics by requiring each parsed component in title or summary.
+    if len(components) <= 1:
+        return text_query_filter
+
+    component_filters = [
+        component_filter
+        for component_filter in (
+            build_search_component_field_filter(component_kind, component_value)
+            for component_kind, component_value in components
+        )
+        if isinstance(component_filter, dict)
+    ]
+    if len(component_filters) == 0:
+        return text_query_filter
+
+    return {
+        **text_query_filter,
+        "$and": component_filters,
     }
 
 
@@ -160,9 +330,16 @@ def merge_article_search_filter(
     if not isinstance(search_filter, dict):
         return base_query
 
-    if "$text" in search_filter and len(search_filter) == 1:
+    if "$text" in search_filter:
         merged_query = dict(base_query)
         merged_query["$text"] = search_filter["$text"]
+
+        additional_and_filters = search_filter.get("$and")
+        if isinstance(additional_and_filters, list) and len(additional_and_filters) > 0:
+            return {
+                "$and": [merged_query, *additional_and_filters],
+            }
+
         return merged_query
 
     return {
@@ -2217,6 +2394,12 @@ async def list_recently_read_cards(
                 }
             }
         ]
+
+        additional_and_filters = search_filter.get("$and")
+        if isinstance(additional_and_filters, list):
+            for component_filter in additional_and_filters:
+                if isinstance(component_filter, dict):
+                    lookup_pipeline.append({"$match": component_filter})
     else:
         lookup_pipeline = [
             {"$match": {"$expr": {"$eq": ["$_id", "$$article_id"]}}},
@@ -2386,6 +2569,12 @@ async def list_saved_cards(
                 }
             }
         ]
+
+        additional_and_filters = search_filter.get("$and")
+        if isinstance(additional_and_filters, list):
+            for component_filter in additional_and_filters:
+                if isinstance(component_filter, dict):
+                    lookup_pipeline.append({"$match": component_filter})
     else:
         lookup_pipeline = [
             {"$match": {"$expr": {"$eq": ["$_id", "$$article_id"]}}},

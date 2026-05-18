@@ -508,7 +508,9 @@ sequenceDiagram
 	2. Examples:
 		1. query `hole` matches `holes` but not `whole`.
 		2. query `run` matches `run`, `running`, and `ran`.
-	3. Matching is case-insensitive and token-based (word boundaries), not raw substring scanning.
+	3. Multi-term searches default to logical `AND` across terms/phrases (for example `black hole` requires both `black` and `hole`).
+	4. Quoted phrases remain supported (for example `"black hole"`).
+	5. Matching is case-insensitive and token-based (word boundaries), not raw substring scanning.
 5. Query safety and performance safeguards:
 	1. Sanitize and length-limit incoming `search` query values.
 	2. Use a text index on `title` and `summary_html` for consistent natural-language matching and query performance.
