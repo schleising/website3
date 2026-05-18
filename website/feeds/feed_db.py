@@ -260,12 +260,12 @@ def build_article_summary_html(
     article_doc: dict[str, Any],
     *,
     truncate_on_display: bool = False,
-) -> str | None:
-    """Return sanitized summary HTML, optionally truncated for display."""
+) -> tuple[str | None, str | None, bool]:
+    """Return summary display HTML and optional full HTML for inline expansion."""
 
     raw_summary_html = article_doc.get("summary_html")
     if raw_summary_html is None:
-        return None
+        return None, None, False
 
     normalized_summary_html = normalize_summary_document_fragment_links(
         str(raw_summary_html),
@@ -273,7 +273,7 @@ def build_article_summary_html(
     )
 
     if normalized_summary_html is None or normalized_summary_html == "":
-        return None
+        return None, None, False
 
     sanitized = sanitize_html(
         normalized_summary_html,
@@ -281,12 +281,18 @@ def build_article_summary_html(
     )
 
     if not truncate_on_display:
-        return sanitized
+        return sanitized, None, False
 
-    return feed_utils.truncate_html_to_paragraphs(
+    truncated = feed_utils.truncate_html_to_paragraphs(
         sanitized,
         max_paragraphs=TRUNCATED_SUMMARY_PARAGRAPH_LIMIT,
     )
+
+    is_truncated = truncated != sanitized
+    if not is_truncated:
+        return sanitized, None, False
+
+    return truncated, sanitized, True
 
 
 async def validate_feed_url(feed_url: str) -> tuple[str, str]:
@@ -1890,6 +1896,10 @@ async def list_cards_for_feed_ids(
         read_at = read_map.get(article_id)
         is_saved = article_id in saved_map
         saved_at = saved_map.get(article_id)
+        summary_html, full_summary_html, is_summary_truncated = build_article_summary_html(
+            article_doc,
+            truncate_on_display=feed_id in truncated_feed_ids,
+        )
 
         cards.append(
             FeedArticleCard(
@@ -1897,10 +1907,9 @@ async def list_cards_for_feed_ids(
                 title=str(article_doc.get("title", "Untitled")),
                 link=normalize_article_navigation_link(article_doc.get("canonical_url") or article_doc.get("link")),
                 author=str(article_doc.get("author", "")).strip() or None,
-                summary_html=build_article_summary_html(
-                    article_doc,
-                    truncate_on_display=feed_id in truncated_feed_ids,
-                ),
+                summary_html=summary_html,
+                full_summary_html=full_summary_html,
+                is_summary_truncated=is_summary_truncated,
                 media_image_url=normalize_article_link(article_doc.get("media_image_url")) or None,
                 published_at=article_doc.get("published_at"),
                 feed_title=source_title,
@@ -2031,6 +2040,10 @@ async def list_recently_read_cards(
 
         read_at_value = row.get("read_at")
         read_at = read_at_value if isinstance(read_at_value, datetime) else None
+        summary_html, full_summary_html, is_summary_truncated = build_article_summary_html(
+            article_doc,
+            truncate_on_display=feed_id in truncated_feed_ids,
+        )
 
         cards.append(
             FeedArticleCard(
@@ -2038,10 +2051,9 @@ async def list_recently_read_cards(
                 title=str(article_doc.get("title", "Untitled")),
                 link=normalize_article_navigation_link(article_doc.get("canonical_url") or article_doc.get("link")),
                 author=str(article_doc.get("author", "")).strip() or None,
-                summary_html=build_article_summary_html(
-                    article_doc,
-                    truncate_on_display=feed_id in truncated_feed_ids,
-                ),
+                summary_html=summary_html,
+                full_summary_html=full_summary_html,
+                is_summary_truncated=is_summary_truncated,
                 media_image_url=normalize_article_link(article_doc.get("media_image_url")) or None,
                 published_at=article_doc.get("published_at"),
                 feed_title=source_title,
@@ -2164,6 +2176,10 @@ async def list_saved_cards(
 
         saved_at_value = row.get("saved_at")
         saved_at = saved_at_value if isinstance(saved_at_value, datetime) else None
+        summary_html, full_summary_html, is_summary_truncated = build_article_summary_html(
+            article_doc,
+            truncate_on_display=feed_id in truncated_feed_ids,
+        )
 
         cards.append(
             FeedArticleCard(
@@ -2171,10 +2187,9 @@ async def list_saved_cards(
                 title=str(article_doc.get("title", "Untitled")),
                 link=normalize_article_navigation_link(article_doc.get("canonical_url") or article_doc.get("link")),
                 author=str(article_doc.get("author", "")).strip() or None,
-                summary_html=build_article_summary_html(
-                    article_doc,
-                    truncate_on_display=feed_id in truncated_feed_ids,
-                ),
+                summary_html=summary_html,
+                full_summary_html=full_summary_html,
+                is_summary_truncated=is_summary_truncated,
                 media_image_url=normalize_article_link(article_doc.get("media_image_url")) or None,
                 published_at=article_doc.get("published_at"),
                 feed_title=source_title,

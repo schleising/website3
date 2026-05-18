@@ -125,6 +125,12 @@
 
       {% if article.summary_html %}
       <div class="feed-article-summary">{{ article.summary_html | safe }}</div>
+      {% if article.is_summary_truncated and article.full_summary_html %}
+      <div class="feed-article-summary-actions">
+        <button type="button" class="feed-article-read-more-button">Read more...</button>
+      </div>
+      <template class="feed-article-summary-full-template">{{ article.full_summary_html | safe }}</template>
+      {% endif %}
       {% endif %}
     </article>
     {% endfor %}

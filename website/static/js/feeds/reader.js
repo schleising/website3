@@ -1444,6 +1444,27 @@
                 summary.className = "feed-article-summary";
                 summary.innerHTML = sanitizedSummary;
                 card.appendChild(summary);
+
+                if (Boolean(article.is_summary_truncated) && article.full_summary_html) {
+                    const sanitizedFullSummary = sanitizeSummaryHtml(String(article.full_summary_html));
+                    if (sanitizedFullSummary !== "") {
+                        const summaryActions = document.createElement("div");
+                        summaryActions.className = "feed-article-summary-actions";
+
+                        const readMoreButton = document.createElement("button");
+                        readMoreButton.type = "button";
+                        readMoreButton.className = "feed-article-read-more-button";
+                        readMoreButton.textContent = "Read more...";
+                        summaryActions.appendChild(readMoreButton);
+
+                        const fullSummaryTemplate = document.createElement("template");
+                        fullSummaryTemplate.className = "feed-article-summary-full-template";
+                        fullSummaryTemplate.innerHTML = sanitizedFullSummary;
+
+                        card.appendChild(summaryActions);
+                        card.appendChild(fullSummaryTemplate);
+                    }
+                }
             }
         }
 
@@ -2705,6 +2726,34 @@
     articleList.addEventListener("click", event => {
         const target = /** @type {HTMLElement | null} */ (event.target instanceof HTMLElement ? event.target : null);
         if (!target) {
+            return;
+        }
+
+        const readMoreButton = target.closest(".feed-article-read-more-button");
+        if (readMoreButton instanceof HTMLButtonElement) {
+            const cardForExpansion = readMoreButton.closest(".feed-article-card");
+            if (!(cardForExpansion instanceof HTMLElement)) {
+                return;
+            }
+
+            const summaryNode = cardForExpansion.querySelector(".feed-article-summary");
+            const fullSummaryTemplate = cardForExpansion.querySelector(".feed-article-summary-full-template");
+            if (!(summaryNode instanceof HTMLElement) || !(fullSummaryTemplate instanceof HTMLTemplateElement)) {
+                return;
+            }
+
+            const sanitizedFullSummary = sanitizeSummaryHtml(fullSummaryTemplate.innerHTML);
+            if (sanitizedFullSummary !== "") {
+                summaryNode.innerHTML = sanitizedFullSummary;
+            }
+
+            fullSummaryTemplate.remove();
+            const summaryActions = readMoreButton.closest(".feed-article-summary-actions");
+            if (summaryActions instanceof HTMLElement) {
+                summaryActions.remove();
+            }
+
+            schedulePagePrefetchCheck();
             return;
         }
 

@@ -127,6 +127,8 @@ class FeedArticleCard(BaseModel):
     link: str
     author: str | None = None
     summary_html: str | None = None
+    full_summary_html: str | None = None
+    is_summary_truncated: bool = False
     media_image_url: str | None = None
     published_at: datetime | None = None
     feed_title: str

@@ -431,6 +431,37 @@
     outline-offset: 0.08rem;
 }
 
+.feed-article-summary-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin: 0.15rem 0 0.45rem;
+}
+
+.feed-article-read-more-button {
+    border: 0;
+    background: transparent;
+    color: color-mix(in srgb, var(--brand-strong), #1b3f67 10%);
+    font-weight: 700;
+    font-size: 0.9rem;
+    line-height: 1.1;
+    text-decoration: underline;
+    text-decoration-thickness: 0.1em;
+    text-underline-offset: 0.13em;
+    padding: 0.1rem 0.05rem;
+    cursor: pointer;
+}
+
+.feed-article-read-more-button:hover,
+.feed-article-read-more-button:focus-visible {
+    color: color-mix(in srgb, var(--brand-strong), #16365b 8%);
+}
+
+.feed-article-read-more-button:focus-visible {
+    outline: 0.125rem solid color-mix(in srgb, var(--brand-strong), #ffffff 42%);
+    outline-offset: 0.08rem;
+    border-radius: 0.2rem;
+}
+
 .feed-article-card.is-read-article .feed-article-summary a {
     color: color-mix(in srgb, var(--text-soft), var(--brand-strong) 28%);
     text-decoration-color: color-mix(in srgb, var(--text-soft), #ffffff 20%);
