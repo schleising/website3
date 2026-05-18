@@ -2953,7 +2953,7 @@ async def get_feed_settings_context(user_id: str) -> dict[str, Any]:
         "all_unread_count": category_payload.all_unread_count,
         "recently_read_count": category_payload.recently_read_count,
         "saved_count": category_payload.saved_count,
-        "sidebar_feed_groups": build_sidebar_feed_groups(subscription_rows),
+        "sidebar_feed_groups": await get_sidebar_feed_groups_for_reader(user_id),
     }
 
 
@@ -3507,13 +3507,12 @@ async def get_feed_stats_context(user_id: str) -> dict[str, Any]:
     """Build template context payload for the feed stats page."""
 
     category_payload = await get_categories_with_counts(user_id)
-    subscription_rows = await list_user_subscription_rows(user_id)
     return {
         "categories": category_payload.categories,
         "all_unread_count": category_payload.all_unread_count,
         "recently_read_count": category_payload.recently_read_count,
         "saved_count": category_payload.saved_count,
-        "sidebar_feed_groups": build_sidebar_feed_groups(subscription_rows),
+        "sidebar_feed_groups": await get_sidebar_feed_groups_for_reader(user_id),
     }
 
 
