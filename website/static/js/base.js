@@ -41,12 +41,8 @@ function handleFeedsCategoryNavigation(event, destinationUrl) {
     }
 
     if (destinationCategory === "all") {
-        if (isSamePath && isCustomFeedsCategory(currentCategory) && window.history.length > 1) {
-            event.preventDefault();
-            window.history.back();
-            return true;
-        }
-
+        // Never use history.back here because the previous entry may be a different
+        // feeds page (for example stats/settings/admin), which causes surprising jumps.
         event.preventDefault();
         window.location.replace(destinationUrl.toString());
         return true;
