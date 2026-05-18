@@ -21,6 +21,10 @@
     /** @type {string} */
     const selectedStatus = String(root.dataset.selectedStatus || "unread").trim() || "unread";
     /** @type {string} */
+    const selectedSearch = String(root.dataset.selectedSearch || "").trim();
+    /** @type {boolean} */
+    const isSearchPage = String(root.dataset.isSearchPage || "false").toLowerCase() === "true";
+    /** @type {string} */
     const selectedFeedId = String(root.dataset.selectedFeedId || "").trim();
     /** @type {string} */
     const articlesEndpoint = root.dataset.articlesEndpoint || "/feeds/api/articles/";
@@ -93,11 +97,15 @@
     /** @type {number} */
     const maxStoredArticleIds = 2500;
     /** @type {string} */
-    const emptyHintMessage = selectedCategory === "recently-read"
-        ? "No recently read articles in the last 7 days."
-        : (selectedCategory === "saved"
-            ? "No saved articles yet."
-            : "No unread articles in this view.");
+    const emptyHintMessage = isSearchPage
+        ? (selectedSearch === ""
+            ? "Enter a search term to search your feeds."
+            : "No matching articles found.")
+        : (selectedCategory === "recently-read"
+            ? "No recently read articles in the last 7 days."
+            : (selectedCategory === "saved"
+                ? "No saved articles yet."
+                : "No unread articles in this view."));
 
     /** @type {number} */
     let selectedIndex = -1;
@@ -292,6 +300,9 @@
     function buildArticlesUrl(offset = 0, limitOverride = pageSize, statusOverride = selectedStatus) {
         const params = new URLSearchParams();
         params.set("category", selectedCategory);
+        if (selectedSearch !== "") {
+            params.set("search", selectedSearch);
+        }
         if (selectedFeedId !== "") {
             params.set("feed_id", selectedFeedId);
         }
@@ -2066,6 +2077,10 @@
      * Ensure the currently active sidebar category link remains highlighted.
      */
     function syncSidebarSelection() {
+        if (isSearchPage) {
+            return;
+        }
+
         const activeCategory = selectedCategory;
         const sidebarLinks = document.querySelectorAll(
             ".right-sidebar .sub-level-nav[data-category-shortcut], .right-sidebar .feed-category-link[data-category-id]"
@@ -2173,6 +2188,12 @@
      */
     function updateReaderHeader(payload) {
         if (!(pageHeaderTitleNode instanceof HTMLElement) || !(pageHeaderCountNode instanceof HTMLElement)) {
+            return;
+        }
+
+        if (isSearchPage) {
+            pageHeaderTitleNode.textContent = "Search";
+            renderHeaderCountAsText("");
             return;
         }
 

@@ -218,6 +218,37 @@ async def feed_reader_page(
     )
 
 
+@feeds_router.get("/search", response_class=HTMLResponse)
+@feeds_router.get("/search/", response_class=HTMLResponse)
+async def feed_search_page(
+    request: Request,
+    search: str = "",
+    status_filter: Literal["unread", "read", "all"] = "all",
+    feed_id: str | None = None,
+):
+    """Render the dedicated search page using reader-style cards."""
+
+    username = _request_username(request)
+    if username is None:
+        return _login_redirect_response(request)
+
+    context = await get_feed_reader_context(
+        username,
+        "all",
+        status_filter,
+        feed_filter=feed_id,
+        search_query=search,
+    )
+    context["reader_page_mode"] = "search"
+    template_context = _feeds_template_context(request, "Feed Search", context)
+
+    return TEMPLATES.TemplateResponse(
+        request,
+        "feeds/reader.html",
+        template_context,
+    )
+
+
 @feeds_router.get("/settings", response_class=HTMLResponse)
 @feeds_router.get("/settings/", response_class=HTMLResponse)
 async def feed_settings_page(request: Request):
@@ -378,17 +409,23 @@ async def get_articles(
     category: str = "all",
     status_filter: Literal["unread", "read", "all"] = "unread",
     feed_id: str | None = None,
+    search: str | None = None,
     offset: int = 0,
     limit: int = 10,
 ) -> FeedArticleListResponse:
     """Return feed article cards filtered by category and status."""
 
     username = _require_logged_in_user(request)
+    effective_status_filter = status_filter
+    if isinstance(search, str) and search.strip() != "" and "status_filter" not in request.query_params:
+        effective_status_filter = "all"
+
     return await get_article_list(
         username,
         category,
-        status_filter,
+        effective_status_filter,
         feed_filter=feed_id,
+        search_query=search,
         offset=max(0, int(offset)),
         limit=max(1, min(100, int(limit))),
     )

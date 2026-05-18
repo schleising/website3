@@ -1,6 +1,6 @@
 {% extends "feeds/feed-base.html" %}
 
-{% set feed_page_mode = "reader" %}
+{% set feed_page_mode = reader_page_mode|default("reader") %}
 
 {% block header %}
 {% set header = namespace(
@@ -11,7 +11,9 @@
   count_use_all_pill=false,
   count_accent=""
 ) %}
-{% if selected_category == "all" %}
+{% if feed_page_mode == "search" %}
+  {% set header.title = "Search" %}
+{% elif selected_category == "all" %}
   {% set header.title = "All Feeds" %}
   {% set header.count_value = all_unread_count|int %}
   {% set header.count_is_pill = true %}
@@ -49,6 +51,8 @@
   id="feeds-reader-root"
   data-selected-category="{{ selected_category }}"
   data-selected-status="{{ selected_status }}"
+  data-selected-search="{{ selected_search|default('') }}"
+  data-is-search-page="{{ 'true' if feed_page_mode == 'search' else 'false' }}"
   data-selected-feed-id="{{ selected_feed_id|default('') }}"
   data-articles-endpoint="{{ feeds_root_path }}api/articles/"
   data-article-statuses-endpoint="{{ feeds_root_path }}api/articles/statuses/"
@@ -64,6 +68,29 @@
   data-has-more="{{ 'true' if article_has_more else 'false' }}"
   data-csrf-token="{{ request.state.csrf_token|default('') }}"
 >
+  {% if feed_page_mode == "search" %}
+  <form class="site-card feeds-search-form" method="get" action="{{ feeds_root_path }}search/" id="feeds-search-form">
+    <label for="feeds-search-input" class="feeds-search-label">Search Your Feed Articles</label>
+    <div class="feeds-search-controls">
+      <input
+        id="feeds-search-input"
+        class="feeds-search-input"
+        type="search"
+        name="search"
+        value="{{ selected_search|default('') }}"
+        placeholder="Search titles and article bodies"
+        maxlength="160"
+        autocomplete="off"
+      />
+      <input type="hidden" name="status_filter" value="{{ selected_status|default('all') }}" />
+      {% if selected_feed_id %}
+      <input type="hidden" name="feed_id" value="{{ selected_feed_id }}" />
+      {% endif %}
+      <button type="submit" class="btn btn-primary feeds-search-submit">Search</button>
+      <a class="btn feeds-search-clear" href="{{ feeds_root_path }}search/">Clear</a>
+    </div>
+  </form>
+  {% endif %}
   <div id="feeds-article-list" class="feeds-article-list{% if articles|length == 0 %} is-empty{% endif %}">
     {% if articles|length == 0 %}
     <div class="feeds-empty-state" id="feeds-empty-hint" role="status" aria-live="polite">
@@ -73,7 +100,13 @@
         <circle cx="71" cy="24" r="8"></circle>
       </svg>
       <p class="feeds-empty-state-text">
-        {% if selected_category == 'recently-read' %}
+        {% if feed_page_mode == 'search' %}
+          {% if selected_search|default('') %}
+          No matching articles found.
+          {% else %}
+          Enter a search term to search your feeds.
+          {% endif %}
+        {% elif selected_category == 'recently-read' %}
          No recently read articles in the last 7 days.
         {% elif selected_category == 'saved' %}
         No saved articles yet.

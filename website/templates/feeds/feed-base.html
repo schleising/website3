@@ -23,16 +23,16 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 {% endif %}
-<link rel="stylesheet" href="/css/feeds/feeds.css?v1.0.88">
+<link rel="stylesheet" href="/css/feeds/feeds.css?v1.0.89">
 {% endblock %}
 
 {% block scripts %}
 {% if is_web_app %}
   <script defer src="/js/feeds/pwa.js?v1.0.1"></script>
 {% endif %}
-<script defer src="/js/feeds/sidebar.js?v1.0.11"></script>
-{% if feed_page_mode == "reader" %}
-  <script defer src="/js/feeds/reader.js?v1.0.81"></script>
+<script defer src="/js/feeds/sidebar.js?v1.0.12"></script>
+{% if feed_page_mode in ["reader", "search"] %}
+  <script defer src="/js/feeds/reader.js?v1.0.82"></script>
 {% elif feed_page_mode == "settings" %}
 <script defer src="/js/feeds/settings.js?v1.0.25"></script>
 {% elif feed_page_mode == "stats" %}
@@ -47,10 +47,11 @@
 {% endblock %}
 
 {% block sidebar %}
+{% set is_search_page = feed_page_mode == 'search' %}
 <a
   href="{{ feeds_root_path }}?category=all"
-  class="sub-level-nav feed-sidebar-link feed-category-link feed-category-shortcut{% if selected_category == 'all' %} is-current{% endif %}"
-  {% if selected_category == 'all' %}aria-current="page"{% endif %}
+  class="sub-level-nav feed-sidebar-link feed-category-link feed-category-shortcut{% if selected_category == 'all' and not is_search_page %} is-current{% endif %}"
+  {% if selected_category == 'all' and not is_search_page %}aria-current="page"{% endif %}
   data-history-mode="feeds-category"
   data-category-shortcut="all"
 >
@@ -60,8 +61,8 @@
 {% for category_item in categories %}
 <a
   href="{{ feeds_root_path }}?category={{ category_item.category_id }}"
-  class="sub-level-nav feed-sidebar-link feed-category-link{% if selected_category == category_item.category_id %} is-current{% endif %}{% if category_item.muted %} is-muted{% endif %}"
-  {% if selected_category == category_item.category_id %}aria-current="page"{% endif %}
+  class="sub-level-nav feed-sidebar-link feed-category-link{% if selected_category == category_item.category_id and not is_search_page %} is-current{% endif %}{% if category_item.muted %} is-muted{% endif %}"
+  {% if selected_category == category_item.category_id and not is_search_page %}aria-current="page"{% endif %}
   data-history-mode="feeds-category"
   data-category-id="{{ category_item.category_id }}"
 >
@@ -71,8 +72,8 @@
 {% endfor %}
 <a
   href="{{ feeds_root_path }}?category=saved"
-  class="sub-level-nav feed-sidebar-link feed-category-link feed-category-shortcut{% if selected_category == 'saved' %} is-current{% endif %}"
-  {% if selected_category == 'saved' %}aria-current="page"{% endif %}
+  class="sub-level-nav feed-sidebar-link feed-category-link feed-category-shortcut{% if selected_category == 'saved' and not is_search_page %} is-current{% endif %}"
+  {% if selected_category == 'saved' and not is_search_page %}aria-current="page"{% endif %}
   data-history-mode="feeds-category"
   data-category-shortcut="saved"
 >
@@ -81,13 +82,14 @@
 </a>
 <a
 href="{{ feeds_root_path }}?category=recently-read"
-class="sub-level-nav feed-sidebar-link feed-category-link feed-category-shortcut{% if selected_category == 'recently-read' %} is-current{% endif %}"
-{% if selected_category == 'recently-read' %}aria-current="page"{% endif %}
+class="sub-level-nav feed-sidebar-link feed-category-link feed-category-shortcut{% if selected_category == 'recently-read' and not is_search_page %} is-current{% endif %}"
+{% if selected_category == 'recently-read' and not is_search_page %}aria-current="page"{% endif %}
 data-history-mode="feeds-category"
 data-category-shortcut="recently-read"
 >
 <span class="feed-category-name">Recently Read</span>
 </a>
+<a href="{{ feeds_root_path }}search/" class="sub-level-nav feed-sidebar-link{% if feed_page_mode == 'search' %} is-current{% endif %}" {% if feed_page_mode == 'search' %}aria-current="page"{% endif %}>Search</a>
 <a href="{{ feeds_root_path }}settings/" class="sub-level-nav feed-sidebar-link{% if feed_page_mode == 'settings' %} is-current{% endif %}" {% if feed_page_mode == 'settings' %}aria-current="page"{% endif %}>Settings</a>
 <a href="{{ feeds_root_path }}stats/" class="sub-level-nav feed-sidebar-link{% if feed_page_mode == 'stats' %} is-current{% endif %}" {% if feed_page_mode == 'stats' %}aria-current="page"{% endif %}>Stats</a>
 {% if request.state.user != None and request.state.user.can_use_tools %}

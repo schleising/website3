@@ -45,6 +45,7 @@ RECENTLY_READ_WINDOW = timedelta(days=7)
 FEED_VALIDATION_MAX_REDIRECTS = 5
 FEED_VALIDATION_REDIRECT_STATUSES = {301, 302, 303, 307, 308}
 TRUNCATED_SUMMARY_PARAGRAPH_LIMIT = 5
+SEARCH_QUERY_MAX_LENGTH = 160
 
 SUMMARY_ANCHOR_HREF_RE = re.compile(
     r'(?P<prefix>\bhref\s*=\s*)(?P<quote>["\']?)(?P<href>[^"\'\s>]+)(?P=quote)',
@@ -60,6 +61,35 @@ def utc_now() -> datetime:
     """Return the current UTC timestamp with timezone information."""
 
     return datetime.now(UTC)
+
+
+def normalize_article_search_query(search_query: str | None) -> str:
+    """Normalize a free-text article search query."""
+
+    if not isinstance(search_query, str):
+        return ""
+
+    normalized = " ".join(search_query.strip().split())
+    if normalized == "":
+        return ""
+
+    return normalized[:SEARCH_QUERY_MAX_LENGTH]
+
+
+def build_article_search_filter(search_query: str | None) -> dict[str, Any] | None:
+    """Return a MongoDB filter for case-insensitive title/body substring search."""
+
+    normalized = normalize_article_search_query(search_query)
+    if normalized == "":
+        return None
+
+    escaped = re.escape(normalized)
+    return {
+        "$or": [
+            {"title": {"$regex": escaped, "$options": "i"}},
+            {"summary_html": {"$regex": escaped, "$options": "i"}},
+        ]
+    }
 
 
 def format_datetime_utc_iso(value: Any) -> str:
@@ -1453,6 +1483,7 @@ async def get_article_list(
     category_filter: str,
     status_filter: str,
     feed_filter: str | None = None,
+    search_query: str | None = None,
     offset: int = 0,
     limit: int = 10,
 ) -> FeedArticleListResponse:
@@ -1460,6 +1491,7 @@ async def get_article_list(
 
     normalized_offset = max(0, int(offset))
     normalized_limit = max(1, int(limit))
+    normalized_search_query = normalize_article_search_query(search_query)
 
     normalized_status: Literal["unread", "read", "all"]
     if status_filter in {"unread", "read", "all"}:
@@ -1499,6 +1531,7 @@ async def get_article_list(
             feed_to_category=feed_to_category,
             truncated_feed_ids=truncated_feed_ids,
             selected_feed_id=selected_feed_id,
+            search_query=normalized_search_query,
             offset=normalized_offset,
             limit=normalized_limit,
         )
@@ -1519,6 +1552,7 @@ async def get_article_list(
             feed_to_category=feed_to_category,
             truncated_feed_ids=truncated_feed_ids,
             selected_feed_id=selected_feed_id,
+            search_query=normalized_search_query,
             offset=normalized_offset,
             limit=normalized_limit,
         )
@@ -1598,6 +1632,7 @@ async def get_article_list(
         truncated_feed_ids=truncated_feed_ids,
         read_state_ids=read_state_ids,
         recent_read_state_ids=recent_read_state_ids,
+        search_query=normalized_search_query,
         status_filter=normalized_status,
         offset=normalized_offset,
         limit=normalized_limit,
@@ -1817,6 +1852,7 @@ async def list_cards_for_feed_ids(
     truncated_feed_ids: set[ObjectId],
     read_state_ids: set[ObjectId],
     recent_read_state_ids: set[ObjectId],
+    search_query: str,
     status_filter: str,
     offset: int,
     limit: int,
@@ -1841,6 +1877,8 @@ async def list_cards_for_feed_ids(
         # the user performs a full page refresh.
         base_query["_id"] = {"$nin": list(read_state_ids)}
 
+    search_filter = build_article_search_filter(search_query)
+
     # Match frontend ordering: publication date ascending, with undated articles
     # treated as "infinite" and therefore placed at the end.
 
@@ -1855,6 +1893,14 @@ async def list_cards_for_feed_ids(
             {"published_at": {"$exists": False}},
         ],
     }
+
+    if isinstance(search_filter, dict):
+        dated_query = {
+            "$and": [dated_query, search_filter],
+        }
+        undated_query = {
+            "$and": [undated_query, search_filter],
+        }
 
     dated_total = await feed_articles_collection.count_documents(dated_query)
     dated_skip = min(offset, dated_total)
@@ -1962,6 +2008,7 @@ async def list_recently_read_cards(
     feed_to_category: dict[ObjectId, ObjectId],
     truncated_feed_ids: set[ObjectId],
     selected_feed_id: ObjectId | None,
+    search_query: str,
     offset: int,
     limit: int,
 ) -> tuple[list[FeedArticleCard], bool]:
@@ -1990,6 +2037,19 @@ async def list_recently_read_cards(
     if len(eligible_feed_ids) == 0:
         return [], False
 
+    search_filter = build_article_search_filter(search_query)
+    lookup_pipeline: list[dict[str, Any]] = [
+        {"$match": {"$expr": {"$eq": ["$_id", "$$article_id"]}}},
+        {
+            "$match": {
+                "is_deleted": False,
+                "feed_id": {"$in": eligible_feed_ids},
+            }
+        },
+    ]
+    if isinstance(search_filter, dict):
+        lookup_pipeline.append({"$match": search_filter})
+
     threshold = recently_read_cutoff()
     pipeline: list[dict[str, Any]] = [
         {
@@ -2004,15 +2064,7 @@ async def list_recently_read_cards(
             "$lookup": {
                 "from": feed_articles_collection.name,
                 "let": {"article_id": "$article_id"},
-                "pipeline": [
-                    {"$match": {"$expr": {"$eq": ["$_id", "$$article_id"]}}},
-                    {
-                        "$match": {
-                            "is_deleted": False,
-                            "feed_id": {"$in": eligible_feed_ids},
-                        }
-                    },
-                ],
+                "pipeline": lookup_pipeline,
                 "as": "article_docs",
             }
         },
@@ -2114,6 +2166,7 @@ async def list_saved_cards(
     feed_to_category: dict[ObjectId, ObjectId],
     truncated_feed_ids: set[ObjectId],
     selected_feed_id: ObjectId | None,
+    search_query: str,
     offset: int,
     limit: int,
 ) -> tuple[list[FeedArticleCard], bool]:
@@ -2136,6 +2189,19 @@ async def list_saved_cards(
     if len(eligible_feed_ids) == 0:
         return [], False
 
+    search_filter = build_article_search_filter(search_query)
+    lookup_pipeline: list[dict[str, Any]] = [
+        {"$match": {"$expr": {"$eq": ["$_id", "$$article_id"]}}},
+        {
+            "$match": {
+                "is_deleted": False,
+                "feed_id": {"$in": eligible_feed_ids},
+            }
+        },
+    ]
+    if isinstance(search_filter, dict):
+        lookup_pipeline.append({"$match": search_filter})
+
     pipeline: list[dict[str, Any]] = [
         {
             "$match": {
@@ -2148,15 +2214,7 @@ async def list_saved_cards(
             "$lookup": {
                 "from": feed_articles_collection.name,
                 "let": {"article_id": "$article_id"},
-                "pipeline": [
-                    {"$match": {"$expr": {"$eq": ["$_id", "$$article_id"]}}},
-                    {
-                        "$match": {
-                            "is_deleted": False,
-                            "feed_id": {"$in": eligible_feed_ids},
-                        }
-                    },
-                ],
+                "pipeline": lookup_pipeline,
                 "as": "article_docs",
             }
         },
@@ -2908,6 +2966,7 @@ async def get_feed_reader_context(
     category_filter: str,
     status_filter: str,
     feed_filter: str | None = None,
+    search_query: str | None = None,
 ) -> dict[str, Any]:
     """Build template context payload for the feed reader page."""
 
@@ -2922,9 +2981,11 @@ async def get_feed_reader_context(
         category_filter,
         status_filter,
         feed_filter=feed_filter,
+        search_query=search_query,
         offset=0,
         limit=10,
     )
+    normalized_search_query = normalize_article_search_query(search_query)
     return {
         "categories": categories_payload.categories,
         "all_unread_count": categories_payload.all_unread_count,
@@ -2934,6 +2995,7 @@ async def get_feed_reader_context(
         "articles": article_payload.articles,
         "selected_category": category_filter,
         "selected_feed_id": str(feed_filter or "").strip(),
+        "selected_search": normalized_search_query,
         "selected_status": article_payload.status,
         "article_has_more": article_payload.has_more,
         "article_next_offset": article_payload.next_offset,
