@@ -1795,19 +1795,30 @@ body.feed-category-color-popup-open {
 }
 
 .right-sidebar .feed-sidebar-feed-link {
-    display: block;
-    text-align: right;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.35rem;
     font-size: 0.78rem;
-    padding: 0.16rem 0.6rem;
+    padding: 0.16rem 0.85rem 0.16rem 0.6rem;
     margin-right: 0;
     opacity: 0.95;
-    white-space: nowrap;
     overflow: hidden;
-    text-overflow: clip;
     color: var(--text-soft);
     text-decoration: none;
     border-radius: 0.6rem;
     transition: background-color 120ms ease, color 120ms ease, transform 120ms ease;
+}
+
+.right-sidebar .feed-sidebar-feed-label {
+    display: block;
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: clip;
+    text-align: right;
+    line-height: 1.22;
 }
 
 .right-sidebar .feed-sidebar-feed-link:hover {
@@ -1836,12 +1847,12 @@ html.suppress-sidebar-hover .right-sidebar .feed-sidebar-feed-link:hover:not(.is
 
 .right-sidebar .feed-sidebar-feed-link::before {
     content: "";
-    display: inline-block;
+    display: block;
+    flex: 0 0 auto;
     width: 0.45rem;
     height: 0.0625rem;
     background: color-mix(in srgb, var(--line), #ffffff 25%);
-    margin-right: 0.35rem;
-    vertical-align: middle;
+    margin-right: 0;
 }
 
 .feeds-stats {

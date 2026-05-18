@@ -8,13 +8,25 @@
 
     /** @type {{ all?: Array<Record<string, any>>, saved?: Array<Record<string, any>>, ["recently-read"]?: Array<Record<string, any>>, categories?: Record<string, Array<Record<string, any>>> }} */
     let sidebarGroups = {};
+    let sidebarGroupsFingerprint = "";
+
+    function serializeSidebarGroups(payload) {
+        try {
+            return JSON.stringify(payload);
+        } catch (_error) {
+            return "";
+        }
+    }
+
     try {
         const parsed = JSON.parse(dataNode.textContent || "{}");
         if (parsed && typeof parsed === "object") {
             sidebarGroups = parsed;
+            sidebarGroupsFingerprint = serializeSidebarGroups(parsed);
         }
     } catch (_error) {
         sidebarGroups = {};
+        sidebarGroupsFingerprint = "";
     }
 
     const feedsRootPath = String(dataNode.dataset.feedsRootPath || "/feeds/").trim() || "/feeds/";
@@ -22,6 +34,7 @@
     const currentCategory = String(currentUrl.searchParams.get("category") || "all").trim() || "all";
     const currentFeedId = String(currentUrl.searchParams.get("feed_id") || "").trim();
     const expandedStorageKey = "feeds-sidebar-expanded-category-v1";
+    const minimumShortLabelChars = 7;
 
     function middleEllipsis(label, maxChars) {
         const text = String(label || "").trim();
@@ -36,6 +49,62 @@
 
     function maxFeedLabelChars() {
         return window.matchMedia("(max-width: 52rem)").matches ? 22 : 30;
+    }
+
+    function fitFeedLabelToWidth(feedLink, fullLabel) {
+        if (!(feedLink instanceof HTMLElement)) {
+            return;
+        }
+
+        const labelNode = feedLink.querySelector(".feed-sidebar-feed-label");
+        if (!(labelNode instanceof HTMLElement)) {
+            return;
+        }
+
+        const normalizedFullLabel = String(fullLabel || "").trim();
+        labelNode.textContent = normalizedFullLabel;
+        if (normalizedFullLabel === "") {
+            return;
+        }
+
+        // Reset to full label first; if it already fits we keep it unchanged.
+        if (labelNode.scrollWidth <= labelNode.clientWidth + 1) {
+            return;
+        }
+
+        let low = minimumShortLabelChars;
+        let high = normalizedFullLabel.length;
+        let bestFit = middleEllipsis(normalizedFullLabel, minimumShortLabelChars);
+
+        while (low <= high) {
+            const candidateChars = Math.floor((low + high) / 2);
+            const candidateText = middleEllipsis(normalizedFullLabel, candidateChars);
+            labelNode.textContent = candidateText;
+
+            if (labelNode.scrollWidth <= labelNode.clientWidth + 1) {
+                bestFit = candidateText;
+                low = candidateChars + 1;
+            } else {
+                high = candidateChars - 1;
+            }
+        }
+
+        labelNode.textContent = bestFit;
+    }
+
+    function applySidebarFeedLabelShortening(includeHidden = false) {
+        const selector = includeHidden
+            ? ".right-sidebar .feed-sidebar-feed-link"
+            : ".right-sidebar .feed-sidebar-feed-panel:not([hidden]) .feed-sidebar-feed-link";
+        const feedLinks = document.querySelectorAll(selector);
+        feedLinks.forEach(link => {
+            if (!(link instanceof HTMLElement)) {
+                return;
+            }
+
+            const fullLabel = String(link.dataset.fullTitle || "").trim();
+            fitFeedLabelToWidth(link, fullLabel);
+        });
     }
 
     /** @type {Array<{ key: string, toggle: HTMLElement, panel: HTMLElement, enabled: boolean }>} */
@@ -194,7 +263,11 @@
                 feedLink.dataset.feedId = feed.feed_id;
                 feedLink.dataset.categoryKey = categoryKey;
                 feedLink.href = buildReaderHref(categoryKey, feed.feed_id);
-                feedLink.textContent = middleEllipsis(feed.title, maxFeedLabelChars());
+                feedLink.dataset.fullTitle = feed.title;
+                const feedLabel = document.createElement("span");
+                feedLabel.className = "feed-sidebar-feed-label";
+                feedLabel.textContent = middleEllipsis(feed.title, maxFeedLabelChars());
+                feedLink.appendChild(feedLabel);
                 feedLink.title = feed.title;
 
                 const clearHref = buildReaderHref(categoryKey, "");
@@ -235,6 +308,8 @@
                 const shouldExpand = panel.hidden;
                 if (shouldExpand) {
                     setExpanded(categoryKey);
+                    applySidebarFeedLabelShortening();
+                    window.requestAnimationFrame(applySidebarFeedLabelShortening);
                 } else {
                     setExpanded("");
                 }
@@ -259,6 +334,8 @@
 
         if (currentFeedId !== "") {
             setExpanded(currentCategory);
+            applySidebarFeedLabelShortening();
+            window.requestAnimationFrame(applySidebarFeedLabelShortening);
             return;
         }
 
@@ -268,11 +345,14 @@
             );
             if (hasPreferredCategory) {
                 setExpanded(preferredExpandedCategory);
+                applySidebarFeedLabelShortening();
+                window.requestAnimationFrame(applySidebarFeedLabelShortening);
                 return;
             }
         }
 
         setExpanded("");
+        window.requestAnimationFrame(applySidebarFeedLabelShortening);
     }
 
     function applySidebarGroupUpdate(nextGroups) {
@@ -280,7 +360,13 @@
             return;
         }
 
+        const nextFingerprint = serializeSidebarGroups(nextGroups);
+        if (nextFingerprint !== "" && nextFingerprint === sidebarGroupsFingerprint) {
+            return;
+        }
+
         sidebarGroups = nextGroups;
+        sidebarGroupsFingerprint = nextFingerprint;
         try {
             dataNode.textContent = JSON.stringify(nextGroups);
         } catch (_error) {
@@ -303,6 +389,10 @@
 
         applySidebarGroupUpdate(incomingGroups);
     });
+
+    window.addEventListener("resize", () => {
+        window.requestAnimationFrame(applySidebarFeedLabelShortening);
+    }, { passive: true });
 
     renderSidebarPanels({ preserveExpanded: true });
 })();
