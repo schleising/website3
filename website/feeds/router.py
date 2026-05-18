@@ -20,6 +20,8 @@ from .feed_db import (
     get_feed_admin_context,
     get_feed_reader_context,
     get_feed_settings_context,
+    get_feed_stats,
+    get_feed_stats_context,
     list_feed_admin_rows,
     import_opml,
     mark_article_read,
@@ -45,6 +47,7 @@ from .models import (
     FeedCategoryReorderRequest,
     FeedOpmlImportOptions,
     FeedOpmlImportResult,
+    FeedStatsResponse,
     FeedSubscriptionCreateRequest,
     FeedSubscriptionCreateResponse,
     FeedSubscriptionDeleteResponse,
@@ -226,6 +229,25 @@ async def feed_settings_page(request: Request):
     )
 
 
+@feeds_router.get("/stats", response_class=HTMLResponse)
+@feeds_router.get("/stats/", response_class=HTMLResponse)
+async def feed_stats_page(request: Request):
+    """Render the feed stats page."""
+
+    username = _request_username(request)
+    if username is None:
+        return _login_redirect_response(request)
+
+    context = await get_feed_stats_context(username)
+    template_context = _feeds_template_context(request, "Feed Stats", context)
+
+    return TEMPLATES.TemplateResponse(
+        request,
+        "feeds/stats.html",
+        template_context,
+    )
+
+
 @feeds_router.get("/admin", response_class=HTMLResponse)
 @feeds_router.get("/admin/", response_class=HTMLResponse)
 async def feed_admin_page(request: Request):
@@ -364,6 +386,24 @@ async def get_article_statuses(
     username = _require_logged_in_user(request)
     statuses = await get_article_read_statuses(username, payload.article_ids)
     return FeedArticleStatusResponse(statuses=statuses)
+
+
+@feeds_router.get(
+    "/api/stats",
+    response_model=FeedStatsResponse,
+)
+@feeds_router.get(
+    "/api/stats/",
+    response_model=FeedStatsResponse,
+)
+async def get_feed_stats_api(
+    request: Request,
+    window_days: int = 30,
+) -> FeedStatsResponse:
+    """Return feed-reader stats for the authenticated user."""
+
+    username = _require_logged_in_user(request)
+    return await get_feed_stats(username, window_days=max(7, min(120, int(window_days))))
 
 
 @feeds_router.post(

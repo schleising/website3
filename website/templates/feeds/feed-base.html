@@ -23,7 +23,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 {% endif %}
-<link rel="stylesheet" href="/css/feeds/feeds.css?v1.0.75">
+<link rel="stylesheet" href="/css/feeds/feeds.css?v1.0.78">
 {% endblock %}
 
 {% block scripts %}
@@ -34,6 +34,8 @@
   <script defer src="/js/feeds/reader.js?v1.0.77"></script>
 {% elif feed_page_mode == "settings" %}
 <script defer src="/js/feeds/settings.js?v1.0.24"></script>
+{% elif feed_page_mode == "stats" %}
+<script defer src="/js/feeds/stats.js?v1.0.2"></script>
 {% elif feed_page_mode == "admin" %}
 <script defer src="/js/feeds/admin.js?v1.0.6"></script>
 {% endif %}
@@ -76,14 +78,15 @@
   <span class="feed-category-name">Saved</span>
 </a>
 <a
-  href="{{ feeds_root_path }}?category=recently-read"
-  class="sub-level-nav feed-sidebar-link feed-category-link feed-category-shortcut{% if selected_category == 'recently-read' %} is-current{% endif %}"
-  {% if selected_category == 'recently-read' %}aria-current="page"{% endif %}
-  data-category-shortcut="recently-read"
+href="{{ feeds_root_path }}?category=recently-read"
+class="sub-level-nav feed-sidebar-link feed-category-link feed-category-shortcut{% if selected_category == 'recently-read' %} is-current{% endif %}"
+{% if selected_category == 'recently-read' %}aria-current="page"{% endif %}
+data-category-shortcut="recently-read"
 >
-  <span class="feed-category-name">Recently Read</span>
+<span class="feed-category-name">Recently Read</span>
 </a>
 <a href="{{ feeds_root_path }}settings/" class="sub-level-nav feed-sidebar-link{% if feed_page_mode == 'settings' %} is-current{% endif %}" {% if feed_page_mode == 'settings' %}aria-current="page"{% endif %}>Settings</a>
+<a href="{{ feeds_root_path }}stats/" class="sub-level-nav feed-sidebar-link{% if feed_page_mode == 'stats' %} is-current{% endif %}" {% if feed_page_mode == 'stats' %}aria-current="page"{% endif %}>Stats</a>
 {% if request.state.user != None and request.state.user.can_use_tools %}
 <a href="{{ feeds_root_path }}admin/" class="sub-level-nav feed-sidebar-link{% if feed_page_mode == 'admin' %} is-current{% endif %}" {% if feed_page_mode == 'admin' %}aria-current="page"{% endif %}>Admin</a>
 {% endif %}

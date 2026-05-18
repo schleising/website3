@@ -33,6 +33,10 @@ from .models import (
     FeedCategorySummary,
     FeedOpmlImportOptions,
     FeedOpmlImportResult,
+    FeedStatsDailyPoint,
+    FeedStatsOverall,
+    FeedStatsResponse,
+    FeedStatsRow,
 )
 
 
@@ -2711,6 +2715,472 @@ async def get_feed_admin_context(user_id: str) -> dict[str, Any]:
     context = await get_feed_settings_context(user_id)
     context["feed_admin_rows"] = await list_feed_admin_rows()
     return context
+
+
+def _safe_percent(numerator: int, denominator: int) -> float:
+    """Return rounded percentage with zero guard."""
+
+    if denominator <= 0:
+        return 0.0
+
+    return round((numerator / denominator) * 100.0, 1)
+
+
+def _build_day_keys(window_days: int, now: datetime) -> list[str]:
+    """Return ordered UTC day keys (YYYY-MM-DD) for the lookback window."""
+
+    day_keys: list[str] = []
+    start = now - timedelta(days=max(1, window_days) - 1)
+    for offset in range(max(1, window_days)):
+        day = (start + timedelta(days=offset)).date().isoformat()
+        day_keys.append(day)
+    return day_keys
+
+
+async def get_feed_stats(user_id: str, window_days: int = 30) -> FeedStatsResponse:
+    """Return aggregate feed-reader stats overall, by category, and by feed."""
+
+    if (
+        user_feed_subscriptions_collection is None
+        or feed_articles_collection is None
+        or user_article_states_collection is None
+    ):
+        return FeedStatsResponse(window_days=max(1, window_days), overall=FeedStatsOverall())
+
+    normalized_window_days = max(1, int(window_days))
+    now = utc_now()
+    cutoff = now - timedelta(days=normalized_window_days)
+    day_keys = _build_day_keys(normalized_window_days, now)
+
+    subscriptions = await list_user_subscription_docs(user_id)
+    feed_to_category = {
+        sub["feed_id"]: sub["category_id"]
+        for sub in subscriptions
+        if isinstance(sub.get("feed_id"), ObjectId) and isinstance(sub.get("category_id"), ObjectId)
+    }
+
+    feed_ids = list(feed_to_category.keys())
+    if len(feed_ids) == 0:
+        return FeedStatsResponse(window_days=normalized_window_days, overall=FeedStatsOverall())
+
+    categories = await list_category_documents(user_id)
+    categories_by_id = {
+        category.id: category
+        for category in categories
+        if category.id is not None
+    }
+    source_map = await load_sources_map(set(feed_ids))
+
+    feed_article_stats: dict[ObjectId, dict[str, Any]] = {}
+    article_pipeline: list[dict[str, Any]] = [
+        {
+            "$match": {
+                "feed_id": {"$in": feed_ids},
+                "is_deleted": False,
+            }
+        },
+        {
+            "$project": {
+                "feed_id": 1,
+                "event_at": {"$ifNull": ["$published_at", "$fetched_at"]},
+            }
+        },
+        {
+            "$group": {
+                "_id": "$feed_id",
+                "articles_total": {"$sum": 1},
+                "articles_recent": {
+                    "$sum": {
+                        "$cond": [
+                            {"$gte": ["$event_at", cutoff]},
+                            1,
+                            0,
+                        ]
+                    }
+                },
+            }
+        },
+    ]
+
+    async for doc in feed_articles_collection.aggregate(article_pipeline):
+        feed_id = doc.get("_id")
+        if not isinstance(feed_id, ObjectId):
+            continue
+        feed_article_stats[feed_id] = {
+            "articles_total": int(doc.get("articles_total", 0)),
+            "articles_recent": int(doc.get("articles_recent", 0)),
+        }
+
+    feed_state_stats: dict[ObjectId, dict[str, Any]] = {}
+    state_pipeline: list[dict[str, Any]] = [
+        {
+            "$match": {
+                "user_id": user_id,
+                "$or": [
+                    {"is_read": True},
+                    {"is_saved": True},
+                ],
+            }
+        },
+        {
+            "$lookup": {
+                "from": feed_articles_collection.name,
+                "let": {"article_id": "$article_id"},
+                "pipeline": [
+                    {"$match": {"$expr": {"$eq": ["$_id", "$$article_id"]}}},
+                    {
+                        "$match": {
+                            "feed_id": {"$in": feed_ids},
+                            "is_deleted": False,
+                        }
+                    },
+                    {
+                        "$project": {
+                            "feed_id": 1,
+                        }
+                    },
+                ],
+                "as": "article_docs",
+            }
+        },
+        {"$unwind": "$article_docs"},
+        {
+            "$group": {
+                "_id": "$article_docs.feed_id",
+                "opened_total": {
+                    "$sum": {"$cond": [{"$eq": ["$is_read", True]}, 1, 0]}
+                },
+                "opened_recent": {
+                    "$sum": {
+                        "$cond": [
+                            {
+                                "$and": [
+                                    {"$eq": ["$is_read", True]},
+                                    {"$gte": ["$read_at", cutoff]},
+                                ]
+                            },
+                            1,
+                            0,
+                        ]
+                    }
+                },
+                "saved_total": {
+                    "$sum": {"$cond": [{"$eq": ["$is_saved", True]}, 1, 0]}
+                },
+                "saved_recent": {
+                    "$sum": {
+                        "$cond": [
+                            {
+                                "$and": [
+                                    {"$eq": ["$is_saved", True]},
+                                    {"$gte": ["$saved_at", cutoff]},
+                                ]
+                            },
+                            1,
+                            0,
+                        ]
+                    }
+                },
+            }
+        },
+    ]
+
+    async for doc in user_article_states_collection.aggregate(state_pipeline):
+        feed_id = doc.get("_id")
+        if not isinstance(feed_id, ObjectId):
+            continue
+
+        feed_state_stats[feed_id] = {
+            "opened_total": int(doc.get("opened_total", 0)),
+            "opened_recent": int(doc.get("opened_recent", 0)),
+            "saved_total": int(doc.get("saved_total", 0)),
+            "saved_recent": int(doc.get("saved_recent", 0)),
+        }
+
+    daily_overall = {
+        day: {"published": 0, "opened": 0, "saved": 0}
+        for day in day_keys
+    }
+
+    publish_daily_pipeline: list[dict[str, Any]] = [
+        {
+            "$match": {
+                "feed_id": {"$in": feed_ids},
+                "is_deleted": False,
+            }
+        },
+        {
+            "$project": {
+                "event_at": {"$ifNull": ["$published_at", "$fetched_at"]},
+            }
+        },
+        {
+            "$match": {
+                "event_at": {"$gte": cutoff},
+            }
+        },
+        {
+            "$project": {
+                "day": {
+                    "$dateToString": {
+                        "format": "%Y-%m-%d",
+                        "date": "$event_at",
+                        "timezone": "UTC",
+                    }
+                }
+            }
+        },
+        {
+            "$group": {
+                "_id": "$day",
+                "count": {"$sum": 1},
+            }
+        },
+    ]
+
+    async for doc in feed_articles_collection.aggregate(publish_daily_pipeline):
+        day = str(doc.get("_id", "")).strip()
+        if day in daily_overall:
+            daily_overall[day]["published"] = int(doc.get("count", 0))
+
+    read_daily_pipeline: list[dict[str, Any]] = [
+        {
+            "$match": {
+                "user_id": user_id,
+                "is_read": True,
+                "read_at": {"$gte": cutoff},
+            }
+        },
+        {
+            "$lookup": {
+                "from": feed_articles_collection.name,
+                "let": {"article_id": "$article_id"},
+                "pipeline": [
+                    {"$match": {"$expr": {"$eq": ["$_id", "$$article_id"]}}},
+                    {
+                        "$match": {
+                            "feed_id": {"$in": feed_ids},
+                            "is_deleted": False,
+                        }
+                    },
+                    {"$project": {"_id": 1}},
+                ],
+                "as": "article_docs",
+            }
+        },
+        {"$match": {"article_docs.0": {"$exists": True}}},
+        {
+            "$project": {
+                "day": {
+                    "$dateToString": {
+                        "format": "%Y-%m-%d",
+                        "date": "$read_at",
+                        "timezone": "UTC",
+                    }
+                }
+            }
+        },
+        {
+            "$group": {
+                "_id": "$day",
+                "count": {"$sum": 1},
+            }
+        },
+    ]
+
+    async for doc in user_article_states_collection.aggregate(read_daily_pipeline):
+        day = str(doc.get("_id", "")).strip()
+        if day in daily_overall:
+            daily_overall[day]["opened"] = int(doc.get("count", 0))
+
+    saved_daily_pipeline: list[dict[str, Any]] = [
+        {
+            "$match": {
+                "user_id": user_id,
+                "is_saved": True,
+                "saved_at": {"$gte": cutoff},
+            }
+        },
+        {
+            "$lookup": {
+                "from": feed_articles_collection.name,
+                "let": {"article_id": "$article_id"},
+                "pipeline": [
+                    {"$match": {"$expr": {"$eq": ["$_id", "$$article_id"]}}},
+                    {
+                        "$match": {
+                            "feed_id": {"$in": feed_ids},
+                            "is_deleted": False,
+                        }
+                    },
+                    {"$project": {"_id": 1}},
+                ],
+                "as": "article_docs",
+            }
+        },
+        {"$match": {"article_docs.0": {"$exists": True}}},
+        {
+            "$project": {
+                "day": {
+                    "$dateToString": {
+                        "format": "%Y-%m-%d",
+                        "date": "$saved_at",
+                        "timezone": "UTC",
+                    }
+                }
+            }
+        },
+        {
+            "$group": {
+                "_id": "$day",
+                "count": {"$sum": 1},
+            }
+        },
+    ]
+
+    async for doc in user_article_states_collection.aggregate(saved_daily_pipeline):
+        day = str(doc.get("_id", "")).strip()
+        if day in daily_overall:
+            daily_overall[day]["saved"] = int(doc.get("count", 0))
+
+    per_feed_rows: list[FeedStatsRow] = []
+    category_accumulator: dict[ObjectId, dict[str, Any]] = {}
+
+    for feed_id in feed_ids:
+        article_stats = feed_article_stats.get(feed_id, {})
+        state_stats = feed_state_stats.get(feed_id, {})
+
+        articles_total = int(article_stats.get("articles_total", 0))
+        articles_recent = int(article_stats.get("articles_recent", 0))
+        opened_total = int(state_stats.get("opened_total", 0))
+        opened_recent = int(state_stats.get("opened_recent", 0))
+        saved_total = int(state_stats.get("saved_total", 0))
+        saved_recent = int(state_stats.get("saved_recent", 0))
+
+        category_id = feed_to_category.get(feed_id)
+        category_doc = categories_by_id.get(category_id) if isinstance(category_id, ObjectId) else None
+        source_doc = source_map.get(feed_id, {})
+
+        feed_row = FeedStatsRow(
+            scope_id=str(feed_id),
+            name=resolve_source_display_title(source_doc) if isinstance(source_doc, dict) else "Feed",
+            category_id=str(category_id) if isinstance(category_id, ObjectId) else None,
+            category_name=category_doc.name if category_doc is not None else None,
+            articles_total=articles_total,
+            articles_recent=articles_recent,
+            articles_per_day_recent=round(articles_recent / normalized_window_days, 2),
+            opened_total=opened_total,
+            opened_recent=opened_recent,
+            saved_total=saved_total,
+            saved_recent=saved_recent,
+            open_rate_percent=_safe_percent(opened_total, articles_total),
+            save_rate_percent=_safe_percent(saved_total, articles_total),
+        )
+        per_feed_rows.append(feed_row)
+
+        if not isinstance(category_id, ObjectId):
+            continue
+
+        category_stats = category_accumulator.setdefault(
+            category_id,
+            {
+                "articles_total": 0,
+                "articles_recent": 0,
+                "opened_total": 0,
+                "opened_recent": 0,
+                "saved_total": 0,
+                "saved_recent": 0,
+            },
+        )
+        category_stats["articles_total"] += articles_total
+        category_stats["articles_recent"] += articles_recent
+        category_stats["opened_total"] += opened_total
+        category_stats["opened_recent"] += opened_recent
+        category_stats["saved_total"] += saved_total
+        category_stats["saved_recent"] += saved_recent
+
+    per_feed_rows.sort(key=lambda row: (row.articles_recent, row.articles_total, row.name.lower()), reverse=True)
+
+    per_category_rows: list[FeedStatsRow] = []
+    for category_id, stats in category_accumulator.items():
+        category_doc = categories_by_id.get(category_id)
+        category_name = category_doc.name if category_doc is not None else "Category"
+
+        articles_total = int(stats.get("articles_total", 0))
+        articles_recent = int(stats.get("articles_recent", 0))
+        opened_total = int(stats.get("opened_total", 0))
+        opened_recent = int(stats.get("opened_recent", 0))
+        saved_total = int(stats.get("saved_total", 0))
+        saved_recent = int(stats.get("saved_recent", 0))
+
+        per_category_rows.append(
+            FeedStatsRow(
+                scope_id=str(category_id),
+                name=category_name,
+                articles_total=articles_total,
+                articles_recent=articles_recent,
+                articles_per_day_recent=round(articles_recent / normalized_window_days, 2),
+                opened_total=opened_total,
+                opened_recent=opened_recent,
+                saved_total=saved_total,
+                saved_recent=saved_recent,
+                open_rate_percent=_safe_percent(opened_total, articles_total),
+                save_rate_percent=_safe_percent(saved_total, articles_total),
+            )
+        )
+
+    per_category_rows.sort(key=lambda row: (row.articles_recent, row.articles_total, row.name.lower()), reverse=True)
+
+    overall_articles_total = sum(row.articles_total for row in per_feed_rows)
+    overall_articles_recent = sum(row.articles_recent for row in per_feed_rows)
+    overall_opened_total = sum(row.opened_total for row in per_feed_rows)
+    overall_opened_recent = sum(row.opened_recent for row in per_feed_rows)
+    overall_saved_total = sum(row.saved_total for row in per_feed_rows)
+    overall_saved_recent = sum(row.saved_recent for row in per_feed_rows)
+
+    daily_points = [
+        FeedStatsDailyPoint(
+            day=day,
+            published_count=daily_overall[day]["published"],
+            opened_count=daily_overall[day]["opened"],
+            saved_count=daily_overall[day]["saved"],
+        )
+        for day in day_keys
+    ]
+
+    overall = FeedStatsOverall(
+        total_feeds=len(per_feed_rows),
+        total_categories=len(per_category_rows),
+        articles_total=overall_articles_total,
+        articles_recent=overall_articles_recent,
+        articles_per_day_recent=round(overall_articles_recent / normalized_window_days, 2),
+        opened_total=overall_opened_total,
+        opened_recent=overall_opened_recent,
+        saved_total=overall_saved_total,
+        saved_recent=overall_saved_recent,
+        open_rate_percent=_safe_percent(overall_opened_total, overall_articles_total),
+        save_rate_percent=_safe_percent(overall_saved_total, overall_articles_total),
+        daily=daily_points,
+    )
+
+    return FeedStatsResponse(
+        window_days=normalized_window_days,
+        overall=overall,
+        per_category=per_category_rows,
+        per_feed=per_feed_rows,
+    )
+
+
+async def get_feed_stats_context(user_id: str) -> dict[str, Any]:
+    """Build template context payload for the feed stats page."""
+
+    category_payload = await get_categories_with_counts(user_id)
+    return {
+        "categories": category_payload.categories,
+        "all_unread_count": category_payload.all_unread_count,
+        "recently_read_count": category_payload.recently_read_count,
+        "saved_count": category_payload.saved_count,
+    }
 
 
 async def log_feed_operation_error(operation_name: str, exc: Exception) -> None:

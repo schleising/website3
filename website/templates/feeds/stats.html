@@ -1,0 +1,56 @@
+{% extends "feeds/feed-base.html" %}
+
+{% set feed_page_mode = "stats" %}
+
+{% block feeds_content %}
+<section class="feeds-stats" id="feeds-stats-root" data-stats-endpoint="{{ feeds_root_path }}api/stats/">
+  <article class="site-card feed-stats-card">
+    <h5>Overall (Last <span id="feeds-stats-window-days">30</span> Days)</h5>
+    <div class="feeds-stats-kpis" id="feeds-stats-kpis"></div>
+    <div class="feeds-stats-overall-chart" id="feeds-stats-overall-chart" aria-label="Overall daily stats chart"></div>
+  </article>
+
+  <article class="site-card feed-stats-card">
+    <h5>By Category</h5>
+    <div class="feeds-stats-bar-list" id="feeds-stats-category-bars"></div>
+    <div class="feeds-stats-table-wrap">
+      <table class="feeds-stats-table" id="feeds-stats-category-table">
+        <thead>
+          <tr>
+            <th>Category</th>
+            <th>Articles</th>
+            <th>30d</th>
+            <th>Opened</th>
+            <th>Saved</th>
+            <th>Open %</th>
+            <th>Save %</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </article>
+
+  <article class="site-card feed-stats-card">
+    <h5>By Feed</h5>
+    <div class="feeds-stats-bar-list" id="feeds-stats-feed-bars"></div>
+    <div class="feeds-stats-table-wrap">
+      <table class="feeds-stats-table" id="feeds-stats-feed-table">
+        <thead>
+          <tr>
+            <th>Feed</th>
+            <th>Category</th>
+            <th>Articles</th>
+            <th>30d</th>
+            <th>Opened</th>
+            <th>Saved</th>
+            <th>Open %</th>
+            <th>Save %</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </article>
+</section>
+{% endblock %}

@@ -283,3 +283,56 @@ class FeedAdminFeedListResponse(BaseModel):
     """Feeds admin table response payload."""
 
     feeds: list[FeedAdminFeedRow] = Field(default_factory=list)
+
+
+class FeedStatsDailyPoint(BaseModel):
+    """Daily aggregate point used by stats charts."""
+
+    day: str
+    published_count: int = 0
+    opened_count: int = 0
+    saved_count: int = 0
+
+
+class FeedStatsRow(BaseModel):
+    """Aggregate stats row for category/feed breakdown tables."""
+
+    scope_id: str
+    name: str
+    category_id: str | None = None
+    category_name: str | None = None
+    articles_total: int = 0
+    articles_recent: int = 0
+    articles_per_day_recent: float = 0.0
+    opened_total: int = 0
+    opened_recent: int = 0
+    saved_total: int = 0
+    saved_recent: int = 0
+    open_rate_percent: float = 0.0
+    save_rate_percent: float = 0.0
+
+
+class FeedStatsOverall(BaseModel):
+    """Top-level stats summary and overall daily trend points."""
+
+    total_feeds: int = 0
+    total_categories: int = 0
+    articles_total: int = 0
+    articles_recent: int = 0
+    articles_per_day_recent: float = 0.0
+    opened_total: int = 0
+    opened_recent: int = 0
+    saved_total: int = 0
+    saved_recent: int = 0
+    open_rate_percent: float = 0.0
+    save_rate_percent: float = 0.0
+    daily: list[FeedStatsDailyPoint] = Field(default_factory=list)
+
+
+class FeedStatsResponse(BaseModel):
+    """Feed reader stats API response payload."""
+
+    window_days: int = 30
+    overall: FeedStatsOverall
+    per_category: list[FeedStatsRow] = Field(default_factory=list)
+    per_feed: list[FeedStatsRow] = Field(default_factory=list)
