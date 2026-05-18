@@ -421,6 +421,7 @@ class SubscriptionPreferencesResponse(BaseModel):
     can_manage_subscription: bool = False
     ownership_status: str = "none"
     team_ids: list[int] = Field(default_factory=list)
+    subscription_matches_browser: bool = True
 
 
 class SubscriptionOperationResponse(BaseModel):

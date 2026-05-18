@@ -16,6 +16,7 @@ const footballRootPath = footballBasePath === "" ? "/" : `${footballBasePath}/`;
 const serviceWorkerPath = `${footballBasePath}/sw.js`;
 const serviceWorkerScope = footballRootPath;
 const subscriptionPreferencesUrl = `${footballRootPath}subscription/preferences/`;
+const currentUserSubscriptionPreferencesUrl = `${footballRootPath}subscription/preferences/current/`;
 const vapidPublicKey = "BAE-ATyX2xQGdyv9W5vcsI7qzA1FSui3UYNHgKFSKMmR12_7L9xQcVcDz8JbweMOTWb7npz6VMQMQC1BUylu00E";
 
 function getTeamCheckboxes() {
@@ -86,6 +87,11 @@ function statusMessageForOwnership(ownershipStatus, selectedCount) {
     }
 
     return `This browser is subscribed to ${selectedCount} ${countSuffix}. Login or sign up to manage notifications.`;
+}
+
+function statusMessageForRelink(selectedCount) {
+    const countSuffix = selectedCount === 1 ? "team" : "teams";
+    return `Loaded saved preferences for ${selectedCount} ${countSuffix}. Save to relink notifications to this browser.`;
 }
 
 function setStatus(message, isError = false) {
@@ -213,6 +219,24 @@ async function loadPreferences() {
         const subscription = await getCurrentSubscription();
 
         if (!subscription) {
+            if (canManageSubscriptions) {
+                const currentUserData = await requestJson(currentUserSubscriptionPreferencesUrl, "GET");
+
+                if (currentUserData.is_subscribed && Array.isArray(currentUserData.team_ids)) {
+                    const selectedIds = new Set(currentUserData.team_ids.map(id => Number(id)));
+                    getTeamCheckboxes().forEach(checkbox => {
+                        checkbox.checked = selectedIds.has(Number(checkbox.value));
+                    });
+
+                    updateSelectionCount();
+                    syncSelectAllState();
+                    hasActiveSubscription = false;
+                    setActionButtonsDisabled(false);
+                    setStatus(statusMessageForRelink(selectedIds.size));
+                    return;
+                }
+            }
+
             resetToUnsubscribedState();
             return;
         }
@@ -247,11 +271,15 @@ async function loadPreferences() {
 
         updateSelectionCount();
         syncSelectAllState();
-        hasActiveSubscription = true;
+        hasActiveSubscription = data.subscription_matches_browser !== false;
         setActionButtonsDisabled(false);
 
         if (canManageSubscriptions) {
-            setStatus("Loaded current preferences.");
+            if (data.subscription_matches_browser === false) {
+                setStatus(statusMessageForRelink(selectedIds.size));
+            } else {
+                setStatus("Loaded current preferences.");
+            }
             return;
         }
 

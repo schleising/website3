@@ -602,6 +602,27 @@ async def get_push_subscription(
     return PushSubscriptionDocument.model_validate(existing)
 
 
+async def get_latest_push_subscription_for_username(
+    username: str,
+) -> PushSubscriptionDocument | None:
+    if football_push is None:
+        logging.error("No DB connection")
+        return None
+
+    if username.strip() == "":
+        return None
+
+    existing = await football_push.find_one(
+        {"username": username},
+        sort=[("updated_at", -1), ("created_at", -1)],
+    )
+
+    if existing is None:
+        return None
+
+    return PushSubscriptionDocument.model_validate(existing)
+
+
 async def delete_push_subscription(subscription: PushSubscription) -> bool:
     if football_push is None:
         logging.error("No DB connection")

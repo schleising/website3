@@ -37,6 +37,7 @@ from .football_db import (
     get_table_db,
     get_table_db_for_season,
     get_push_subscription,
+    get_latest_push_subscription_for_username,
     upsert_push_subscription,
     delete_push_subscription,
 )
@@ -1467,10 +1468,23 @@ async def get_subscription_preferences(request: Request, payload: SubscriptionLo
     is_logged_in = username != "Anonymous User"
 
     if subscription_doc is None:
+        if is_logged_in:
+            fallback_subscription = await get_latest_push_subscription_for_username(username)
+
+            if fallback_subscription is not None:
+                return SubscriptionPreferencesResponse(
+                    is_subscribed=True,
+                    can_manage_subscription=True,
+                    ownership_status="current_user",
+                    team_ids=sorted(set(fallback_subscription.team_ids)),
+                    subscription_matches_browser=False,
+                )
+
         return SubscriptionPreferencesResponse(
             is_subscribed=False,
             can_manage_subscription=is_logged_in,
             ownership_status="none",
+            subscription_matches_browser=False,
         )
 
     if not is_logged_in:
@@ -1479,6 +1493,7 @@ async def get_subscription_preferences(request: Request, payload: SubscriptionLo
             can_manage_subscription=False,
             ownership_status="logged_out",
             team_ids=sorted(set(subscription_doc.team_ids)),
+            subscription_matches_browser=True,
         )
 
     if subscription_doc.username == username:
@@ -1487,6 +1502,7 @@ async def get_subscription_preferences(request: Request, payload: SubscriptionLo
             can_manage_subscription=True,
             ownership_status="current_user",
             team_ids=sorted(set(subscription_doc.team_ids)),
+            subscription_matches_browser=True,
         )
 
     return SubscriptionPreferencesResponse(
@@ -1494,6 +1510,45 @@ async def get_subscription_preferences(request: Request, payload: SubscriptionLo
         can_manage_subscription=False,
         ownership_status="different_user",
         team_ids=sorted(set(subscription_doc.team_ids)),
+        subscription_matches_browser=True,
+    )
+
+
+@football_router.get(
+    "/subscription/preferences/current",
+    response_model=SubscriptionPreferencesResponse,
+)
+@football_router.get(
+    "/subscription/preferences/current/",
+    response_model=SubscriptionPreferencesResponse,
+)
+async def get_current_user_subscription_preferences(request: Request):
+    username = _request_username(request)
+
+    if username == "Anonymous User":
+        return SubscriptionPreferencesResponse(
+            is_subscribed=False,
+            can_manage_subscription=False,
+            ownership_status="none",
+            subscription_matches_browser=False,
+        )
+
+    subscription_doc = await get_latest_push_subscription_for_username(username)
+
+    if subscription_doc is None:
+        return SubscriptionPreferencesResponse(
+            is_subscribed=False,
+            can_manage_subscription=True,
+            ownership_status="none",
+            subscription_matches_browser=False,
+        )
+
+    return SubscriptionPreferencesResponse(
+        is_subscribed=True,
+        can_manage_subscription=True,
+        ownership_status="current_user",
+        team_ids=sorted(set(subscription_doc.team_ids)),
+        subscription_matches_browser=False,
     )
 
 
