@@ -34,6 +34,12 @@ function handleFeedsCategoryNavigation(event, destinationUrl) {
     const destinationCategory = normaliseFeedsCategoryValue(destinationUrl.searchParams.get("category"));
     const isSamePath = currentPath === destinationPath;
 
+    // Preserve normal browser history when navigating between different feeds pages
+    // (for example Stats -> Reader), and only customize behavior for in-page category switches.
+    if (!isSamePath) {
+        return false;
+    }
+
     if (destinationCategory === "all") {
         if (isSamePath && isCustomFeedsCategory(currentCategory) && window.history.length > 1) {
             event.preventDefault();
