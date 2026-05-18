@@ -1452,6 +1452,7 @@ async def get_article_list(
     user_id: str,
     category_filter: str,
     status_filter: str,
+    feed_filter: str | None = None,
     offset: int = 0,
     limit: int = 10,
 ) -> FeedArticleListResponse:
@@ -1468,6 +1469,13 @@ async def get_article_list(
 
     categories = await list_category_documents(user_id)
     subscriptions = await list_user_subscription_docs(user_id)
+
+    selected_feed_id: ObjectId | None = None
+    if isinstance(feed_filter, str) and feed_filter.strip() != "":
+        try:
+            selected_feed_id = ObjectId(feed_filter.strip())
+        except Exception:
+            selected_feed_id = None
 
     feed_to_category = {
         sub["feed_id"]: sub["category_id"]
@@ -1490,6 +1498,7 @@ async def get_article_list(
             categories_by_id=categories_by_id,
             feed_to_category=feed_to_category,
             truncated_feed_ids=truncated_feed_ids,
+            selected_feed_id=selected_feed_id,
             offset=normalized_offset,
             limit=normalized_limit,
         )
@@ -1509,6 +1518,7 @@ async def get_article_list(
             categories_by_id=categories_by_id,
             feed_to_category=feed_to_category,
             truncated_feed_ids=truncated_feed_ids,
+            selected_feed_id=selected_feed_id,
             offset=normalized_offset,
             limit=normalized_limit,
         )
@@ -1556,6 +1566,13 @@ async def get_article_list(
         for feed_id, category_id in feed_to_category.items()
         if category_id in allowed_category_ids
     ]
+
+    if isinstance(selected_feed_id, ObjectId):
+        allowed_feed_ids = [
+            feed_id
+            for feed_id in allowed_feed_ids
+            if feed_id == selected_feed_id
+        ]
 
     if len(allowed_feed_ids) == 0:
         return FeedArticleListResponse(
@@ -1943,6 +1960,7 @@ async def list_recently_read_cards(
     categories_by_id: dict[ObjectId, FeedCategoryDocument],
     feed_to_category: dict[ObjectId, ObjectId],
     truncated_feed_ids: set[ObjectId],
+    selected_feed_id: ObjectId | None,
     offset: int,
     limit: int,
 ) -> tuple[list[FeedArticleCard], bool]:
@@ -1962,6 +1980,12 @@ async def list_recently_read_cards(
         for feed_id, category_id in feed_to_category.items()
         if category_id in categories_by_id and category_id not in muted_category_ids
     ]
+    if isinstance(selected_feed_id, ObjectId):
+        eligible_feed_ids = [
+            feed_id
+            for feed_id in eligible_feed_ids
+            if feed_id == selected_feed_id
+        ]
     if len(eligible_feed_ids) == 0:
         return [], False
 
@@ -2087,6 +2111,7 @@ async def list_saved_cards(
     categories_by_id: dict[ObjectId, FeedCategoryDocument],
     feed_to_category: dict[ObjectId, ObjectId],
     truncated_feed_ids: set[ObjectId],
+    selected_feed_id: ObjectId | None,
     offset: int,
     limit: int,
 ) -> tuple[list[FeedArticleCard], bool]:
@@ -2100,6 +2125,12 @@ async def list_saved_cards(
         for feed_id, category_id in feed_to_category.items()
         if category_id in categories_by_id
     ]
+    if isinstance(selected_feed_id, ObjectId):
+        eligible_feed_ids = [
+            feed_id
+            for feed_id in eligible_feed_ids
+            if feed_id == selected_feed_id
+        ]
     if len(eligible_feed_ids) == 0:
         return [], False
 
@@ -2635,7 +2666,48 @@ async def export_opml(user_id: str) -> str:
     return ET.tostring(root, encoding="utf-8", xml_declaration=True).decode("utf-8")
 
 
-async def get_feed_reader_context(user_id: str, category_filter: str, status_filter: str) -> dict[str, Any]:
+def build_sidebar_feed_groups(subscription_rows: list[dict[str, Any]]) -> dict[str, Any]:
+    """Build feed groups for expandable sidebar sections."""
+
+    all_feeds: list[dict[str, str]] = []
+    categories: dict[str, list[dict[str, str]]] = {}
+
+    for row in subscription_rows:
+        feed_id = str(row.get("feed_id", "")).strip()
+        if feed_id == "":
+            continue
+
+        title = str(row.get("source_title", "")).strip() or "Feed"
+        category_id = str(row.get("category_id", "")).strip()
+
+        item = {
+            "feed_id": feed_id,
+            "title": title,
+            "category_id": category_id,
+        }
+        all_feeds.append(item)
+
+        if category_id != "":
+            categories.setdefault(category_id, []).append(item)
+
+    all_feeds.sort(key=lambda item: item["title"].lower())
+    for category_feed_items in categories.values():
+        category_feed_items.sort(key=lambda item: item["title"].lower())
+
+    return {
+        "all": all_feeds,
+        "saved": all_feeds,
+        "recently-read": all_feeds,
+        "categories": categories,
+    }
+
+
+async def get_feed_reader_context(
+    user_id: str,
+    category_filter: str,
+    status_filter: str,
+    feed_filter: str | None = None,
+) -> dict[str, Any]:
     """Build template context payload for the feed reader page."""
 
     try:
@@ -2648,17 +2720,21 @@ async def get_feed_reader_context(user_id: str, category_filter: str, status_fil
         user_id,
         category_filter,
         status_filter,
+        feed_filter=feed_filter,
         offset=0,
         limit=10,
     )
+    subscription_rows = await list_user_subscription_rows(user_id)
 
     return {
         "categories": categories_payload.categories,
         "all_unread_count": categories_payload.all_unread_count,
         "recently_read_count": categories_payload.recently_read_count,
         "saved_count": categories_payload.saved_count,
+        "sidebar_feed_groups": build_sidebar_feed_groups(subscription_rows),
         "articles": article_payload.articles,
         "selected_category": category_filter,
+        "selected_feed_id": str(feed_filter or "").strip(),
         "selected_status": article_payload.status,
         "article_has_more": article_payload.has_more,
         "article_next_offset": article_payload.next_offset,
@@ -2678,6 +2754,7 @@ async def get_feed_settings_context(user_id: str) -> dict[str, Any]:
         "all_unread_count": category_payload.all_unread_count,
         "recently_read_count": category_payload.recently_read_count,
         "saved_count": category_payload.saved_count,
+        "sidebar_feed_groups": build_sidebar_feed_groups(subscription_rows),
     }
 
 
@@ -3231,11 +3308,13 @@ async def get_feed_stats_context(user_id: str) -> dict[str, Any]:
     """Build template context payload for the feed stats page."""
 
     category_payload = await get_categories_with_counts(user_id)
+    subscription_rows = await list_user_subscription_rows(user_id)
     return {
         "categories": category_payload.categories,
         "all_unread_count": category_payload.all_unread_count,
         "recently_read_count": category_payload.recently_read_count,
         "saved_count": category_payload.saved_count,
+        "sidebar_feed_groups": build_sidebar_feed_groups(subscription_rows),
     }
 
 

@@ -260,10 +260,21 @@
                 return;
             }
 
+            const panel = link.nextElementSibling instanceof HTMLElement
+                && link.nextElementSibling.classList.contains("feed-sidebar-feed-panel")
+                ? link.nextElementSibling
+                : null;
+
             if (insertionPoint instanceof HTMLElement) {
                 container.insertBefore(link, insertionPoint);
+                if (panel instanceof HTMLElement) {
+                    container.insertBefore(panel, insertionPoint);
+                }
             } else {
                 container.appendChild(link);
+                if (panel instanceof HTMLElement) {
+                    container.appendChild(panel);
+                }
             }
         });
     }

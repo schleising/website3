@@ -23,17 +23,18 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 {% endif %}
-<link rel="stylesheet" href="/css/feeds/feeds.css?v1.0.78">
+<link rel="stylesheet" href="/css/feeds/feeds.css?v1.0.84">
 {% endblock %}
 
 {% block scripts %}
 {% if is_web_app %}
   <script defer src="/js/feeds/pwa.js?v1.0.1"></script>
 {% endif %}
+<script defer src="/js/feeds/sidebar.js?v1.0.6"></script>
 {% if feed_page_mode == "reader" %}
-  <script defer src="/js/feeds/reader.js?v1.0.78"></script>
+  <script defer src="/js/feeds/reader.js?v1.0.79"></script>
 {% elif feed_page_mode == "settings" %}
-<script defer src="/js/feeds/settings.js?v1.0.24"></script>
+<script defer src="/js/feeds/settings.js?v1.0.25"></script>
 {% elif feed_page_mode == "stats" %}
 <script defer src="/js/feeds/stats.js?v1.0.2"></script>
 {% elif feed_page_mode == "admin" %}
@@ -94,6 +95,11 @@ data-category-shortcut="recently-read"
 {% if not show_left_sidebar and request.state.user != None %}
 <a href="https://www.schleising.net/account/logout/" class="sub-level-nav feed-sidebar-link">Logout</a>
 {% endif %}
+<script
+  id="feeds-sidebar-feed-groups"
+  type="application/json"
+  data-feeds-root-path="{{ feeds_root_path }}"
+>{{ sidebar_feed_groups|default({})|tojson }}</script>
 {% endblock %}
 
 {% block footer %}

@@ -194,6 +194,7 @@ async def feed_reader_page(
     request: Request,
     category: str = "all",
     status_filter: Literal["unread", "read", "all"] = "unread",
+    feed_id: str | None = None,
 ):
     """Render the main feed reader page."""
 
@@ -201,7 +202,12 @@ async def feed_reader_page(
     if username is None:
         return _login_redirect_response(request)
 
-    context = await get_feed_reader_context(username, category, status_filter)
+    context = await get_feed_reader_context(
+        username,
+        category,
+        status_filter,
+        feed_filter=feed_id,
+    )
     template_context = _feeds_template_context(request, "Feeds", context)
 
     return TEMPLATES.TemplateResponse(
@@ -355,6 +361,7 @@ async def get_articles(
     request: Request,
     category: str = "all",
     status_filter: Literal["unread", "read", "all"] = "unread",
+    feed_id: str | None = None,
     offset: int = 0,
     limit: int = 10,
 ) -> FeedArticleListResponse:
@@ -365,6 +372,7 @@ async def get_articles(
         username,
         category,
         status_filter,
+        feed_filter=feed_id,
         offset=max(0, int(offset)),
         limit=max(1, min(100, int(limit))),
     )

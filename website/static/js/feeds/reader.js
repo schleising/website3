@@ -21,6 +21,8 @@
     /** @type {string} */
     const selectedStatus = String(root.dataset.selectedStatus || "unread").trim() || "unread";
     /** @type {string} */
+    const selectedFeedId = String(root.dataset.selectedFeedId || "").trim();
+    /** @type {string} */
     const articlesEndpoint = root.dataset.articlesEndpoint || "/feeds/api/articles/";
     /** @type {string} */
     const articleStatusesEndpoint = root.dataset.articleStatusesEndpoint || "/feeds/api/articles/statuses/";
@@ -289,6 +291,9 @@
     function buildArticlesUrl(offset = 0, limitOverride = pageSize, statusOverride = selectedStatus) {
         const params = new URLSearchParams();
         params.set("category", selectedCategory);
+        if (selectedFeedId !== "") {
+            params.set("feed_id", selectedFeedId);
+        }
         params.set("status_filter", String(statusOverride || selectedStatus));
         params.set("offset", String(Math.max(0, Number(offset))));
         params.set("limit", String(Math.max(1, Number(limitOverride))));
