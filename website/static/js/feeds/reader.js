@@ -1654,6 +1654,40 @@
     }
 
     /**
+     * Remove cards that do not match the active filter without waiting for API refresh.
+     */
+    function pruneCardsOutsideCurrentFilter() {
+        const cards = getCards();
+        if (cards.length === 0) {
+            return;
+        }
+
+        let removedCount = 0;
+        cards.forEach(card => {
+            if (isCardIncludedByCurrentFilter(card)) {
+                return;
+            }
+
+            card.remove();
+            removedCount += 1;
+        });
+
+        if (removedCount === 0) {
+            return;
+        }
+
+        const remainingCards = getCards();
+        if (remainingCards.length === 0) {
+            renderInlineEmptyHint();
+            clearCardSelection();
+            return;
+        }
+
+        articleList.classList.remove("is-empty");
+        refreshPagingSentinelObserver();
+    }
+
+    /**
      * Compute the safest offset for the next paging request based on cards that
      * still match the active server-side filter. This avoids skipping pages when
      * local read/save toggles mutate what the backend would include.
@@ -2236,6 +2270,7 @@
         // Refresh interactions should reset viewport without auto-marking cards read.
         suppressTouchScrollReadUntilMs = Date.now() + 2200;
         setReaderViewportScrollTop(0);
+        pruneCardsOutsideCurrentFilter();
 
         try {
             await refreshFeedData();
