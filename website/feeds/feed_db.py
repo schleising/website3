@@ -46,6 +46,14 @@ FEED_VALIDATION_MAX_REDIRECTS = 5
 FEED_VALIDATION_REDIRECT_STATUSES = {301, 302, 303, 307, 308}
 TRUNCATED_SUMMARY_PARAGRAPH_LIMIT = 5
 SEARCH_QUERY_MAX_LENGTH = 160
+FEED_ARTICLE_TEXT_INDEX_CACHE_TTL = timedelta(minutes=10)
+FEED_ARTICLE_TEXT_INDEX_KEYS: list[tuple[str, str]] = [
+    ("title", "text"),
+    ("summary_html", "text"),
+]
+
+_feed_article_text_index_available_cache: bool | None = None
+_feed_article_text_index_checked_at: datetime | None = None
 
 SUMMARY_ANCHOR_HREF_RE = re.compile(
     r'(?P<prefix>\bhref\s*=\s*)(?P<quote>["\']?)(?P<href>[^"\'\s>]+)(?P=quote)',
@@ -76,20 +84,150 @@ def normalize_article_search_query(search_query: str | None) -> str:
     return normalized[:SEARCH_QUERY_MAX_LENGTH]
 
 
-def build_article_search_filter(search_query: str | None) -> dict[str, Any] | None:
-    """Return a MongoDB filter for case-insensitive title/body substring search."""
+def build_article_fallback_search_filter(search_query: str | None) -> dict[str, Any] | None:
+    """Return a minimal regex fallback when full-text search is unavailable."""
 
     normalized = normalize_article_search_query(search_query)
     if normalized == "":
         return None
 
-    escaped = re.escape(normalized)
+    terms = [token.casefold() for token in re.findall(r"[A-Za-z0-9]+", normalized)]
+    if len(terms) == 0:
+        escaped = re.escape(normalized)
+        return {
+            "$or": [
+                {"title": {"$regex": escaped, "$options": "i"}},
+                {"summary_html": {"$regex": escaped, "$options": "i"}},
+            ]
+        }
+
+    unique_terms = list(dict.fromkeys(terms))
+    per_term_filters: list[dict[str, Any]] = []
+    for term in unique_terms:
+        term_regex = rf"\b{re.escape(term)}\b"
+        per_term_filters.append(
+            {
+                "$or": [
+                    {"title": {"$regex": term_regex, "$options": "i"}},
+                    {"summary_html": {"$regex": term_regex, "$options": "i"}},
+                ]
+            }
+        )
+
+    if len(per_term_filters) == 1:
+        return per_term_filters[0]
+
     return {
-        "$or": [
-            {"title": {"$regex": escaped, "$options": "i"}},
-            {"summary_html": {"$regex": escaped, "$options": "i"}},
-        ]
+        "$and": per_term_filters,
     }
+
+
+def build_article_text_search_filter(search_query: str | None) -> dict[str, Any] | None:
+    """Return a MongoDB full-text query for natural-language matching."""
+
+    normalized = normalize_article_search_query(search_query)
+    if normalized == "":
+        return None
+
+    return {
+        "$text": {
+            "$search": normalized,
+            "$caseSensitive": False,
+            "$diacriticSensitive": False,
+        }
+    }
+
+
+def build_article_search_filter(
+    search_query: str | None,
+    *,
+    use_text_search: bool,
+) -> dict[str, Any] | None:
+    """Build article search filter using text search when available."""
+
+    if use_text_search:
+        return build_article_text_search_filter(search_query)
+
+    return build_article_fallback_search_filter(search_query)
+
+
+def merge_article_search_filter(
+    base_query: dict[str, Any],
+    search_filter: dict[str, Any] | None,
+) -> dict[str, Any]:
+    """Merge a search filter into a base MongoDB query."""
+
+    if not isinstance(search_filter, dict):
+        return base_query
+
+    if "$text" in search_filter and len(search_filter) == 1:
+        merged_query = dict(base_query)
+        merged_query["$text"] = search_filter["$text"]
+        return merged_query
+
+    return {
+        "$and": [base_query, search_filter],
+    }
+
+
+async def feed_articles_text_search_available() -> bool:
+    """Return True when feed_articles has a usable text index."""
+
+    global _feed_article_text_index_available_cache
+    global _feed_article_text_index_checked_at
+
+    now = utc_now()
+    if (
+        _feed_article_text_index_available_cache is not None
+        and isinstance(_feed_article_text_index_checked_at, datetime)
+        and now - _feed_article_text_index_checked_at <= FEED_ARTICLE_TEXT_INDEX_CACHE_TTL
+    ):
+        return _feed_article_text_index_available_cache
+
+    if feed_articles_collection is None:
+        _feed_article_text_index_available_cache = False
+        _feed_article_text_index_checked_at = now
+        return False
+
+    try:
+        index_info = await feed_articles_collection.index_information()
+    except Exception as ex:
+        logging.warning("Unable to inspect feed article indexes for text search: %s", ex)
+        _feed_article_text_index_available_cache = False
+        _feed_article_text_index_checked_at = now
+        return False
+
+    has_text_index = False
+    for meta in index_info.values():
+        key_spec = meta.get("key")
+        if not isinstance(key_spec, list):
+            continue
+
+        for key_pair in key_spec:
+            if not isinstance(key_pair, (list, tuple)) or len(key_pair) != 2:
+                continue
+
+            if str(key_pair[1]).lower() == "text":
+                has_text_index = True
+                break
+
+        if has_text_index:
+            break
+
+    if not has_text_index:
+        try:
+            await feed_articles_collection.create_index(
+                FEED_ARTICLE_TEXT_INDEX_KEYS,
+                default_language="english",
+                weights={"title": 8, "summary_html": 2},
+            )
+            has_text_index = True
+        except Exception as ex:
+            logging.warning("Unable to create feed article text index: %s", ex)
+
+    _feed_article_text_index_available_cache = has_text_index
+    _feed_article_text_index_checked_at = now
+    return has_text_index
 
 
 def format_datetime_utc_iso(value: Any) -> str:
@@ -1492,6 +1630,9 @@ async def get_article_list(
     normalized_offset = max(0, int(offset))
     normalized_limit = max(1, int(limit))
     normalized_search_query = normalize_article_search_query(search_query)
+    use_text_search = False
+    if normalized_search_query != "":
+        use_text_search = await feed_articles_text_search_available()
 
     normalized_status: Literal["unread", "read", "all"]
     if status_filter in {"unread", "read", "all"}:
@@ -1532,6 +1673,7 @@ async def get_article_list(
             truncated_feed_ids=truncated_feed_ids,
             selected_feed_id=selected_feed_id,
             search_query=normalized_search_query,
+            use_text_search=use_text_search,
             offset=normalized_offset,
             limit=normalized_limit,
         )
@@ -1553,6 +1695,7 @@ async def get_article_list(
             truncated_feed_ids=truncated_feed_ids,
             selected_feed_id=selected_feed_id,
             search_query=normalized_search_query,
+            use_text_search=use_text_search,
             offset=normalized_offset,
             limit=normalized_limit,
         )
@@ -1633,6 +1776,7 @@ async def get_article_list(
         read_state_ids=read_state_ids,
         recent_read_state_ids=recent_read_state_ids,
         search_query=normalized_search_query,
+        use_text_search=use_text_search,
         status_filter=normalized_status,
         offset=normalized_offset,
         limit=normalized_limit,
@@ -1853,6 +1997,7 @@ async def list_cards_for_feed_ids(
     read_state_ids: set[ObjectId],
     recent_read_state_ids: set[ObjectId],
     search_query: str,
+    use_text_search: bool,
     status_filter: str,
     offset: int,
     limit: int,
@@ -1877,10 +2022,12 @@ async def list_cards_for_feed_ids(
         # the user performs a full page refresh.
         base_query["_id"] = {"$nin": list(read_state_ids)}
 
-    search_filter = build_article_search_filter(search_query)
+    search_filter = build_article_search_filter(
+        search_query,
+        use_text_search=use_text_search,
+    )
 
-    # Match frontend ordering: publication date ascending, with undated articles
-    # treated as "infinite" and therefore placed at the end.
+    # Show newest-first by publication date, while leaving undated articles last.
 
     dated_query = {
         **base_query,
@@ -1894,13 +2041,8 @@ async def list_cards_for_feed_ids(
         ],
     }
 
-    if isinstance(search_filter, dict):
-        dated_query = {
-            "$and": [dated_query, search_filter],
-        }
-        undated_query = {
-            "$and": [undated_query, search_filter],
-        }
+    dated_query = merge_article_search_filter(dated_query, search_filter)
+    undated_query = merge_article_search_filter(undated_query, search_filter)
 
     dated_total = await feed_articles_collection.count_documents(dated_query)
     dated_skip = min(offset, dated_total)
@@ -1909,7 +2051,7 @@ async def list_cards_for_feed_ids(
     dated_docs = [
         doc
         async for doc in feed_articles_collection.find(dated_query)
-        .sort([("published_at", ASCENDING), ("_id", ASCENDING)])
+        .sort([("published_at", DESCENDING), ("_id", DESCENDING)])
         .skip(dated_skip)
         .limit(limit + 1)
     ]
@@ -1922,7 +2064,7 @@ async def list_cards_for_feed_ids(
         undated_docs = [
             doc
             async for doc in feed_articles_collection.find(undated_query)
-            .sort("_id", ASCENDING)
+            .sort("_id", DESCENDING)
             .skip(undated_skip)
             .limit(remaining_limit + 1)
         ]
@@ -2009,6 +2151,7 @@ async def list_recently_read_cards(
     truncated_feed_ids: set[ObjectId],
     selected_feed_id: ObjectId | None,
     search_query: str,
+    use_text_search: bool,
     offset: int,
     limit: int,
 ) -> tuple[list[FeedArticleCard], bool]:
@@ -2037,18 +2180,34 @@ async def list_recently_read_cards(
     if len(eligible_feed_ids) == 0:
         return [], False
 
-    search_filter = build_article_search_filter(search_query)
-    lookup_pipeline: list[dict[str, Any]] = [
-        {"$match": {"$expr": {"$eq": ["$_id", "$$article_id"]}}},
-        {
-            "$match": {
-                "is_deleted": False,
-                "feed_id": {"$in": eligible_feed_ids},
+    search_filter = build_article_search_filter(
+        search_query,
+        use_text_search=use_text_search,
+    )
+
+    if use_text_search and isinstance(search_filter, dict) and "$text" in search_filter:
+        lookup_pipeline: list[dict[str, Any]] = [
+            {
+                "$match": {
+                    "$expr": {"$eq": ["$_id", "$$article_id"]},
+                    "is_deleted": False,
+                    "feed_id": {"$in": eligible_feed_ids},
+                    "$text": search_filter["$text"],
+                }
             }
-        },
-    ]
-    if isinstance(search_filter, dict):
-        lookup_pipeline.append({"$match": search_filter})
+        ]
+    else:
+        lookup_pipeline = [
+            {"$match": {"$expr": {"$eq": ["$_id", "$$article_id"]}}},
+            {
+                "$match": {
+                    "is_deleted": False,
+                    "feed_id": {"$in": eligible_feed_ids},
+                }
+            },
+        ]
+        if isinstance(search_filter, dict):
+            lookup_pipeline.append({"$match": search_filter})
 
     threshold = recently_read_cutoff()
     pipeline: list[dict[str, Any]] = [
@@ -2167,6 +2326,7 @@ async def list_saved_cards(
     truncated_feed_ids: set[ObjectId],
     selected_feed_id: ObjectId | None,
     search_query: str,
+    use_text_search: bool,
     offset: int,
     limit: int,
 ) -> tuple[list[FeedArticleCard], bool]:
@@ -2189,18 +2349,34 @@ async def list_saved_cards(
     if len(eligible_feed_ids) == 0:
         return [], False
 
-    search_filter = build_article_search_filter(search_query)
-    lookup_pipeline: list[dict[str, Any]] = [
-        {"$match": {"$expr": {"$eq": ["$_id", "$$article_id"]}}},
-        {
-            "$match": {
-                "is_deleted": False,
-                "feed_id": {"$in": eligible_feed_ids},
+    search_filter = build_article_search_filter(
+        search_query,
+        use_text_search=use_text_search,
+    )
+
+    if use_text_search and isinstance(search_filter, dict) and "$text" in search_filter:
+        lookup_pipeline: list[dict[str, Any]] = [
+            {
+                "$match": {
+                    "$expr": {"$eq": ["$_id", "$$article_id"]},
+                    "is_deleted": False,
+                    "feed_id": {"$in": eligible_feed_ids},
+                    "$text": search_filter["$text"],
+                }
             }
-        },
-    ]
-    if isinstance(search_filter, dict):
-        lookup_pipeline.append({"$match": search_filter})
+        ]
+    else:
+        lookup_pipeline = [
+            {"$match": {"$expr": {"$eq": ["$_id", "$$article_id"]}}},
+            {
+                "$match": {
+                    "is_deleted": False,
+                    "feed_id": {"$in": eligible_feed_ids},
+                }
+            },
+        ]
+        if isinstance(search_filter, dict):
+            lookup_pipeline.append({"$match": search_filter})
 
     pipeline: list[dict[str, Any]] = [
         {

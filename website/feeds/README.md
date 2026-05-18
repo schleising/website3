@@ -504,12 +504,14 @@ sequenceDiagram
 	1. Article title.
 	2. Article body text (derived from summary/body content).
 4. Search matching (clarification of matching mode question):
-	1. Initial matching mode is case-insensitive substring matching.
-	2. Example: query `climate` matches `Climate`, `climate`, and `microclimate`.
-	3. Phrase/proximity/advanced operators are explicitly out of scope for the first iteration and can be added later.
+	1. Matching mode is MongoDB full-text search with English language stemming.
+	2. Examples:
+		1. query `hole` matches `holes` but not `whole`.
+		2. query `run` matches `run`, `running`, and `ran`.
+	3. Matching is case-insensitive and token-based (word boundaries), not raw substring scanning.
 5. Query safety and performance safeguards:
 	1. Sanitize and length-limit incoming `search` query values.
-	2. Start with simple matching, then introduce indexed/text-search optimization if profiling indicates need.
+	2. Use a text index on `title` and `summary_html` for consistent natural-language matching and query performance.
 
 ### 6. Frontend UX and Interaction Design
 
