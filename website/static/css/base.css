@@ -357,10 +357,11 @@ video {
         top: 3.3rem;
         bottom: auto;
         width: max-content;
-        max-height: none;
+        max-height: calc(100dvh - 3.9rem);
         z-index: 12;
         display: none;
-        overflow-y: visible;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
         border-radius: 0.78rem;
         background: linear-gradient(180deg, #fbfdff 0%, #edf5ff 100%);
         border: 0.0625rem solid var(--line);
