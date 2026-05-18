@@ -23,7 +23,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 {% endif %}
-<link rel="stylesheet" href="/css/feeds/feeds.css?v1.0.90">
+<link rel="stylesheet" href="/css/feeds/feeds.css?v1.0.92">
 {% endblock %}
 
 {% block scripts %}
@@ -32,7 +32,7 @@
 {% endif %}
 <script defer src="/js/feeds/sidebar.js?v1.0.12"></script>
 {% if feed_page_mode in ["reader", "search"] %}
-  <script defer src="/js/feeds/reader.js?v1.0.83"></script>
+  <script defer src="/js/feeds/reader.js?v1.0.84"></script>
 {% elif feed_page_mode == "settings" %}
 <script defer src="/js/feeds/settings.js?v1.0.25"></script>
 {% elif feed_page_mode == "stats" %}
@@ -111,7 +111,7 @@ data-category-shortcut="recently-read"
 {% endblock %}
 
 {% block content %}
-<div class="feeds-page">
+<div class="feeds-page feeds-page-{{ feed_page_mode|default('reader') }}">
 {% block feeds_content %}{% endblock %}
 </div>
 {% endblock %}

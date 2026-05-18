@@ -33,6 +33,10 @@
 
     /** @type {HTMLElement} */
     const scrollContainer = (() => {
+        if (isSearchPage) {
+            return articleList;
+        }
+
         const contentContainer = root.closest("#content");
         if (contentContainer instanceof HTMLElement) {
             return contentContainer;

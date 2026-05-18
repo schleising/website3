@@ -69,27 +69,31 @@
   data-csrf-token="{{ request.state.csrf_token|default('') }}"
 >
   {% if feed_page_mode == "search" %}
-  <form class="site-card feeds-search-form" method="get" action="{{ feeds_root_path }}search/" id="feeds-search-form">
-    <label for="feeds-search-input" class="feeds-search-label">Search Your Feed Articles</label>
-    <div class="feeds-search-controls">
-      <input
-        id="feeds-search-input"
-        class="feeds-search-input"
-        type="search"
-        name="search"
-        value="{{ selected_search|default('') }}"
-        placeholder="Search titles and article bodies"
-        maxlength="160"
-        autocomplete="off"
-      />
-      <input type="hidden" name="status_filter" value="{{ selected_status|default('all') }}" />
-      {% if selected_feed_id %}
-      <input type="hidden" name="feed_id" value="{{ selected_feed_id }}" />
-      {% endif %}
-      <button type="submit" class="btn btn-primary feeds-search-submit">Search</button>
-      <a class="btn feeds-search-clear" href="{{ feeds_root_path }}search/">Clear</a>
+  <div class="feeds-search-layout">
+    <div class="feeds-search-toolbar-container">
+      <form class="site-card feeds-search-form" method="get" action="{{ feeds_root_path }}search/" id="feeds-search-form">
+        <label for="feeds-search-input" class="feeds-search-label">Search Your Feed Articles</label>
+        <div class="feeds-search-controls">
+          <input
+            id="feeds-search-input"
+            class="feeds-search-input"
+            type="search"
+            name="search"
+            value="{{ selected_search|default('') }}"
+            placeholder="Search titles and article bodies"
+            maxlength="160"
+            autocomplete="off"
+          />
+          <input type="hidden" name="status_filter" value="{{ selected_status|default('all') }}" />
+          {% if selected_feed_id %}
+          <input type="hidden" name="feed_id" value="{{ selected_feed_id }}" />
+          {% endif %}
+          <button type="submit" class="btn btn-primary feeds-search-submit">Search</button>
+          <a class="btn feeds-search-clear" href="{{ feeds_root_path }}search/">Clear</a>
+        </div>
+      </form>
     </div>
-  </form>
+    <div class="site-card feeds-search-results-container" id="feeds-search-results-container">
   {% endif %}
   <div id="feeds-article-list" class="feeds-article-list{% if articles|length == 0 %} is-empty{% endif %}">
     {% if articles|length == 0 %}
@@ -173,5 +177,9 @@
     {% endfor %}
     {% endif %}
   </div>
+  {% if feed_page_mode == "search" %}
+    </div>
+  </div>
+  {% endif %}
 </section>
 {% endblock %}
