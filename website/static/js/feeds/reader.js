@@ -39,6 +39,8 @@
 
     const categoriesEndpoint = root.dataset.categoriesEndpoint || "/feeds/api/categories/";
     /** @type {string} */
+    const markOpenEndpointTemplate = root.dataset.markOpenEndpointTemplate || "";
+    /** @type {string} */
     const markReadEndpointTemplate = root.dataset.markReadEndpointTemplate || "";
     /** @type {string} */
     const markUnreadEndpointTemplate = root.dataset.markUnreadEndpointTemplate || "";
@@ -97,6 +99,8 @@
     /** @type {number} */
     let selectedIndex = -1;
 
+    /** @type {Set<string>} */
+    const pendingOpenIds = new Set();
     /** @type {Set<string>} */
     const pendingReadIds = new Set();
     /** @type {Set<string>} */
@@ -207,6 +211,9 @@
         th: new Set(["colspan", "rowspan"]),
         td: new Set(["colspan", "rowspan"]),
     };
+
+    /** @type {Set<string>} */
+    const sessionOpenedArticleIds = new Set();
 
     /** @type {Set<string>} */
     const sessionReadArticleIds = new Set();
@@ -969,6 +976,16 @@
     }
 
     /**
+     * Build mark-open endpoint from a card article ID.
+     *
+     * @param {string} articleId
+     * @returns {string}
+     */
+    function buildMarkOpenUrl(articleId) {
+        return markOpenEndpointTemplate.replace("__ARTICLE_ID__", encodeURIComponent(articleId));
+    }
+
+    /**
      * Build mark-unread endpoint from a card article ID.
      *
      * @param {string} articleId
@@ -1030,7 +1047,46 @@
         const link = card.dataset.articleLink || "";
         openInNewTab(link);
 
+        await markCardOpened(card);
         await markCardRead(card);
+    }
+
+    /**
+     * Mark a card as explicitly opened through the API.
+     *
+     * @param {HTMLElement} card
+     * @returns {Promise<void>}
+     */
+    async function markCardOpened(card) {
+        const articleId = card.dataset.articleId || "";
+        if (articleId === "" || markOpenEndpointTemplate.trim() === "") {
+            return;
+        }
+
+        if (sessionOpenedArticleIds.has(articleId) || pendingOpenIds.has(articleId)) {
+            return;
+        }
+
+        pendingOpenIds.add(articleId);
+
+        try {
+            const response = await fetch(buildMarkOpenUrl(articleId), {
+                method: "POST",
+                headers: {
+                    "X-CSRF-Token": csrfToken,
+                },
+            });
+
+            if (!response.ok) {
+                return;
+            }
+
+            sessionOpenedArticleIds.add(articleId);
+        } catch (_error) {
+            // Ignore open-tracking failures; article navigation/read state still proceeds.
+        } finally {
+            pendingOpenIds.delete(articleId);
+        }
     }
 
     /**
@@ -2768,6 +2824,7 @@
         }
 
         if (target.closest(".feed-article-title a")) {
+            markCardOpened(card);
             markCardRead(card);
             return;
         }
@@ -2796,6 +2853,24 @@
             selectedIndex = index;
             cards.forEach((entry, idx) => entry.classList.toggle("is-selected", idx === index));
         }
+    });
+
+    articleList.addEventListener("contextmenu", event => {
+        const target = /** @type {HTMLElement | null} */ (event.target instanceof HTMLElement ? event.target : null);
+        if (!target) {
+            return;
+        }
+
+        if (!target.closest(".feed-article-title a")) {
+            return;
+        }
+
+        const card = target.closest(".feed-article-card");
+        if (!(card instanceof HTMLElement)) {
+            return;
+        }
+
+        markCardOpened(card);
     });
 
     if (useElementScrollContainer) {

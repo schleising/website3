@@ -579,18 +579,24 @@ async def _merge_user_article_state(
             )
             continue
 
+        source_is_opened = bool(source_state.get("is_opened"))
         source_is_read = bool(source_state.get("is_read"))
         source_is_saved = bool(source_state.get("is_saved"))
+        target_is_opened = bool(target_state.get("is_opened"))
         target_is_read = bool(target_state.get("is_read"))
         target_is_saved = bool(target_state.get("is_saved"))
 
+        source_opened_at = _as_utc_datetime(source_state.get("opened_at"))
+        target_opened_at = _as_utc_datetime(target_state.get("opened_at"))
         source_read_at = _as_utc_datetime(source_state.get("read_at"))
         target_read_at = _as_utc_datetime(target_state.get("read_at"))
         source_saved_at = _as_utc_datetime(source_state.get("saved_at"))
         target_saved_at = _as_utc_datetime(target_state.get("saved_at"))
 
+        merged_is_opened = target_is_opened or source_is_opened
         merged_is_read = target_is_read or source_is_read
         merged_is_saved = target_is_saved or source_is_saved
+        merged_opened_at = _latest_datetime(target_opened_at, source_opened_at)
         merged_read_at = _latest_datetime(target_read_at, source_read_at)
         merged_saved_at = _latest_datetime(target_saved_at, source_saved_at)
 
@@ -598,6 +604,8 @@ async def _merge_user_article_state(
             {"_id": target_state["_id"]},
             {
                 "$set": {
+                    "is_opened": merged_is_opened,
+                    "opened_at": merged_opened_at,
                     "is_read": merged_is_read,
                     "read_at": merged_read_at,
                     "is_saved": merged_is_saved,
@@ -2241,6 +2249,54 @@ async def mark_article_read(user_id: str, article_id: str) -> bool:
     return True
 
 
+async def mark_article_opened(user_id: str, article_id: str) -> bool:
+    """Mark an article as explicitly opened for a user."""
+
+    if user_article_states_collection is None:
+        return False
+
+    try:
+        article_object_id = ObjectId(article_id)
+    except Exception:
+        return False
+
+    now = utc_now()
+
+    await user_article_states_collection.update_one(
+        {"user_id": user_id, "article_id": article_object_id},
+        {
+            "$set": {
+                "is_opened": True,
+                "updated_at": now,
+            },
+            "$setOnInsert": {
+                "opened_at": now,
+                "created_at": now,
+            },
+        },
+        upsert=True,
+    )
+
+    await user_article_states_collection.update_one(
+        {
+            "user_id": user_id,
+            "article_id": article_object_id,
+            "$or": [
+                {"opened_at": {"$exists": False}},
+                {"opened_at": None},
+            ],
+        },
+        {
+            "$set": {
+                "opened_at": now,
+                "updated_at": now,
+            }
+        },
+    )
+
+    return True
+
+
 async def mark_article_unread(user_id: str, article_id: str) -> bool:
     """Mark an article as unread for a user."""
 
@@ -2817,7 +2873,7 @@ async def get_feed_stats(user_id: str, window_days: int = 30) -> FeedStatsRespon
             "$match": {
                 "user_id": user_id,
                 "$or": [
-                    {"is_read": True},
+                    {"is_opened": True},
                     {"is_saved": True},
                 ],
             }
@@ -2848,15 +2904,15 @@ async def get_feed_stats(user_id: str, window_days: int = 30) -> FeedStatsRespon
             "$group": {
                 "_id": "$article_docs.feed_id",
                 "opened_total": {
-                    "$sum": {"$cond": [{"$eq": ["$is_read", True]}, 1, 0]}
+                    "$sum": {"$cond": [{"$eq": ["$is_opened", True]}, 1, 0]}
                 },
                 "opened_recent": {
                     "$sum": {
                         "$cond": [
                             {
                                 "$and": [
-                                    {"$eq": ["$is_read", True]},
-                                    {"$gte": ["$read_at", cutoff]},
+                                    {"$eq": ["$is_opened", True]},
+                                    {"$gte": ["$opened_at", cutoff]},
                                 ]
                             },
                             1,
@@ -2943,12 +2999,12 @@ async def get_feed_stats(user_id: str, window_days: int = 30) -> FeedStatsRespon
         if day in daily_overall:
             daily_overall[day]["published"] = int(doc.get("count", 0))
 
-    read_daily_pipeline: list[dict[str, Any]] = [
+    opened_daily_pipeline: list[dict[str, Any]] = [
         {
             "$match": {
                 "user_id": user_id,
-                "is_read": True,
-                "read_at": {"$gte": cutoff},
+                "is_opened": True,
+                "opened_at": {"$gte": cutoff},
             }
         },
         {
@@ -2974,7 +3030,7 @@ async def get_feed_stats(user_id: str, window_days: int = 30) -> FeedStatsRespon
                 "day": {
                     "$dateToString": {
                         "format": "%Y-%m-%d",
-                        "date": "$read_at",
+                        "date": "$opened_at",
                         "timezone": "UTC",
                     }
                 }
@@ -2988,7 +3044,7 @@ async def get_feed_stats(user_id: str, window_days: int = 30) -> FeedStatsRespon
         },
     ]
 
-    async for doc in user_article_states_collection.aggregate(read_daily_pipeline):
+    async for doc in user_article_states_collection.aggregate(opened_daily_pipeline):
         day = str(doc.get("_id", "")).strip()
         if day in daily_overall:
             daily_overall[day]["opened"] = int(doc.get("count", 0))

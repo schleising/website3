@@ -84,13 +84,15 @@ class UserFeedSubscriptionDocument(BaseModel):
 
 
 class UserArticleStateDocument(BaseModel):
-    """Stores user read/save state for an article."""
+    """Stores user open/read/save state for an article."""
 
     model_config = ConfigDict(populate_by_name=True)
 
     id: PyObjectId | None = Field(default=None, alias="_id")
     user_id: str
     article_id: PyObjectId
+    is_opened: bool = False
+    opened_at: datetime | None = None
     is_read: bool = False
     read_at: datetime | None = None
     is_saved: bool = False

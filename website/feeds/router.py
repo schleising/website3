@@ -24,6 +24,7 @@ from .feed_db import (
     get_feed_stats_context,
     list_feed_admin_rows,
     import_opml,
+    mark_article_opened,
     mark_article_read,
     mark_article_saved,
     mark_article_unread,
@@ -544,6 +545,27 @@ async def mark_article_as_read(
         )
 
     return {"article_id": article_id, "is_read": True}
+
+
+@feeds_router.post("/api/articles/{article_id}/open")
+@feeds_router.post("/api/articles/{article_id}/open/")
+async def mark_article_as_opened(
+    request: Request,
+    article_id: str,
+    _: None = Depends(validate_csrf),
+) -> dict[str, str | bool]:
+    """Mark an article as explicitly opened for the authenticated user."""
+
+    username = _require_logged_in_user(request)
+    success = await mark_article_opened(username, article_id)
+
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid article ID.",
+        )
+
+    return {"article_id": article_id, "is_opened": True}
 
 
 @feeds_router.post("/api/articles/{article_id}/unread")
