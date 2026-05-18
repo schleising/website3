@@ -238,6 +238,7 @@ async def feed_search_page(
         status_filter,
         feed_filter=feed_id,
         search_query=search,
+        require_search_query=True,
     )
     context["reader_page_mode"] = "search"
     template_context = _feeds_template_context(request, "Feed Search", context)
@@ -420,12 +421,15 @@ async def get_articles(
     if isinstance(search, str) and search.strip() != "" and "status_filter" not in request.query_params:
         effective_status_filter = "all"
 
+    require_search_query = "search" in request.query_params
+
     return await get_article_list(
         username,
         category,
         effective_status_filter,
         feed_filter=feed_id,
         search_query=search,
+        require_search_query=require_search_query,
         offset=max(0, int(offset)),
         limit=max(1, min(100, int(limit))),
     )

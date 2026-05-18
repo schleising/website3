@@ -1622,6 +1622,7 @@ async def get_article_list(
     status_filter: str,
     feed_filter: str | None = None,
     search_query: str | None = None,
+    require_search_query: bool = False,
     offset: int = 0,
     limit: int = 10,
 ) -> FeedArticleListResponse:
@@ -1630,15 +1631,35 @@ async def get_article_list(
     normalized_offset = max(0, int(offset))
     normalized_limit = max(1, int(limit))
     normalized_search_query = normalize_article_search_query(search_query)
-    use_text_search = False
-    if normalized_search_query != "":
-        use_text_search = await feed_articles_text_search_available()
 
     normalized_status: Literal["unread", "read", "all"]
     if status_filter in {"unread", "read", "all"}:
         normalized_status = cast(Literal["unread", "read", "all"], status_filter)
     else:
         normalized_status = "unread"
+
+    if require_search_query and normalized_search_query == "":
+        response_status: Literal["unread", "read", "all"]
+        if category_filter == "recently-read":
+            response_status = "read"
+        elif category_filter == "saved":
+            response_status = "all"
+        else:
+            response_status = normalized_status
+
+        return FeedArticleListResponse(
+            category=category_filter,
+            status=response_status,
+            articles=[],
+            offset=normalized_offset,
+            limit=normalized_limit,
+            has_more=False,
+            next_offset=normalized_offset,
+        )
+
+    use_text_search = False
+    if normalized_search_query != "":
+        use_text_search = await feed_articles_text_search_available()
 
     categories = await list_category_documents(user_id)
     subscriptions = await list_user_subscription_docs(user_id)
@@ -3143,6 +3164,7 @@ async def get_feed_reader_context(
     status_filter: str,
     feed_filter: str | None = None,
     search_query: str | None = None,
+    require_search_query: bool = False,
 ) -> dict[str, Any]:
     """Build template context payload for the feed reader page."""
 
@@ -3158,6 +3180,7 @@ async def get_feed_reader_context(
         status_filter,
         feed_filter=feed_filter,
         search_query=search_query,
+        require_search_query=require_search_query,
         offset=0,
         limit=10,
     )

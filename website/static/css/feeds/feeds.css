@@ -18,6 +18,15 @@
     padding: 0.65rem 0.72rem;
 }
 
+.feeds-reader[data-is-search-page="true"] .feeds-search-form {
+    position: sticky;
+    top: 0.4rem;
+    z-index: 7;
+    background: color-mix(in srgb, var(--surface), #ffffff 14%);
+    border-color: color-mix(in srgb, var(--line), #ffffff 35%);
+    backdrop-filter: blur(0.25rem);
+}
+
 .feeds-search-label {
     margin: 0;
     color: var(--text-soft);

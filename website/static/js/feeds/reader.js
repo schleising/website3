@@ -300,7 +300,7 @@
     function buildArticlesUrl(offset = 0, limitOverride = pageSize, statusOverride = selectedStatus) {
         const params = new URLSearchParams();
         params.set("category", selectedCategory);
-        if (selectedSearch !== "") {
+        if (isSearchPage || selectedSearch !== "") {
             params.set("search", selectedSearch);
         }
         if (selectedFeedId !== "") {
