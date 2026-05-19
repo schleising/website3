@@ -1838,6 +1838,8 @@ async def get_article_list(
     if normalized_search_query != "":
         use_text_search = await feed_articles_text_search_available()
 
+    newest_first = normalized_search_query != ""
+
     categories = await list_category_documents(user_id)
     subscriptions = await list_user_subscription_docs(user_id)
 
@@ -1894,6 +1896,7 @@ async def get_article_list(
             selected_feed_id=selected_feed_id,
             search_query=normalized_search_query,
             use_text_search=use_text_search,
+            newest_first=newest_first,
             offset=normalized_offset,
             limit=normalized_limit,
         )
@@ -1975,6 +1978,7 @@ async def get_article_list(
         recent_read_state_ids=recent_read_state_ids,
         search_query=normalized_search_query,
         use_text_search=use_text_search,
+        newest_first=newest_first,
         status_filter=normalized_status,
         offset=normalized_offset,
         limit=normalized_limit,
@@ -2196,6 +2200,7 @@ async def list_cards_for_feed_ids(
     recent_read_state_ids: set[ObjectId],
     search_query: str,
     use_text_search: bool,
+    newest_first: bool,
     status_filter: str,
     offset: int,
     limit: int,
@@ -2225,7 +2230,8 @@ async def list_cards_for_feed_ids(
         use_text_search=use_text_search,
     )
 
-    # Show newest-first by publication date, while leaving undated articles last.
+    # Show oldest-first by default, while keeping search results newest-first.
+    sort_direction = DESCENDING if newest_first else ASCENDING
 
     dated_query = {
         **base_query,
@@ -2249,7 +2255,7 @@ async def list_cards_for_feed_ids(
     dated_docs = [
         doc
         async for doc in feed_articles_collection.find(dated_query)
-        .sort([("published_at", DESCENDING), ("_id", DESCENDING)])
+        .sort([("published_at", sort_direction), ("_id", sort_direction)])
         .skip(dated_skip)
         .limit(limit + 1)
     ]
@@ -2262,7 +2268,7 @@ async def list_cards_for_feed_ids(
         undated_docs = [
             doc
             async for doc in feed_articles_collection.find(undated_query)
-            .sort("_id", DESCENDING)
+            .sort("_id", sort_direction)
             .skip(undated_skip)
             .limit(remaining_limit + 1)
         ]
@@ -2531,10 +2537,11 @@ async def list_saved_cards(
     selected_feed_id: ObjectId | None,
     search_query: str,
     use_text_search: bool,
+    newest_first: bool,
     offset: int,
     limit: int,
 ) -> tuple[list[FeedArticleCard], bool]:
-    """Return user-saved article cards, newest-saved first."""
+    """Return user-saved article cards ordered by article age or search recency."""
 
     if user_article_states_collection is None or feed_articles_collection is None:
         return [], False
@@ -2588,6 +2595,7 @@ async def list_saved_cards(
         if isinstance(search_filter, dict):
             lookup_pipeline.append({"$match": search_filter})
 
+    article_sort_direction = DESCENDING if newest_first else ASCENDING
     pipeline: list[dict[str, Any]] = [
         {
             "$match": {
@@ -2595,7 +2603,6 @@ async def list_saved_cards(
                 "is_saved": True,
             }
         },
-        {"$sort": {"saved_at": DESCENDING, "_id": DESCENDING}},
         {
             "$lookup": {
                 "from": feed_articles_collection.name,
@@ -2605,6 +2612,24 @@ async def list_saved_cards(
             }
         },
         {"$unwind": "$article_docs"},
+        {
+            "$addFields": {
+                "article_sort_is_undated": {
+                    "$cond": [
+                        {"$eq": [{"$type": "$article_docs.published_at"}, "date"]},
+                        0,
+                        1,
+                    ]
+                }
+            }
+        },
+        {
+            "$sort": {
+                "article_sort_is_undated": ASCENDING,
+                "article_docs.published_at": article_sort_direction,
+                "article_docs._id": article_sort_direction,
+            }
+        },
         {"$skip": offset},
         {"$limit": limit + 1},
         {
