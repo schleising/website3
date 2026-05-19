@@ -89,9 +89,9 @@ data-category-shortcut="recently-read"
 >
 <span class="feed-category-name">Recently Read</span>
 </a>
+<a href="{{ feeds_root_path }}stats/" class="sub-level-nav feed-sidebar-link{% if feed_page_mode == 'stats' %} is-current{% endif %}" {% if feed_page_mode == 'stats' %}aria-current="page"{% endif %}>Stats</a>
 <a href="{{ feeds_root_path }}search/" class="sub-level-nav feed-sidebar-link{% if feed_page_mode == 'search' %} is-current{% endif %}" {% if feed_page_mode == 'search' %}aria-current="page"{% endif %}>Search</a>
 <a href="{{ feeds_root_path }}settings/" class="sub-level-nav feed-sidebar-link{% if feed_page_mode == 'settings' %} is-current{% endif %}" {% if feed_page_mode == 'settings' %}aria-current="page"{% endif %}>Settings</a>
-<a href="{{ feeds_root_path }}stats/" class="sub-level-nav feed-sidebar-link{% if feed_page_mode == 'stats' %} is-current{% endif %}" {% if feed_page_mode == 'stats' %}aria-current="page"{% endif %}>Stats</a>
 {% if request.state.user != None and request.state.user.can_use_tools %}
 <a href="{{ feeds_root_path }}admin/" class="sub-level-nav feed-sidebar-link{% if feed_page_mode == 'admin' %} is-current{% endif %}" {% if feed_page_mode == 'admin' %}aria-current="page"{% endif %}>Admin</a>
 {% endif %}
