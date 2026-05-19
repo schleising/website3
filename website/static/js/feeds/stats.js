@@ -138,10 +138,39 @@
         overallChart.innerHTML = "";
 
         const seriesDefs = [
-            ["Saved", "saved_count", "is-saved"],
-            ["Opened", "opened_count", "is-opened"],
-            ["Published", "published_count", "is-published"],
+            {
+                key: "saved",
+                label: "Saved",
+                className: "is-saved",
+                getValue(pointData) {
+                    const publishedCount = Math.max(0, Number(pointData.published_count || 0));
+                    const openedCount = Math.max(0, Math.min(publishedCount, Number(pointData.opened_count || 0)));
+                    return Math.max(0, Math.min(openedCount, Number(pointData.saved_count || 0)));
+                },
+            },
+            {
+                key: "opened",
+                label: "Opened",
+                className: "is-opened",
+                getValue(pointData) {
+                    const publishedCount = Math.max(0, Number(pointData.published_count || 0));
+                    const openedCount = Math.max(0, Math.min(publishedCount, Number(pointData.opened_count || 0)));
+                    const savedCount = Math.max(0, Math.min(openedCount, Number(pointData.saved_count || 0)));
+                    return Math.max(0, openedCount - savedCount);
+                },
+            },
+            {
+                key: "published",
+                label: "Published",
+                className: "is-published",
+                getValue(pointData) {
+                    const publishedCount = Math.max(0, Number(pointData.published_count || 0));
+                    const openedCount = Math.max(0, Math.min(publishedCount, Number(pointData.opened_count || 0)));
+                    return Math.max(0, publishedCount - openedCount);
+                },
+            },
         ];
+        const activeSeriesKeys = new Set(seriesDefs.map(def => def.key));
 
         const overallMaxValue = Math.max(
             1,
@@ -157,14 +186,17 @@
         legend.appendChild(legendTitle);
 
         seriesDefs.forEach(def => {
-            const legendItem = document.createElement("div");
+            const legendItem = document.createElement("button");
             legendItem.className = "feeds-stats-overall-legend-item";
+            legendItem.type = "button";
+            legendItem.dataset.seriesKey = def.key;
+            legendItem.setAttribute("aria-pressed", "true");
 
             const swatch = document.createElement("span");
-            swatch.className = `feeds-stats-overall-legend-swatch ${def[2]}`;
+            swatch.className = `feeds-stats-overall-legend-swatch ${def.className}`;
 
             const text = document.createElement("span");
-            text.textContent = def[0];
+            text.textContent = def.label;
 
             legendItem.appendChild(swatch);
             legendItem.appendChild(text);
@@ -207,6 +239,9 @@
         const xAxis = document.createElement("div");
         xAxis.className = "feeds-stats-overall-x-axis";
 
+        /** @type {Array<{ segments: Map<string, HTMLElement> }>} */
+        const daySegmentEntries = [];
+
         dailyPoints.forEach((pointData, index) => {
             const dayGroup = document.createElement("div");
             dayGroup.className = "feeds-stats-overall-day";
@@ -220,32 +255,21 @@
             const dayBars = document.createElement("div");
             dayBars.className = "feeds-stats-overall-day-bars";
 
-            const publishedCount = Math.max(0, Number(pointData.published_count || 0));
-            const openedCount = Math.max(0, Math.min(publishedCount, Number(pointData.opened_count || 0)));
-            const savedCount = Math.max(0, Math.min(openedCount, Number(pointData.saved_count || 0)));
-
-            const segmentValues = [
-                ["is-published", publishedCount - openedCount],
-                ["is-opened", openedCount - savedCount],
-                ["is-saved", savedCount],
-            ];
-
             const barWrap = document.createElement("span");
             barWrap.className = "feeds-stats-series-bar-wrap is-stacked";
 
-            segmentValues.forEach(segment => {
-                const value = Math.max(0, Number(segment[1] || 0));
-                if (value <= 0) {
-                    return;
-                }
-
+            /** @type {Map<string, HTMLElement>} */
+            const segmentMap = new Map();
+            seriesDefs.slice().reverse().forEach(def => {
                 const bar = document.createElement("span");
-                bar.className = `feeds-stats-series-bar ${segment[0]}`;
-                bar.style.height = `${((value / scale.axisMax) * 100).toFixed(3)}%`;
+                bar.className = `feeds-stats-series-bar ${def.className}`;
+                bar.dataset.seriesKey = def.key;
                 barWrap.appendChild(bar);
+                segmentMap.set(def.key, bar);
             });
 
             dayBars.appendChild(barWrap);
+            daySegmentEntries.push({ segments: segmentMap });
 
             dayGroup.appendChild(dayBars);
             plot.appendChild(dayGroup);
@@ -267,6 +291,67 @@
 
         overallChart.appendChild(legend);
         overallChart.appendChild(body);
+
+        function updateOverallChartVisibility() {
+            daySegmentEntries.forEach((entry, index) => {
+                const pointData = dailyPoints[index];
+                seriesDefs.forEach(def => {
+                    const bar = entry.segments.get(def.key);
+                    if (!(bar instanceof HTMLElement)) {
+                        return;
+                    }
+
+                    const isActive = activeSeriesKeys.has(def.key);
+                    const value = isActive ? def.getValue(pointData) : 0;
+                    const percentHeight = value <= 0
+                        ? "0%"
+                        : `${((value / scale.axisMax) * 100).toFixed(3)}%`;
+
+                    bar.style.height = percentHeight;
+                    bar.style.opacity = isActive ? "0.92" : "0";
+                    bar.classList.toggle("is-hidden", !isActive || value <= 0);
+                });
+            });
+
+            const legendItems = legend.querySelectorAll(".feeds-stats-overall-legend-item[data-series-key]");
+            legendItems.forEach(item => {
+                if (!(item instanceof HTMLButtonElement)) {
+                    return;
+                }
+
+                const key = String(item.dataset.seriesKey || "").trim();
+                const isActive = activeSeriesKeys.has(key);
+                item.setAttribute("aria-pressed", isActive ? "true" : "false");
+                item.classList.toggle("is-inactive", !isActive);
+            });
+        }
+
+        legend.addEventListener("click", event => {
+            const target = event.target;
+            if (!(target instanceof Element)) {
+                return;
+            }
+
+            const button = target.closest(".feeds-stats-overall-legend-item[data-series-key]");
+            if (!(button instanceof HTMLButtonElement)) {
+                return;
+            }
+
+            const seriesKey = String(button.dataset.seriesKey || "").trim();
+            if (seriesKey === "") {
+                return;
+            }
+
+            if (activeSeriesKeys.has(seriesKey)) {
+                activeSeriesKeys.delete(seriesKey);
+            } else {
+                activeSeriesKeys.add(seriesKey);
+            }
+
+            updateOverallChartVisibility();
+        });
+
+        updateOverallChartVisibility();
     }
 
     function renderBarList(container, rows, metricKey) {
