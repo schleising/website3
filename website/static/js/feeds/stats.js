@@ -34,6 +34,66 @@
         return `${Number(value || 0).toFixed(1)}%`;
     }
 
+    function formatShortDay(dayValue) {
+        const rawDay = String(dayValue || "").trim();
+        if (rawDay === "") {
+            return "";
+        }
+
+        const parsed = new Date(`${rawDay}T00:00:00Z`);
+        if (Number.isNaN(parsed.getTime())) {
+            return rawDay;
+        }
+
+        return new Intl.DateTimeFormat(undefined, {
+            month: "short",
+            day: "numeric",
+            timeZone: "UTC",
+        }).format(parsed);
+    }
+
+    function buildNiceAxisScale(maxValue) {
+        const normalizedMax = Math.max(1, Number(maxValue || 0));
+        const roughStep = normalizedMax / 4;
+        const magnitude = 10 ** Math.floor(Math.log10(Math.max(roughStep, 1)));
+        const normalizedStep = roughStep / magnitude;
+
+        let stepMultiplier = 1;
+        if (normalizedStep > 5) {
+            stepMultiplier = 10;
+        } else if (normalizedStep > 2) {
+            stepMultiplier = 5;
+        } else if (normalizedStep > 1) {
+            stepMultiplier = 2;
+        }
+
+        const step = Math.max(1, stepMultiplier * magnitude);
+        const axisMax = Math.max(step, Math.ceil(normalizedMax / step) * step);
+        const tickValues = [];
+
+        for (let value = axisMax; value >= 0; value -= step) {
+            tickValues.push(value);
+        }
+
+        if (tickValues[tickValues.length - 1] !== 0) {
+            tickValues.push(0);
+        }
+
+        return {
+            axisMax,
+            tickValues,
+        };
+    }
+
+    function shouldShowXAxisLabel(index, total) {
+        if (total <= 8) {
+            return true;
+        }
+
+        const cadence = total <= 16 ? 3 : 5;
+        return index === 0 || index === total - 1 || index % cadence === 0;
+    }
+
     function renderKpis(overall) {
         if (!(kpiContainer instanceof HTMLElement)) {
             return;
@@ -83,32 +143,118 @@
             ["Saved", "saved_count", "is-saved"],
         ];
 
+        const overallMaxValue = Math.max(
+            1,
+            ...seriesDefs.flatMap(def => dailyPoints.map(point => Number(point[def[1]] || 0)))
+        );
+        const scale = buildNiceAxisScale(overallMaxValue);
+        const legend = document.createElement("div");
+        legend.className = "feeds-stats-overall-legend";
+
+        const legendTitle = document.createElement("div");
+        legendTitle.className = "feeds-stats-overall-legend-title";
+        legendTitle.textContent = "Key";
+        legend.appendChild(legendTitle);
+
         seriesDefs.forEach(def => {
-            const row = document.createElement("div");
-            row.className = "feeds-stats-series-row";
+            const legendItem = document.createElement("div");
+            legendItem.className = "feeds-stats-overall-legend-item";
 
-            const label = document.createElement("div");
-            label.className = "feeds-stats-series-label";
-            label.textContent = def[0];
+            const swatch = document.createElement("span");
+            swatch.className = `feeds-stats-overall-legend-swatch ${def[2]}`;
 
-            const bars = document.createElement("div");
-            bars.className = "feeds-stats-series-bars";
+            const text = document.createElement("span");
+            text.textContent = def[0];
 
-            const values = dailyPoints.map(point => Number(point[def[1]] || 0));
-            const maxValue = Math.max(1, ...values);
+            legendItem.appendChild(swatch);
+            legendItem.appendChild(text);
+            legend.appendChild(legendItem);
+        });
 
-            values.forEach((value, index) => {
+        const body = document.createElement("div");
+        body.className = "feeds-stats-overall-body";
+
+        const yAxis = document.createElement("div");
+        yAxis.className = "feeds-stats-overall-y-axis";
+
+        scale.tickValues.forEach(value => {
+            const tick = document.createElement("div");
+            tick.className = "feeds-stats-overall-y-tick";
+            tick.textContent = formatNumber(value);
+            yAxis.appendChild(tick);
+        });
+
+        const stage = document.createElement("div");
+        stage.className = "feeds-stats-overall-stage";
+
+        const gridArea = document.createElement("div");
+        gridArea.className = "feeds-stats-overall-grid-area";
+
+        const gridLines = document.createElement("div");
+        gridLines.className = "feeds-stats-overall-gridlines";
+        scale.tickValues.forEach((value, index) => {
+            const line = document.createElement("div");
+            line.className = "feeds-stats-overall-gridline";
+            if (index === scale.tickValues.length - 1 || value === 0) {
+                line.classList.add("is-baseline");
+            }
+            gridLines.appendChild(line);
+        });
+
+        const plot = document.createElement("div");
+        plot.className = "feeds-stats-overall-plot";
+
+        const xAxis = document.createElement("div");
+        xAxis.className = "feeds-stats-overall-x-axis";
+
+        dailyPoints.forEach((pointData, index) => {
+            const dayGroup = document.createElement("div");
+            dayGroup.className = "feeds-stats-overall-day";
+            dayGroup.title = [
+                pointData.day,
+                `Published: ${formatNumber(pointData.published_count)}`,
+                `Opened: ${formatNumber(pointData.opened_count)}`,
+                `Saved: ${formatNumber(pointData.saved_count)}`,
+            ].join("\n");
+
+            const dayBars = document.createElement("div");
+            dayBars.className = "feeds-stats-overall-day-bars";
+
+            seriesDefs.forEach(def => {
+                const value = Number(pointData[def[1]] || 0);
+                const barWrap = document.createElement("span");
+                barWrap.className = "feeds-stats-series-bar-wrap";
+
                 const bar = document.createElement("span");
                 bar.className = `feeds-stats-series-bar ${def[2]}`;
-                bar.style.height = `${Math.max(6, Math.round((value / maxValue) * 64))}px`;
-                bar.title = `${dailyPoints[index].day}: ${value}`;
-                bars.appendChild(bar);
+                bar.style.height = value <= 0
+                    ? "0rem"
+                    : `${Math.max(0.5, (value / scale.axisMax) * 100).toFixed(3)}%`;
+
+                barWrap.appendChild(bar);
+                dayBars.appendChild(barWrap);
             });
 
-            row.appendChild(label);
-            row.appendChild(bars);
-            overallChart.appendChild(row);
+            dayGroup.appendChild(dayBars);
+            plot.appendChild(dayGroup);
+
+            const xTick = document.createElement("div");
+            xTick.className = "feeds-stats-overall-x-tick";
+            xTick.textContent = shouldShowXAxisLabel(index, dailyPoints.length)
+                ? formatShortDay(pointData.day)
+                : "";
+            xAxis.appendChild(xTick);
         });
+
+        gridArea.appendChild(gridLines);
+        gridArea.appendChild(plot);
+        stage.appendChild(gridArea);
+        stage.appendChild(xAxis);
+        body.appendChild(yAxis);
+        body.appendChild(stage);
+
+        overallChart.appendChild(legend);
+        overallChart.appendChild(body);
     }
 
     function renderBarList(container, rows, metricKey) {

@@ -3600,7 +3600,7 @@ async def get_feed_stats(user_id: str, window_days: int = 30) -> FeedStatsRespon
                 "user_id": user_id,
                 "$or": [
                     {"is_opened": True},
-                    {"is_saved": True},
+                    {"saved_at": {"$exists": True, "$ne": None}},
                 ],
             }
         },
@@ -3647,14 +3647,20 @@ async def get_feed_stats(user_id: str, window_days: int = 30) -> FeedStatsRespon
                     }
                 },
                 "saved_total": {
-                    "$sum": {"$cond": [{"$eq": ["$is_saved", True]}, 1, 0]}
+                    "$sum": {
+                        "$cond": [
+                            {"$ne": ["$saved_at", None]},
+                            1,
+                            0,
+                        ]
+                    }
                 },
                 "saved_recent": {
                     "$sum": {
                         "$cond": [
                             {
                                 "$and": [
-                                    {"$eq": ["$is_saved", True]},
+                                    {"$ne": ["$saved_at", None]},
                                     {"$gte": ["$saved_at", cutoff]},
                                 ]
                             },
@@ -3779,8 +3785,11 @@ async def get_feed_stats(user_id: str, window_days: int = 30) -> FeedStatsRespon
         {
             "$match": {
                 "user_id": user_id,
-                "is_saved": True,
-                "saved_at": {"$gte": cutoff},
+                "saved_at": {
+                    "$exists": True,
+                    "$ne": None,
+                    "$gte": cutoff,
+                },
             }
         },
         {
