@@ -1958,15 +1958,15 @@ html.suppress-sidebar-hover .right-sidebar .feed-sidebar-feed-link:hover:not(.is
 }
 
 .feeds-stats-overall-legend-swatch.is-published {
-    background: color-mix(in srgb, var(--brand-strong), #ffffff 20%);
+    background: linear-gradient(180deg, #68b6ff 0%, #2563eb 100%);
 }
 
 .feeds-stats-overall-legend-swatch.is-opened {
-    background: color-mix(in srgb, var(--success), #ffffff 8%);
+    background: linear-gradient(180deg, #5eead4 0%, #0f9f6e 100%);
 }
 
 .feeds-stats-overall-legend-swatch.is-saved {
-    background: linear-gradient(180deg, #ffb347 0%, #e67e22 100%);
+    background: linear-gradient(180deg, #c084fc 0%, #7c3aed 100%);
 }
 
 .feeds-stats-overall-body {
@@ -2105,15 +2105,15 @@ html.suppress-sidebar-hover .right-sidebar .feed-sidebar-feed-link:hover:not(.is
 }
 
 .feeds-stats-series-bar.is-published {
-    background: color-mix(in srgb, var(--brand-strong), #ffffff 20%);
+    background: linear-gradient(180deg, #68b6ff 0%, #2563eb 100%);
 }
 
 .feeds-stats-series-bar.is-opened {
-    background: color-mix(in srgb, var(--success), #ffffff 8%);
+    background: linear-gradient(180deg, #5eead4 0%, #0f9f6e 100%);
 }
 
 .feeds-stats-series-bar.is-saved {
-    background: linear-gradient(180deg, #ffb347 0%, #e67e22 100%);
+    background: linear-gradient(180deg, #c084fc 0%, #7c3aed 100%);
 }
 
 .feeds-stats-bar-list {
