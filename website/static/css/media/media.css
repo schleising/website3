@@ -403,6 +403,11 @@
     z-index: 30;
 }
 
+.media-loading-overlay[hidden],
+.media-detail-overlay[hidden] {
+    display: none !important;
+}
+
 .media-loading-panel,
 .media-detail-dialog {
     width: min(100%, 56rem);
