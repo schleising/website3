@@ -2053,17 +2053,26 @@ html.suppress-sidebar-hover .right-sidebar .feed-sidebar-feed-link:hover:not(.is
 }
 
 .feeds-stats-overall-x-tick {
+    --feeds-stats-x-tick-shift: 0rem;
     min-width: 0;
     font-size: 0.62rem;
     line-height: 1.1;
     color: var(--text-soft);
     text-align: center;
     white-space: nowrap;
-    overflow: hidden;
-    text-overflow: clip;
-    transform: rotate(-35deg);
+    overflow: visible;
+    text-overflow: unset;
+    transform: translateX(var(--feeds-stats-x-tick-shift)) rotate(-35deg);
     transform-origin: top center;
     padding-bottom: 0.5rem;
+}
+
+.feeds-stats-overall-x-tick.is-first {
+    --feeds-stats-x-tick-shift: 0.3rem;
+}
+
+.feeds-stats-overall-x-tick.is-last {
+    --feeds-stats-x-tick-shift: -0.3rem;
 }
 
 .feeds-stats-series-bar-wrap {
@@ -2219,11 +2228,12 @@ html.suppress-sidebar-hover .right-sidebar .feed-sidebar-feed-link:hover:not(.is
     .feeds-stats-overall-x-axis {
         grid-template-columns: repeat(15, minmax(1rem, 1fr));
         row-gap: 0.6rem;
-        min-height: 2.4rem;
+        min-height: 2.9rem;
     }
 
     .feeds-stats-overall-x-tick {
         font-size: 0.56rem;
+        padding-bottom: 0.7rem;
     }
 
     .feeds-stats-bar-item {

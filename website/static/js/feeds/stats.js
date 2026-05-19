@@ -297,6 +297,12 @@
 
             const xTick = document.createElement("div");
             xTick.className = "feeds-stats-overall-x-tick";
+            if (index === 0) {
+                xTick.classList.add("is-first");
+            }
+            if (index === dailyPoints.length - 1) {
+                xTick.classList.add("is-last");
+            }
             xTick.textContent = shouldShowXAxisLabel(index, dailyPoints.length)
                 ? formatShortDay(pointData.day)
                 : "";
