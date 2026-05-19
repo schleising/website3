@@ -14,6 +14,7 @@
     const csrfToken = root.dataset.csrfToken || "";
 
     const filterForm = document.getElementById("media-filter-form");
+    const scrollContainer = document.getElementById("content");
     const filterPanel = document.querySelector(".media-panel");
     const filterToggle = document.getElementById("media-filter-toggle");
     const filterToggleIcon = document.getElementById("media-filter-toggle-icon");
@@ -34,6 +35,7 @@
     const detailTitle = document.getElementById("media-detail-title");
     const detailBody = document.getElementById("media-detail-body");
     const detailCloseButton = document.getElementById("media-detail-close-button");
+    const resultsShell = root.querySelector(".media-results-shell");
     const summaryTotal = document.getElementById("media-summary-total");
     const summaryDisplayed = document.getElementById("media-summary-displayed");
     const summaryErrors = document.getElementById("media-summary-errors");
@@ -45,6 +47,74 @@
         openFilename: "",
         requestVersion: 0,
     };
+
+    function getScrollMetrics() {
+        if (scrollContainer instanceof HTMLElement) {
+            return {
+                top: scrollContainer.scrollTop,
+                maxTop: Math.max(0, scrollContainer.scrollHeight - scrollContainer.clientHeight),
+            };
+        }
+
+        const scrollingElement = document.scrollingElement;
+        if (scrollingElement instanceof HTMLElement) {
+            return {
+                top: scrollingElement.scrollTop,
+                maxTop: Math.max(0, scrollingElement.scrollHeight - scrollingElement.clientHeight),
+            };
+        }
+
+        return {
+            top: window.scrollY,
+            maxTop: Math.max(0, document.documentElement.scrollHeight - window.innerHeight),
+        };
+    }
+
+    function setScrollTop(top) {
+        const numericTop = Number(top);
+        if (!Number.isFinite(numericTop)) {
+            return;
+        }
+
+        const { maxTop } = getScrollMetrics();
+        const clampedTop = Math.min(Math.max(0, numericTop), maxTop);
+
+        if (scrollContainer instanceof HTMLElement) {
+            scrollContainer.scrollTop = clampedTop;
+            return;
+        }
+
+        const scrollingElement = document.scrollingElement;
+        if (scrollingElement instanceof HTMLElement) {
+            scrollingElement.scrollTop = clampedTop;
+            return;
+        }
+
+        window.scrollTo({ top: clampedTop, behavior: "auto" });
+    }
+
+    function adjustScrollTop(delta) {
+        const numericDelta = Number(delta);
+        if (!Number.isFinite(numericDelta) || numericDelta === 0) {
+            return;
+        }
+
+        const { top } = getScrollMetrics();
+        setScrollTop(top + numericDelta);
+    }
+
+    function getRelativeTop(element) {
+        if (!(element instanceof HTMLElement)) {
+            return null;
+        }
+
+        const elementRect = element.getBoundingClientRect();
+        if (scrollContainer instanceof HTMLElement) {
+            return elementRect.top - scrollContainer.getBoundingClientRect().top;
+        }
+
+        return elementRect.top;
+    }
 
     function applyFilterPanelState(isCollapsed) {
         if (!(filterPanel instanceof HTMLElement) || !(filterContent instanceof HTMLElement)) {
@@ -343,6 +413,50 @@
         return wrapper;
     }
 
+    function findRenderedCardByFilename(filename) {
+        if (!(cardGrid instanceof HTMLElement) || typeof filename !== "string" || filename.trim() === "") {
+            return null;
+        }
+
+        for (const child of cardGrid.children) {
+            if (child instanceof HTMLElement && child.dataset.filename === filename) {
+                return child;
+            }
+        }
+
+        return null;
+    }
+
+    function captureViewportAnchor() {
+        if (!(cardGrid instanceof HTMLElement)) {
+            return { scrollTop: getScrollMetrics().top };
+        }
+
+        const cards = Array.from(cardGrid.children).filter(
+            child => child instanceof HTMLElement && child.classList.contains("media-card")
+        );
+
+        for (const card of cards) {
+            const rect = card.getBoundingClientRect();
+            if (rect.bottom > 0) {
+                return {
+                    scrollTop: getScrollMetrics().top,
+                    filename: card.dataset.filename || "",
+                    top: getRelativeTop(card),
+                };
+            }
+        }
+
+        if (resultsShell instanceof HTMLElement) {
+            return {
+                scrollTop: getScrollMetrics().top,
+                resultsTop: getRelativeTop(resultsShell),
+            };
+        }
+
+        return { scrollTop: getScrollMetrics().top };
+    }
+
     function appendFileActionButtons(actions, file, options) {
         const actionOptions = options || {};
         const variant = actionOptions.variant === "detail" ? "detail" : "card";
@@ -441,6 +555,7 @@
         state.files.forEach(file => {
             const card = document.createElement("article");
             card.className = "media-card site-card";
+            card.dataset.filename = String(file.filename || "");
 
             const header = document.createElement("div");
             header.className = "media-card-header";
@@ -604,6 +719,7 @@
             return;
         }
 
+        const viewportAnchor = captureViewportAnchor();
         setLoading(true, successMessage);
 
         try {
@@ -617,7 +733,7 @@
             });
 
             setStatus(payload.message || successMessage, "success");
-            await loadFiles();
+            await loadFiles({ viewportAnchor: viewportAnchor });
 
             if (state.openFilename === filename) {
                 await openDetails(filename);
@@ -629,7 +745,47 @@
         }
     }
 
-    async function loadFiles() {
+    function restoreViewportAnchor(anchor) {
+        if (!anchor || typeof anchor !== "object") {
+            return;
+        }
+
+        window.requestAnimationFrame(() => {
+            window.requestAnimationFrame(() => {
+                if (
+                    typeof anchor.filename === "string"
+                    && anchor.filename.trim() !== ""
+                    && Number.isFinite(anchor.top)
+                ) {
+                    const anchorCard = findRenderedCardByFilename(anchor.filename);
+                    if (anchorCard instanceof HTMLElement) {
+                        const currentTop = getRelativeTop(anchorCard);
+                        const delta = currentTop === null ? 0 : currentTop - anchor.top;
+                        if (delta !== 0) {
+                            adjustScrollTop(delta);
+                            return;
+                        }
+                    }
+                }
+
+                if (resultsShell instanceof HTMLElement && Number.isFinite(anchor.resultsTop)) {
+                    const currentTop = getRelativeTop(resultsShell);
+                    const delta = currentTop === null ? 0 : currentTop - anchor.resultsTop;
+                    if (delta !== 0) {
+                        adjustScrollTop(delta);
+                        return;
+                    }
+                }
+
+                if (Number.isFinite(anchor.scrollTop)) {
+                    setScrollTop(anchor.scrollTop);
+                }
+            });
+        });
+    }
+
+    async function loadFiles(options) {
+        const loadOptions = options || {};
         const requestVersion = state.requestVersion + 1;
         state.requestVersion = requestVersion;
 
@@ -686,6 +842,7 @@
             setStatus(error instanceof Error ? error.message : "Failed to load media files.", "error");
         } finally {
             setLoading(false, "");
+            restoreViewportAnchor(loadOptions.viewportAnchor);
         }
     }
 
