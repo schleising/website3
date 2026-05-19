@@ -6,19 +6,19 @@
 {% endblock %}
 
 {% block head %}
-<link rel="stylesheet" href="/css/markdown/markdown.css?v1.2.0">
+<link rel="stylesheet" href="/css/markdown/markdown.css?v1.3.0">
 <link rel="stylesheet" href="/css/markdown/styles.css?v1.1.0">
 {% block title %}<title>Markdown Editor</title>{% endblock %}
 {% endblock %}
 
 {% block header %}
-<h3 class="header-text">Markdown Editor</h3>
+<h3 class="header-text markdown-page-title">Markdown Editor</h3>
 {% endblock %}
 
 {% block content %}
 <div id="markdown-container">
   <div id="markdown-header">
-    <h5 class="no-margin">Live Markdown Editor</h5>
+    <h5 class="no-margin" id="markdown-page-heading">Live Markdown Editor</h5>
     <div id="markdown-controls">
       <button class="btn btn-primary" id="load-button">Load</button>
       <button class="btn btn-primary" id="save-button">Save</button>

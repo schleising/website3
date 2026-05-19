@@ -1,68 +1,145 @@
+.markdown-page-title {
+    font-size: clamp(1.35rem, 2vw, 1.7rem);
+}
+
 #markdown-container {
     display: flex;
     flex-direction: column;
     flex: 1 1 auto;
-    overflow-y: auto;
+    gap: 0.75rem;
+    min-height: 0;
+    padding: clamp(0.6rem, 1vw, 0.95rem);
+    border: 0.0625rem solid var(--line);
+    border-radius: 0.9rem;
+    background: linear-gradient(180deg, #fbfdff 0%, #f0f6fd 100%);
+    box-shadow: var(--shadow);
+    overflow: hidden;
 }
 
 #markdown-header {
     display: flex;
     flex-direction: row;
-    flex: 1 1 auto;
     align-items: center;
     justify-content: space-between;
-    padding: 0.25rem;
+    gap: 0.75rem;
+    padding: 0.2rem 0.15rem 0.1rem;
+}
+
+#markdown-page-heading {
+    font-size: clamp(1.15rem, 1.6vw, 1.4rem);
+    color: var(--brand-strong);
+    letter-spacing: 0.01rem;
 }
 
 #markdown-controls {
     display: flex;
     flex-direction: row;
-    flex: 1 1 auto;
+    flex: 0 0 auto;
+    flex-wrap: wrap;
     align-items: center;
     justify-content: flex-end;
-    gap: 0.25rem;
+    gap: 0.45rem;
+}
+
+#markdown-controls .btn {
+    min-height: 2.25rem;
+    padding: 0.45rem 0.85rem;
+    border-radius: 0.65rem;
+    border: 0.0625rem solid rgba(42, 91, 144, 0.18);
+    background: linear-gradient(180deg, #ffffff 0%, #eaf2fc 100%);
+    color: var(--brand-strong);
+    font-weight: 600;
+    box-shadow: 0 0.25rem 0.8rem rgba(26, 46, 75, 0.08);
+}
+
+#markdown-controls .btn:hover,
+#markdown-controls .btn:focus-visible {
+    border-color: rgba(42, 91, 144, 0.32);
+    background: linear-gradient(180deg, #ffffff 0%, #dfeafb 100%);
+    color: var(--brand-strong);
 }
 
 #title-input-container {
     display: flex;
     flex-direction: row;
-    flex: 1 1 auto;
     align-items: center;
-    padding: 0.25rem;
+    padding: 0;
 }
 
 #title-input {
     flex: 1 1 auto;
-    align-items: center;
+    width: 100%;
+    min-height: 2.65rem;
+    padding: 0.65rem 0.85rem;
+    border: 0.0625rem solid var(--line);
+    border-radius: 0.75rem;
+    background: #ffffff;
+    color: var(--text);
+    box-shadow: inset 0 0.0625rem 0 rgba(255, 255, 255, 0.85);
+}
+
+#title-input:focus-visible {
+    outline: 0.125rem solid rgba(42, 91, 144, 0.2);
+    border-color: var(--brand-soft);
+    box-shadow: 0 0 0 0.2rem rgba(77, 123, 177, 0.12);
 }
 
 #markdown-area {
     display: flex;
     flex-direction: row;
     flex: 1 1 auto;
-    height: 100%;
-    overflow-y: auto;
+    min-height: 0;
+    gap: 0.75rem;
+    overflow: hidden;
 }
 
 #markdown-editor {
-    padding: 0.25rem;
     display: flex;
     flex-direction: column;
     flex: 1 1 0;
-    overflow-y: auto;
+    min-height: 0;
+    padding: 0.6rem;
+    border: 0.0625rem solid var(--line);
+    border-radius: 0.85rem;
+    background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+    box-shadow: 0 0.35rem 1rem rgba(26, 46, 75, 0.06);
+    overflow: hidden;
 }
 
 #markdown-output {
-    padding: 0.25rem;
     display: flex;
     flex-direction: column;
     flex: 1 1 0;
+    min-height: 0;
+    padding: 0.9rem;
+    border: 0.0625rem solid var(--line);
+    border-radius: 0.85rem;
+    background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+    box-shadow: 0 0.35rem 1rem rgba(26, 46, 75, 0.06);
     overflow-y: auto;
 }
 
 textarea.markdown {
     resize: none;
+    flex: 1 1 auto;
     height: 100%;
+    width: 100%;
+    min-height: 0;
+    padding: 0.85rem 0.95rem;
+    border: 0.0625rem solid rgba(199, 216, 238, 0.9);
+    border-radius: 0.75rem;
+    background: #fdfefe;
+    color: var(--text);
+    font-family: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    font-size: 0.92rem;
+    line-height: 1.55;
+    box-shadow: inset 0 0.0625rem 0 rgba(255, 255, 255, 0.85);
+}
+
+textarea.markdown:focus-visible {
+    outline: 0.125rem solid rgba(42, 91, 144, 0.2);
+    border-color: var(--brand-soft);
+    box-shadow: 0 0 0 0.2rem rgba(77, 123, 177, 0.12);
 }
 
 .markdown-toast-container {
@@ -175,7 +252,32 @@ textarea.markdown {
 @media screen and (max-width: 40rem) {
     #markdown-header {
         flex-direction: column;
-        row-gap: 0.25rem;
+        align-items: stretch;
+        row-gap: 0.45rem;
+    }
+
+    #markdown-controls {
+        justify-content: stretch;
+    }
+
+    #markdown-controls .btn {
+        flex: 1 1 0;
+        justify-content: center;
+    }
+
+    #markdown-area {
+        flex-direction: column;
+        overflow: hidden;
+    }
+
+    #markdown-editor,
+    #markdown-output {
+        flex: 1 1 0;
+        min-height: 0;
+    }
+
+    textarea.markdown {
+        min-height: 0;
     }
 }
 
