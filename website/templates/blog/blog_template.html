@@ -7,7 +7,7 @@
 <link rel="stylesheet" href="/css/markdown/styles.css?v1.1.0">
 {% block scripts %}
 {% if not is_blog_index|default(false) or has_mermaid_previews|default(false) %}
-<script defer src="https://cdn.jsdelivr.net/npm/mermaid@9/dist/mermaid.min.js"></script>
+<script defer src="/js/vendor/mermaid-9.4.3.min.js"></script>
 <script defer src="/js/blog/blog.js?v1.1.1"></script>
 {% endif %}
 {% endblock %}
