@@ -83,6 +83,27 @@ class MediaDatabase:
 
         return "Unknown"
 
+    def _get_video_resolution(self, db_file: Mapping[str, Any]) -> str:
+        streams = db_file.get("video_information", {}).get("streams", [])
+
+        for stream in streams:
+            if stream.get("codec_type") != "video":
+                continue
+
+            width = stream.get("width") or stream.get("coded_width")
+            height = stream.get("height") or stream.get("coded_height")
+
+            try:
+                normalized_width = int(width)
+                normalized_height = int(height)
+            except (TypeError, ValueError):
+                continue
+
+            if normalized_width > 0 and normalized_height > 0:
+                return f"{normalized_width} x {normalized_height}"
+
+        return "Unknown"
+
     def _serialize_document(self, value: Any) -> Any:
         if isinstance(value, datetime):
             return value.isoformat()
@@ -152,6 +173,7 @@ class MediaDatabase:
             "bit_rate": self._format_bit_rate(format_data.get("bit_rate")),
             "video_codec": self._get_codec_name(db_file, "video"),
             "audio_codec": self._get_codec_name(db_file, "audio"),
+            "resolution": self._get_video_resolution(db_file),
             "video_streams": int(db_file.get("video_streams") or 0),
             "audio_streams": int(db_file.get("audio_streams") or 0),
             "subtitle_streams": int(db_file.get("subtitle_streams") or 0),
@@ -228,6 +250,10 @@ class MediaDatabase:
                 "end_conversion_time",
                 "video_information.streams.codec_type",
                 "video_information.streams.codec_name",
+                "video_information.streams.width",
+                "video_information.streams.height",
+                "video_information.streams.coded_width",
+                "video_information.streams.coded_height",
                 "video_information.format.duration",
                 "video_information.format.bit_rate",
             ],

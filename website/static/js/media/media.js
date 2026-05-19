@@ -601,7 +601,7 @@
                 createFact("Duration", file.video_duration || "Unknown"),
                 createFact("Codecs", `${file.video_codec || "Unknown"} / ${file.audio_codec || "Unknown"}`),
                 createFact("Bit rate", file.bit_rate || "Unknown"),
-                createFact("Streams", `${Number(file.video_streams || 0)}/${Number(file.audio_streams || 0)}/${Number(file.subtitle_streams || 0)}`)
+                createFact("Resolution", file.resolution || "Unknown")
             );
 
             const actions = document.createElement("div");
