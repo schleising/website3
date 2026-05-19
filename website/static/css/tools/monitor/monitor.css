@@ -1,6 +1,6 @@
 :root {
-    --font-body: "Avenir Next", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
-    --font-display: "Trebuchet MS", "Avenir Next Condensed", "Arial Narrow", "Avenir Next", "Segoe UI", sans-serif;
+    --font-body: "Outfit", "Avenir Next", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    --font-display: "Space Grotesk", "Outfit", "Avenir Next", "Segoe UI", sans-serif;
     --bg-0: hsl(170, 50%, 96%);
     --bg-1: hsl(205, 58%, 94%);
     --panel: hsla(0, 0%, 100%, 0.86);
