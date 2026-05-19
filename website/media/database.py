@@ -162,6 +162,13 @@ class MediaDatabase:
                 db_file.get("end_conversion_time")
             ),
             "can_queue": (not deleted) and (not converted) and (not conversion_required),
+            "can_unqueue": (
+                (not deleted)
+                and (not converted)
+                and conversion_required
+                and (not converting)
+                and (not copying)
+            ),
             "can_restart_error": (not deleted) and conversion_error,
         }
 
@@ -273,6 +280,18 @@ class MediaDatabase:
             filename,
             {"converted": False, "conversion_required": {"$ne": True}},
             {"conversion_required": True},
+        )
+
+    async def unqueue_media_file(self, filename: str) -> str:
+        return await self._update_media_file(
+            filename,
+            {
+                "converted": False,
+                "conversion_required": True,
+                "converting": {"$ne": True},
+                "copying": {"$ne": True},
+            },
+            {"conversion_required": False},
         )
 
     async def restart_media_error_file(self, filename: str) -> str:

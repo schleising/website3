@@ -9,6 +9,7 @@
     const listEndpoint = root.dataset.listEndpoint || "/media/api/files/";
     const detailEndpoint = root.dataset.detailEndpoint || "/media/api/files/detail/";
     const queueEndpoint = root.dataset.queueEndpoint || "/media/api/files/queue/";
+    const unqueueEndpoint = root.dataset.unqueueEndpoint || "/media/api/files/unqueue/";
     const restartEndpoint = root.dataset.restartEndpoint || "/media/api/files/restart-error/";
     const csrfToken = root.dataset.csrfToken || "";
 
@@ -342,6 +343,66 @@
         return wrapper;
     }
 
+    function appendFileActionButtons(actions, file, options) {
+        const actionOptions = options || {};
+        const variant = actionOptions.variant === "detail" ? "detail" : "card";
+
+        if (!(actions instanceof HTMLElement) || !file || typeof file !== "object") {
+            return;
+        }
+
+        const canQueue = Boolean(file.can_queue);
+        const canUnqueue = Boolean(
+            file.can_unqueue ?? (
+                !file.deleted
+                && !file.converted
+                && file.conversion_required
+                && !file.converting
+                && !file.copying
+            )
+        );
+        const canRestartError = Boolean(file.can_restart_error ?? (!file.deleted && file.conversion_error));
+
+        if (canQueue) {
+            const queueButton = document.createElement("button");
+            queueButton.type = "button";
+            queueButton.className = variant === "detail"
+                ? "media-button media-button-primary"
+                : "media-button media-button-primary media-card-action-primary";
+            queueButton.textContent = "Queue file";
+            queueButton.addEventListener("click", () => {
+                void runAction(queueEndpoint, String(file.filename || ""), "File queued for conversion.");
+            });
+            actions.appendChild(queueButton);
+        }
+
+        if (canUnqueue) {
+            const unqueueButton = document.createElement("button");
+            unqueueButton.type = "button";
+            unqueueButton.className = variant === "detail"
+                ? "media-button media-button-secondary"
+                : "media-button media-button-secondary";
+            unqueueButton.textContent = "Unqueue file";
+            unqueueButton.addEventListener("click", () => {
+                void runAction(unqueueEndpoint, String(file.filename || ""), "File removed from queue.");
+            });
+            actions.appendChild(unqueueButton);
+        }
+
+        if (canRestartError) {
+            const restartButton = document.createElement("button");
+            restartButton.type = "button";
+            restartButton.className = variant === "detail"
+                ? "media-button media-button-danger"
+                : "media-button media-button-danger media-card-action-secondary";
+            restartButton.textContent = "Clear error";
+            restartButton.addEventListener("click", () => {
+                void runAction(restartEndpoint, String(file.filename || ""), "Conversion error cleared.");
+            });
+            actions.appendChild(restartButton);
+        }
+    }
+
     function updateSummary() {
         const files = Array.isArray(state.files) ? state.files : [];
         const errorCount = files.filter(file => Boolean(file.conversion_error)).length;
@@ -440,29 +501,9 @@
             });
             actions.appendChild(detailsButton);
 
-            if (file.can_queue) {
-                const queueButton = document.createElement("button");
-                queueButton.type = "button";
-                queueButton.className = "media-button media-button-primary media-card-action-primary";
-                queueButton.textContent = "Queue file";
-                queueButton.addEventListener("click", () => {
-                    void runAction(queueEndpoint, file.filename || "", "File queued for conversion.");
-                });
-                actions.appendChild(queueButton);
-            }
+            appendFileActionButtons(actions, file, { variant: "card" });
 
-            if (file.can_restart_error) {
-                const restartButton = document.createElement("button");
-                restartButton.type = "button";
-                restartButton.className = "media-button media-button-danger media-card-action-secondary";
-                restartButton.textContent = "Clear error";
-                restartButton.addEventListener("click", () => {
-                    void runAction(restartEndpoint, file.filename || "", "Conversion error cleared.");
-                });
-                actions.appendChild(restartButton);
-            }
-
-            if (!file.can_queue) {
+            if (!(file.can_queue || file.can_unqueue || file.can_restart_error)) {
                 detailsButton.classList.add("media-card-action-primary-full");
             }
 
@@ -489,26 +530,7 @@
 
         const actions = document.createElement("div");
         actions.className = "media-detail-actions";
-
-        const queueButton = document.createElement("button");
-        queueButton.type = "button";
-        queueButton.className = "media-button media-button-primary";
-        queueButton.textContent = "Queue file";
-        queueButton.disabled = !(!file.deleted && !file.converted && !file.conversion_required);
-        queueButton.addEventListener("click", () => {
-            void runAction(queueEndpoint, file.filename || "", "File queued for conversion.");
-        });
-        actions.appendChild(queueButton);
-
-        const restartButton = document.createElement("button");
-        restartButton.type = "button";
-        restartButton.className = "media-button media-button-danger";
-        restartButton.textContent = "Clear error";
-        restartButton.disabled = !Boolean(file.conversion_error);
-        restartButton.addEventListener("click", () => {
-            void runAction(restartEndpoint, file.filename || "", "Conversion error cleared.");
-        });
-        actions.appendChild(restartButton);
+        appendFileActionButtons(actions, file, { variant: "detail" });
 
         const summary = document.createElement("div");
         summary.className = "media-detail-summary";

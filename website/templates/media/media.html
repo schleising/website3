@@ -4,7 +4,7 @@
 
 {% block head %}
 <link rel="stylesheet" href="/css/media/media.css?v1.0.6">
-<script defer src="/js/media/media.js?v1.0.6"></script>
+<script defer src="/js/media/media.js?v1.0.8"></script>
 {% endblock %}
 
 {% block header %}
@@ -34,6 +34,7 @@
   data-list-endpoint="/media/api/files/"
   data-detail-endpoint="/media/api/files/detail/"
   data-queue-endpoint="/media/api/files/queue/"
+  data-unqueue-endpoint="/media/api/files/unqueue/"
   data-restart-endpoint="/media/api/files/restart-error/"
   data-csrf-token="{{ request.state.csrf_token|default('') }}"
   data-auto-collapse-filters="{{ auto_collapse_filters }}"

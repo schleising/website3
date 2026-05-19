@@ -113,6 +113,21 @@ async def queue_media_file(
     )
 
 
+@media_router.post("/api/files/unqueue/", dependencies=[Depends(validate_csrf)])
+async def unqueue_media_file(
+    request: Request,
+    action: MediaFileActionRequest,
+) -> JSONResponse:
+    require_media_access(request)
+
+    action_status = await media_database.unqueue_media_file(action.filename)
+    return _action_response(
+        action_status,
+        action.filename,
+        "File removed from queue.",
+    )
+
+
 @media_router.post(
     "/api/files/restart-error/",
     dependencies=[Depends(validate_csrf)],
