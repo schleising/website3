@@ -138,14 +138,14 @@
         overallChart.innerHTML = "";
 
         const seriesDefs = [
-            ["Published", "published_count", "is-published"],
-            ["Opened", "opened_count", "is-opened"],
             ["Saved", "saved_count", "is-saved"],
+            ["Opened", "opened_count", "is-opened"],
+            ["Published", "published_count", "is-published"],
         ];
 
         const overallMaxValue = Math.max(
             1,
-            ...seriesDefs.flatMap(def => dailyPoints.map(point => Number(point[def[1]] || 0)))
+            ...dailyPoints.map(point => Number(point.published_count || 0))
         );
         const scale = buildNiceAxisScale(overallMaxValue);
         const legend = document.createElement("div");
@@ -220,20 +220,32 @@
             const dayBars = document.createElement("div");
             dayBars.className = "feeds-stats-overall-day-bars";
 
-            seriesDefs.forEach(def => {
-                const value = Number(pointData[def[1]] || 0);
-                const barWrap = document.createElement("span");
-                barWrap.className = "feeds-stats-series-bar-wrap";
+            const publishedCount = Math.max(0, Number(pointData.published_count || 0));
+            const openedCount = Math.max(0, Math.min(publishedCount, Number(pointData.opened_count || 0)));
+            const savedCount = Math.max(0, Math.min(openedCount, Number(pointData.saved_count || 0)));
+
+            const segmentValues = [
+                ["is-published", publishedCount - openedCount],
+                ["is-opened", openedCount - savedCount],
+                ["is-saved", savedCount],
+            ];
+
+            const barWrap = document.createElement("span");
+            barWrap.className = "feeds-stats-series-bar-wrap is-stacked";
+
+            segmentValues.forEach(segment => {
+                const value = Math.max(0, Number(segment[1] || 0));
+                if (value <= 0) {
+                    return;
+                }
 
                 const bar = document.createElement("span");
-                bar.className = `feeds-stats-series-bar ${def[2]}`;
-                bar.style.height = value <= 0
-                    ? "0rem"
-                    : `${Math.max(0.5, (value / scale.axisMax) * 100).toFixed(3)}%`;
-
+                bar.className = `feeds-stats-series-bar ${segment[0]}`;
+                bar.style.height = `${((value / scale.axisMax) * 100).toFixed(3)}%`;
                 barWrap.appendChild(bar);
-                dayBars.appendChild(barWrap);
             });
+
+            dayBars.appendChild(barWrap);
 
             dayGroup.appendChild(dayBars);
             plot.appendChild(dayGroup);

@@ -2005,9 +2005,8 @@ html.suppress-sidebar-hover .right-sidebar .feed-sidebar-feed-link:hover:not(.is
 
 .feeds-stats-overall-day-bars {
     height: 13rem;
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0.22rem, 1fr));
-    gap: 0.12rem;
+    display: flex;
+    justify-content: center;
     align-items: end;
 }
 
@@ -2035,6 +2034,13 @@ html.suppress-sidebar-hover .right-sidebar .feed-sidebar-feed-link:hover:not(.is
     height: 13rem;
     display: flex;
     align-items: end;
+    width: 100%;
+}
+
+.feeds-stats-series-bar-wrap.is-stacked {
+    flex-direction: column;
+    justify-content: flex-end;
+    align-items: stretch;
 }
 
 .feeds-stats-series-bar {
@@ -2042,8 +2048,18 @@ html.suppress-sidebar-hover .right-sidebar .feed-sidebar-feed-link:hover:not(.is
     position: relative;
     overflow: hidden;
     width: 100%;
-    border-radius: 0.14rem;
+    border-radius: 0;
     opacity: 0.9;
+}
+
+.feeds-stats-series-bar-wrap.is-stacked .feeds-stats-series-bar:first-child {
+    border-top-left-radius: 0.18rem;
+    border-top-right-radius: 0.18rem;
+}
+
+.feeds-stats-series-bar-wrap.is-stacked .feeds-stats-series-bar:last-child {
+    border-bottom-left-radius: 0.18rem;
+    border-bottom-right-radius: 0.18rem;
 }
 
 .feeds-stats-series-bar.is-published {
