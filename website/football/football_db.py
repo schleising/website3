@@ -30,6 +30,7 @@ FORM_RESULT_CLASS = {
 FIRST_PREMIER_LEAGUE_SEASON_START_YEAR = 1992
 TEAM_CACHE: list[Team] = []
 TEAM_CACHE_INITIALISED = False
+SUBSCRIPTION_DOCUMENT_SORT = [("updated_at", DESCENDING), ("created_at", DESCENDING)]
 
 
 def _season_matches_collection_name(season_key: str) -> str:
@@ -554,6 +555,51 @@ def _subscription_query(subscription: PushSubscription) -> dict:
     return {"subscription.endpoint": subscription.endpoint}
 
 
+def _normalise_subscription_client_id(client_id: str | None) -> str | None:
+    if not isinstance(client_id, str):
+        return None
+
+    candidate = client_id.strip()
+    return candidate if candidate != "" else None
+
+
+def _subscription_client_query(username: str | None, client_id: str | None) -> dict | None:
+    if not isinstance(username, str):
+        return None
+
+    normalised_username = username.strip()
+    normalised_client_id = _normalise_subscription_client_id(client_id)
+
+    if (
+        normalised_username == ""
+        or normalised_username == "Anonymous User"
+        or normalised_client_id is None
+    ):
+        return None
+
+    return {"username": normalised_username, "client_id": normalised_client_id}
+
+
+async def ensure_push_subscription_indexes() -> None:
+    if football_push is None:
+        logging.error("No DB connection")
+        return
+
+    await football_push.create_index(
+        [("subscription.endpoint", ASCENDING)],
+        name="football_push_subscription_endpoint",
+    )
+    await football_push.create_index(
+        [("username", ASCENDING)],
+        name="football_push_username",
+    )
+    await football_push.create_index(
+        [("username", ASCENDING), ("client_id", ASCENDING)],
+        name="football_push_username_client_id",
+        sparse=True,
+    )
+
+
 async def upsert_push_subscription(subscription_doc: PushSubscriptionDocument) -> bool:
     if football_push is None:
         logging.error("No DB connection")
@@ -561,10 +607,26 @@ async def upsert_push_subscription(subscription_doc: PushSubscriptionDocument) -
 
     now = datetime.now(tz=UTC)
     team_ids = sorted(set(subscription_doc.team_ids))
+    client_query = _subscription_client_query(
+        subscription_doc.username,
+        subscription_doc.client_id,
+    )
+    update_filter: dict = _subscription_query(subscription_doc.subscription)
+
+    if client_query is not None:
+        existing = await football_push.find_one(
+            {"$or": [client_query, _subscription_query(subscription_doc.subscription)]},
+            sort=SUBSCRIPTION_DOCUMENT_SORT,
+        )
+
+        if existing is not None:
+            update_filter = {"_id": existing["_id"]}
+        else:
+            update_filter = client_query
 
     try:
         await football_push.update_one(
-            _subscription_query(subscription_doc.subscription),
+            update_filter,
             {
                 "$set": {
                     "subscription": subscription_doc.subscription.model_dump(
@@ -572,6 +634,7 @@ async def upsert_push_subscription(subscription_doc: PushSubscriptionDocument) -
                     ),
                     "team_ids": team_ids,
                     "username": subscription_doc.username,
+                    "client_id": subscription_doc.client_id,
                     "updated_at": now,
                 },
                 "$setOnInsert": {
@@ -584,17 +647,80 @@ async def upsert_push_subscription(subscription_doc: PushSubscriptionDocument) -
         logging.error(f"Error upserting subscription: {ex}")
         return False
 
+    if client_query is not None:
+        current_subscription = await football_push.find_one(
+            client_query,
+            sort=SUBSCRIPTION_DOCUMENT_SORT,
+        )
+
+        if current_subscription is not None:
+            await football_push.delete_many(
+                {
+                    "$and": [
+                        {"_id": {"$ne": current_subscription["_id"]}},
+                        {
+                            "$or": [
+                                client_query,
+                                _subscription_query(subscription_doc.subscription),
+                            ]
+                        },
+                    ]
+                }
+            )
+
     return True
 
 
 async def get_push_subscription(
-    subscription: PushSubscription,
+    subscription: PushSubscription | None,
+    *,
+    username: str | None = None,
+    client_id: str | None = None,
 ) -> PushSubscriptionDocument | None:
     if football_push is None:
         logging.error("No DB connection")
         return None
 
-    existing = await football_push.find_one(_subscription_query(subscription))
+    if subscription is not None:
+        existing = await football_push.find_one(
+            _subscription_query(subscription),
+            sort=SUBSCRIPTION_DOCUMENT_SORT,
+        )
+
+        if existing is not None:
+            return PushSubscriptionDocument.model_validate(existing)
+
+    client_query = _subscription_client_query(username, client_id)
+    if client_query is None:
+        return None
+
+    existing = await football_push.find_one(
+        client_query,
+        sort=SUBSCRIPTION_DOCUMENT_SORT,
+    )
+
+    if existing is None:
+        return None
+
+    return PushSubscriptionDocument.model_validate(existing)
+
+
+async def get_push_subscription_for_username_client(
+    username: str,
+    client_id: str | None,
+) -> PushSubscriptionDocument | None:
+    if football_push is None:
+        logging.error("No DB connection")
+        return None
+
+    client_query = _subscription_client_query(username, client_id)
+    if client_query is None:
+        return None
+
+    existing = await football_push.find_one(
+        client_query,
+        sort=SUBSCRIPTION_DOCUMENT_SORT,
+    )
 
     if existing is None:
         return None
@@ -614,7 +740,7 @@ async def get_latest_push_subscription_for_username(
 
     existing = await football_push.find_one(
         {"username": username},
-        sort=[("updated_at", -1), ("created_at", -1)],
+        sort=SUBSCRIPTION_DOCUMENT_SORT,
     )
 
     if existing is None:
@@ -623,12 +749,35 @@ async def get_latest_push_subscription_for_username(
     return PushSubscriptionDocument.model_validate(existing)
 
 
-async def delete_push_subscription(subscription: PushSubscription) -> bool:
+async def delete_push_subscription(
+    subscription: PushSubscription | None,
+    *,
+    username: str | None = None,
+    client_id: str | None = None,
+) -> bool:
     if football_push is None:
         logging.error("No DB connection")
         return False
 
-    result = await football_push.delete_one(_subscription_query(subscription))
+    delete_filters: list[dict] = []
+
+    if subscription is not None:
+        delete_filters.append(_subscription_query(subscription))
+
+    client_query = _subscription_client_query(username, client_id)
+    if client_query is not None:
+        delete_filters.append(client_query)
+
+    if len(delete_filters) == 0:
+        logging.error("No subscription identity provided for delete")
+        return False
+
+    delete_query = (
+        delete_filters[0]
+        if len(delete_filters) == 1
+        else {"$or": delete_filters}
+    )
+    result = await football_push.delete_many(delete_query)
 
     if result.deleted_count == 0:
         logging.error("No subscription found to delete")
@@ -650,7 +799,17 @@ async def get_push_subscriptions_for_team_ids(
         return []
 
     cursor = football_push.find({"team_ids": {"$in": unique_team_ids}})
-    return [
-        PushSubscriptionDocument.model_validate(item)
-        async for item in cursor
-    ]
+    subscriptions: list[PushSubscriptionDocument] = []
+    seen_endpoints: set[str] = set()
+
+    async for item in cursor:
+        subscription_doc = PushSubscriptionDocument.model_validate(item)
+        endpoint = subscription_doc.subscription.endpoint
+
+        if endpoint in seen_endpoints:
+            continue
+
+        seen_endpoints.add(endpoint)
+        subscriptions.append(subscription_doc)
+
+    return subscriptions

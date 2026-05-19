@@ -26,7 +26,7 @@ from .markdown.router import markdown_router
 from .blog.router import blog_router
 
 from .football.router import football_router
-from .football.football_db import initialise_teams_cache
+from .football.football_db import ensure_push_subscription_indexes, initialise_teams_cache
 
 from .feeds.router import feeds_router
 from .media.router import media_router
@@ -177,6 +177,7 @@ COLLECTION = MONGODB.get_collection("item_collection")
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await initialise_teams_cache()
+    await ensure_push_subscription_indexes()
     yield
     logging.debug("Closing DB Connection")
     MONGODB.client.close()

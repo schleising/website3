@@ -37,6 +37,7 @@ from .football_db import (
     get_table_db,
     get_table_db_for_season,
     get_push_subscription,
+    get_push_subscription_for_username_client,
     get_latest_push_subscription_for_username,
     upsert_push_subscription,
     delete_push_subscription,
@@ -74,6 +75,7 @@ from .models import (
     Team,
     PushSubscriptionDocument,
     SubscriptionLookupRequest,
+    SubscriptionDeleteRequest,
     SubscriptionPreferencesUpdateRequest,
     SubscriptionPreferencesResponse,
     SubscriptionOperationResponse,
@@ -621,6 +623,14 @@ def _require_logged_in_username(request: Request) -> str:
             detail="Login required to manage notifications.",
         )
     return username
+
+
+def _normalise_client_id_query_value(client_id: str | None) -> str | None:
+    if not isinstance(client_id, str):
+        return None
+
+    candidate = client_id.strip()
+    return candidate if candidate != "" else None
 
 
 def _assert_subscription_owner(
@@ -1463,12 +1473,16 @@ async def websocket_table_endpoint(websocket: WebSocket):
     response_model=SubscriptionPreferencesResponse,
 )
 async def get_subscription_preferences(request: Request, payload: SubscriptionLookupRequest):
-    subscription_doc = await get_push_subscription(payload.subscription)
     username = _request_username(request)
     is_logged_in = username != "Anonymous User"
+    subscription_doc = await get_push_subscription(
+        payload.subscription,
+        username=username if is_logged_in else None,
+        client_id=payload.client_id,
+    )
 
     if subscription_doc is None:
-        if is_logged_in:
+        if is_logged_in and payload.client_id is None:
             fallback_subscription = await get_latest_push_subscription_for_username(username)
 
             if fallback_subscription is not None:
@@ -1496,13 +1510,27 @@ async def get_subscription_preferences(request: Request, payload: SubscriptionLo
             subscription_matches_browser=True,
         )
 
-    if subscription_doc.username == username:
+    subscription_matches_browser = (
+        subscription_doc.subscription.endpoint == payload.subscription.endpoint
+    )
+    subscription_owner = subscription_doc.username.strip()
+
+    if subscription_owner == "" or subscription_owner == "Anonymous User":
         return SubscriptionPreferencesResponse(
             is_subscribed=True,
             can_manage_subscription=True,
             ownership_status="current_user",
             team_ids=sorted(set(subscription_doc.team_ids)),
-            subscription_matches_browser=True,
+            subscription_matches_browser=subscription_matches_browser,
+        )
+
+    if subscription_owner == username:
+        return SubscriptionPreferencesResponse(
+            is_subscribed=True,
+            can_manage_subscription=True,
+            ownership_status="current_user",
+            team_ids=sorted(set(subscription_doc.team_ids)),
+            subscription_matches_browser=subscription_matches_browser,
         )
 
     return SubscriptionPreferencesResponse(
@@ -1510,7 +1538,7 @@ async def get_subscription_preferences(request: Request, payload: SubscriptionLo
         can_manage_subscription=False,
         ownership_status="different_user",
         team_ids=sorted(set(subscription_doc.team_ids)),
-        subscription_matches_browser=True,
+        subscription_matches_browser=subscription_matches_browser,
     )
 
 
@@ -1524,6 +1552,7 @@ async def get_subscription_preferences(request: Request, payload: SubscriptionLo
 )
 async def get_current_user_subscription_preferences(request: Request):
     username = _request_username(request)
+    client_id = _normalise_client_id_query_value(request.query_params.get("client_id"))
 
     if username == "Anonymous User":
         return SubscriptionPreferencesResponse(
@@ -1533,7 +1562,16 @@ async def get_current_user_subscription_preferences(request: Request):
             subscription_matches_browser=False,
         )
 
-    subscription_doc = await get_latest_push_subscription_for_username(username)
+    subscription_doc = None
+
+    if client_id is not None:
+        subscription_doc = await get_push_subscription_for_username_client(
+            username,
+            client_id,
+        )
+
+    if subscription_doc is None and client_id is None:
+        subscription_doc = await get_latest_push_subscription_for_username(username)
 
     if subscription_doc is None:
         return SubscriptionPreferencesResponse(
@@ -1579,13 +1617,18 @@ async def update_subscription_preferences(
         )
 
     username = _require_logged_in_username(request)
-    existing_subscription = await get_push_subscription(payload.subscription)
+    existing_subscription = await get_push_subscription(
+        payload.subscription,
+        username=username,
+        client_id=payload.client_id,
+    )
     _assert_subscription_owner(existing_subscription, username)
 
     subscription_doc = PushSubscriptionDocument(
         subscription=payload.subscription,
         team_ids=selected_team_ids,
         username=username,
+        client_id=payload.client_id,
     )
     ok = await upsert_push_subscription(subscription_doc)
 
@@ -1613,14 +1656,22 @@ async def update_subscription_preferences(
 )
 async def remove_subscription_preferences(
     request: Request,
-    payload: SubscriptionLookupRequest,
+    payload: SubscriptionDeleteRequest,
     _: None = Depends(validate_csrf),
 ):
     username = _require_logged_in_username(request)
-    existing_subscription = await get_push_subscription(payload.subscription)
+    existing_subscription = await get_push_subscription(
+        payload.subscription,
+        username=username,
+        client_id=payload.client_id,
+    )
     _assert_subscription_owner(existing_subscription, username)
 
-    ok = await delete_push_subscription(payload.subscription)
+    ok = await delete_push_subscription(
+        payload.subscription,
+        username=username,
+        client_id=payload.client_id,
+    )
 
     if not ok:
         raise HTTPException(
@@ -1647,13 +1698,18 @@ async def subscribe(
     selected_team_ids = sorted({team.id for team in current_teams})
     username = _require_logged_in_username(request)
 
-    existing_subscription = await get_push_subscription(payload.subscription)
+    existing_subscription = await get_push_subscription(
+        payload.subscription,
+        username=username,
+        client_id=payload.client_id,
+    )
     _assert_subscription_owner(existing_subscription, username)
 
     subscription_doc = PushSubscriptionDocument(
         subscription=payload.subscription,
         team_ids=selected_team_ids,
         username=username,
+        client_id=payload.client_id,
     )
     ok = await upsert_push_subscription(subscription_doc)
 
@@ -1686,10 +1742,18 @@ async def unsubscribe(
     _: None = Depends(validate_csrf),
 ):
     username = _require_logged_in_username(request)
-    existing_subscription = await get_push_subscription(payload.subscription)
+    existing_subscription = await get_push_subscription(
+        payload.subscription,
+        username=username,
+        client_id=payload.client_id,
+    )
     _assert_subscription_owner(existing_subscription, username)
 
-    ok = await delete_push_subscription(payload.subscription)
+    ok = await delete_push_subscription(
+        payload.subscription,
+        username=username,
+        client_id=payload.client_id,
+    )
 
     if not ok:
         raise HTTPException(

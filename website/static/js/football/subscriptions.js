@@ -18,6 +18,62 @@ const serviceWorkerScope = footballRootPath;
 const subscriptionPreferencesUrl = `${footballRootPath}subscription/preferences/`;
 const currentUserSubscriptionPreferencesUrl = `${footballRootPath}subscription/preferences/current/`;
 const vapidPublicKey = "BAE-ATyX2xQGdyv9W5vcsI7qzA1FSui3UYNHgKFSKMmR12_7L9xQcVcDz8JbweMOTWb7npz6VMQMQC1BUylu00E";
+const subscriptionClientStorageKey = "football.subscriptionClientId.v1";
+const browserSubscriptionClientId = getBrowserSubscriptionClientId();
+
+function createSubscriptionClientId() {
+    if (window.crypto && typeof window.crypto.randomUUID === "function") {
+        return window.crypto.randomUUID();
+    }
+
+    if (window.crypto && typeof window.crypto.getRandomValues === "function") {
+        const randomValues = new Uint8Array(16);
+        window.crypto.getRandomValues(randomValues);
+        return Array.from(randomValues, value => value.toString(16).padStart(2, "0")).join("");
+    }
+
+    return `football-${Date.now().toString(16)}-${Math.random().toString(16).slice(2)}`;
+}
+
+function getBrowserSubscriptionClientId() {
+    try {
+        const existingClientId = window.localStorage.getItem(subscriptionClientStorageKey);
+        if (typeof existingClientId === "string" && existingClientId.trim() !== "") {
+            return existingClientId.trim();
+        }
+
+        const newClientId = createSubscriptionClientId();
+        window.localStorage.setItem(subscriptionClientStorageKey, newClientId);
+        return newClientId;
+    } catch (error) {
+        console.warn("Failed to access browser storage for football subscription client id", error);
+        return null;
+    }
+}
+
+function buildCurrentUserSubscriptionPreferencesUrl() {
+    if (!browserSubscriptionClientId) {
+        return currentUserSubscriptionPreferencesUrl;
+    }
+
+    const url = new URL(currentUserSubscriptionPreferencesUrl, window.location.origin);
+    url.searchParams.set("client_id", browserSubscriptionClientId);
+    return url.toString();
+}
+
+function buildSubscriptionPayload(subscription) {
+    const payload = {};
+
+    if (subscription) {
+        payload.subscription = subscription;
+    }
+
+    if (browserSubscriptionClientId) {
+        payload.client_id = browserSubscriptionClientId;
+    }
+
+    return payload;
+}
 
 function getTeamCheckboxes() {
     if (!subscriptionTeamGrid) {
@@ -64,10 +120,22 @@ function setAllSelections(checked) {
     updateSelectionCount();
 }
 
-function resetToUnsubscribedState(statusMessage) {
+function applySelectedTeamIds(teamIds) {
+    const selectedIds = new Set(teamIds.map(id => Number(id)));
+
+    getTeamCheckboxes().forEach(checkbox => {
+        checkbox.checked = selectedIds.has(Number(checkbox.value));
+    });
+
+    updateSelectionCount();
+    syncSelectAllState();
+    return selectedIds.size;
+}
+
+function resetToUnsubscribedState(statusMessage, { disableActions = false } = {}) {
     hasActiveSubscription = false;
     setAllSelections(false);
-    setActionButtonsDisabled(false);
+    setActionButtonsDisabled(disableActions);
     setStatus(statusMessage || defaultUnsubscribedMessage());
 }
 
@@ -92,6 +160,15 @@ function statusMessageForOwnership(ownershipStatus, selectedCount) {
 function statusMessageForRelink(selectedCount) {
     const countSuffix = selectedCount === 1 ? "team" : "teams";
     return `Loaded saved preferences for ${selectedCount} ${countSuffix}. Save to relink notifications to this browser.`;
+}
+
+function statusMessageForUnsupportedBrowser(selectedCount) {
+    if (selectedCount <= 0) {
+        return "Push notifications are not supported in this browser context.";
+    }
+
+    const countSuffix = selectedCount === 1 ? "team" : "teams";
+    return `Loaded saved preferences for ${selectedCount} ${countSuffix}, but push notifications are not supported in this browser context.`;
 }
 
 function setStatus(message, isError = false) {
@@ -160,14 +237,6 @@ async function getExistingPushSubscription() {
         }
     }
 
-    const allRegistrations = await navigator.serviceWorker.getRegistrations();
-    for (const registration of allRegistrations) {
-        const subscription = await registration.pushManager.getSubscription();
-        if (subscription) {
-            return subscription;
-        }
-    }
-
     return null;
 }
 
@@ -187,15 +256,20 @@ async function getCurrentSubscription() {
 }
 
 async function requestJson(url, method, payload) {
-    const response = await fetch(url, {
+    const requestOptions = {
         method,
         credentials: "same-origin",
         headers: {
             "Content-Type": "application/json",
             "X-CSRF-Token": csrfToken,
         },
-        body: JSON.stringify(payload),
-    });
+    };
+
+    if (payload !== undefined) {
+        requestOptions.body = JSON.stringify(payload);
+    }
+
+    const response = await fetch(url, requestOptions);
 
     if (!response.ok) {
         let detail = `Request failed with status ${response.status}`;
@@ -214,35 +288,40 @@ async function requestJson(url, method, payload) {
     return response.json();
 }
 
-async function loadPreferences() {
+async function loadPreferences({ supportsPushNotifications }) {
     try {
-        const subscription = await getCurrentSubscription();
+        const subscription = supportsPushNotifications ? await getCurrentSubscription() : null;
 
         if (!subscription) {
             if (canManageSubscriptions) {
-                const currentUserData = await requestJson(currentUserSubscriptionPreferencesUrl, "GET");
+                const currentUserData = await requestJson(buildCurrentUserSubscriptionPreferencesUrl(), "GET");
 
                 if (currentUserData.is_subscribed && Array.isArray(currentUserData.team_ids)) {
-                    const selectedIds = new Set(currentUserData.team_ids.map(id => Number(id)));
-                    getTeamCheckboxes().forEach(checkbox => {
-                        checkbox.checked = selectedIds.has(Number(checkbox.value));
-                    });
-
-                    updateSelectionCount();
-                    syncSelectAllState();
+                    const selectedCount = applySelectedTeamIds(currentUserData.team_ids);
                     hasActiveSubscription = false;
-                    setActionButtonsDisabled(false);
-                    setStatus(statusMessageForRelink(selectedIds.size));
+                    setActionButtonsDisabled(!supportsPushNotifications);
+                    setStatus(
+                        supportsPushNotifications
+                            ? statusMessageForRelink(selectedCount)
+                            : statusMessageForUnsupportedBrowser(selectedCount),
+                        !supportsPushNotifications,
+                    );
                     return;
                 }
             }
 
-            resetToUnsubscribedState();
+            resetToUnsubscribedState(
+                supportsPushNotifications ? undefined : statusMessageForUnsupportedBrowser(0),
+                { disableActions: !supportsPushNotifications },
+            );
             return;
         }
 
-        const payload = { subscription };
-        const data = await requestJson(subscriptionPreferencesUrl, "POST", payload);
+        const data = await requestJson(
+            subscriptionPreferencesUrl,
+            "POST",
+            buildSubscriptionPayload(subscription),
+        );
 
         if (!data.is_subscribed) {
             try {
@@ -260,17 +339,11 @@ async function loadPreferences() {
             return;
         }
 
-        const selectedIds = new Set(data.team_ids.map(id => Number(id)));
-        getTeamCheckboxes().forEach(checkbox => {
-            checkbox.checked = selectedIds.has(Number(checkbox.value));
-        });
-
         if (typeof data.can_manage_subscription === "boolean") {
             canManageSubscriptions = data.can_manage_subscription;
         }
 
-        updateSelectionCount();
-        syncSelectAllState();
+        const selectedCount = applySelectedTeamIds(data.team_ids);
         hasActiveSubscription = data.subscription_matches_browser !== false;
         setActionButtonsDisabled(false);
 
@@ -283,7 +356,6 @@ async function loadPreferences() {
             return;
         }
 
-        const selectedCount = selectedIds.size;
         setStatus(statusMessageForOwnership(data.ownership_status, selectedCount), data.ownership_status === "different_user");
     } catch (error) {
         console.error("Failed to load preferences", error);
@@ -330,7 +402,7 @@ async function savePreferences() {
     try {
         const subscription = await ensurePushSubscription();
         const payload = {
-            subscription,
+            ...buildSubscriptionPayload(subscription),
             team_ids: teamIds,
         };
 
@@ -358,14 +430,23 @@ async function unsubscribeAll() {
 
     try {
         const subscription = await getCurrentSubscription();
+        const payload = buildSubscriptionPayload(subscription);
 
-        if (!subscription) {
-            setStatus("No active push subscription found.");
+        if (!payload.subscription && !payload.client_id) {
+            setStatus("No saved subscription found for this browser.");
             return;
         }
 
-        await requestJson(subscriptionPreferencesUrl, "DELETE", { subscription });
-        await subscription.unsubscribe();
+        await requestJson(subscriptionPreferencesUrl, "DELETE", payload);
+
+        if (subscription) {
+            try {
+                await subscription.unsubscribe();
+            } catch (error) {
+                console.warn("Failed to remove browser push subscription during unsubscribe", error);
+            }
+        }
+
         resetToUnsubscribedState("Not currently subscribed. Select teams and save to subscribe.");
     } catch (error) {
         console.error("Failed to unsubscribe", error);
@@ -402,18 +483,19 @@ document.addEventListener("DOMContentLoaded", () => {
         subscriptionUnsubscribeButton.addEventListener("click", unsubscribeAll);
     }
 
+    updateSelectionCount();
+    syncSelectAllState();
+
     if (!supportsPushNotifications) {
         setActionButtonsDisabled(true);
-        setStatus("Push notifications are not supported in this browser context.", true);
         console.warn("Football subscriptions disabled: push support unavailable", {
             supportsServiceWorker,
             supportsPushManager,
         });
+        loadPreferences({ supportsPushNotifications: false });
         return;
     }
 
     setActionButtonsDisabled(false);
-    updateSelectionCount();
-    syncSelectAllState();
-    loadPreferences();
+    loadPreferences({ supportsPushNotifications: true });
 });

@@ -2,7 +2,15 @@ from datetime import datetime
 from enum import Enum
 from pathlib import Path
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
+
+
+def _normalise_optional_client_id(value) -> str | None:
+    if value is None:
+        return None
+
+    candidate = str(value).strip()
+    return candidate if candidate != "" else None
 
 
 class ShortName(str, Enum):
@@ -378,8 +386,14 @@ class PushSubscriptionDocument(BaseModel):
     subscription: PushSubscription
     team_ids: list[int] = Field(default_factory=list)
     username: str = "Anonymous User"
+    client_id: str | None = None
     created_at: datetime | None = None
     updated_at: datetime | None = None
+
+    @field_validator("client_id", mode="before")
+    @classmethod
+    def normalise_client_id(cls, value):
+        return _normalise_optional_client_id(value)
 
     @model_validator(mode="before")
     @classmethod
@@ -388,7 +402,11 @@ class PushSubscriptionDocument(BaseModel):
             return data
 
         if "subscription" in data:
-            return data
+            normalised_data = dict(data)
+            normalised_data["client_id"] = _normalise_optional_client_id(
+                normalised_data.get("client_id")
+            )
+            return normalised_data
 
         # Backward compatibility for legacy documents stored as raw PushSubscription.
         if "endpoint" in data and "keys" in data:
@@ -400,6 +418,7 @@ class PushSubscriptionDocument(BaseModel):
                 },
                 "team_ids": data.get("team_ids", []),
                 "username": data.get("username", "Anonymous User"),
+                "client_id": _normalise_optional_client_id(data.get("client_id")),
                 "created_at": data.get("created_at"),
                 "updated_at": data.get("updated_at"),
             }
@@ -407,11 +426,30 @@ class PushSubscriptionDocument(BaseModel):
         return data
 
 
-class SubscriptionLookupRequest(BaseModel):
+class SubscriptionClientIdentity(BaseModel):
+    client_id: str | None = None
+
+    @field_validator("client_id", mode="before")
+    @classmethod
+    def normalise_client_id(cls, value):
+        return _normalise_optional_client_id(value)
+
+
+class SubscriptionLookupRequest(SubscriptionClientIdentity):
     subscription: PushSubscription
 
 
-class SubscriptionPreferencesUpdateRequest(BaseModel):
+class SubscriptionDeleteRequest(SubscriptionClientIdentity):
+    subscription: PushSubscription | None = None
+
+    @model_validator(mode="after")
+    def require_lookup_key(self):
+        if self.subscription is None and self.client_id is None:
+            raise ValueError("Either subscription or client_id is required.")
+        return self
+
+
+class SubscriptionPreferencesUpdateRequest(SubscriptionLookupRequest):
     subscription: PushSubscription
     team_ids: list[int] = Field(default_factory=list)
 
