@@ -5,7 +5,7 @@
 {% endblock %}
 
 {% block head %}
-<link rel="stylesheet" href="/css/account/account.css?v1.2.0">
+<link rel="stylesheet" href="/css/account/account.css?v1.3.0">
 {% block title %}<title>Verify Signup</title>{% endblock %}
 {% endblock %}
 
@@ -14,35 +14,62 @@
 {% endblock %}
 
 {% block content %}
-<div id="login-text">
-  <h3>Email Verified</h3>
-  <p>Thanks, your email is verified. Complete passkey setup to finish account creation.</p>
-</div>
+<section class="account-shell">
+  <div class="account-hero">
+    <article class="account-panel">
+      <p class="account-eyebrow">Verification Complete</p>
+      <h2 class="account-title">Email confirmed. One final step.</h2>
+      <p class="account-notice is-success">Your email is verified and ready for account activation.</p>
+      <p class="account-lead">Review the verified details below, then register a passkey to complete account creation and start using the site securely.</p>
+      <div class="account-chip-row">
+        <span class="account-chip">Verified identity</span>
+        <span class="account-chip">Passkey ready</span>
+        <span class="account-chip">Immediate activation</span>
+      </div>
+    </article>
 
-<form class="row g-3" id="verified-signup-register-form" data-passkey-flow="register-verified" novalidate>
-  <input type="hidden" name="csrf_token" value="{{ request.state.csrf_token|default('') }}">
-  <input type="hidden" name="signup_session_token" value="{{ signup_session_token|default('') }}">
-
-  <div class="col-md-6">
-    <label for="firstname" class="form-label">First Name</label>
-    <input name="firstname" id="firstname" class="form-control" type="text" value="{{ firstname|default('') }}" readonly>
-  </div>
-  <div class="col-md-6">
-    <label for="lastname" class="form-label">Last Name</label>
-    <input name="lastname" id="lastname" class="form-control" type="text" value="{{ lastname|default('') }}" readonly>
-  </div>
-  <div class="col-md-6">
-    <label for="username" class="form-label">Email</label>
-    <input name="username" id="username" class="form-control" type="email" value="{{ username|default('') }}" readonly>
+    <aside class="account-panel account-panel--side">
+      <p class="account-panel-kicker">What this step does</p>
+      <ul class="account-feature-list">
+        <li>Registers the first passkey for the new account.</li>
+        <li>Uses the verified profile details shown on this page.</li>
+        <li>Completes account setup in the same flow without a separate password.</li>
+      </ul>
+    </aside>
   </div>
 
-  <div class="col-12">
-    <button type="submit" class="btn btn-primary" id="verified-signup-submit">Create account with passkey</button>
-  </div>
-  <div class="col-12">
-    <p id="passkey-status" class="account-status" role="status" aria-live="polite"></p>
-  </div>
-</form>
+  <section class="account-panel">
+    <div class="account-card-header">
+      <h3 class="account-card-title">Register passkey</h3>
+      <p class="account-card-copy">The values below are locked because they were already verified through the email link.</p>
+    </div>
+
+    <form class="row g-3 account-form" id="verified-signup-register-form" data-passkey-flow="register-verified" novalidate>
+      <input type="hidden" name="csrf_token" value="{{ request.state.csrf_token|default('') }}">
+      <input type="hidden" name="signup_session_token" value="{{ signup_session_token|default('') }}">
+
+      <div class="col-md-6">
+        <label for="firstname" class="form-label">First Name</label>
+        <input name="firstname" id="firstname" class="form-control" type="text" value="{{ firstname|default('') }}" readonly>
+      </div>
+      <div class="col-md-6">
+        <label for="lastname" class="form-label">Last Name</label>
+        <input name="lastname" id="lastname" class="form-control" type="text" value="{{ lastname|default('') }}" readonly>
+      </div>
+      <div class="col-md-6">
+        <label for="username" class="form-label">Email</label>
+        <input name="username" id="username" class="form-control" type="email" value="{{ username|default('') }}" readonly>
+      </div>
+
+      <div class="col-12">
+        <button type="submit" class="btn btn-primary" id="verified-signup-submit">Create account with passkey</button>
+      </div>
+      <div class="col-12">
+        <p id="passkey-status" class="account-status" role="status" aria-live="polite"></p>
+      </div>
+    </form>
+  </section>
+</section>
 {% endblock %}
 
 {% block footer %}

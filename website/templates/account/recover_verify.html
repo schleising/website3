@@ -5,7 +5,7 @@
 {% endblock %}
 
 {% block head %}
-<link rel="stylesheet" href="/css/account/account.css?v1.2.0">
+<link rel="stylesheet" href="/css/account/account.css?v1.3.0">
 {% block title %}<title>Recover Passkey</title>{% endblock %}
 {% endblock %}
 
@@ -14,24 +14,51 @@
 {% endblock %}
 
 {% block content %}
-<div id="login-text">
-  <h3>Recovery Link Verified</h3>
-  <p>Enroll a new passkey. Existing passkeys will be revoked after successful recovery.</p>
-</div>
+<section class="account-shell">
+  <div class="account-hero">
+    <article class="account-panel">
+      <p class="account-eyebrow">Recovery Verified</p>
+      <h2 class="account-title">Enroll a fresh passkey for this account</h2>
+      <p class="account-notice is-success">The recovery link is valid and you can finish access restoration now.</p>
+      <p class="account-lead">Register a new passkey to restore account access. Existing passkeys will be revoked when recovery succeeds.</p>
+      <div class="account-chip-row">
+        <span class="account-chip">Single verified session</span>
+        <span class="account-chip">Old passkeys revoked</span>
+        <span class="account-chip">Access restored immediately</span>
+      </div>
+    </article>
 
-<form class="row g-3" id="recovery-register-form" data-passkey-flow="recovery-register" novalidate>
-  <input type="hidden" name="csrf_token" value="{{ request.state.csrf_token|default('') }}">
-  <input type="hidden" name="recovery_session_token" value="{{ recovery_session_token|default('') }}">
-  <input type="hidden" name="username" value="{{ username|default('') }}">
-
-  <div class="col-12">
-    <button type="submit" class="btn btn-primary" id="recovery-register-submit">Enroll new passkey</button>
+    <aside class="account-panel account-panel--side">
+      <p class="account-panel-kicker">Recovery notes</p>
+      <ul class="account-feature-list">
+        <li>Finish this step on the device where the replacement passkey should live.</li>
+        <li>When recovery completes, earlier passkeys are no longer valid for the account.</li>
+        <li>Keep at least one backup authenticator enrolled later for resilience.</li>
+      </ul>
+    </aside>
   </div>
 
-  <div class="col-12">
-    <p id="passkey-status" class="account-status" role="status" aria-live="polite"></p>
-  </div>
-</form>
+  <section class="account-panel">
+    <div class="account-card-header">
+      <h3 class="account-card-title">Restore access</h3>
+      <p class="account-card-copy">Approve the passkey enrollment prompt to finish recovery and reactivate normal sign-in.</p>
+    </div>
+
+    <form class="row g-3 account-form" id="recovery-register-form" data-passkey-flow="recovery-register" novalidate>
+      <input type="hidden" name="csrf_token" value="{{ request.state.csrf_token|default('') }}">
+      <input type="hidden" name="recovery_session_token" value="{{ recovery_session_token|default('') }}">
+      <input type="hidden" name="username" value="{{ username|default('') }}">
+
+      <div class="col-12">
+        <button type="submit" class="btn btn-primary" id="recovery-register-submit">Enroll new passkey</button>
+      </div>
+
+      <div class="col-12">
+        <p id="passkey-status" class="account-status" role="status" aria-live="polite"></p>
+      </div>
+    </form>
+  </section>
+</section>
 {% endblock %}
 
 {% block footer %}

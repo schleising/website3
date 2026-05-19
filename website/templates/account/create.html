@@ -4,7 +4,7 @@
 <script defer src="/js/account/passkeys.js?v1.1.0"></script>
 {% endblock %}
 {% block head %}
-<link rel="stylesheet" href="/css/account/account.css?v1.2.0">
+<link rel="stylesheet" href="/css/account/account.css?v1.3.0">
 {% block title %}<title>Create Account</title>{% endblock %}
 {% endblock %}
 
@@ -13,50 +13,77 @@
 {% endblock %}
 
 {% block content %}
-<div id="login-text">
-  <h3>Create Account</h3>
-  {% if result == 'create_failed' %}
-    <h5>User Creation Failed</h5>
-  {% elif result == 'email_verification_required' %}
-    <h5>Email verification is required before passkey setup.</h5>
-  {% elif result == 'email_link_invalid' %}
-    <h5>The verification link is invalid or expired. Request a new one.</h5>
-  {% endif %}
-  <p>Enter your details and request a one-time email verification link.</p>
-</div>
-<form class="row g-3" id="signup-email-form" data-passkey-flow="signup-email" novalidate>
-  <input type="hidden" name="csrf_token" value="{{ request.state.csrf_token|default('') }}">
-  <input type="hidden" name="form_loaded_at" value="{{ form_loaded_at|default('') }}">
-  <div style="position:absolute;left:-10000px;top:auto;width:1px;height:1px;overflow:hidden;" aria-hidden="true">
-    <label for="website">Leave this field empty</label>
-    <input
-      name="website"
-      id="website"
-      type="text"
-      tabindex="-1"
-      autocomplete="off"
-      value=""
-    >
+<section class="account-shell">
+  <div class="account-hero">
+    <article class="account-panel">
+      <p class="account-eyebrow">New Account</p>
+      <h2 class="account-title">Start with verified email, finish with a passkey</h2>
+      {% if result == 'create_failed' %}
+      <p class="account-notice is-danger">Account creation could not be started. Please review your details and try again.</p>
+      {% elif result == 'email_verification_required' %}
+      <p class="account-notice is-warning">Verify your email before passkey setup can continue.</p>
+      {% elif result == 'email_link_invalid' %}
+      <p class="account-notice is-danger">The verification link is invalid or expired. Request a new one.</p>
+      {% endif %}
+      <p class="account-lead">Create the account record first, then confirm ownership through a one-time email link before registering a passkey.</p>
+      <div class="account-chip-row">
+        <span class="account-chip">Verified email</span>
+        <span class="account-chip">Passkey protected</span>
+        <span class="account-chip">Low-friction setup</span>
+      </div>
+    </article>
+
+    <aside class="account-panel account-panel--side">
+      <p class="account-panel-kicker">Before you start</p>
+      <ul class="account-feature-list">
+        <li>Use an email address you can access immediately for the verification step.</li>
+        <li>Choose the device where you want the first passkey enrolled.</li>
+        <li>The verification link is single use and time limited for safety.</li>
+      </ul>
+    </aside>
   </div>
-  <div class="col-md-6">
-    <label for="firstname" class="form-label">First Name</label>
-    <input name="firstname" id="firstname" class="form-control" type="text" placeholder="First Name" autocomplete="given-name" required>
-  </div>
-  <div class="col-md-6">
-    <label for="lastname" class="form-label">Last Name</label>
-    <input name="lastname" id="lastname" class="form-control" type="text" placeholder="Last Name" autocomplete="family-name" required>
-  </div>
-  <div class="col-md-6">
-    <label for="username" class="form-label">Email</label>
-    <input name="username" id="username" class="form-control" type="email" placeholder="name@example.com" autocomplete="email" required>
-  </div>
-  <div class="col-12">
-    <button type="submit" class="btn btn-primary" id="signup-email-submit">Send verification email</button>
-  </div>
-  <div class="col-12">
-    <p id="passkey-status" class="account-status" role="status" aria-live="polite"></p>
-  </div>
-</form>
+
+  <section class="account-panel">
+    <div class="account-card-header">
+      <h3 class="account-card-title">Request verification email</h3>
+      <p class="account-card-copy">Once the verification link is opened, the final passkey registration step continues automatically.</p>
+    </div>
+
+    <form class="row g-3 account-form" id="signup-email-form" data-passkey-flow="signup-email" novalidate>
+      <input type="hidden" name="csrf_token" value="{{ request.state.csrf_token|default('') }}">
+      <input type="hidden" name="form_loaded_at" value="{{ form_loaded_at|default('') }}">
+      <div style="position:absolute;left:-10000px;top:auto;width:1px;height:1px;overflow:hidden;" aria-hidden="true">
+        <label for="website">Leave this field empty</label>
+        <input
+          name="website"
+          id="website"
+          type="text"
+          tabindex="-1"
+          autocomplete="off"
+          value=""
+        >
+      </div>
+      <div class="col-md-6">
+        <label for="firstname" class="form-label">First Name</label>
+        <input name="firstname" id="firstname" class="form-control" type="text" placeholder="First Name" autocomplete="given-name" required>
+      </div>
+      <div class="col-md-6">
+        <label for="lastname" class="form-label">Last Name</label>
+        <input name="lastname" id="lastname" class="form-control" type="text" placeholder="Last Name" autocomplete="family-name" required>
+      </div>
+      <div class="col-md-6">
+        <label for="username" class="form-label">Email</label>
+        <input name="username" id="username" class="form-control" type="email" placeholder="name@example.com" autocomplete="email" required>
+      </div>
+      <div class="col-12">
+        <button type="submit" class="btn btn-primary" id="signup-email-submit">Send verification email</button>
+      </div>
+      <div class="col-12">
+        <p id="passkey-status" class="account-status" role="status" aria-live="polite"></p>
+      </div>
+    </form>
+  </section>
+</section>
 {% endblock %}
 
 {% block footer %}

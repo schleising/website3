@@ -5,7 +5,7 @@
 {% endblock %}
 
 {% block head %}
-<link rel="stylesheet" href="/css/account/account.css?v1.2.0">
+<link rel="stylesheet" href="/css/account/account.css?v1.3.0">
 {% block title %}<title>Login</title>{% endblock %}
 {% endblock %}
 
@@ -14,32 +14,65 @@
 {% endblock %}
 
 {% block content %}
-<div id="login-text">
-  <h3>Login</h3>
-  {% if result == 'login_failed' %}
-    <h5>Login failed</h5>
-  {% elif result == 'passkey_required' %}
-    <h5>Password login is disabled. Use a passkey.</h5>
-  {% elif result == 'migration_required' %}
-    <h5>Your account must be migrated to passkeys before login.</h5>
-  {% endif %}
-  <p>Use your passkey to sign in. The passkey prompt should open automatically.</p>
-  <p>If you do not have an account, please <a href="/account/create/">create one</a></p>
-  <p>If you lost access to your passkeys, <a href="/account/recover/">recover your account</a>.</p>
-</div>
-<form class="row g-3" id="passkey-login-form" data-passkey-flow="login" novalidate>
-  <input type="hidden" name="next" value="{{ next_path|default('') }}">
-  <input type="hidden" name="csrf_token" value="{{ request.state.csrf_token|default('') }}">
-  <div class="col-12">
-    <button type="submit" class="btn btn-primary" id="passkey-login-submit">Try passkey again</button>
+<section class="account-shell">
+  <div class="account-hero">
+    <article class="account-panel">
+      <p class="account-eyebrow">Account Access</p>
+      <h2 class="account-title">Sign in with your passkey</h2>
+      {% if result == 'login_failed' %}
+      <p class="account-notice is-danger">Passkey sign-in failed. Please try again.</p>
+      {% elif result == 'passkey_required' %}
+      <p class="account-notice is-warning">Password sign-in is disabled for this account.</p>
+      {% elif result == 'migration_required' %}
+      <p class="account-notice is-warning">Your account must be migrated to passkeys before you continue.</p>
+      {% endif %}
+      <p class="account-lead">Use the passkey stored on this device, your password manager, or a security key. The sign-in prompt should open automatically.</p>
+      {% if next_path %}
+      <p class="account-context">After sign-in you will return to <span class="account-inline-path">{{ next_path }}</span>.</p>
+      {% endif %}
+      <div class="account-chip-row">
+        <span class="account-chip">Passkey first</span>
+        <span class="account-chip">Phishing resistant</span>
+        <span class="account-chip">Fast re-entry</span>
+      </div>
+    </article>
+
+    <aside class="account-panel account-panel--side">
+      <p class="account-panel-kicker">Need a different route?</p>
+      <div class="account-link-grid">
+        <a class="account-link-card" href="/account/create/">
+          <strong>Create an account</strong>
+          <span>Register a new account and verify your email before passkey setup.</span>
+        </a>
+        <a class="account-link-card" href="/account/recover/">
+          <strong>Recover access</strong>
+          <span>Request a short-lived recovery link if you have lost your existing passkeys.</span>
+        </a>
+      </div>
+    </aside>
   </div>
-  <div class="col-12">
-    <a id="passkey-migrate-link" class="btn btn-outline-secondary" href="/account/migrate/">Migrate existing account</a>
-  </div>
-  <div class="col-12">
-    <p id="passkey-status" class="account-status" role="status" aria-live="polite"></p>
-  </div>
-</form>
+
+  <section class="account-panel">
+    <div class="account-card-header">
+      <h3 class="account-card-title">Continue securely</h3>
+      <p class="account-card-copy">Approve the device prompt to complete sign-in. Touch ID, Face ID, Windows Hello, and security keys are all supported.</p>
+    </div>
+
+    <form class="row g-3 account-form" id="passkey-login-form" data-passkey-flow="login" novalidate>
+      <input type="hidden" name="next" value="{{ next_path|default('') }}">
+      <input type="hidden" name="csrf_token" value="{{ request.state.csrf_token|default('') }}">
+      <div class="col-12">
+        <button type="submit" class="btn btn-primary" id="passkey-login-submit">Try passkey again</button>
+      </div>
+      <div class="col-12">
+        <a id="passkey-migrate-link" class="btn btn-outline-secondary" href="/account/migrate/">Migrate existing account</a>
+      </div>
+      <div class="col-12">
+        <p id="passkey-status" class="account-status" role="status" aria-live="polite"></p>
+      </div>
+    </form>
+  </section>
+</section>
 {% endblock %}
 
 {% block footer %}

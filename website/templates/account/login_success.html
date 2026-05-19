@@ -4,6 +4,7 @@
 {% endblock %}
 
 {% block head %}
+<link rel="stylesheet" href="/css/account/account.css?v1.3.0">
 {% block title %}<title>Login Success</title>{% endblock %}
 {% endblock %}
 
@@ -12,9 +13,30 @@
 {% endblock %}
 
 {% block content %}
-<div class="col">
-  <h3>Login Successful</h3>
-</div>
+<section class="account-shell account-shell--compact">
+  <article class="account-panel">
+    <p class="account-eyebrow">Session Active</p>
+    <h2 class="account-title">Login successful</h2>
+    <p class="account-notice is-success">Your passkey was accepted and this browser session is now active.</p>
+    <p class="account-lead">You can continue into the authenticated areas of the site immediately. If you were redirected here from a passkey prompt, everything completed successfully.</p>
+
+    <div class="account-metadata">
+      <div class="account-stat">
+        <span class="account-stat-label">Authentication</span>
+        <span class="account-stat-value">Passkey confirmed</span>
+      </div>
+      <div class="account-stat">
+        <span class="account-stat-label">Session</span>
+        <span class="account-stat-value">Active on this browser</span>
+      </div>
+    </div>
+
+    <div class="account-action-row">
+      <a class="btn btn-primary" href="/">Return home</a>
+      <a class="btn btn-outline-secondary" href="/webapps/">Browse webapps</a>
+    </div>
+  </article>
+</section>
 {% endblock %}
 
 {% block footer %}

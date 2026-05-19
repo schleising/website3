@@ -5,7 +5,7 @@
 {% endblock %}
 
 {% block head %}
-<link rel="stylesheet" href="/css/account/account.css?v1.2.0">
+<link rel="stylesheet" href="/css/account/account.css?v1.3.0">
 {% block title %}<title>Migrate Account</title>{% endblock %}
 {% endblock %}
 
@@ -14,56 +14,85 @@
 {% endblock %}
 
 {% block content %}
-<div id="login-text">
-  <h3>Migrate To Passkey</h3>
-  {% if result == 'migration_required' %}
-    <h5>Passkey enrollment is required before continuing.</h5>
-  {% elif result == 'migration_failed' %}
-    <h5>Migration failed. Please try again.</h5>
-  {% endif %}
-  <p>This account still uses a legacy password. Complete this one-time migration to continue.</p>
-</div>
+<section class="account-shell">
+  <div class="account-hero">
+    <article class="account-panel">
+      <p class="account-eyebrow">Account Upgrade</p>
+      <h2 class="account-title">Move this account to passkeys</h2>
+      {% if result == 'migration_required' %}
+      <p class="account-notice is-warning">Passkey enrollment is required before you can continue.</p>
+      {% elif result == 'migration_failed' %}
+      <p class="account-notice is-danger">Migration could not be completed. Please try again.</p>
+      {% endif %}
+      <p class="account-lead">This account still uses a legacy password. Complete the one-time migration now to modernise sign-in and keep access uninterrupted.</p>
+      {% if next_path %}
+      <p class="account-context">When migration completes you will continue to <span class="account-inline-path">{{ next_path }}</span>.</p>
+      {% endif %}
+      <div class="account-chip-row">
+        <span class="account-chip">One-time step</span>
+        <span class="account-chip">Stronger sign-in</span>
+        <span class="account-chip">Same account</span>
+      </div>
+    </article>
 
-<form class="row g-3" id="passkey-migrate-form" data-passkey-flow="migrate" novalidate>
-  <input type="hidden" name="csrf_token" value="{{ request.state.csrf_token|default('') }}">
-  <input type="hidden" name="next" value="{{ next_path|default('') }}">
-  <input type="hidden" name="session_migration" value="{{ 'true' if session_migration else 'false' }}">
-
-  <div class="col-md-6">
-    <label for="username" class="form-label">Email</label>
-    <input
-      name="username"
-      id="username"
-      class="form-control"
-      type="email"
-      placeholder="name@example.com"
-      autocomplete="username"
-      value="{{ username|default('') }}"
-      {% if session_migration %}readonly{% endif %}
-      required
-    >
+    <aside class="account-panel account-panel--side">
+      <p class="account-panel-kicker">What happens next</p>
+      <ul class="account-feature-list">
+        <li>Confirm the verified email attached to the current account.</li>
+        <li>{% if session_migration %}Use the active session to finish migration without re-entering your password.{% else %}Use the current password once to prove account ownership.{% endif %}</li>
+        <li>Approve passkey enrollment on this device or with your preferred authenticator.</li>
+      </ul>
+    </aside>
   </div>
 
-  <div class="col-md-6" {% if session_migration %}style="display:none;"{% endif %}>
-    <label for="password" class="form-label">Password</label>
-    <input
-      name="password"
-      id="password"
-      class="form-control"
-      type="password"
-      autocomplete="current-password"
-      {% if not session_migration %}required{% endif %}
-    >
-  </div>
+  <section class="account-panel">
+    <div class="account-card-header">
+      <h3 class="account-card-title">Finish migration</h3>
+      <p class="account-card-copy">Keep the same email address and convert the sign-in flow to passkeys without creating a new account.</p>
+    </div>
 
-  <div class="col-12">
-    <button type="submit" class="btn btn-primary" id="passkey-migrate-submit">Enroll passkey and finish migration</button>
-  </div>
+    <form class="row g-3 account-form" id="passkey-migrate-form" data-passkey-flow="migrate" novalidate>
+      <input type="hidden" name="csrf_token" value="{{ request.state.csrf_token|default('') }}">
+      <input type="hidden" name="next" value="{{ next_path|default('') }}">
+      <input type="hidden" name="session_migration" value="{{ 'true' if session_migration else 'false' }}">
 
-  <div class="col-12">
-    <p id="passkey-status" class="account-status" role="status" aria-live="polite"></p>
-  </div>
-</form>
+      <div class="col-md-6">
+        <label for="username" class="form-label">Email</label>
+        <input
+          name="username"
+          id="username"
+          class="form-control"
+          type="email"
+          placeholder="name@example.com"
+          autocomplete="username"
+          value="{{ username|default('') }}"
+          {% if session_migration %}readonly{% endif %}
+          required
+        >
+      </div>
+
+      <div class="col-md-6" {% if session_migration %}style="display:none;"{% endif %}>
+        <label for="password" class="form-label">Password</label>
+        <input
+          name="password"
+          id="password"
+          class="form-control"
+          type="password"
+          autocomplete="current-password"
+          {% if not session_migration %}required{% endif %}
+        >
+      </div>
+
+      <div class="col-12">
+        <button type="submit" class="btn btn-primary" id="passkey-migrate-submit">Enroll passkey and finish migration</button>
+      </div>
+
+      <div class="col-12">
+        <p id="passkey-status" class="account-status" role="status" aria-live="polite"></p>
+      </div>
+    </form>
+  </section>
+</section>
 {% endblock %}
 
 {% block footer %}

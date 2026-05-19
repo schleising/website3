@@ -5,7 +5,7 @@
 {% endblock %}
 
 {% block head %}
-<link rel="stylesheet" href="/css/account/account.css?v1.2.0">
+<link rel="stylesheet" href="/css/account/account.css?v1.3.0">
 {% block title %}<title>Recover Account</title>{% endblock %}
 {% endblock %}
 
@@ -14,30 +14,56 @@
 {% endblock %}
 
 {% block content %}
-<div id="login-text">
-  <h3>Recover Account</h3>
-  {% if result == 'recovery_link_invalid' %}
-    <h5>The recovery link is invalid or expired. Request a new one.</h5>
-  {% endif %}
-  <p>Enter your verified email to receive a one-time 15-minute recovery link.</p>
-</div>
+<section class="account-shell">
+  <div class="account-hero">
+    <article class="account-panel">
+      <p class="account-eyebrow">Account Recovery</p>
+      <h2 class="account-title">Recover access without starting over</h2>
+      {% if result == 'recovery_link_invalid' %}
+      <p class="account-notice is-danger">The recovery link is invalid or expired. Request a new one to continue.</p>
+      {% endif %}
+      <p class="account-lead">Enter the verified email on the account and a one-time recovery link will be sent. The link stays valid for 15 minutes.</p>
+      <div class="account-chip-row">
+        <span class="account-chip">Time-limited link</span>
+        <span class="account-chip">Verified email required</span>
+        <span class="account-chip">Fresh passkey enrollment</span>
+      </div>
+    </article>
 
-<form class="row g-3" id="recovery-email-form" data-passkey-flow="recovery-email" novalidate>
-  <input type="hidden" name="csrf_token" value="{{ request.state.csrf_token|default('') }}">
-
-  <div class="col-md-6">
-    <label for="username" class="form-label">Email</label>
-    <input name="username" id="username" class="form-control" type="email" placeholder="name@example.com" autocomplete="email" required>
+    <aside class="account-panel account-panel--side">
+      <p class="account-panel-kicker">Recovery overview</p>
+      <ul class="account-feature-list">
+        <li>Use the email address already associated with the account.</li>
+        <li>Open the link from a device where you want to enroll a replacement passkey.</li>
+        <li>Existing passkeys are revoked after a successful recovery for security.</li>
+      </ul>
+    </aside>
   </div>
 
-  <div class="col-12">
-    <button type="submit" class="btn btn-primary" id="recovery-email-submit">Send recovery link</button>
-  </div>
+  <section class="account-panel">
+    <div class="account-card-header">
+      <h3 class="account-card-title">Request recovery link</h3>
+      <p class="account-card-copy">If the email is eligible, a secure recovery link will be issued without exposing account existence.</p>
+    </div>
 
-  <div class="col-12">
-    <p id="passkey-status" class="account-status" role="status" aria-live="polite"></p>
-  </div>
-</form>
+    <form class="row g-3 account-form" id="recovery-email-form" data-passkey-flow="recovery-email" novalidate>
+      <input type="hidden" name="csrf_token" value="{{ request.state.csrf_token|default('') }}">
+
+      <div class="col-md-6">
+        <label for="username" class="form-label">Email</label>
+        <input name="username" id="username" class="form-control" type="email" placeholder="name@example.com" autocomplete="email" required>
+      </div>
+
+      <div class="col-12">
+        <button type="submit" class="btn btn-primary" id="recovery-email-submit">Send recovery link</button>
+      </div>
+
+      <div class="col-12">
+        <p id="passkey-status" class="account-status" role="status" aria-live="polite"></p>
+      </div>
+    </form>
+  </section>
+</section>
 {% endblock %}
 
 {% block footer %}

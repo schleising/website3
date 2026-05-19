@@ -3,6 +3,7 @@
 {% block scripts %}
 {% endblock %}
 {% block head %}
+<link rel="stylesheet" href="/css/account/account.css?v1.3.0">
 {% block title %}<title>Success</title>{% endblock %}
 {% endblock %}
 
@@ -11,9 +12,30 @@
 {% endblock %}
 
 {% block content %}
-<div class="col">
-  <h3>Account created successfully</h3>
-</div>
+<section class="account-shell account-shell--compact">
+  <article class="account-panel">
+    <p class="account-eyebrow">Account Ready</p>
+    <h2 class="account-title">Account created successfully</h2>
+    <p class="account-notice is-success">Your account is live and protected with a passkey.</p>
+    <p class="account-lead">You can move straight into the site. The initial registration flow is complete and the account is ready for normal use.</p>
+
+    <div class="account-metadata">
+      <div class="account-stat">
+        <span class="account-stat-label">Verification</span>
+        <span class="account-stat-value">Completed</span>
+      </div>
+      <div class="account-stat">
+        <span class="account-stat-label">Sign-in method</span>
+        <span class="account-stat-value">Passkey enabled</span>
+      </div>
+    </div>
+
+    <div class="account-action-row">
+      <a class="btn btn-primary" href="/">Go to home</a>
+      <a class="btn btn-outline-secondary" href="/webapps/">Browse webapps</a>
+    </div>
+  </article>
+</section>
 {% endblock %}
 
 {% block footer %}

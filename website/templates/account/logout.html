@@ -4,6 +4,7 @@
 {% endblock %}
 
 {% block head %}
+<link rel="stylesheet" href="/css/account/account.css?v1.3.0">
 {% block title %}<title>Log Out</title>{% endblock %}
 {% endblock %}
 
@@ -12,9 +13,30 @@
 {% endblock %}
 
 {% block content %}
-<div class="col">
-  <h3>Logged Out Successfully</h3>
-</div>
+<section class="account-shell account-shell--compact">
+  <article class="account-panel">
+    <p class="account-eyebrow">Session Closed</p>
+    <h2 class="account-title">Logged out successfully</h2>
+    <p class="account-notice is-success">The current session has been ended cleanly.</p>
+    <p class="account-lead">You can sign back in at any time. This browser no longer has an active account session from the logout action you just completed.</p>
+
+    <div class="account-metadata">
+      <div class="account-stat">
+        <span class="account-stat-label">Status</span>
+        <span class="account-stat-value">Signed out</span>
+      </div>
+      <div class="account-stat">
+        <span class="account-stat-label">Next step</span>
+        <span class="account-stat-value">Sign in when ready</span>
+      </div>
+    </div>
+
+    <div class="account-action-row">
+      <a class="btn btn-primary" href="/account/login/">Sign in again</a>
+      <a class="btn btn-outline-secondary" href="/">Return home</a>
+    </div>
+  </article>
+</section>
 {% endblock %}
 
 {% block footer %}
