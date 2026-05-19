@@ -23,8 +23,8 @@
     /** @type {number | null} */
     let resizeRafId = null;
     const tableSortState = {
-        category: { key: "", direction: "descending" },
-        feed: { key: "", direction: "descending" },
+        category: { key: "articles_recent", direction: "descending" },
+        feed: { key: "articles_recent", direction: "descending" },
     };
 
     function setStatus(message, isError) {
@@ -139,26 +139,28 @@
     }
 
     function getSortedRows(rows, state) {
-        const normalizedRows = Array.isArray(rows) ? rows.slice() : [];
+        const normalizedRows = Array.isArray(rows)
+            ? rows.map((row, index) => ({ row, index }))
+            : [];
         const sortKey = String(state?.key || "").trim();
         if (sortKey === "") {
-            return normalizedRows;
+            return normalizedRows.map(entry => entry.row);
         }
 
         const directionMultiplier = state?.direction === "ascending" ? 1 : -1;
-        normalizedRows.sort((leftRow, rightRow) => {
-            const comparison = compareSortableValues(leftRow?.[sortKey], rightRow?.[sortKey]);
+        normalizedRows.sort((leftEntry, rightEntry) => {
+            const comparison = compareSortableValues(
+                leftEntry.row?.[sortKey],
+                rightEntry.row?.[sortKey]
+            );
             if (comparison !== 0) {
                 return comparison * directionMultiplier;
             }
 
-            return String(leftRow?.name || "").localeCompare(String(rightRow?.name || ""), undefined, {
-                numeric: true,
-                sensitivity: "base",
-            });
+            return leftEntry.index - rightEntry.index;
         });
 
-        return normalizedRows;
+        return normalizedRows.map(entry => entry.row);
     }
 
     function updateTableSortIndicators(table, state) {
@@ -555,11 +557,11 @@
             return;
         }
 
-        const topRows = rows.slice(0, 10);
-        const maxMetric = Math.max(1, ...topRows.map(row => Number(row[metricKey] || 0)));
+        const visibleRows = rows.filter(row => Number(row?.[metricKey] || 0) > 0);
+        const maxMetric = Math.max(1, ...visibleRows.map(row => Number(row[metricKey] || 0)));
 
         container.innerHTML = "";
-        topRows.forEach(row => {
+        visibleRows.forEach(row => {
             const item = document.createElement("div");
             item.className = "feeds-stats-bar-item";
 
