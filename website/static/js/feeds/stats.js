@@ -139,13 +139,11 @@
 
         const seriesDefs = [
             {
-                key: "saved",
-                label: "Saved",
-                className: "is-saved",
+                key: "published",
+                label: "Published",
+                className: "is-published",
                 getValue(pointData) {
-                    const publishedCount = Math.max(0, Number(pointData.published_count || 0));
-                    const openedCount = Math.max(0, Math.min(publishedCount, Number(pointData.opened_count || 0)));
-                    return Math.max(0, Math.min(openedCount, Number(pointData.saved_count || 0)));
+                    return Math.max(0, Number(pointData.published_count || 0));
                 },
             },
             {
@@ -153,30 +151,20 @@
                 label: "Opened",
                 className: "is-opened",
                 getValue(pointData) {
-                    const publishedCount = Math.max(0, Number(pointData.published_count || 0));
-                    const openedCount = Math.max(0, Math.min(publishedCount, Number(pointData.opened_count || 0)));
-                    const savedCount = Math.max(0, Math.min(openedCount, Number(pointData.saved_count || 0)));
-                    return Math.max(0, openedCount - savedCount);
+                    return Math.max(0, Number(pointData.opened_count || 0));
                 },
             },
             {
-                key: "published",
-                label: "Published",
-                className: "is-published",
+                key: "saved",
+                label: "Saved",
+                className: "is-saved",
                 getValue(pointData) {
-                    const publishedCount = Math.max(0, Number(pointData.published_count || 0));
-                    const openedCount = Math.max(0, Math.min(publishedCount, Number(pointData.opened_count || 0)));
-                    return Math.max(0, publishedCount - openedCount);
+                    return Math.max(0, Number(pointData.saved_count || 0));
                 },
             },
         ];
+        const stackOrder = ["published", "opened", "saved"];
         const activeSeriesKeys = new Set(seriesDefs.map(def => def.key));
-
-        const overallMaxValue = Math.max(
-            1,
-            ...dailyPoints.map(point => Number(point.published_count || 0))
-        );
-        const scale = buildNiceAxisScale(overallMaxValue);
         const legend = document.createElement("div");
         legend.className = "feeds-stats-overall-legend";
 
@@ -209,13 +197,6 @@
         const yAxis = document.createElement("div");
         yAxis.className = "feeds-stats-overall-y-axis";
 
-        scale.tickValues.forEach(value => {
-            const tick = document.createElement("div");
-            tick.className = "feeds-stats-overall-y-tick";
-            tick.textContent = formatNumber(value);
-            yAxis.appendChild(tick);
-        });
-
         const stage = document.createElement("div");
         stage.className = "feeds-stats-overall-stage";
 
@@ -224,14 +205,6 @@
 
         const gridLines = document.createElement("div");
         gridLines.className = "feeds-stats-overall-gridlines";
-        scale.tickValues.forEach((value, index) => {
-            const line = document.createElement("div");
-            line.className = "feeds-stats-overall-gridline";
-            if (index === scale.tickValues.length - 1 || value === 0) {
-                line.classList.add("is-baseline");
-            }
-            gridLines.appendChild(line);
-        });
 
         const plot = document.createElement("div");
         plot.className = "feeds-stats-overall-plot";
@@ -260,7 +233,12 @@
 
             /** @type {Map<string, HTMLElement>} */
             const segmentMap = new Map();
-            seriesDefs.slice().reverse().forEach(def => {
+            stackOrder.forEach(key => {
+                const def = seriesDefs.find(entry => entry.key === key);
+                if (!def) {
+                    return;
+                }
+
                 const bar = document.createElement("span");
                 bar.className = `feeds-stats-series-bar ${def.className}`;
                 bar.dataset.seriesKey = def.key;
@@ -292,7 +270,45 @@
         overallChart.appendChild(legend);
         overallChart.appendChild(body);
 
+        function buildActiveScale() {
+            const maxStackValue = Math.max(
+                1,
+                ...dailyPoints.map(pointData => {
+                    return seriesDefs.reduce((total, def) => {
+                        if (!activeSeriesKeys.has(def.key)) {
+                            return total;
+                        }
+                        return total + def.getValue(pointData);
+                    }, 0);
+                })
+            );
+
+            return buildNiceAxisScale(maxStackValue);
+        }
+
+        function renderAxis(scale) {
+            yAxis.innerHTML = "";
+            gridLines.innerHTML = "";
+
+            scale.tickValues.forEach((value, index) => {
+                const tick = document.createElement("div");
+                tick.className = "feeds-stats-overall-y-tick";
+                tick.textContent = formatNumber(value);
+                yAxis.appendChild(tick);
+
+                const line = document.createElement("div");
+                line.className = "feeds-stats-overall-gridline";
+                if (index === scale.tickValues.length - 1 || value === 0) {
+                    line.classList.add("is-baseline");
+                }
+                gridLines.appendChild(line);
+            });
+        }
+
         function updateOverallChartVisibility() {
+            const scale = buildActiveScale();
+            renderAxis(scale);
+
             daySegmentEntries.forEach((entry, index) => {
                 const pointData = dailyPoints[index];
                 seriesDefs.forEach(def => {
