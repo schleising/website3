@@ -134,7 +134,9 @@ class MediaDatabase:
         conversion_error = bool(db_file.get("conversion_error", False))
         deleted = bool(db_file.get("deleted", False))
 
-        if conversion_error:
+        if deleted:
+            status_label = "Deleted"
+        elif conversion_error:
             status_label = "Conversion error"
         elif copying:
             status_label = "Copying"

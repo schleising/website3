@@ -577,18 +577,22 @@
 
             const statusList = document.createElement("div");
             statusList.className = "media-status-list";
-            statusList.appendChild(createPill(file.status_label || "Unknown", file.conversion_error ? "is-danger" : file.converted ? "is-success" : file.conversion_required ? "is-primary" : "is-warning"));
+            if (file.deleted) {
+                statusList.appendChild(createPill("Deleted", "is-danger"));
+            } else {
+                statusList.appendChild(createPill(file.status_label || "Unknown", file.conversion_error ? "is-danger" : file.converted ? "is-success" : file.conversion_required ? "is-primary" : "is-warning"));
 
-            if (file.conversion_required) {
-                statusList.appendChild(createPill("Needs conversion", "is-primary"));
-            }
+                if (file.conversion_required) {
+                    statusList.appendChild(createPill("Needs conversion", "is-primary"));
+                }
 
-            if (file.conversion_error) {
-                statusList.appendChild(createPill("Error", "is-danger"));
-            }
+                if (file.conversion_error) {
+                    statusList.appendChild(createPill("Error", "is-danger"));
+                }
 
-            if (file.converting) {
-                statusList.appendChild(createPill("Active", "is-primary"));
+                if (file.converting) {
+                    statusList.appendChild(createPill("Active", "is-primary"));
+                }
             }
 
             header.append(titleWrap, statusList);
