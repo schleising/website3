@@ -16,6 +16,10 @@
     const feedTableBody = document.querySelector("#feeds-stats-feed-table tbody");
 
     const statsEndpoint = String(root.dataset.statsEndpoint || "/feeds/api/stats/").trim();
+    /** @type {Record<string, any> | null} */
+    let latestStatsPayload = null;
+    /** @type {number | null} */
+    let resizeRafId = null;
 
     function setStatus(message, isError) {
         if (!(statusNode instanceof HTMLElement)) {
@@ -92,6 +96,45 @@
 
         const cadence = total <= 16 ? 3 : 5;
         return index === 0 || index === total - 1 || index % cadence === 0;
+    }
+
+    function maxOverallChartDays() {
+        if (window.matchMedia("(max-width: 52rem)").matches) {
+            return 15;
+        }
+
+        return 30;
+    }
+
+    function getVisibleDailyPoints(dailyPoints) {
+        const normalizedPoints = Array.isArray(dailyPoints) ? dailyPoints : [];
+        const maxDays = maxOverallChartDays();
+        if (normalizedPoints.length <= maxDays) {
+            return normalizedPoints;
+        }
+
+        return normalizedPoints.slice(normalizedPoints.length - maxDays);
+    }
+
+    function renderStatsPayload(payload) {
+        latestStatsPayload = payload && typeof payload === "object" ? payload : null;
+        const safePayload = latestStatsPayload || {};
+
+        if (windowDaysNode instanceof HTMLElement) {
+            windowDaysNode.textContent = String(safePayload.window_days || 30);
+        }
+
+        const overall = safePayload.overall || {};
+        const perCategory = Array.isArray(safePayload.per_category) ? safePayload.per_category : [];
+        const perFeed = Array.isArray(safePayload.per_feed) ? safePayload.per_feed : [];
+        const daily = getVisibleDailyPoints(Array.isArray(overall.daily) ? overall.daily : []);
+
+        renderKpis(overall);
+        renderOverallChart(daily);
+        renderBarList(categoryBars, perCategory, "articles_recent");
+        renderBarList(feedBars, perFeed, "articles_recent");
+        renderTableRows(categoryTableBody, perCategory, false);
+        renderTableRows(feedTableBody, perFeed, true);
     }
 
     function renderKpis(overall) {
@@ -461,27 +504,26 @@
             }
 
             const payload = await response.json();
-            if (windowDaysNode instanceof HTMLElement) {
-                windowDaysNode.textContent = String(payload.window_days || 30);
-            }
-
-            const overall = payload.overall || {};
-            const perCategory = Array.isArray(payload.per_category) ? payload.per_category : [];
-            const perFeed = Array.isArray(payload.per_feed) ? payload.per_feed : [];
-            const daily = Array.isArray(overall.daily) ? overall.daily : [];
-
-            renderKpis(overall);
-            renderOverallChart(daily);
-            renderBarList(categoryBars, perCategory, "articles_recent");
-            renderBarList(feedBars, perFeed, "articles_recent");
-            renderTableRows(categoryTableBody, perCategory, false);
-            renderTableRows(feedTableBody, perFeed, true);
+            renderStatsPayload(payload);
 
             setStatus("Stats updated.", false);
         } catch (error) {
             setStatus(error instanceof Error ? error.message : "Unable to load feed stats.", true);
         }
     }
+
+    window.addEventListener("resize", () => {
+        if (resizeRafId !== null) {
+            window.cancelAnimationFrame(resizeRafId);
+        }
+
+        resizeRafId = window.requestAnimationFrame(() => {
+            resizeRafId = null;
+            if (latestStatsPayload !== null) {
+                renderStatsPayload(latestStatsPayload);
+            }
+        });
+    }, { passive: true });
 
     loadStats();
 })();
