@@ -2196,6 +2196,53 @@ html.suppress-sidebar-hover .right-sidebar .feed-sidebar-feed-link:hover:not(.is
     font-weight: 700;
 }
 
+.feeds-stats-sort-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.32rem;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    font-weight: inherit;
+    cursor: pointer;
+}
+
+.feeds-stats-sort-button:hover {
+    color: var(--text);
+}
+
+.feeds-stats-sort-button:focus-visible {
+    outline: 0.125rem solid color-mix(in srgb, var(--brand-strong), #ffffff 18%);
+    outline-offset: 0.125rem;
+    border-radius: 0.2rem;
+}
+
+.feeds-stats-sort-indicator {
+    width: 0.7rem;
+    text-align: center;
+    color: var(--text-soft);
+    opacity: 0.52;
+}
+
+.feeds-stats-sort-button.is-active .feeds-stats-sort-indicator {
+    opacity: 1;
+    color: var(--text);
+}
+
+.feeds-stats-sort-button[data-sort-direction="descending"] .feeds-stats-sort-indicator::before {
+    content: "↓";
+}
+
+.feeds-stats-sort-button[data-sort-direction="ascending"] .feeds-stats-sort-indicator::before {
+    content: "↑";
+}
+
+.feeds-stats-sort-button[data-sort-direction="none"] .feeds-stats-sort-indicator::before {
+    content: "↕";
+}
+
 @media screen and (max-width: 52rem) {
     .feeds-stats-overall-body {
         grid-template-columns: 2.2rem 1fr;

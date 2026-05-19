@@ -12,6 +12,8 @@
     const overallChart = document.getElementById("feeds-stats-overall-chart");
     const categoryBars = document.getElementById("feeds-stats-category-bars");
     const feedBars = document.getElementById("feeds-stats-feed-bars");
+    const categoryTable = document.getElementById("feeds-stats-category-table");
+    const feedTable = document.getElementById("feeds-stats-feed-table");
     const categoryTableBody = document.querySelector("#feeds-stats-category-table tbody");
     const feedTableBody = document.querySelector("#feeds-stats-feed-table tbody");
 
@@ -20,6 +22,10 @@
     let latestStatsPayload = null;
     /** @type {number | null} */
     let resizeRafId = null;
+    const tableSortState = {
+        category: { key: "", direction: "descending" },
+        feed: { key: "", direction: "descending" },
+    };
 
     function setStatus(message, isError) {
         if (!(statusNode instanceof HTMLElement)) {
@@ -116,6 +122,123 @@
         return normalizedPoints.slice(normalizedPoints.length - maxDays);
     }
 
+    function compareSortableValues(leftValue, rightValue) {
+        const leftNumber = Number(leftValue);
+        const rightNumber = Number(rightValue);
+        const leftIsNumber = Number.isFinite(leftNumber) && `${leftValue ?? ""}`.trim() !== "";
+        const rightIsNumber = Number.isFinite(rightNumber) && `${rightValue ?? ""}`.trim() !== "";
+
+        if (leftIsNumber && rightIsNumber) {
+            return leftNumber - rightNumber;
+        }
+
+        return String(leftValue || "").localeCompare(String(rightValue || ""), undefined, {
+            numeric: true,
+            sensitivity: "base",
+        });
+    }
+
+    function getSortedRows(rows, state) {
+        const normalizedRows = Array.isArray(rows) ? rows.slice() : [];
+        const sortKey = String(state?.key || "").trim();
+        if (sortKey === "") {
+            return normalizedRows;
+        }
+
+        const directionMultiplier = state?.direction === "ascending" ? 1 : -1;
+        normalizedRows.sort((leftRow, rightRow) => {
+            const comparison = compareSortableValues(leftRow?.[sortKey], rightRow?.[sortKey]);
+            if (comparison !== 0) {
+                return comparison * directionMultiplier;
+            }
+
+            return String(leftRow?.name || "").localeCompare(String(rightRow?.name || ""), undefined, {
+                numeric: true,
+                sensitivity: "base",
+            });
+        });
+
+        return normalizedRows;
+    }
+
+    function updateTableSortIndicators(table, state) {
+        if (!(table instanceof HTMLTableElement)) {
+            return;
+        }
+
+        const headers = table.querySelectorAll("thead th[data-sort-key]");
+        headers.forEach(header => {
+            const sortKey = String(header.getAttribute("data-sort-key") || "").trim();
+            const isActive = sortKey !== "" && sortKey === state.key;
+            const direction = isActive ? state.direction : "none";
+            header.setAttribute(
+                "aria-sort",
+                direction === "ascending"
+                    ? "ascending"
+                    : direction === "descending"
+                        ? "descending"
+                        : "none"
+            );
+
+            const button = header.querySelector(".feeds-stats-sort-button");
+            if (!(button instanceof HTMLButtonElement)) {
+                return;
+            }
+
+            button.classList.toggle("is-active", isActive);
+            button.dataset.sortDirection = isActive ? direction : "none";
+        });
+    }
+
+    function initializeSortableTable(table, tableKey) {
+        if (!(table instanceof HTMLTableElement)) {
+            return;
+        }
+
+        const headers = table.querySelectorAll("thead th[data-sort-key]");
+        headers.forEach(header => {
+            if (header.querySelector(".feeds-stats-sort-button")) {
+                return;
+            }
+
+            const headerLabel = String(header.textContent || "").trim();
+            const button = document.createElement("button");
+            button.type = "button";
+            button.className = "feeds-stats-sort-button";
+            button.innerHTML = "<span class=\"feeds-stats-sort-label\"></span><span class=\"feeds-stats-sort-indicator\" aria-hidden=\"true\"></span>";
+
+            const labelNode = button.querySelector(".feeds-stats-sort-label");
+            if (labelNode instanceof HTMLElement) {
+                labelNode.textContent = headerLabel;
+            }
+
+            button.addEventListener("click", () => {
+                const sortKey = String(header.getAttribute("data-sort-key") || "").trim();
+                if (sortKey === "") {
+                    return;
+                }
+
+                const state = tableSortState[tableKey];
+                if (state.key === sortKey) {
+                    state.direction = state.direction === "descending" ? "ascending" : "descending";
+                } else {
+                    state.key = sortKey;
+                    state.direction = "descending";
+                }
+
+                if (latestStatsPayload !== null) {
+                    renderStatsPayload(latestStatsPayload);
+                    setStatus("Stats updated.", false);
+                }
+            });
+
+            header.textContent = "";
+            header.appendChild(button);
+        });
+
+        updateTableSortIndicators(table, tableSortState[tableKey]);
+    }
+
     function renderStatsPayload(payload) {
         latestStatsPayload = payload && typeof payload === "object" ? payload : null;
         const safePayload = latestStatsPayload || {};
@@ -125,8 +248,14 @@
         }
 
         const overall = safePayload.overall || {};
-        const perCategory = Array.isArray(safePayload.per_category) ? safePayload.per_category : [];
-        const perFeed = Array.isArray(safePayload.per_feed) ? safePayload.per_feed : [];
+        const perCategory = getSortedRows(
+            Array.isArray(safePayload.per_category) ? safePayload.per_category : [],
+            tableSortState.category
+        );
+        const perFeed = getSortedRows(
+            Array.isArray(safePayload.per_feed) ? safePayload.per_feed : [],
+            tableSortState.feed
+        );
         const daily = getVisibleDailyPoints(Array.isArray(overall.daily) ? overall.daily : []);
 
         renderKpis(overall);
@@ -135,6 +264,8 @@
         renderBarList(feedBars, perFeed, "articles_recent");
         renderTableRows(categoryTableBody, perCategory, false);
         renderTableRows(feedTableBody, perFeed, true);
+        updateTableSortIndicators(categoryTable, tableSortState.category);
+        updateTableSortIndicators(feedTable, tableSortState.feed);
     }
 
     function renderKpis(overall) {
@@ -531,5 +662,7 @@
         });
     }, { passive: true });
 
+    initializeSortableTable(categoryTable, "category");
+    initializeSortableTable(feedTable, "feed");
     loadStats();
 })();
