@@ -11,6 +11,7 @@ from ..account import user_collection
 
 from ..account.user_model import User
 from ..utils.html_sanitizer import sanitize_html
+from ..utils.mermaid import disable_mermaid_autorun_markup
 
 async def get_blog_list() -> list[MarkdownDataFromDb]:
     # Check we have connected to the database
@@ -57,6 +58,7 @@ def get_blog_html(current_blog: MarkdownDataFromDb | None) -> str | None:
             'md_mermaid',
         ])
         blog_html = sanitize_html(blog_html)
+        blog_html = disable_mermaid_autorun_markup(blog_html)
     else:
         # Set the HTML to None
         blog_html = None

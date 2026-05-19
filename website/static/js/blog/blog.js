@@ -9,42 +9,61 @@ function buildSvg(svgGraph) {
     return template.content.firstChild;
 }
 
-function renderMermaidIntoElement(element, definition, id) {
+async function renderMermaidIntoElement(element, definition, id) {
     if (!definition || definition.trim() === "") {
         return;
     }
 
     try {
-        mermaid.mermaidAPI.render(id, definition, svgGraph => {
-            const svgElement = buildSvg(svgGraph);
-            if (svgElement == null) {
-                return;
-            }
+        const { svg, bindFunctions } = await mermaid.render(id, definition);
+        const svgElement = buildSvg(svg);
+        if (svgElement == null) {
+            return;
+        }
 
-            element.replaceChildren(svgElement);
-            element.classList.add("is-rendered");
-        });
+        element.replaceChildren(svgElement);
+        bindFunctions?.(element);
+        element.classList.add("is-rendered");
     } catch (error) {
         // Leave the preview empty if Mermaid cannot parse the definition.
     }
 }
 
-function initialiseBlogMermaid() {
+async function initialiseBlogMermaid() {
     if (typeof mermaid === "undefined") {
         return;
     }
 
-    mermaid.mermaidAPI.initialize({ startOnLoad: false });
+    mermaid.initialize({ startOnLoad: false });
 
-    document.querySelectorAll("#blog-view .mermaid").forEach((element, index) => {
-        const definition = decodeHtml(element.innerHTML).trim();
-        renderMermaidIntoElement(element, definition, `blog-mermaid-${index}`);
-    });
+    const blogElements = Array.from(document.querySelectorAll("#blog-view .mermaid-source"));
+    if (blogElements.length > 0) {
+        for (const [index, element] of blogElements.entries()) {
+            element.classList.add("mermaid");
+            if (element.id === "") {
+                element.id = `blog-mermaid-${index}`;
+            }
+        }
 
-    document.querySelectorAll(".blog-card-mermaid[data-mermaid-definition]").forEach((element, index) => {
+        try {
+            await mermaid.run({
+                nodes: blogElements,
+                suppressErrors: true,
+            });
+
+            blogElements.forEach(element => {
+                element.classList.add("is-rendered");
+            });
+        } catch (error) {
+            // Leave the source text visible if Mermaid cannot parse the definition.
+        }
+    }
+
+    const previewElements = Array.from(document.querySelectorAll(".blog-card-mermaid[data-mermaid-definition]"));
+    for (const [index, element] of previewElements.entries()) {
         const definition = element.dataset.mermaidDefinition ?? "";
-        renderMermaidIntoElement(element, definition, `blog-card-mermaid-${index}`);
-    });
+        await renderMermaidIntoElement(element, definition, `blog-card-mermaid-${index}`);
+    }
 }
 
 if (document.readyState === "loading") {

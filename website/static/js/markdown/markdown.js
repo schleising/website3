@@ -75,24 +75,10 @@ clearButton.addEventListener('click', event => {
 // On save being clicked send a Save Message
 saveButton.addEventListener("click", event => checkSocketAndSendMessage(event, MARKDOWN_UPDATE));
 
-function mermaidCallback(svgGraph) {
-    // Create a template to hold the svg
-    template = document.createElement("template");
-
-    // Add the svg to the template
+function buildMermaidSvg(svgGraph) {
+    const template = document.createElement("template");
     template.innerHTML = svgGraph;
-
-    // Get the svg, which is now an element, from the template
-    newElement = template.content.firstChild;
-
-    // Get the div element to insert the svg into, the ID is found by stripping the -svg from the svg ID
-    mermaidElement = document.getElementById(newElement.id.substring(0, newElement.id.length - 4))
-
-    // Clear the existing children from the mermaid div
-    mermaidElement.replaceChildren();
-
-    // Append the svg element as a child of the svg div
-    mermaidElement.appendChild(newElement);
+    return template.content.firstChild;
 }
 
 const htmlDecode = (input) => {
@@ -100,24 +86,36 @@ const htmlDecode = (input) => {
     return doc.documentElement.textContent;
 }
 
-function updateMarkdown(data) {
+async function updateMarkdown(data) {
     // Add the formatted text to the control
     markdownOutput.innerHTML = data.markdown_text;
 
     // Get any divs whose class is mermaid
-    mermaidElements = document.getElementsByClassName("mermaid");
+    const mermaidElements = Array.from(document.getElementsByClassName("mermaid"));
 
     // Loop through the mermaid divs
     for (let index = 0; index < mermaidElements.length; index++) {
         // Get the ID
-        id = mermaidElements[index].id;
+        const id = mermaidElements[index].id;
 
         // Get the markdown for the image
-        innerHTML = htmlDecode(mermaidElements[index].innerHTML);
+        const innerHTML = htmlDecode(mermaidElements[index].innerHTML);
 
         try {
-            // Render the image, append -svg to the ID so it doesn't trash the existing div
-            mermaid.mermaidAPI.render(id + "-svg", innerHTML, mermaidCallback);
+            const isValidDefinition = await mermaid.parse(innerHTML, { suppressErrors: true });
+            if (!isValidDefinition) {
+                mermaidElements[index].replaceChildren();
+                continue;
+            }
+
+            const { svg, bindFunctions } = await mermaid.render(id + "-svg", innerHTML);
+            const newElement = buildMermaidSvg(svg);
+            if (newElement == null) {
+                continue;
+            }
+
+            mermaidElements[index].replaceChildren(newElement);
+            bindFunctions?.(mermaidElements[index]);
         } catch (e) {
             // Ignore the parsing error as this will happen while building up the diagram
         }
@@ -296,7 +294,8 @@ document.addEventListener('readystatechange', event => {
         saveToast = createToastController(saveToastEl, saveToastCloseEl)
 
         // Initialise mermaid
-        mermaid.mermaidAPI.initialize({startOnLoad:true})
+        mermaid.initialize({startOnLoad:false})
+        mermaid.parseError = () => {}
 
         // Create the new socket
         openWebSocket(MARKDOWN_UPDATE);

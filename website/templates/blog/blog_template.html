@@ -1,16 +1,17 @@
 {% extends "base.html" %}
 
+{% block scripts %}
+{% if not is_blog_index|default(false) or has_mermaid_previews|default(false) %}
+<script defer src="/js/vendor/mermaid-11.15.0.min.js"></script>
+<script defer src="/js/blog/blog.js?v1.1.2"></script>
+{% endif %}
+{% endblock %}
+
 {% block head %}
 <link rel="stylesheet" href="/css/right-nav.css?v1.1.0">
 <link rel="stylesheet" href="/css/blog/blog.css?v1.2.3">
 <link rel="stylesheet" href="/css/markdown/markdown.css?v1.2.0">
 <link rel="stylesheet" href="/css/markdown/styles.css?v1.1.0">
-{% block scripts %}
-{% if not is_blog_index|default(false) or has_mermaid_previews|default(false) %}
-<script defer src="/js/vendor/mermaid-9.4.3.min.js"></script>
-<script defer src="/js/blog/blog.js?v1.1.1"></script>
-{% endif %}
-{% endblock %}
 {% block title %}<title>{% if is_blog_index|default(false) %}Blog Index{% elif blog_entry != None %}{{ blog_entry.title }}{% else %}Blog{% endif %}</title>{% endblock %}
 {% endblock %}
 

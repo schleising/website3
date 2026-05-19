@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import unittest
 
+from website.utils.mermaid import disable_mermaid_autorun_markup
 from website.utils.markdown_preview import build_markdown_preview, extract_first_mermaid_preview
 
 
@@ -56,6 +57,13 @@ graph TD
         preview = extract_first_mermaid_preview("# Title\n\nNo diagram here.")
 
         self.assertIsNone(preview)
+
+    def test_disable_mermaid_autorun_markup_rewrites_mermaid_class(self) -> None:
+        html = '<div class="mermaid" id="abc">graph TD\nA --&gt; B</div>'
+
+        result = disable_mermaid_autorun_markup(html)
+
+        self.assertEqual(result, '<div class="mermaid-source" id="abc">graph TD\nA --&gt; B</div>')
 
 
 if __name__ == "__main__":
