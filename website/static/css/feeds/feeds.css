@@ -1966,7 +1966,7 @@ html.suppress-sidebar-hover .right-sidebar .feed-sidebar-feed-link:hover:not(.is
 }
 
 .feeds-stats-overall-legend-swatch.is-saved {
-    background: color-mix(in srgb, var(--brand-soft), #ffffff 20%);
+    background: linear-gradient(180deg, #ffb347 0%, #e67e22 100%);
 }
 
 .feeds-stats-overall-body {
@@ -2113,7 +2113,7 @@ html.suppress-sidebar-hover .right-sidebar .feed-sidebar-feed-link:hover:not(.is
 }
 
 .feeds-stats-series-bar.is-saved {
-    background: color-mix(in srgb, var(--brand-soft), #ffffff 20%);
+    background: linear-gradient(180deg, #ffb347 0%, #e67e22 100%);
 }
 
 .feeds-stats-bar-list {
