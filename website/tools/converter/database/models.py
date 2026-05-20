@@ -1,5 +1,7 @@
 from datetime import datetime
+
 from pydantic import BaseModel
+
 
 class Disposition(BaseModel):
     default: int | None = None
@@ -20,6 +22,7 @@ class Disposition(BaseModel):
     dependent: int | None = None
     still_image: int | None = None
 
+
 class Tags(BaseModel):
     language: str | None = None
     handler_name: str | None = None
@@ -28,6 +31,7 @@ class Tags(BaseModel):
     title: str | None = None
     creation_time: str | None = None
     duration: str | None = None
+
 
 class Stream(BaseModel):
     index: int | None = None
@@ -81,6 +85,7 @@ class Stream(BaseModel):
     divx_packed: str | None = None
     quarter_sample: str | None = None
 
+
 class Tags1(BaseModel):
     major_brand: str | None = None
     minor_version: str | None = None
@@ -90,6 +95,7 @@ class Tags1(BaseModel):
     title: str | None = None
     comment: str | None = None
     encoder: str | None = None
+
 
 class Format(BaseModel):
     filename: str | None = None
@@ -104,9 +110,11 @@ class Format(BaseModel):
     probe_score: int | None = None
     tags: Tags1 | None = None
 
+
 class VideoInformation(BaseModel):
     streams: list[Stream]
     format: Format
+
 
 class FileData(BaseModel):
     filename: str
@@ -132,9 +140,16 @@ class FileData(BaseModel):
     backend_name: str = "None"
     speed: float | None = None
 
+
 class ConvertedFileDataFromDb(BaseModel):
     filename: str
     start_conversion_time: datetime | None = None
     end_conversion_time: datetime | None = None
     pre_conversion_size: int
     current_size: int
+
+
+class FileInfo:
+    def __init__(self, filename: str, inode: int) -> None:
+        self.filename = filename
+        self.inode = inode
