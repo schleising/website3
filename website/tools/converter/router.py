@@ -90,14 +90,19 @@ async def converter_websocket(websocket: WebSocket):
                         for (
                             current_conversion_status_db
                         ) in current_conversion_status_db_list:
-                            # Get the time since the conversion started
-                            if (
-                                current_conversion_status_db.start_conversion_time
+                            active_start_time = (
+                                current_conversion_status_db.start_copy_time
+                                if current_conversion_status_db.copying
+                                and current_conversion_status_db.start_copy_time
                                 is not None
-                            ):
+                                else current_conversion_status_db.start_conversion_time
+                            )
+
+                            # Get the time since the conversion started
+                            if active_start_time is not None:
                                 time_since_start = (
                                     datetime.now().astimezone(UTC)
-                                    - current_conversion_status_db.start_conversion_time
+                                    - active_start_time
                                 )
                             else:
                                 time_since_start = timedelta(seconds=0)
@@ -107,7 +112,7 @@ async def converter_websocket(websocket: WebSocket):
 
                             # Get the conversion time remaining
                             time_remaining = calculate_time_remaining(
-                                start_time=current_conversion_status_db.start_conversion_time,
+                                start_time=active_start_time,
                                 progress=current_conversion_status_db.percentage_complete,
                             )
 
