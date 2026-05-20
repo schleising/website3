@@ -220,18 +220,33 @@ class MediaDatabase:
         if conversion_error is not None:
             query["conversion_error"] = conversion_error
 
+        is_ready_to_queue_view = (
+            deleted is False
+            and conversion_required is False
+            and converting is False
+            and converted is False
+            and conversion_error is False
+        )
+
+        sort_fields: list[tuple[str, int]] = [
+            ("conversion_error", DESCENDING),
+            ("converting", DESCENDING),
+            ("copying", DESCENDING),
+            ("conversion_required", DESCENDING),
+            ("converted", 1),
+        ]
+
+        if is_ready_to_queue_view:
+            sort_fields.append(("video_information.format.bit_rate", DESCENDING))
+        else:
+            sort_fields.append(("current_size", DESCENDING))
+
+        sort_fields.append(("filename", 1))
+
         total_count = await media_collection.count_documents(query)
         cursor = media_collection.find(
             query,
-            sort=[
-                ("conversion_error", DESCENDING),
-                ("converting", DESCENDING),
-                ("copying", DESCENDING),
-                ("conversion_required", DESCENDING),
-                ("converted", 1),
-                ("current_size", DESCENDING),
-                ("filename", 1),
-            ],
+            sort=sort_fields,
             projection=[
                 "filename",
                 "inode",
