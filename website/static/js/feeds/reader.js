@@ -2902,6 +2902,7 @@
                 summaryActions.remove();
             }
 
+            void markCardOpened(cardForExpansion);
             schedulePagePrefetchCheck();
             return;
         }
