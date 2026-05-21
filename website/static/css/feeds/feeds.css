@@ -292,7 +292,6 @@
     --site-card-top-accent: color-mix(in srgb, #9aa7bb, #ffffff 55%);
 }
 
-.feed-article-card.is-read-article .feed-article-title a,
 .feed-article-card.is-read-article .feed-source-title,
 .feed-article-card.is-read-article .feed-article-author,
 .feed-article-card.is-read-article .feed-article-summary,
@@ -455,7 +454,7 @@
     display: block;
     padding: 0.22rem 0.05rem;
     font-family: "Merriweather", Georgia, "Times New Roman", serif;
-    color: var(--brand-strong);
+    color: color-mix(in srgb, var(--brand), var(--brand-soft) 18%);
     text-decoration: none;
 }
 
@@ -477,7 +476,7 @@
 .feed-article-title a:hover,
 .feed-article-title a:focus-visible {
     text-decoration: none;
-    color: color-mix(in srgb, var(--brand-strong), #1b3f67 12%);
+    color: color-mix(in srgb, var(--brand), var(--brand-strong) 42%);
 }
 
 .feed-article-title a:hover::after,
