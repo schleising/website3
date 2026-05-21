@@ -454,7 +454,7 @@
     display: block;
     padding: 0.22rem 0.05rem;
     font-family: "Merriweather", Georgia, "Times New Roman", serif;
-    color: color-mix(in srgb, var(--brand), var(--brand-soft) 18%);
+    color: color-mix(in srgb, var(--brand-strong), var(--brand) 62%);
     text-decoration: none;
 }
 
