@@ -11,6 +11,7 @@ from unittest.mock import patch
 
 WEBSITE_ROOT = Path(__file__).resolve().parents[2]
 FEED_UTILS_PATH = WEBSITE_ROOT / "feeds" / "feed_utils.py"
+HTML_SANITIZER_PATH = WEBSITE_ROOT / "utils" / "html_sanitizer.py"
 
 if str(WEBSITE_ROOT.parent) not in sys.path:
     sys.path.insert(0, str(WEBSITE_ROOT.parent))
@@ -25,12 +26,23 @@ if feed_utils_spec is None or feed_utils_spec.loader is None:
 feed_utils = importlib.util.module_from_spec(feed_utils_spec)
 feed_utils_spec.loader.exec_module(feed_utils)
 
+html_sanitizer_spec = importlib.util.spec_from_file_location(
+    "html_sanitizer_for_tests",
+    HTML_SANITIZER_PATH,
+)
+if html_sanitizer_spec is None or html_sanitizer_spec.loader is None:
+    raise RuntimeError("Failed to load html_sanitizer module for tests.")
+
+html_sanitizer = importlib.util.module_from_spec(html_sanitizer_spec)
+html_sanitizer_spec.loader.exec_module(html_sanitizer)
+
 deterministic_category_color = feed_utils.deterministic_category_color
 is_public_http_url = feed_utils.is_public_http_url
 normalize_color_hex = feed_utils.normalize_color_hex
 normalize_feed_url = feed_utils.normalize_feed_url
 parse_opml_entries = feed_utils.parse_opml_entries
 truncate_html_to_paragraphs = feed_utils.truncate_html_to_paragraphs
+sanitize_html = html_sanitizer.sanitize_html
 
 
 class FeedHelperTests(unittest.TestCase):
@@ -159,6 +171,19 @@ class TruncateHtmlToParagraphsTests(unittest.TestCase):
         html = "<p>One</P><p>Two</P><p>Three</P><p>Four</P><p>Five</P><p>Six</P>"
         result = truncate_html_to_paragraphs(html)
         self.assertEqual(result, "<p>One</P><p>Two</P><p>Three</P><p>Four</P><p>Five</P>")
+
+
+class HtmlSanitizerTests(unittest.TestCase):
+    def test_restores_missing_spaces_around_inline_tags_between_words(self) -> None:
+        html = (
+            '<p>It occurs after the events of<em><a href="https://example.com/mando" '
+            'target="_blank">The Mandalorian</a></em>TV series.</p>'
+        )
+
+        result = sanitize_html(html, allow_inline_styles=True)
+
+        self.assertIn("events of <em><a", result)
+        self.assertIn("</a></em> TV series.", result)
 
 
 if __name__ == "__main__":
