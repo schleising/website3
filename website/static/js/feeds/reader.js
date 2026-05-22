@@ -47,8 +47,8 @@
     /** @type {boolean} */
     const useElementScrollContainer = scrollContainer !== document.documentElement;
 
-    const categoriesEndpoint = root.dataset.categoriesEndpoint || "/feeds/api/categories/";
-    const sidebarFeedGroupsEndpoint = root.dataset.sidebarFeedGroupsEndpoint || "/feeds/api/sidebar-feed-groups/";
+    const sidebarEndpoint = root.dataset.sidebarEndpoint || "/feeds/api/sidebar/";
+    const readerSyncEndpoint = root.dataset.readerSyncEndpoint || "/feeds/api/reader/sync/";
     /** @type {string} */
     const markOpenEndpointTemplate = root.dataset.markOpenEndpointTemplate || "";
     /** @type {string} */
@@ -73,18 +73,21 @@
     const pageLoadRetryDelayMs = 900;
     /** @type {number} */
     const pagingWatchdogIntervalMs = 1200;
+    /** @type {number} */
+    const HEAD_PROBE_MAX_LIMIT = 20;
+    /** @type {number} */
+    const headProbeLimit = Math.min(
+        Math.max(pageSize * 2, pageSize),
+        HEAD_PROBE_MAX_LIMIT
+    );
+    /** @type {boolean} */
+    let liveSyncInFlight = false;
     /** @type {boolean} */
     let pageLoadInFlight = false;
     /** @type {boolean} */
     let pagePrefetchScheduled = false;
     /** @type {boolean} */
-    let tailRefreshInFlight = false;
-    /** @type {number} */
-    let lastTailRefreshAtMs = 0;
-    /** @type {number} */
-    const tailRefreshMinIntervalMs = 1200;
-    /** @type {boolean} */
-    let headRefreshProbeInFlight = false;
+    let manualRefreshInFlight = false;
     /** @type {number | null} */
     let pageLoadRetryTimerId = null;
     /** @type {number | null} */
@@ -136,8 +139,6 @@
 
     /** @type {boolean} */
     let touchScrollReadScheduled = false;
-    /** @type {boolean} */
-    let manualRefreshInFlight = false;
     /** @type {number} */
     let suppressTouchScrollReadUntilMs = 0;
     /** @type {HTMLButtonElement | null} */
@@ -301,7 +302,7 @@
      *
      * @returns {string}
      */
-    function buildArticlesUrl(offset = 0, limitOverride = pageSize, statusOverride = selectedStatus) {
+    function buildArticlesUrl(offset = 0, limitOverride = pageSize, statusOverride = selectedStatus, idsOnly = false) {
         const params = new URLSearchParams();
         params.set("category", selectedCategory);
         if (isSearchPage || selectedSearch !== "") {
@@ -313,6 +314,9 @@
         params.set("status_filter", String(statusOverride || selectedStatus));
         params.set("offset", String(Math.max(0, Number(offset))));
         params.set("limit", String(Math.max(1, Number(limitOverride))));
+        if (idsOnly) {
+            params.set("ids_only", "true");
+        }
         return `${articlesEndpoint}?${params.toString()}`;
     }
 
@@ -2305,13 +2309,292 @@
     }
 
     /**
-     * Refresh sidebar counts only.
+     * Return the first capped head-window article IDs currently rendered.
+     *
+     * @returns {string[]}
+     */
+    function getCurrentHeadIds() {
+        return getCards()
+            .slice(0, headProbeLimit)
+            .map(getCardArticleId)
+            .filter(articleId => articleId !== "");
+    }
+
+    /**
+     * Determine whether a server head probe requires a list rerender.
+     *
+     * @param {string[]} probeIds
+     * @returns {boolean}
+     */
+    function headArticleRefreshNeeded(probeIds) {
+        const currentCardIds = getCards()
+            .map(getCardArticleId)
+            .filter(articleId => articleId !== "");
+
+        const probeIdSet = new Set(probeIds);
+        const retainedExistingIds = currentCardIds.filter(articleId => !probeIdSet.has(articleId));
+        const retainedIdSet = new Set(retainedExistingIds);
+
+        const expectedFinalIds = Array.from(probeIds);
+        const expectedFinalIdSet = new Set(expectedFinalIds);
+        currentCardIds.forEach((articleId, previousIndex) => {
+            if (!retainedIdSet.has(articleId) || expectedFinalIdSet.has(articleId)) {
+                return;
+            }
+
+            let insertAt = expectedFinalIds.length;
+            for (let lookahead = previousIndex + 1; lookahead < currentCardIds.length; lookahead += 1) {
+                const neighborId = currentCardIds[lookahead];
+                const neighborIndex = expectedFinalIds.indexOf(neighborId);
+                if (neighborIndex >= 0) {
+                    insertAt = neighborIndex;
+                    break;
+                }
+            }
+
+            expectedFinalIds.splice(insertAt, 0, articleId);
+            expectedFinalIdSet.add(articleId);
+        });
+
+        return !(
+            expectedFinalIds.length === currentCardIds.length
+            && expectedFinalIds.every((articleId, index) => articleId === currentCardIds[index])
+        );
+    }
+
+    /**
+     * Apply read/save status updates to rendered cards.
+     *
+     * @param {Array<Record<string, any>>} incomingStatuses
+     * @param {{ skipArticleIds?: Set<string> }} [options]
+     */
+    function applyVisibleCardStatusesFromPayload(incomingStatuses, options = {}) {
+        const skipArticleIds = options.skipArticleIds instanceof Set ? options.skipArticleIds : null;
+        const cards = getCards();
+        if (cards.length === 0) {
+            return;
+        }
+
+        const statusById = new Map(
+            incomingStatuses
+                .map(status => [
+                    String(status.article_id || "").trim(),
+                    {
+                        isRead: Boolean(status.is_read),
+                        isSaved: Boolean(status.is_saved),
+                        readAt: String(status.read_at || "").trim(),
+                        savedAt: String(status.saved_at || "").trim(),
+                    },
+                ])
+                .filter(([articleId]) => articleId !== "")
+        );
+
+        if (statusById.size === 0) {
+            return;
+        }
+
+        let removedAnyCard = false;
+
+        cards.forEach(card => {
+            const articleId = getCardArticleId(card);
+            if (articleId === "") {
+                return;
+            }
+
+            if (skipArticleIds instanceof Set && skipArticleIds.has(articleId)) {
+                return;
+            }
+
+            if (
+                pendingReadIds.has(articleId)
+                || pendingUnreadIds.has(articleId)
+                || pendingSaveIds.has(articleId)
+                || pendingUnsaveIds.has(articleId)
+            ) {
+                return;
+            }
+
+            if (!statusById.has(articleId)) {
+                return;
+            }
+
+            const status = statusById.get(articleId);
+            if (!status || typeof status !== "object") {
+                return;
+            }
+
+            const isRead = Boolean(status.isRead);
+            const isSaved = Boolean(status.isSaved);
+            if (!isRead) {
+                sessionReadArticleIds.delete(articleId);
+            }
+
+            const locallyReadInSession = sessionReadArticleIds.has(articleId);
+            const shouldRemoveForRemoteRead = (
+                selectedStatus === "unread"
+                && isRead
+                && !locallyReadInSession
+            );
+
+            if (shouldRemoveForRemoteRead) {
+                if (selectedIndex >= 0) {
+                    const selectedCards = getCards();
+                    if (selectedCards[selectedIndex] === card) {
+                        clearCardSelection();
+                    }
+                }
+
+                card.remove();
+                removedAnyCard = true;
+                return;
+            }
+
+            const statusReadAt = String(status.readAt || "").trim();
+            const effectiveReadAt = statusReadAt !== ""
+                ? statusReadAt
+                : String(card.dataset.readAt || "").trim();
+            const statusSavedAt = String(status.savedAt || "").trim();
+            const effectiveSavedAt = statusSavedAt !== ""
+                ? statusSavedAt
+                : String(card.dataset.savedAt || "").trim();
+
+            const currentIsRead = isCardMarkedRead(card);
+            const currentIsSaved = isCardSaved(card);
+            const currentReadAt = String(card.dataset.readAt || "").trim();
+            const currentSavedAt = String(card.dataset.savedAt || "").trim();
+
+            const readStateChanged = currentIsRead !== isRead || effectiveReadAt !== currentReadAt;
+            const savedStateChanged = currentIsSaved !== isSaved || effectiveSavedAt !== currentSavedAt;
+
+            if (readStateChanged) {
+                setCardReadAppearance(card, isRead, effectiveReadAt);
+            }
+
+            if (savedStateChanged) {
+                setCardSavedAppearance(card, isSaved, effectiveSavedAt);
+            }
+            setCardNewBadge(card, !isRead && newUnreadArticleIds.has(articleId));
+        });
+
+        if (removedAnyCard) {
+            if (getCards().length === 0) {
+                renderInlineEmptyHint();
+                clearCardSelection();
+            } else {
+                articleList.classList.remove("is-empty");
+                refreshPagingSentinelObserver();
+            }
+
+            schedulePagePrefetchCheck();
+        }
+    }
+
+    /**
+     * Apply consolidated reader sync payload from polling.
+     *
+     * @param {Record<string, any>} payload
+     * @returns {Promise<void>}
+     */
+    async function applyReaderSyncPayload(payload) {
+        if (!payload || typeof payload !== "object") {
+            return;
+        }
+
+        updateSidebarCounts(payload);
+        if (payload.sidebar_feed_groups && typeof payload.sidebar_feed_groups === "object") {
+            broadcastSidebarFeedGroups(payload.sidebar_feed_groups);
+        }
+
+        const headArticleIds = Array.isArray(payload.head_article_ids)
+            ? payload.head_article_ids
+                .map(articleId => String(articleId || "").trim())
+                .filter(articleId => articleId !== "")
+            : [];
+
+        let headRerendered = false;
+        if (headArticleRefreshNeeded(headArticleIds)) {
+            let headArticles = Array.isArray(payload.head_articles) ? payload.head_articles : [];
+
+            if (headArticles.length === 0) {
+                try {
+                    const fallbackResponse = await fetch(buildArticlesUrl(0, headProbeLimit), {
+                        method: "GET",
+                        cache: "no-store",
+                    });
+                    if (fallbackResponse.ok) {
+                        const fallbackPayload = await fallbackResponse.json();
+                        headArticles = Array.isArray(fallbackPayload.articles)
+                            ? fallbackPayload.articles
+                            : [];
+                    }
+                } catch (_error) {
+                    headArticles = [];
+                }
+            }
+
+            if (headArticles.length > 0) {
+                renderArticles({ articles: headArticles });
+                headRerendered = true;
+
+                if (typeof payload.head_has_more === "boolean") {
+                    hasMorePages = payload.head_has_more;
+                }
+                if (typeof payload.head_next_offset === "number") {
+                    nextOffset = Math.max(0, payload.head_next_offset);
+                } else {
+                    nextOffset = Math.max(0, getPagingRequestOffset());
+                }
+
+                refreshPagingSentinelObserver();
+                scheduleTouchScrollReadCheck();
+                schedulePagePrefetchCheck();
+            }
+        }
+
+        if (Array.isArray(payload.tail_articles) && payload.tail_articles.length > 0) {
+            const requestOffset = getPagingRequestOffset();
+            appendArticlePage(
+                {
+                    articles: payload.tail_articles,
+                    has_more: payload.tail_has_more,
+                    next_offset: payload.tail_next_offset,
+                },
+                requestOffset
+            );
+            scheduleTouchScrollReadCheck();
+            schedulePagePrefetchCheck();
+        } else if (typeof payload.tail_has_more === "boolean") {
+            hasMorePages = payload.tail_has_more;
+            if (typeof payload.tail_next_offset === "number") {
+                nextOffset = Math.max(0, payload.tail_next_offset);
+            }
+            if (hasMorePages) {
+                schedulePagePrefetchCheck();
+            }
+        }
+
+        const incomingStatuses = Array.isArray(payload.statuses) ? payload.statuses : [];
+        const skipStatusIds = headRerendered && Array.isArray(payload.head_articles)
+            ? new Set(
+                payload.head_articles
+                    .map(article => String(article.article_id || "").trim())
+                    .filter(articleId => articleId !== "")
+            )
+            : null;
+
+        applyVisibleCardStatusesFromPayload(incomingStatuses, {
+            skipArticleIds: skipStatusIds,
+        });
+    }
+
+    /**
+     * Refresh sidebar counts and expandable feed groups.
      *
      * @returns {Promise<void>}
      */
-    async function refreshSidebarCounts() {
+    async function refreshSidebarMeta() {
         try {
-            const response = await fetch(categoriesEndpoint, {
+            const response = await fetch(sidebarEndpoint, {
                 method: "GET",
                 cache: "no-store",
             });
@@ -2321,45 +2604,12 @@
 
             const payload = await response.json();
             updateSidebarCounts(payload);
+            if (payload.sidebar_feed_groups && typeof payload.sidebar_feed_groups === "object") {
+                broadcastSidebarFeedGroups(payload.sidebar_feed_groups);
+            }
         } catch (_error) {
             // Keep existing sidebar data when refresh fails.
         }
-    }
-
-    /**
-     * Refresh sidebar feed groups for category expanders.
-     *
-     * @returns {Promise<void>}
-     */
-    async function refreshSidebarFeedGroups() {
-        try {
-            const response = await fetch(sidebarFeedGroupsEndpoint, {
-                method: "GET",
-                cache: "no-store",
-            });
-            if (!response.ok) {
-                return;
-            }
-
-            const payload = await response.json();
-            if (payload && typeof payload === "object") {
-                broadcastSidebarFeedGroups(payload);
-            }
-        } catch (_error) {
-            // Keep existing sidebar groups when refresh fails.
-        }
-    }
-
-    /**
-     * Refresh both sidebar counts and expandable feed groups.
-     *
-     * @returns {Promise<void>}
-     */
-    async function refreshSidebarMeta() {
-        await Promise.all([
-            refreshSidebarCounts(),
-            refreshSidebarFeedGroups(),
-        ]);
     }
 
     /**
@@ -2370,12 +2620,8 @@
     async function refreshFeedData() {
         try {
             const refreshLimit = Math.max(pageSize, getCards().length, getPagingRequestOffset());
-            const [categoryResponse, sidebarGroupsResponse, articleResponse] = await Promise.all([
-                fetch(categoriesEndpoint, {
-                    method: "GET",
-                    cache: "no-store",
-                }),
-                fetch(sidebarFeedGroupsEndpoint, {
+            const [sidebarResponse, articleResponse] = await Promise.all([
+                fetch(sidebarEndpoint, {
                     method: "GET",
                     cache: "no-store",
                 }),
@@ -2385,21 +2631,19 @@
                 }),
             ]);
 
-            if (!categoryResponse.ok || !articleResponse.ok) {
+            if (!sidebarResponse.ok || !articleResponse.ok) {
                 return;
             }
 
-            const [categoryPayload, sidebarGroupsPayload, articlePayload] = await Promise.all([
-                categoryResponse.json(),
-                sidebarGroupsResponse.ok ? sidebarGroupsResponse.json() : Promise.resolve(null),
+            const [sidebarPayload, articlePayload] = await Promise.all([
+                sidebarResponse.json(),
                 articleResponse.json(),
             ]);
 
-            updateSidebarCounts(categoryPayload);
-            if (sidebarGroupsPayload && typeof sidebarGroupsPayload === "object") {
-                broadcastSidebarFeedGroups(sidebarGroupsPayload);
+            updateSidebarCounts(sidebarPayload);
+            if (sidebarPayload.sidebar_feed_groups && typeof sidebarPayload.sidebar_feed_groups === "object") {
+                broadcastSidebarFeedGroups(sidebarPayload.sidebar_feed_groups);
             }
-            // Manual refresh should rebuild the active list from server state.
             renderArticles(articlePayload, {
                 retainMissingCards: false,
                 scrollToTop: true,
@@ -2495,96 +2739,6 @@
     }
 
     /**
-     * Probe the currently-visible server-filtered article window and refresh when
-     * server ordering or membership diverges.
-     *
-     * @returns {Promise<void>}
-     */
-    async function refreshHeadArticlesIfNeeded() {
-        if (headRefreshProbeInFlight) {
-            return;
-        }
-
-        const currentCards = getCards();
-        const currentCardIds = currentCards
-            .map(getCardArticleId)
-            .filter(articleId => articleId !== "");
-
-        headRefreshProbeInFlight = true;
-
-        try {
-            const refreshLimit = Math.max(currentCardIds.length, pageSize);
-            const probeResponse = await fetch(buildArticlesUrl(0, refreshLimit), {
-                method: "GET",
-                cache: "no-store",
-            });
-            if (!probeResponse.ok) {
-                return;
-            }
-
-            const probePayload = await probeResponse.json();
-            const probeArticles = Array.isArray(probePayload.articles) ? probePayload.articles : [];
-            const probeIds = probeArticles
-                .map(article => String(article.article_id || "").trim())
-                .filter(articleId => articleId !== "");
-
-            const probeIdSet = new Set(probeIds);
-
-            const retainedExistingIds = currentCardIds.filter(articleId => !probeIdSet.has(articleId));
-            const retainedIdSet = new Set(retainedExistingIds);
-
-            // Mirror renderArticles ordering: backend IDs first, then retained IDs
-            // inserted relative to their next known neighbor.
-            const expectedFinalIds = Array.from(probeIds);
-            const expectedFinalIdSet = new Set(expectedFinalIds);
-            currentCardIds.forEach((articleId, previousIndex) => {
-                if (!retainedIdSet.has(articleId) || expectedFinalIdSet.has(articleId)) {
-                    return;
-                }
-
-                let insertAt = expectedFinalIds.length;
-                for (let lookahead = previousIndex + 1; lookahead < currentCardIds.length; lookahead += 1) {
-                    const neighborId = currentCardIds[lookahead];
-                    const neighborIndex = expectedFinalIds.indexOf(neighborId);
-                    if (neighborIndex >= 0) {
-                        insertAt = neighborIndex;
-                        break;
-                    }
-                }
-
-                expectedFinalIds.splice(insertAt, 0, articleId);
-                expectedFinalIdSet.add(articleId);
-            });
-
-            if (
-                expectedFinalIds.length === currentCardIds.length
-                && expectedFinalIds.every((articleId, index) => articleId === currentCardIds[index])
-            ) {
-                return;
-            }
-
-            renderArticles(probePayload);
-
-            if (typeof probePayload.has_more === "boolean") {
-                hasMorePages = probePayload.has_more;
-            }
-            if (typeof probePayload.next_offset === "number") {
-                nextOffset = Math.max(0, probePayload.next_offset);
-            } else {
-                nextOffset = Math.max(0, getPagingRequestOffset());
-            }
-
-            refreshPagingSentinelObserver();
-            scheduleTouchScrollReadCheck();
-            schedulePagePrefetchCheck();
-        } catch (_error) {
-            // Keep current list if top-of-list probe fails.
-        } finally {
-            headRefreshProbeInFlight = false;
-        }
-    }
-
-    /**
      * Sync read/unread state for currently rendered cards.
      *
      * @returns {Promise<void>}
@@ -2618,187 +2772,59 @@
 
             const payload = await response.json();
             const incomingStatuses = Array.isArray(payload.statuses) ? payload.statuses : [];
-            const statusById = new Map(
-                incomingStatuses
-                    .map(status => [
-                        String(status.article_id || "").trim(),
-                        {
-                            isRead: Boolean(status.is_read),
-                            isSaved: Boolean(status.is_saved),
-                            readAt: String(status.read_at || "").trim(),
-                            savedAt: String(status.saved_at || "").trim(),
-                        },
-                    ])
-                    .filter(([articleId]) => articleId !== "")
-            );
-
-            let removedAnyCard = false;
-
-            cards.forEach(card => {
-                const articleId = getCardArticleId(card);
-                if (articleId === "") {
-                    return;
-                }
-
-                if (
-                    pendingReadIds.has(articleId)
-                    || pendingUnreadIds.has(articleId)
-                    || pendingSaveIds.has(articleId)
-                    || pendingUnsaveIds.has(articleId)
-                ) {
-                    return;
-                }
-
-                if (!statusById.has(articleId)) {
-                    return;
-                }
-
-                const status = statusById.get(articleId);
-                if (!status || typeof status !== "object") {
-                    return;
-                }
-
-                const isRead = Boolean(status.isRead);
-                const isSaved = Boolean(status.isSaved);
-                if (!isRead) {
-                    sessionReadArticleIds.delete(articleId);
-                }
-
-                const locallyReadInSession = sessionReadArticleIds.has(articleId);
-                const shouldRemoveForRemoteRead = (
-                    selectedStatus === "unread"
-                    && isRead
-                    && !locallyReadInSession
-                );
-
-                if (shouldRemoveForRemoteRead) {
-                    if (selectedIndex >= 0) {
-                        const selectedCards = getCards();
-                        if (selectedCards[selectedIndex] === card) {
-                            clearCardSelection();
-                        }
-                    }
-
-                    card.remove();
-                    removedAnyCard = true;
-                    return;
-                }
-
-                const statusReadAt = String(status.readAt || "").trim();
-                const effectiveReadAt = statusReadAt !== ""
-                    ? statusReadAt
-                    : String(card.dataset.readAt || "").trim();
-                const statusSavedAt = String(status.savedAt || "").trim();
-                const effectiveSavedAt = statusSavedAt !== ""
-                    ? statusSavedAt
-                    : String(card.dataset.savedAt || "").trim();
-
-                const currentIsRead = isCardMarkedRead(card);
-                const currentIsSaved = isCardSaved(card);
-                const currentReadAt = String(card.dataset.readAt || "").trim();
-                const currentSavedAt = String(card.dataset.savedAt || "").trim();
-
-                const readStateChanged = currentIsRead !== isRead || effectiveReadAt !== currentReadAt;
-                const savedStateChanged = currentIsSaved !== isSaved || effectiveSavedAt !== currentSavedAt;
-
-                if (readStateChanged) {
-                    setCardReadAppearance(card, isRead, effectiveReadAt);
-                }
-
-                if (savedStateChanged) {
-                    setCardSavedAppearance(card, isSaved, effectiveSavedAt);
-                }
-                setCardNewBadge(card, !isRead && newUnreadArticleIds.has(articleId));
-            });
-
-            if (removedAnyCard) {
-                if (getCards().length === 0) {
-                    renderInlineEmptyHint();
-                    clearCardSelection();
-                } else {
-                    articleList.classList.remove("is-empty");
-                    refreshPagingSentinelObserver();
-                }
-
-                schedulePagePrefetchCheck();
-            }
+            applyVisibleCardStatusesFromPayload(incomingStatuses);
         } catch (_error) {
             // Keep existing card states when status sync fails.
         }
     }
 
     /**
-     * When the list has reached the end, poll for newly-arrived articles that
-     * should be appended in-order without requiring a full page refresh.
+     * Poll consolidated reader live-state for cross-device sync.
      *
      * @returns {Promise<void>}
      */
-    async function refreshTailArticlesWhenAtEnd() {
-        if (hasMorePages || pageLoadInFlight || tailRefreshInFlight) {
+    async function refreshLiveReaderState() {
+        if (liveSyncInFlight) {
             return;
         }
 
-        const nowMs = Date.now();
-        if (nowMs - lastTailRefreshAtMs < tailRefreshMinIntervalMs) {
-            return;
-        }
-
-        tailRefreshInFlight = true;
-        lastTailRefreshAtMs = nowMs;
-
-        const requestOffset = getPagingRequestOffset();
+        liveSyncInFlight = true;
 
         try {
-            const response = await fetch(buildArticlesUrl(requestOffset, pageSize), {
-                method: "GET",
+            const visibleArticleIds = getCards()
+                .map(getCardArticleId)
+                .filter(articleId => articleId !== "");
+
+            const response = await fetch(readerSyncEndpoint, {
+                method: "POST",
                 cache: "no-store",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    category: selectedCategory,
+                    status_filter: selectedStatus,
+                    feed_id: selectedFeedId === "" ? null : selectedFeedId,
+                    search: selectedSearch,
+                    require_search_query: isSearchPage && selectedSearch === "",
+                    visible_article_ids: visibleArticleIds,
+                    current_head_ids: getCurrentHeadIds(),
+                    at_end: !hasMorePages,
+                    tail_offset: getPagingRequestOffset(),
+                    page_size: pageSize,
+                }),
             });
             if (!response.ok) {
                 return;
             }
 
             const payload = await response.json();
-            const incomingArticles = Array.isArray(payload.articles) ? payload.articles : [];
-
-            if (incomingArticles.length === 0) {
-                hasMorePages = Boolean(payload.has_more);
-                if (typeof payload.next_offset === "number") {
-                    nextOffset = Math.max(0, payload.next_offset);
-                }
-
-                if (hasMorePages) {
-                    schedulePagePrefetchCheck();
-                } else {
-                    await refreshHeadArticlesIfNeeded();
-                }
-                return;
-            }
-
-            const appendedCount = appendArticlePage(payload, requestOffset);
-            if (appendedCount === 0) {
-                await refreshHeadArticlesIfNeeded();
-            }
-            scheduleTouchScrollReadCheck();
-            schedulePagePrefetchCheck();
+            await applyReaderSyncPayload(payload);
         } catch (_error) {
-            // Keep current list if tail refresh fails.
+            // Keep existing reader state when sync fails.
         } finally {
-            tailRefreshInFlight = false;
+            liveSyncInFlight = false;
         }
-    }
-
-    /**
-     * Poll sidebar counts and in-place card status state for cross-device sync.
-     *
-     * @returns {Promise<void>}
-     */
-    async function refreshLiveReaderState() {
-        await Promise.all([
-            refreshSidebarMeta(),
-            refreshVisibleCardStatuses(),
-        ]);
-        await refreshHeadArticlesIfNeeded();
-        await refreshTailArticlesWhenAtEnd();
     }
 
     /**

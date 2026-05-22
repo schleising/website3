@@ -33,6 +33,9 @@ from .models import (
     FeedCategorySummary,
     FeedOpmlImportOptions,
     FeedOpmlImportResult,
+    FeedReaderSyncRequest,
+    FeedReaderSyncResponse,
+    FeedSidebarMetaResponse,
     FeedStatsDailyPoint,
     FeedStatsOverall,
     FeedStatsResponse,
@@ -47,6 +50,8 @@ FEED_VALIDATION_REDIRECT_STATUSES = {301, 302, 303, 307, 308}
 TRUNCATED_SUMMARY_PARAGRAPH_LIMIT = 5
 SEARCH_QUERY_MAX_LENGTH = 160
 FEED_ARTICLE_TEXT_INDEX_CACHE_TTL = timedelta(minutes=10)
+CATEGORY_COUNTS_CACHE_TTL = timedelta(seconds=2)
+HEAD_PROBE_MAX_LIMIT = 20
 FEED_ARTICLE_TEXT_INDEX_KEYS: list[tuple[str, str]] = [
     ("title", "text"),
     ("summary_html", "text"),
@@ -57,6 +62,7 @@ SEARCH_TERM_IRREGULAR_VARIANTS: dict[str, tuple[str, ...]] = {
 
 _feed_article_text_index_available_cache: bool | None = None
 _feed_article_text_index_checked_at: datetime | None = None
+_category_counts_cache: dict[str, tuple[datetime, FeedCategoryListResponse]] = {}
 
 SUMMARY_ANCHOR_HREF_RE = re.compile(
     r'(?P<prefix>\bhref\s*=\s*)(?P<quote>["\']?)(?P<href>[^"\'\s>]+)(?P=quote)',
@@ -1351,6 +1357,7 @@ async def create_or_update_subscription(
         if isinstance(source_id, ObjectId):
             await request_immediate_feed_refresh({source_id})
 
+        invalidate_category_counts_cache(user_id)
         return existing, False
 
     new_subscription = {
@@ -1369,6 +1376,7 @@ async def create_or_update_subscription(
     if isinstance(source_id, ObjectId):
         await request_immediate_feed_refresh({source_id})
 
+    invalidate_category_counts_cache(user_id)
     return new_subscription, True
 
 
@@ -1472,6 +1480,8 @@ async def update_subscription_details(
     if isinstance(source_id, ObjectId):
         await request_immediate_feed_refresh({source_id})
 
+    if updated_subscription is not None:
+        invalidate_category_counts_cache(user_id)
     return dict(updated_subscription) if updated_subscription is not None else None
 
 
@@ -1489,6 +1499,8 @@ async def delete_subscription(user_id: str, subscription_id: str) -> bool:
     result = await user_feed_subscriptions_collection.delete_one(
         {"_id": subscription_object_id, "user_id": user_id}
     )
+    if result.deleted_count > 0:
+        invalidate_category_counts_cache(user_id)
     return result.deleted_count > 0
 
 
@@ -1580,10 +1592,26 @@ async def load_sources_map(feed_ids: set[ObjectId]) -> dict[ObjectId, dict[str, 
     return source_map
 
 
-async def get_categories_with_counts(user_id: str) -> FeedCategoryListResponse:
-    """Return sidebar categories and unread counters for a user."""
+def resolve_head_probe_limit(page_size: int) -> int:
+    """Return the capped article-window size used for reader head probes."""
 
-    categories = await list_category_documents(user_id)
+    normalized_page_size = max(1, int(page_size))
+    return min(max(normalized_page_size * 2, normalized_page_size), HEAD_PROBE_MAX_LIMIT)
+
+
+def invalidate_category_counts_cache(user_id: str) -> None:
+    """Drop cached sidebar category counts for a user."""
+
+    _category_counts_cache.pop(user_id, None)
+
+
+async def build_categories_with_counts(
+    user_id: str,
+    categories: list[FeedCategoryDocument],
+    subscriptions: list[dict[str, Any]],
+    read_state_ids: set[ObjectId],
+) -> FeedCategoryListResponse:
+    """Build sidebar categories and unread counters from preloaded scope data."""
 
     if user_feed_subscriptions_collection is None:
         return FeedCategoryListResponse(
@@ -1593,15 +1621,9 @@ async def get_categories_with_counts(user_id: str) -> FeedCategoryListResponse:
             categories=[],
         )
 
-    subscriptions = [
-        dict(doc)
-        async for doc in user_feed_subscriptions_collection.find({"user_id": user_id})
-    ]
     feed_to_category = {
         sub["feed_id"]: sub["category_id"] for sub in subscriptions if "feed_id" in sub and "category_id" in sub
     }
-
-    read_state_ids = await get_read_article_id_set(user_id)
 
     category_summaries: list[FeedCategorySummary] = []
     all_unread_count = 0
@@ -1640,6 +1662,30 @@ async def get_categories_with_counts(user_id: str) -> FeedCategoryListResponse:
         saved_count=saved_count,
         categories=category_summaries,
     )
+
+
+async def get_categories_with_counts(user_id: str) -> FeedCategoryListResponse:
+    """Return sidebar categories and unread counters for a user."""
+
+    now = utc_now()
+    cached_entry = _category_counts_cache.get(user_id)
+    if (
+        cached_entry is not None
+        and now - cached_entry[0] <= CATEGORY_COUNTS_CACHE_TTL
+    ):
+        return cached_entry[1]
+
+    categories = await list_category_documents(user_id)
+    subscriptions = await list_user_subscription_docs(user_id)
+    read_state_ids = await get_read_article_id_set(user_id)
+    payload = await build_categories_with_counts(
+        user_id,
+        categories,
+        subscriptions,
+        read_state_ids,
+    )
+    _category_counts_cache[user_id] = (now, payload)
+    return payload
 
 
 async def get_read_article_id_set(user_id: str) -> set[ObjectId]:
@@ -1802,6 +1848,10 @@ async def get_article_list(
     require_search_query: bool = False,
     offset: int = 0,
     limit: int = 10,
+    ids_only: bool = False,
+    preloaded_categories: list[FeedCategoryDocument] | None = None,
+    preloaded_subscriptions: list[dict[str, Any]] | None = None,
+    preloaded_read_state_ids: set[ObjectId] | None = None,
 ) -> FeedArticleListResponse:
     """Return filtered article cards for the feed reader view."""
 
@@ -1828,6 +1878,7 @@ async def get_article_list(
             category=category_filter,
             status=response_status,
             articles=[],
+            article_ids=[],
             offset=normalized_offset,
             limit=normalized_limit,
             has_more=False,
@@ -1840,8 +1891,16 @@ async def get_article_list(
 
     newest_first = normalized_search_query != ""
 
-    categories = await list_category_documents(user_id)
-    subscriptions = await list_user_subscription_docs(user_id)
+    categories = (
+        preloaded_categories
+        if preloaded_categories is not None
+        else await list_category_documents(user_id)
+    )
+    subscriptions = (
+        preloaded_subscriptions
+        if preloaded_subscriptions is not None
+        else await list_user_subscription_docs(user_id)
+    )
 
     selected_feed_id: ObjectId | None = None
     if isinstance(feed_filter, str) and feed_filter.strip() != "":
@@ -1877,14 +1936,15 @@ async def get_article_list(
             offset=normalized_offset,
             limit=normalized_limit,
         )
-        return FeedArticleListResponse(
+        return _feed_article_list_response(
             category="recently-read",
             status="read",
             articles=articles,
+            article_ids=[article.article_id for article in articles],
             offset=normalized_offset,
             limit=normalized_limit,
             has_more=has_more,
-            next_offset=normalized_offset + len(articles),
+            ids_only=ids_only,
         )
 
     if category_filter == "saved":
@@ -1900,14 +1960,15 @@ async def get_article_list(
             offset=normalized_offset,
             limit=normalized_limit,
         )
-        return FeedArticleListResponse(
+        return _feed_article_list_response(
             category="saved",
             status="all",
             articles=articles,
+            article_ids=[article.article_id for article in articles],
             offset=normalized_offset,
             limit=normalized_limit,
             has_more=has_more,
-            next_offset=normalized_offset + len(articles),
+            ids_only=ids_only,
         )
 
     muted_category_ids = {
@@ -1927,14 +1988,15 @@ async def get_article_list(
             selected_category = None
 
         if selected_category is None or selected_category in muted_category_ids:
-            return FeedArticleListResponse(
+            return _feed_article_list_response(
                 category=category_filter,
                 status=normalized_status,
                 articles=[],
+                article_ids=[],
                 offset=normalized_offset,
                 limit=normalized_limit,
                 has_more=False,
-                next_offset=normalized_offset,
+                ids_only=ids_only,
             )
 
         allowed_category_ids = [selected_category]
@@ -1953,20 +2015,48 @@ async def get_article_list(
         ]
 
     if len(allowed_feed_ids) == 0:
-        return FeedArticleListResponse(
+        return _feed_article_list_response(
             category=category_filter,
             status=normalized_status,
             articles=[],
+            article_ids=[],
             offset=normalized_offset,
             limit=normalized_limit,
             has_more=False,
-            next_offset=normalized_offset,
+            ids_only=ids_only,
         )
 
-    read_state_ids = await get_read_article_id_set(user_id)
+    read_state_ids = (
+        preloaded_read_state_ids
+        if preloaded_read_state_ids is not None
+        else await get_read_article_id_set(user_id)
+    )
     recent_read_state_ids: set[ObjectId] = set()
     if normalized_status == "read":
         recent_read_state_ids, _ = await get_read_article_visibility_sets(user_id)
+
+    if ids_only:
+        article_ids, has_more = await list_article_ids_for_feed_ids(
+            allowed_feed_ids=allowed_feed_ids,
+            read_state_ids=read_state_ids,
+            recent_read_state_ids=recent_read_state_ids,
+            search_query=normalized_search_query,
+            use_text_search=use_text_search,
+            newest_first=newest_first,
+            status_filter=normalized_status,
+            offset=normalized_offset,
+            limit=normalized_limit,
+        )
+        return _feed_article_list_response(
+            category=category_filter,
+            status=normalized_status,
+            articles=[],
+            article_ids=article_ids,
+            offset=normalized_offset,
+            limit=normalized_limit,
+            has_more=has_more,
+            ids_only=True,
+        )
 
     cards, has_more = await list_cards_for_feed_ids(
         user_id=user_id,
@@ -1984,14 +2074,15 @@ async def get_article_list(
         limit=normalized_limit,
     )
 
-    return FeedArticleListResponse(
+    return _feed_article_list_response(
         category=category_filter,
         status=normalized_status,
         articles=cards,
+        article_ids=[card.article_id for card in cards],
         offset=normalized_offset,
         limit=normalized_limit,
         has_more=has_more,
-        next_offset=normalized_offset + len(cards),
+        ids_only=False,
     )
 
 
@@ -2346,6 +2437,120 @@ async def list_cards_for_feed_ids(
         )
 
     return cards, has_more
+
+
+async def list_article_ids_for_feed_ids(
+    allowed_feed_ids: list[ObjectId],
+    read_state_ids: set[ObjectId],
+    recent_read_state_ids: set[ObjectId],
+    search_query: str,
+    use_text_search: bool,
+    newest_first: bool,
+    status_filter: str,
+    offset: int,
+    limit: int,
+) -> tuple[list[str], bool]:
+    """Return article IDs for feed IDs with status filtering."""
+
+    if feed_articles_collection is None or len(allowed_feed_ids) == 0:
+        return [], False
+
+    base_query = {
+        "feed_id": {"$in": allowed_feed_ids},
+        "is_deleted": False,
+    }
+
+    if status_filter == "read":
+        if len(recent_read_state_ids) == 0:
+            return [], False
+        base_query["_id"] = {"$in": list(recent_read_state_ids)}
+    elif status_filter == "unread" and len(read_state_ids) > 0:
+        base_query["_id"] = {"$nin": list(read_state_ids)}
+
+    search_filter = build_article_search_filter(
+        search_query,
+        use_text_search=use_text_search,
+    )
+
+    sort_direction = DESCENDING if newest_first else ASCENDING
+
+    dated_query = {
+        **base_query,
+        "published_at": {"$type": "date"},
+    }
+    undated_query = {
+        **base_query,
+        "$or": [
+            {"published_at": None},
+            {"published_at": {"$exists": False}},
+        ],
+    }
+
+    dated_query = merge_article_search_filter(dated_query, search_filter)
+    undated_query = merge_article_search_filter(undated_query, search_filter)
+
+    dated_total = await feed_articles_collection.count_documents(dated_query)
+    dated_skip = min(offset, dated_total)
+    undated_skip = max(0, offset - dated_total)
+
+    dated_docs = [
+        doc
+        async for doc in feed_articles_collection.find(dated_query, {"_id": 1})
+        .sort([("published_at", sort_direction), ("_id", sort_direction)])
+        .skip(dated_skip)
+        .limit(limit + 1)
+    ]
+
+    selected_docs: list[Any] = list(dated_docs[:limit])
+    has_more = len(dated_docs) > limit
+
+    if not has_more and len(selected_docs) < limit:
+        remaining_limit = limit - len(selected_docs)
+        undated_docs = [
+            doc
+            async for doc in feed_articles_collection.find(undated_query, {"_id": 1})
+            .sort("_id", sort_direction)
+            .skip(undated_skip)
+            .limit(remaining_limit + 1)
+        ]
+
+        selected_docs.extend(undated_docs[:remaining_limit])
+        has_more = len(undated_docs) > remaining_limit
+
+    article_ids = [
+        str(article_id)
+        for article_id in [doc.get("_id") for doc in selected_docs]
+        if isinstance(article_id, ObjectId)
+    ]
+
+    return article_ids, has_more
+
+
+def _feed_article_list_response(
+    category: str,
+    status: Literal["unread", "read", "all"],
+    articles: list[FeedArticleCard],
+    article_ids: list[str],
+    offset: int,
+    limit: int,
+    has_more: bool,
+    ids_only: bool,
+) -> FeedArticleListResponse:
+    """Build a normalized article-list API payload."""
+
+    resolved_ids = article_ids if article_ids else [article.article_id for article in articles]
+    resolved_count = len(resolved_ids)
+
+    return FeedArticleListResponse(
+        category=category,
+        status=status,
+        articles=[] if ids_only else articles,
+        article_ids=resolved_ids,
+        offset=offset,
+        limit=limit,
+        has_more=has_more,
+        next_offset=offset + resolved_count,
+    )
 
 
 async def list_recently_read_cards(
@@ -2749,6 +2954,7 @@ async def mark_article_read(user_id: str, article_id: str) -> bool:
         upsert=True,
     )
 
+    invalidate_category_counts_cache(user_id)
     return True
 
 
@@ -2827,6 +3033,7 @@ async def mark_article_unread(user_id: str, article_id: str) -> bool:
         upsert=True,
     )
 
+    invalidate_category_counts_cache(user_id)
     return True
 
 
@@ -2859,6 +3066,7 @@ async def mark_article_saved(user_id: str, article_id: str) -> bool:
         upsert=True,
     )
 
+    invalidate_category_counts_cache(user_id)
     return True
 
 
@@ -2890,6 +3098,7 @@ async def mark_article_unsaved(user_id: str, article_id: str) -> bool:
         upsert=True,
     )
 
+    invalidate_category_counts_cache(user_id)
     return True
 
 
@@ -2920,6 +3129,8 @@ async def set_category_muted(user_id: str, category_id: str, muted: bool) -> Fee
     updated = await feed_categories_collection.find_one(
         {"_id": category_object_id, "user_id": user_id}
     )
+    if updated is not None:
+        invalidate_category_counts_cache(user_id)
     return FeedCategoryDocument.model_validate(updated) if updated is not None else None
 
 
@@ -3061,6 +3272,12 @@ async def import_opml(
                 result.existing_subscriptions += 1
 
     result.created_categories = len(created_category_names)
+    if (
+        result.created_subscriptions > 0
+        or result.created_categories > 0
+        or result.existing_subscriptions > 0
+    ):
+        invalidate_category_counts_cache(user_id)
     return result
 
 
@@ -3214,6 +3431,8 @@ def build_sidebar_feed_groups(
 
 async def get_sidebar_visible_feed_ids_by_group(
     user_id: str,
+    subscriptions: list[dict[str, Any]] | None = None,
+    read_state_ids: set[ObjectId] | None = None,
 ) -> dict[str, set[str]]:
     """Return visible feed IDs for each sidebar group, independent of selected category.
 
@@ -3232,11 +3451,15 @@ async def get_sidebar_visible_feed_ids_by_group(
             "recently-read": set(),
         }
 
-    subscriptions = await list_user_subscription_docs(user_id)
+    resolved_subscriptions = (
+        subscriptions
+        if subscriptions is not None
+        else await list_user_subscription_docs(user_id)
+    )
 
     all_feed_ids = [
         sub["feed_id"]
-        for sub in subscriptions
+        for sub in resolved_subscriptions
         if isinstance(sub.get("feed_id"), ObjectId)
     ]
     if len(all_feed_ids) == 0:
@@ -3248,7 +3471,7 @@ async def get_sidebar_visible_feed_ids_by_group(
 
     # Track category membership per feed, including duplicate subscriptions.
     feed_id_to_category_ids: dict[str, set[str]] = {}
-    for sub in subscriptions:
+    for sub in resolved_subscriptions:
         feed_id = sub.get("feed_id")
         category_id = sub.get("category_id")
         if not isinstance(feed_id, ObjectId) or not isinstance(category_id, ObjectId):
@@ -3334,9 +3557,13 @@ async def get_sidebar_visible_feed_ids_by_group(
         "is_deleted": False,
     }
 
-    read_state_ids = await get_read_article_id_set(user_id)
-    if len(read_state_ids) > 0:
-        query["_id"] = {"$nin": list(read_state_ids)}
+    resolved_read_state_ids = (
+        read_state_ids
+        if read_state_ids is not None
+        else await get_read_article_id_set(user_id)
+    )
+    if len(resolved_read_state_ids) > 0:
+        query["_id"] = {"$nin": list(resolved_read_state_ids)}
 
     visible_feed_ids = await feed_articles_collection.distinct("feed_id", query)
     all_visible_feed_ids = {
@@ -3364,11 +3591,210 @@ async def get_sidebar_visible_feed_ids_by_group(
 async def get_sidebar_feed_groups_for_reader(user_id: str) -> dict[str, Any]:
     """Return live sidebar feed groups for reader pages."""
 
-    subscription_rows = await list_user_subscription_rows(user_id)
-    visible_feed_ids_by_group = await get_sidebar_visible_feed_ids_by_group(user_id=user_id)
-    return build_sidebar_feed_groups(
+    sidebar_meta = await get_sidebar_meta_for_reader(user_id)
+    return sidebar_meta.sidebar_feed_groups
+
+
+async def _subscription_rows_from_docs(
+    subscriptions: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Build sidebar feed-group rows from preloaded subscription docs."""
+
+    if len(subscriptions) == 0:
+        return []
+
+    category_ids = {
+        sub["category_id"]
+        for sub in subscriptions
+        if isinstance(sub.get("category_id"), ObjectId)
+    }
+    feed_ids = {
+        sub["feed_id"]
+        for sub in subscriptions
+        if isinstance(sub.get("feed_id"), ObjectId)
+    }
+
+    categories_map = await load_categories_map(category_ids)
+    sources_map = await load_sources_map(feed_ids)
+
+    rows: list[dict[str, Any]] = []
+    for sub in subscriptions:
+        feed_id = sub.get("feed_id")
+        category_id = sub.get("category_id")
+        if not isinstance(feed_id, ObjectId) or not isinstance(category_id, ObjectId):
+            continue
+
+        category = categories_map.get(category_id)
+        source = sources_map.get(feed_id)
+        if category is None or source is None:
+            continue
+
+        rows.append(
+            {
+                "subscription_id": str(sub.get("_id", "")),
+                "feed_id": str(feed_id),
+                "source_title": resolve_source_display_title(source),
+                "source_url": str(source.get("normalized_url", "")),
+                "source_image_url": str(source.get("image_url", "")).strip(),
+                "category_id": str(category.id),
+                "category_name": category.name,
+                "category_color_hex": category.color_hex,
+                "category_muted": category.muted,
+                "truncate_on_display": bool(sub.get("truncate_on_display")),
+            }
+        )
+
+    rows.sort(key=lambda row: (row["category_name"].lower(), row["source_title"].lower()))
+    return rows
+
+
+async def get_sidebar_meta_for_reader(user_id: str) -> FeedSidebarMetaResponse:
+    """Return merged sidebar counts and expandable feed groups."""
+
+    categories = await list_category_documents(user_id)
+    subscriptions = await list_user_subscription_docs(user_id)
+    read_state_ids = await get_read_article_id_set(user_id)
+
+    now = utc_now()
+    cached_entry = _category_counts_cache.get(user_id)
+    if (
+        cached_entry is not None
+        and now - cached_entry[0] <= CATEGORY_COUNTS_CACHE_TTL
+    ):
+        categories_payload = cached_entry[1]
+    else:
+        categories_payload = await build_categories_with_counts(
+            user_id,
+            categories,
+            subscriptions,
+            read_state_ids,
+        )
+        _category_counts_cache[user_id] = (now, categories_payload)
+
+    visible_feed_ids_by_group = await get_sidebar_visible_feed_ids_by_group(
+        user_id,
+        subscriptions=subscriptions,
+        read_state_ids=read_state_ids,
+    )
+    subscription_rows = await _subscription_rows_from_docs(subscriptions)
+    sidebar_feed_groups = build_sidebar_feed_groups(
         subscription_rows,
         visible_feed_ids_by_group=visible_feed_ids_by_group,
+    )
+
+    return FeedSidebarMetaResponse(
+        all_unread_count=categories_payload.all_unread_count,
+        recently_read_count=categories_payload.recently_read_count,
+        saved_count=categories_payload.saved_count,
+        categories=categories_payload.categories,
+        sidebar_feed_groups=sidebar_feed_groups,
+    )
+
+
+async def get_reader_live_sync(
+    user_id: str,
+    payload: FeedReaderSyncRequest,
+) -> FeedReaderSyncResponse:
+    """Return consolidated reader live-state in a single backend pass."""
+
+    categories = await list_category_documents(user_id)
+    subscriptions = await list_user_subscription_docs(user_id)
+    read_state_ids = await get_read_article_id_set(user_id)
+
+    now = utc_now()
+    cached_entry = _category_counts_cache.get(user_id)
+    if (
+        cached_entry is not None
+        and now - cached_entry[0] <= CATEGORY_COUNTS_CACHE_TTL
+    ):
+        categories_payload = cached_entry[1]
+    else:
+        categories_payload = await build_categories_with_counts(
+            user_id,
+            categories,
+            subscriptions,
+            read_state_ids,
+        )
+        _category_counts_cache[user_id] = (now, categories_payload)
+
+    visible_feed_ids_by_group = await get_sidebar_visible_feed_ids_by_group(
+        user_id,
+        subscriptions=subscriptions,
+        read_state_ids=read_state_ids,
+    )
+    subscription_rows = await _subscription_rows_from_docs(subscriptions)
+    sidebar_feed_groups = build_sidebar_feed_groups(
+        subscription_rows,
+        visible_feed_ids_by_group=visible_feed_ids_by_group,
+    )
+
+    article_list_kwargs = {
+        "user_id": user_id,
+        "category_filter": payload.category,
+        "status_filter": payload.status_filter,
+        "feed_filter": payload.feed_id,
+        "search_query": payload.search,
+        "require_search_query": payload.require_search_query,
+        "preloaded_categories": categories,
+        "preloaded_subscriptions": subscriptions,
+        "preloaded_read_state_ids": read_state_ids,
+    }
+
+    head_limit = resolve_head_probe_limit(payload.page_size)
+    head_ids_payload = await get_article_list(
+        **article_list_kwargs,
+        offset=0,
+        limit=head_limit,
+        ids_only=True,
+    )
+    head_article_ids = list(head_ids_payload.article_ids)
+
+    head_articles: list[FeedArticleCard] | None = None
+    if head_article_ids != payload.current_head_ids:
+        head_cards_payload = await get_article_list(
+            **article_list_kwargs,
+            offset=0,
+            limit=head_limit,
+            ids_only=False,
+        )
+        head_articles = list(head_cards_payload.articles)
+
+    tail_articles: list[FeedArticleCard] | None = None
+    tail_has_more: bool | None = None
+    tail_next_offset: int | None = None
+    if payload.at_end:
+        tail_offset = max(0, int(payload.tail_offset))
+        tail_limit = max(1, int(payload.page_size))
+        tail_payload = await get_article_list(
+            **article_list_kwargs,
+            offset=tail_offset,
+            limit=tail_limit,
+            ids_only=False,
+        )
+        if len(tail_payload.articles) > 0:
+            tail_articles = list(tail_payload.articles)
+            tail_has_more = tail_payload.has_more
+            tail_next_offset = tail_payload.next_offset
+        else:
+            tail_has_more = tail_payload.has_more
+            tail_next_offset = tail_payload.next_offset
+
+    statuses = await get_article_read_statuses(user_id, payload.visible_article_ids)
+
+    return FeedReaderSyncResponse(
+        all_unread_count=categories_payload.all_unread_count,
+        recently_read_count=categories_payload.recently_read_count,
+        saved_count=categories_payload.saved_count,
+        categories=categories_payload.categories,
+        sidebar_feed_groups=sidebar_feed_groups,
+        statuses=statuses,
+        head_article_ids=head_article_ids,
+        head_articles=head_articles,
+        head_has_more=head_ids_payload.has_more,
+        head_next_offset=head_ids_payload.next_offset,
+        tail_articles=tail_articles,
+        tail_has_more=tail_has_more,
+        tail_next_offset=tail_next_offset,
     )
 
 

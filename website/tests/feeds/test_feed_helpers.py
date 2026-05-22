@@ -173,6 +173,31 @@ class TruncateHtmlToParagraphsTests(unittest.TestCase):
         self.assertEqual(result, "<p>One</P><p>Two</P><p>Three</P><p>Four</P><p>Five</P>")
 
 
+class FeedDbHelperTests(unittest.TestCase):
+    def test_resolve_head_probe_limit_caps_at_max(self) -> None:
+        from website.feeds.feed_db import HEAD_PROBE_MAX_LIMIT, resolve_head_probe_limit
+
+        self.assertEqual(resolve_head_probe_limit(10), 20)
+        self.assertEqual(resolve_head_probe_limit(20), HEAD_PROBE_MAX_LIMIT)
+
+    def test_invalidate_category_counts_cache_clears_user_entry(self) -> None:
+        from website.feeds import feed_db
+        from website.feeds.models import FeedCategoryListResponse
+
+        feed_db._category_counts_cache["test-user"] = (
+            feed_db.utc_now(),
+            FeedCategoryListResponse(
+                all_unread_count=1,
+                recently_read_count=0,
+                saved_count=0,
+                categories=[],
+            ),
+        )
+
+        feed_db.invalidate_category_counts_cache("test-user")
+        self.assertNotIn("test-user", feed_db._category_counts_cache)
+
+
 class HtmlSanitizerTests(unittest.TestCase):
     def test_restores_missing_spaces_around_inline_tags_between_words(self) -> None:
         html = (

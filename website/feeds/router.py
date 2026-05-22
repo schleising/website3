@@ -23,6 +23,8 @@ from .feed_db import (
     get_sidebar_feed_groups_for_reader,
     get_feed_stats,
     get_feed_stats_context,
+    get_reader_live_sync,
+    get_sidebar_meta_for_reader,
     list_feed_admin_rows,
     import_opml,
     mark_article_opened,
@@ -49,6 +51,9 @@ from .models import (
     FeedCategoryReorderRequest,
     FeedOpmlImportOptions,
     FeedOpmlImportResult,
+    FeedReaderSyncRequest,
+    FeedReaderSyncResponse,
+    FeedSidebarMetaResponse,
     FeedStatsResponse,
     FeedSubscriptionCreateRequest,
     FeedSubscriptionCreateResponse,
@@ -373,6 +378,39 @@ async def get_sidebar_feed_groups(request: Request) -> dict[str, Any]:
 
 
 @feeds_router.get(
+    "/api/sidebar",
+    response_model=FeedSidebarMetaResponse,
+)
+@feeds_router.get(
+    "/api/sidebar/",
+    response_model=FeedSidebarMetaResponse,
+)
+async def get_sidebar_meta(request: Request) -> FeedSidebarMetaResponse:
+    """Return merged sidebar counts and expandable feed groups."""
+
+    username = _require_logged_in_user(request)
+    return await get_sidebar_meta_for_reader(username)
+
+
+@feeds_router.post(
+    "/api/reader/sync",
+    response_model=FeedReaderSyncResponse,
+)
+@feeds_router.post(
+    "/api/reader/sync/",
+    response_model=FeedReaderSyncResponse,
+)
+async def sync_reader_live_state(
+    request: Request,
+    payload: FeedReaderSyncRequest,
+) -> FeedReaderSyncResponse:
+    """Return consolidated reader live-state for polling synchronization."""
+
+    username = _require_logged_in_user(request)
+    return await get_reader_live_sync(username, payload)
+
+
+@feeds_router.get(
     "/api/admin/feeds",
     response_model=FeedAdminFeedListResponse,
 )
@@ -413,6 +451,7 @@ async def get_articles(
     search: str | None = None,
     offset: int = 0,
     limit: int = 10,
+    ids_only: bool = False,
 ) -> FeedArticleListResponse:
     """Return feed article cards filtered by category and status."""
 
@@ -432,6 +471,7 @@ async def get_articles(
         require_search_query=require_search_query,
         offset=max(0, int(offset)),
         limit=max(1, min(100, int(limit))),
+        ids_only=ids_only,
     )
 
 

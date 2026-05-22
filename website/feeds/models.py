@@ -150,10 +150,54 @@ class FeedArticleListResponse(BaseModel):
     category: str
     status: Literal["unread", "read", "all"]
     articles: list[FeedArticleCard]
+    article_ids: list[str] = Field(default_factory=list)
     offset: int = 0
     limit: int = 0
     has_more: bool = False
     next_offset: int = 0
+
+
+class FeedSidebarMetaResponse(BaseModel):
+    """Merged sidebar payload with category counts and expandable feed groups."""
+
+    all_unread_count: int
+    recently_read_count: int
+    saved_count: int
+    categories: list[FeedCategorySummary]
+    sidebar_feed_groups: dict[str, Any] = Field(default_factory=dict)
+
+
+class FeedReaderSyncRequest(BaseModel):
+    """Request payload for consolidated reader live-state synchronization."""
+
+    category: str = "all"
+    status_filter: Literal["unread", "read", "all"] = "unread"
+    feed_id: str | None = None
+    search: str | None = None
+    visible_article_ids: list[str] = Field(default_factory=list)
+    current_head_ids: list[str] = Field(default_factory=list)
+    at_end: bool = False
+    tail_offset: int = 0
+    page_size: int = 10
+    require_search_query: bool = False
+
+
+class FeedReaderSyncResponse(BaseModel):
+    """Consolidated reader live-state synchronization response."""
+
+    all_unread_count: int
+    recently_read_count: int
+    saved_count: int
+    categories: list[FeedCategorySummary]
+    sidebar_feed_groups: dict[str, Any] = Field(default_factory=dict)
+    statuses: list[FeedArticleStatusItem] = Field(default_factory=list)
+    head_article_ids: list[str] = Field(default_factory=list)
+    head_articles: list[FeedArticleCard] | None = None
+    head_has_more: bool = False
+    head_next_offset: int = 0
+    tail_articles: list[FeedArticleCard] | None = None
+    tail_has_more: bool | None = None
+    tail_next_offset: int | None = None
 
 
 class FeedArticleStatusRequest(BaseModel):
