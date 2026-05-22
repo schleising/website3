@@ -404,22 +404,100 @@
     }
 
     /**
-     * Reinsert a card by published timestamp so list order stays oldest-first.
+     * Return whether the active view sorts published timestamps newest-first.
+     *
+     * @returns {boolean}
+     */
+    function usesNewestPublishedSortOrder() {
+        return isSearchPage || selectedSearch !== "";
+    }
+
+    /**
+     * Return whether the active view sorts by read timestamp descending.
+     *
+     * @returns {boolean}
+     */
+    function usesReadAtSortOrder() {
+        return selectedCategory === "recently-read";
+    }
+
+    /**
+     * Return a sortable read timestamp for an existing card.
      *
      * @param {HTMLElement} card
+     * @returns {number}
      */
-    function repositionCardByPublishedDate(card) {
-        const targetTimestamp = getCardPublishedTimestamp(card);
-        const siblings = getCards().filter(entry => entry !== card);
-
-        for (const sibling of siblings) {
-            if (getCardPublishedTimestamp(sibling) > targetTimestamp) {
-                articleList.insertBefore(card, sibling);
-                return;
-            }
+    function getCardReadTimestamp(card) {
+        const parsedDate = parseArticleDate(String(card.dataset.readAt || ""));
+        if (!(parsedDate instanceof Date)) {
+            return Number.NEGATIVE_INFINITY;
         }
 
-        articleList.appendChild(card);
+        return parsedDate.getTime();
+    }
+
+    /**
+     * Compare two cards using the canonical order for the active view.
+     *
+     * @param {HTMLElement} leftCard
+     * @param {HTMLElement} rightCard
+     * @returns {number}
+     */
+    function compareCardsCanonical(leftCard, rightCard) {
+        if (usesReadAtSortOrder()) {
+            const readDiff = getCardReadTimestamp(rightCard) - getCardReadTimestamp(leftCard);
+            if (readDiff !== 0) {
+                return readDiff;
+            }
+
+            return getCardArticleId(leftCard).localeCompare(getCardArticleId(rightCard));
+        }
+
+        const leftPublished = getCardPublishedTimestamp(leftCard);
+        const rightPublished = getCardPublishedTimestamp(rightCard);
+        const leftUndated = leftPublished === Number.POSITIVE_INFINITY ? 1 : 0;
+        const rightUndated = rightPublished === Number.POSITIVE_INFINITY ? 1 : 0;
+        if (leftUndated !== rightUndated) {
+            return leftUndated - rightUndated;
+        }
+
+        if (leftPublished !== rightPublished) {
+            return usesNewestPublishedSortOrder()
+                ? rightPublished - leftPublished
+                : leftPublished - rightPublished;
+        }
+
+        return getCardArticleId(leftCard).localeCompare(getCardArticleId(rightCard));
+    }
+
+    /**
+     * Reorder rendered cards to match backend ordering for the active view.
+     */
+    function enforceCanonicalCardOrder() {
+        const cards = getCards();
+        if (cards.length <= 1) {
+            return;
+        }
+
+        const sortedCards = cards.slice().sort(compareCardsCanonical);
+        const needsReorder = sortedCards.some((card, index) => card !== cards[index]);
+        if (!needsReorder) {
+            return;
+        }
+
+        const fragment = document.createDocumentFragment();
+        sortedCards.forEach(card => {
+            fragment.appendChild(card);
+        });
+
+        const pagingSentinel = articleList.querySelector("#feeds-paging-sentinel");
+        if (pagingSentinel instanceof HTMLElement) {
+            articleList.insertBefore(fragment, pagingSentinel);
+        } else {
+            articleList.appendChild(fragment);
+        }
+
+        refreshPagingSentinelObserver();
     }
 
     /**
@@ -1202,7 +1280,7 @@
             setCardNewBadge(card, false);
 
             if (selectedStatus !== "read") {
-                repositionCardByPublishedDate(card);
+                enforceCanonicalCardOrder();
             }
 
             // Leave the card unselected after explicit mark-as-unread to avoid immediate reselection flows.
@@ -1685,9 +1763,13 @@
         articleList.classList.remove("is-empty");
         articleList.replaceChildren(fragment);
         refreshPagingSentinelObserver();
+        enforceCanonicalCardOrder();
 
+        const cardsAfterRender = getCards();
         if (previousSelectedId !== "") {
-            const selectedIdIndex = finalIds.indexOf(previousSelectedId);
+            const selectedIdIndex = cardsAfterRender.findIndex(
+                card => getCardArticleId(card) === previousSelectedId
+            );
             if (selectedIdIndex >= 0) {
                 setSelectedIndex(selectedIdIndex, { scrollIntoView: false });
                 if (scrollToTop) {
@@ -1695,12 +1777,13 @@
                 } else {
                     setReaderViewportScrollTop(previousScrollY);
                 }
+                scheduleTouchScrollReadCheck();
                 return;
             }
         }
 
         if (selectedIndex >= 0) {
-            const fallbackIndex = Math.min(selectedIndex, finalIds.length - 1);
+            const fallbackIndex = Math.min(selectedIndex, cardsAfterRender.length - 1);
             setSelectedIndex(fallbackIndex, { scrollIntoView: false });
         } else {
             clearCardSelection();
@@ -1970,6 +2053,7 @@
         }
 
         refreshPagingSentinelObserver();
+        enforceCanonicalCardOrder();
         return appendedCount;
     }
 
@@ -2487,6 +2571,8 @@
 
             schedulePagePrefetchCheck();
         }
+
+        enforceCanonicalCardOrder();
     }
 
     /**
