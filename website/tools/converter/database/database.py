@@ -694,7 +694,7 @@ class DatabaseTools:
             )
 
         # Get the total number of files in the database
-        total_files = await media_collection.count_documents({})
+        total_files = await media_collection.count_documents({"deleted": False})
 
         # Get the total number of files that have been converted
         total_converted = await media_collection.count_documents(
