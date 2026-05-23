@@ -179,6 +179,10 @@
         return value === "true" || value === "false" ? value : "any";
     }
 
+    function isUnchangedSizeFilterActive() {
+        return new URLSearchParams(window.location.search).get("unchanged_size") === "true";
+    }
+
     function currentFilterState() {
         return {
             deleted: normalizeFilterValue(
@@ -236,6 +240,16 @@
         if (conversionErrorSelect instanceof HTMLSelectElement) {
             conversionErrorSelect.value = conversionError;
         }
+
+        if (params.get("unchanged_size") === "true") {
+            if (deletedSelect instanceof HTMLSelectElement) {
+                deletedSelect.value = "false";
+            }
+
+            if (convertedSelect instanceof HTMLSelectElement) {
+                convertedSelect.value = "true";
+            }
+        }
     }
 
     function syncUrlToFilters() {
@@ -276,6 +290,12 @@
             url.searchParams.delete("conversion_error");
         } else {
             url.searchParams.set("conversion_error", conversionError);
+        }
+
+        if (isUnchangedSizeFilterActive()) {
+            url.searchParams.set("unchanged_size", "true");
+        } else {
+            url.searchParams.delete("unchanged_size");
         }
 
         window.history.replaceState({}, "", url);
@@ -825,6 +845,10 @@
                 url.searchParams.set("conversion_error", conversionError);
             }
 
+            if (isUnchangedSizeFilterActive()) {
+                url.searchParams.set("unchanged_size", "true");
+            }
+
             const payload = await requestJson(url.toString(), { method: "GET" });
             if (requestVersion !== state.requestVersion) {
                 return;
@@ -853,6 +877,9 @@
     if (filterForm instanceof HTMLFormElement) {
         filterForm.addEventListener("submit", event => {
             event.preventDefault();
+            const url = new URL(window.location.href);
+            url.searchParams.delete("unchanged_size");
+            window.history.replaceState({}, "", url);
             applyFilterPanelState(true);
             void loadFiles();
         });

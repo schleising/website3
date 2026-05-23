@@ -4,7 +4,7 @@
 
 {% block head %}
 <link rel="stylesheet" href="/css/media/media.css?v1.0.7">
-<script defer src="/js/media/media.js?v1.0.13"></script>
+<script defer src="/js/media/media.js?v1.0.14"></script>
 {% endblock %}
 
 {% block header %}
@@ -17,12 +17,14 @@
 {% set current_converting = request.query_params.get('converting', 'any') %}
 {% set current_converted = request.query_params.get('converted', 'false') %}
 {% set current_error = request.query_params.get('conversion_error', 'any') %}
+{% set current_unchanged_size = request.query_params.get('unchanged_size', '') %}
 <a class="sub-level-nav{% if current_deleted == 'any' and current_required == 'any' and current_converting == 'any' and current_converted == 'any' and current_error == 'any' %} is-current{% endif %}" href="/media/?deleted=any&conversion_required=any&converting=any&converted=any&conversion_error=any"{% if current_deleted == 'any' and current_required == 'any' and current_converting == 'any' and current_converted == 'any' and current_error == 'any' %} aria-current="page"{% endif %}>All Media</a>
 <a class="sub-level-nav{% if current_deleted == 'false' and current_required == 'any' and current_converting == 'any' and current_converted == 'false' and current_error == 'any' %} is-current{% endif %}" href="/media/?deleted=false&converted=false"{% if current_deleted == 'false' and current_required == 'any' and current_converting == 'any' and current_converted == 'false' and current_error == 'any' %} aria-current="page"{% endif %}>Not Converted</a>
 <a class="sub-level-nav{% if current_deleted == 'false' and current_required == 'false' and current_converting == 'false' and current_converted == 'false' and current_error == 'false' %} is-current{% endif %}" href="/media/?deleted=false&conversion_required=false&converting=false&converted=false&conversion_error=false"{% if current_deleted == 'false' and current_required == 'false' and current_converting == 'false' and current_converted == 'false' and current_error == 'false' %} aria-current="page"{% endif %}>Ready To Queue</a>
 <a class="sub-level-nav{% if current_deleted == 'false' and current_required == 'true' and current_converting == 'any' and current_converted == 'false' and current_error == 'any' %} is-current{% endif %}" href="/media/?deleted=false&conversion_required=true&converted=false"{% if current_deleted == 'false' and current_required == 'true' and current_converting == 'any' and current_converted == 'false' and current_error == 'any' %} aria-current="page"{% endif %}>Queued</a>
 <a class="sub-level-nav{% if current_deleted == 'false' and current_required == 'any' and current_converting == 'true' and current_converted == 'false' and current_error == 'any' %} is-current{% endif %}" href="/media/?deleted=false&converting=true&converted=false"{% if current_deleted == 'false' and current_required == 'any' and current_converting == 'true' and current_converted == 'false' and current_error == 'any' %} aria-current="page"{% endif %}>Converting</a>
 <a class="sub-level-nav{% if current_deleted == 'false' and current_required == 'any' and current_converting == 'any' and current_converted == 'false' and current_error == 'true' %} is-current{% endif %}" href="/media/?deleted=false&converted=false&conversion_error=true"{% if current_deleted == 'false' and current_required == 'any' and current_converting == 'any' and current_converted == 'false' and current_error == 'true' %} aria-current="page"{% endif %}>Conversion Errors</a>
+<a class="sub-level-nav{% if current_unchanged_size == 'true' %} is-current{% endif %}" href="/media/?unchanged_size=true"{% if current_unchanged_size == 'true' %} aria-current="page"{% endif %}>Same Size Converted</a>
 <a class="sub-level-nav{% if current_deleted == 'true' and current_required == 'any' and current_converting == 'any' and current_converted == 'any' and current_error == 'any' %} is-current{% endif %}" href="/media/?deleted=true&conversion_required=any&converting=any&converted=any&conversion_error=any"{% if current_deleted == 'true' and current_required == 'any' and current_converting == 'any' and current_converted == 'any' and current_error == 'any' %} aria-current="page"{% endif %}>Deleted</a>
 {% endblock %}
 

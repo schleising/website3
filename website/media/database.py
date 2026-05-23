@@ -203,22 +203,34 @@ class MediaDatabase:
         converting: bool | None = None,
         converted: bool | None = None,
         conversion_error: bool | None = None,
+        unchanged_size: bool | None = None,
         limit: int = 200,
     ) -> dict[str, Any]:
         if media_collection is None:
             return {"total_count": 0, "files": []}
 
         query: dict[str, Any] = {}
-        if deleted is not None:
-            query["deleted"] = deleted
-        if conversion_required is not None:
-            query["conversion_required"] = conversion_required
-        if converting is not None:
-            query["converting"] = converting
-        if converted is not None:
-            query["converted"] = converted
-        if conversion_error is not None:
-            query["conversion_error"] = conversion_error
+        if unchanged_size is True:
+            query.update(
+                {
+                    "deleted": False,
+                    "converted": True,
+                    "pre_conversion_size": {"$gt": 0},
+                    "current_size": {"$gt": 0},
+                    "$expr": {"$eq": ["$current_size", "$pre_conversion_size"]},
+                }
+            )
+        else:
+            if deleted is not None:
+                query["deleted"] = deleted
+            if conversion_required is not None:
+                query["conversion_required"] = conversion_required
+            if converting is not None:
+                query["converting"] = converting
+            if converted is not None:
+                query["converted"] = converted
+            if conversion_error is not None:
+                query["conversion_error"] = conversion_error
 
         is_ready_to_queue_view = (
             deleted is False

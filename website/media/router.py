@@ -67,6 +67,7 @@ async def get_media_files(
     converting: bool | None = Query(default=None),
     converted: bool | None = Query(default=None),
     conversion_error: bool | None = Query(default=None),
+    unchanged_size: bool | None = Query(default=None),
     limit: int = Query(default=200, ge=1, le=500),
 ) -> dict[str, Any]:
     require_media_access(request)
@@ -77,6 +78,7 @@ async def get_media_files(
         converting=converting,
         converted=converted,
         conversion_error=conversion_error,
+        unchanged_size=unchanged_size,
         limit=limit,
     )
 
