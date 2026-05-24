@@ -555,6 +555,10 @@ function updatePositionMovementIndicators(rows) {
     }
 }
 
+function hasRemainingGames(rows, totalGames) {
+    return rows.some(row => getRowPotentialCalculationPlayed(row) < totalGames);
+}
+
 function applyRangeHighlights(activeRow) {
     if (!activeRow) {
         clearRangeHighlights();
@@ -572,6 +576,11 @@ function applyRangeHighlights(activeRow) {
 
     const teamCount = rows.length;
     const totalGames = Math.max((teamCount - 1) * 2, 0);
+
+    if (!hasRemainingGames(rows, totalGames)) {
+        return;
+    }
+
     const activePosition = asNumber(activeRow.dataset.position);
     const activePoints = getRowPotentialCalculationPoints(activeRow);
     const activePlayed = getRowPotentialCalculationPlayed(activeRow);
