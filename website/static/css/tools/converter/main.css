@@ -580,6 +580,7 @@ body::after {
     display: flex;
     flex-direction: column;
     min-height: auto;
+    min-width: 0;
 }
 
 .stats-container .details-container {
@@ -594,7 +595,7 @@ body::after {
 
 .converted-files-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(16rem, 100%), 1fr));
     gap: 0.44rem;
     width: 100%;
     flex: 0 0 auto;
@@ -605,6 +606,7 @@ body::after {
 }
 
 .converted-file-card {
+    min-width: 0;
     border: 0.0625rem solid var(--line);
     border-radius: 0.72rem;
     padding: 0.45rem;
@@ -776,12 +778,15 @@ body.dark-mode .theme-switch-thumb-moon {
 }
 
 .converted-file-name {
+    flex: 1 1 0;
     margin: 0;
     min-width: 0;
     font-size: 0.84rem;
     line-height: 1.2;
     letter-spacing: -0.01rem;
     color: var(--text-main);
+    overflow-wrap: anywhere;
+    word-break: break-word;
     display: -webkit-box;
     line-clamp: 2;
     -webkit-line-clamp: 2;
