@@ -1,0 +1,689 @@
+# World Cup Section — Design Proposal
+
+Status: Draft
+Date: 2026-05-27
+Scope: New World Cup area within the existing Football section
+
+## 1. Goal
+
+Add a World Cup section to the Football area of the website, using the same upstream data source as the Premier League (football-data.org) and the same general response shapes already modelled in `website/football/models.py` (`Match`, `Standing`, `Table`, `Team`, `Score`).
+
+The section must cover:
+
+- **Group stage** — one table and fixture list per group.
+- **Knockout stage** — round-by-round fixtures with progression through the bracket.
+- **Dedicated pages** — one page per group, one page per knockout round.
+- **Tournament overview** — a single page that shows the full tournament: all groups in order at the bottom, with knockout rounds stacked above them as the tournament progresses, and the **Final at the top of the page** once that stage exists.
+
+API details are documented in §8, verified against [football-data.org v4](https://docs.football-data.org/general/v4/competition.html) and live calls with the project's existing `X-Auth-Token`. Payload shapes match the existing PL `Match` and `Table` models.
+
+## 2. Relationship to the Existing Football Area
+
+The Premier League implementation is the template. Reuse:
+
+
+| Existing piece        | Path / pattern                                           | World Cup reuse                                                       |
+| --------------------- | -------------------------------------------------------- | --------------------------------------------------------------------- |
+| Base layout + sidebar | `templates/football/football-base.html`                  | Extend; add WC nav block                                              |
+| Match cards           | `templates/football/match_template.html`, `score-widget` | Same card component; filter by `stage` / `group`                      |
+| League table grid     | `templates/football/table_template.html`, `table.css`    | Per-group tables; drop PL zone styling                                |
+| Router module         | `website/football/router.py`                             | Add `world-cup` sub-routes or sibling router                          |
+| Pydantic models       | `website/football/models.py`                             | Reuse `Match` (`stage`, `group` already present), `Standing`, `Table` |
+| Mongo upsert pattern  | `backend/src/football/football.py`                       | Parallel WC fetcher + collections                                     |
+| Live scores WebSocket | `WS /football/ws/`                                       | Extend or add WC-scoped channel                                       |
+| Timezone display      | `football_utils.update_match_timezone()`                 | Unchanged                                                             |
+
+
+Do **not** reuse without adaptation:
+
+
+| PL-specific piece                                  | Why                                                            |
+| -------------------------------------------------- | -------------------------------------------------------------- |
+| `pl_matches_{season}` / `pl_table_{season}` naming | WC uses tournament **edition** not Aug–May season              |
+| `ShortName` enum (club names)                      | National teams need a separate display-name strategy           |
+| UCL / UEL / relegation table zones                 | Not applicable to group or knockout tables                     |
+| Season picker (`2025_2026`)                        | Replace with **tournament edition** picker (`2026`, `2022`, …) |
+| `live_pl_table` flat 20-team logic                 | Group-stage live tables are per-group                          |
+
+
+## 3. Tournament Model
+
+### 3.1 Edition (not season)
+
+A World Cup edition is identified by the **calendar year of the tournament** (e.g. `2026`), not `YYYY_YYYY`.
+
+
+| Concept              | PL convention          | WC convention                            |
+| -------------------- | ---------------------- | ---------------------------------------- |
+| Edition key          | `2025_2026`            | `2026`                                   |
+| Match collection     | `pl_matches_2025_2026` | `wc_matches_2026`                        |
+| Standings collection | `pl_table_2026`        | `wc_standings_2026`                      |
+| Live standings       | `live_pl_table`        | `live_wc_standings_2026` (per edition)   |
+| Date window          | Aug–May                | Tournament window only (e.g. 2026: `2026-06-11` → `2026-07-19`) |
+| API `season` filter  | N/A (uses `YYYY_YYYY`) | Calendar year, e.g. `?season=2026` |
+| API season `id`      | N/A                    | Internal id per edition (2026 → `2398`) |
+
+
+### 3.2 Stages
+
+Map upstream `Match.stage` / `Standing.stage` values into two UI phases:
+
+**Group phase**
+
+
+| Stage value (expected) | UI label    |
+| ---------------------- | ----------- |
+| `GROUP_STAGE`          | Group Stage |
+
+
+Matches also carry `Match.group` (e.g. `GROUP_A`, `GROUP_B`). Normalise to display labels `Group A`, `Group B`, …
+
+**Knockout phase**
+
+Knockout rounds are ordered for display. Exact round names depend on tournament format (32-team vs 48-team). Define a configurable ordered list per edition:
+
+
+| Stage value (expected) | Display order (ascending = earliest round) | UI label             |
+| ---------------------- | ------------------------------------------ | -------------------- |
+| `LAST_32`              | 1                                          | Round of 32          |
+| `LAST_16`              | 2                                          | Round of 16          |
+| `QUARTER_FINALS`       | 3                                          | Quarter-finals       |
+| `SEMI_FINALS`          | 4                                          | Semi-finals          |
+| `THIRD_PLACE`          | 5                                          | Third-place play-off |
+| `FINAL`                | 6                                          | Final                |
+
+
+Only rounds that have at least one match in the dataset appear in the UI.
+
+**Verified for FIFA World Cup 2026** (104 matches total):
+
+| Stage | Matches |
+| ----- | ------- |
+| `GROUP_STAGE` | 72 (12 groups × 6 matches; matchdays 1–3) |
+| `LAST_32` | 16 |
+| `LAST_16` | 8 |
+| `QUARTER_FINALS` | 4 |
+| `SEMI_FINALS` | 2 |
+| `THIRD_PLACE` | 1 |
+| `FINAL` | 1 |
+
+Knockout fixtures have `matchday: null`. The Final may list `homeTeam` / `awayTeam` as `null` until teams are known.
+
+### 3.3 Group standings
+
+The standings subresource returns one `Standing` per group in `Table.standings[]`. For WC 2026 there are **12 entries** (`Group A` … `Group L`), each with four teams.
+
+Each group table uses the same columns as the PL table (Pos, Team, Pld, W, D, L, F, A, GD, Pts) without qualification-zone colouring. Standings use `stage: "ALL"` and `type: "TOTAL"` (not `GROUP_STAGE`).
+
+**Important:** group identifiers differ between resources:
+
+| Resource | `group` field format | Example |
+| -------- | -------------------- | ------- |
+| Match | Enum slug | `GROUP_A` |
+| Standings | Display string | `"Group A"` |
+| Match list filter | Enum slug | `?group=GROUP_A` |
+
+`world_cup_utils.py` must map between slug (`a`), match enum (`GROUP_A`), and standings label (`Group A`).
+
+Tie-breaker and “teams to advance” indicators (e.g. top two qualify) can be added as static labels per group section, not as dynamic zone CSS.
+
+## 4. Page Inventory
+
+All routes live under `/football/world-cup/` (PWA mode: `/world-cup/` with existing `football_root_path` stripping).
+
+### 4.1 Overview — full tournament (`GET /football/world-cup/`)
+
+The flagship page. Vertical layout, **read top-to-bottom as the tournament climax**:
+
+```
+┌─────────────────────────────────────┐
+│  FINAL                    (top)     │  ← appears when FINAL fixtures exist
+├─────────────────────────────────────┤
+│  Semi-finals                        │  ← appears when stage has fixtures
+├─────────────────────────────────────┤
+│  Quarter-finals                     │
+├─────────────────────────────────────┤
+│  Round of 16                        │
+├─────────────────────────────────────┤
+│  Round of 32                        │  ← 48-team editions only
+├─────────────────────────────────────┤
+│  ─── Group Stage ───                │
+│  Group A  (table + compact fixtures)│
+│  Group B                            │
+│  Group C                            │
+│  … in alphabetical order            │
+└─────────────────────────────────────┘
+```
+
+**Behaviour**
+
+- Knockout sections are rendered in **reverse round order** (Final first, earliest knockout last among knockout blocks).
+- A knockout section is **omitted until** the edition has at least one match for that stage (scheduled, live, or finished). As the tournament advances, new sections appear at the top; the Final section is always the uppermost block when it exists.
+- Group sections are always shown (for the selected edition), in fixed order A → B → C → …
+- Each group block contains:
+  - Mini standings table (4–6 rows depending on format).
+  - Compact fixture list for that group (reuse `score-widget` at reduced density or a single-row variant).
+- Each knockout block contains:
+  - Round heading with link to the dedicated round page.
+  - Match cards for that round, grouped by matchday or date.
+- Optional: anchor jump menu (like All Matches) — `Final`, `Semi-finals`, …, `Group A`, …
+
+**Template:** `templates/football/world-cup/overview.html`
+
+### 4.2 Groups index (`GET /football/world-cup/groups/`)
+
+Landing page listing all groups as cards. Each card shows:
+
+- Group name.
+- Current top two (or mini table).
+- Next fixture or “complete”.
+
+Links through to per-group pages. Can redirect to overview `#group-a` anchors if preferred; keep as a distinct route for sidebar nav clarity.
+
+**Template:** `templates/football/world-cup/groups_index.html`
+
+### 4.3 Single group (`GET /football/world-cup/groups/{group}/`)
+
+Example: `/football/world-cup/groups/a/?edition=2026`
+
+
+| Section   | Content                                                             |
+| --------- | ------------------------------------------------------------------- |
+| Header    | `Group A — FIFA World Cup 2026` + edition picker                    |
+| Standings | Full group table                                                    |
+| Fixtures  | All group-stage matches for that group, grouped by matchday or date |
+
+
+`{group}` is a lowercase slug (`a`, `b`, …, `l` for a 12-group tournament). Map to API `GROUP_A`, etc.
+
+Reuse `table_template.html` partial for standings and `match_template.html` day-group pattern for fixtures.
+
+**Template:** `templates/football/world-cup/group.html`
+
+### 4.4 Knockout index (`GET /football/world-cup/knockout/`)
+
+Bracket-style or round-list landing page. Shows only rounds that exist for the edition. Each round links to its dedicated page.
+
+For early design, a **round list** (consistent with PL patterns) is enough; a visual bracket diagram can be a later enhancement.
+
+**Template:** `templates/football/world-cup/knockout_index.html`
+
+### 4.5 Single knockout round (`GET /football/world-cup/knockout/{round}/`)
+
+Example: `/football/world-cup/knockout/quarter-finals/?edition=2026`
+
+
+| `{round}` slug   | Stage            |
+| ---------------- | ---------------- |
+| `round-of-32`    | `LAST_32`        |
+| `round-of-16`    | `LAST_16`        |
+| `quarter-finals` | `QUARTER_FINALS` |
+| `semi-finals`    | `SEMI_FINALS`    |
+| `third-place`    | `THIRD_PLACE`    |
+| `final`          | `FINAL`          |
+
+
+Shows all matches for that stage, grouped by date. Match cards show team names, crests, score, status — same as PL.
+
+**Template:** `templates/football/world-cup/knockout_round.html`
+
+### 4.6 All matches (`GET /football/world-cup/matches/`)
+
+Season-long fixture list equivalent to `/football/matches/all/`. All WC matches for the edition in chronological order, with jump menu by stage or date.
+
+Useful when the overview page is long.
+
+**Template:** reuse `match_template.html` with `world_cup_view=true` flag, or dedicated `world_cup_matches.html`.
+
+### 4.7 Team fixtures (`GET /football/world-cup/teams/{team_id}/`)
+
+Optional but consistent with PL `/football/matches/team/{team_id}/`. All matches for one national team across group and knockout stages.
+
+**Template:** reuse team matches layout from `match_template.html`.
+
+### 4.8 Head-to-head
+
+Existing `/football/head-to-head/` can work if national-team matches are stored in queryable collections. WC-specific H2H under `/football/world-cup/head-to-head/` is optional for v1.
+
+## 5. Navigation
+
+### 5.1 Football sidebar
+
+Add a **World Cup** block below existing PL links (or behind a collapsible “Competitions” heading):
+
+```
+Premier League
+  Live League Table
+  Latest Matches
+  …
+
+World Cup
+  Tournament Overview      → /football/world-cup/
+  Groups                   → /football/world-cup/groups/
+  Knockout                 → /football/world-cup/knockout/
+  All Matches              → /football/world-cup/matches/
+```
+
+When viewing a group or knockout sub-page, highlight the parent nav item and show secondary links (Group A … Group L, or round links) in the page header or a horizontal sub-nav — not duplicated in the global sidebar.
+
+### 5.2 Edition picker
+
+Mirror the PL season popup:
+
+- Button in page header: `2026` (current edition).
+- Popup selects edition from available `wc_matches_*` collections.
+- Query param: `?edition=2026`.
+- Default: latest edition with data.
+
+### 5.3 Cross-linking
+
+
+| From                      | To                                               |
+| ------------------------- | ------------------------------------------------ |
+| Group table team name     | `/football/world-cup/teams/{id}/?edition=`       |
+| Match card                | H2H pill → existing head-to-head with both teams |
+| Overview knockout heading | Dedicated round page                             |
+| Overview group heading    | Single group page                                |
+
+
+## 6. Architecture
+
+```mermaid
+flowchart TB
+  subgraph External["football-data.org v4"]
+    API["competitions/WC<br/>matches · standings · teams"]
+  end
+
+  subgraph Backend["backend worker"]
+    Fetcher["wc_fetcher.py<br/>matches + standings ingest"]
+    Live["wc_live.py<br/>today's matches poll"]
+  end
+
+  subgraph Mongo["MongoDB"]
+    WM["wc_matches_{edition}"]
+    WS["wc_standings_{edition}"]
+    LWS["live_wc_standings_{edition}"]
+  end
+
+  subgraph Website["website FastAPI"]
+    Router["/football/world-cup/* routes"]
+    WCDB["world_cup_db.py<br/>group + stage queries"]
+    Templates["world-cup templates"]
+    WSock["WebSocket live scores"]
+  end
+
+  API --> Fetcher
+  Fetcher --> WM
+  Fetcher --> WS
+  Live --> WM
+  Live --> LWS
+  WM --> WCDB
+  WS --> WCDB
+  LWS --> WCDB
+  WCDB --> Router
+  Router --> Templates
+  WM --> WSock
+  WSock --> Templates
+```
+
+
+
+### 6.1 Suggested new modules
+
+
+| File                                          | Responsibility                                                          |
+| --------------------------------------------- | ----------------------------------------------------------------------- |
+| `website/football/world_cup_db.py`            | Queries: matches by group, by stage, all groups standings, edition list |
+| `website/football/world_cup_utils.py`         | Stage ordering, group slug ↔ API name, knockout visibility rules        |
+| `backend/src/football/world_cup.py`           | Scheduled fetch + live poll for WC competition                          |
+| `website/templates/football/world-cup/*.html` | WC-specific templates                                                   |
+| `website/static/css/football/world-cup.css`   | Group grid, overview stacking, optional bracket styles                  |
+
+
+Router code can live in `website/football/router.py` (nested routes) or `website/football/world_cup_router.py` included with `prefix="/football/world-cup"`.
+
+### 6.2 Overview page assembly (server-side)
+
+Pseudocode for the main layout logic:
+
+```python
+def build_overview_context(edition: str) -> dict:
+    groups = list_groups_for_edition(edition)          # ordered A..L
+    group_blocks = [
+        {
+            "slug": group.slug,
+            "label": group.label,
+            "standings": get_group_standings(edition, group),
+            "matches": get_group_matches(edition, group),
+        }
+        for group in groups
+    ]
+
+    knockout_rounds = get_knockout_rounds_for_edition(edition)  # ordered earliest→latest
+    knockout_blocks = []
+    for round in reversed(knockout_rounds):                     # render latest first
+        matches = get_matches_by_stage(edition, round.stage)
+        if matches:
+            knockout_blocks.append({
+                "slug": round.slug,
+                "label": round.label,
+                "matches": matches,
+            })
+
+    return {
+        "knockout_blocks": knockout_blocks,   # Final first
+        "group_blocks": group_blocks,         # A..L at bottom
+        "edition": edition,
+    }
+```
+
+## 7. Data Shapes (verified — same models as PL)
+
+Reuse existing Pydantic models without schema changes for v1. JSON field names use camelCase from the API (`utcDate`, `homeTeam`, `fullTime`, etc.); models already alias these.
+
+### 7.1 Match (existing)
+
+Relevant fields (2026 group-stage example: Mexico vs South Africa, id `537327`):
+
+```python
+class Match:
+    id: int
+    utc_date: datetime
+    status: MatchStatus   # SCHEDULED | TIMED | IN_PLAY | PAUSED | EXTRA_TIME |
+                          # PENALTY_SHOOTOUT | FINISHED | POSTPONED | CANCELLED | AWARDED
+    stage: str            # GROUP_STAGE | LAST_32 | LAST_16 | QUARTER_FINALS |
+                          # SEMI_FINALS | THIRD_PLACE | FINAL
+    group: str | None     # GROUP_A … GROUP_L (group stage only; null in knockout)
+    matchday: int | None  # 1–3 in group stage; null in knockout
+    home_team: Team       # may be null in unseeded knockout slots
+    away_team: Team
+    score: Score          # duration: REGULAR | EXTRA_TIME | PENALTY_SHOOTOUT
+```
+
+### 7.2 Standings (existing)
+
+```python
+class Standing:
+    stage: str            # "ALL" for WC group tables (not GROUP_STAGE)
+    type: str             # "TOTAL"
+    group: str | None     # "Group A" … "Group L" (display string, not GROUP_A)
+    table: list[TableItem]
+```
+
+`Table.standings` contains one `Standing` per group. The PL code currently reads `standings[0]` only; WC must index by `group`. Snapshot standings to Mongo after the tournament — football-data.org removes deducted-point adjustments from past seasons and documents that past standings may not remain available indefinitely.
+
+### 7.3 Team / crests
+
+National teams use football-data.org team IDs. Crest strategy:
+
+1. **Preferred:** store `Team.crest` URL from API (already on model).
+2. **Optional local cache:** `/images/football/crests/wc/{team_id}.png` for offline/PWA performance.
+
+Do not extend the club `ShortName` enum. Display `Team.name` or `Team.tla` (three-letter country code) directly.
+
+## 8. API & Ingestion
+
+Source: [football-data.org API v4](https://docs.football-data.org/general/v4/competition.html). Base URL: `https://api.football-data.org/v4/`.
+
+Verified live with the project token (May 2026). See also [lookup tables](https://docs.football-data.org/general/v4/lookup_tables.html) for enum values.
+
+### 8.1 Competition identifier
+
+
+| Field | Value |
+| ----- | ----- |
+| Competition id | `2000` |
+| League code | `WC` |
+| Name | `FIFA World Cup` |
+| Type | `CUP` |
+| Area | World (`code: INT`) |
+| Emblem | `https://crests.football-data.org/wm26.png` (edition-specific) |
+| Free tier | Yes — listed on [football-data.org/coverage](https://www.football-data.org/coverage) |
+
+**Available editions** (from `GET /competitions/WC` → `seasons[]`):
+
+| Edition | Season id | Start | End | Winner (if known) |
+| ------- | --------- | ----- | --- | ----------------- |
+| 2026 (current) | 2398 | 2026-06-11 | 2026-07-19 | — |
+| 2022 | 1382 | 2022-11-20 | 2022-12-18 | Argentina |
+| 2018 | 1 | 2018-06-14 | 2018-07-15 | France |
+| 2014 | 464 | 2014-06-11 | 2014-07-12 | Germany |
+| … | … | … | … | back to 1960 |
+
+### 8.2 Endpoints
+
+All requests require `X-Auth-Token` (same token as PL: `backend/src/secrets/football_api_token.txt`).
+
+| Purpose | Method | Endpoint | Notes |
+| ------- | ------ | -------- | ----- |
+| Competition metadata | GET | `/competitions/WC` | Edition list, current season, winners |
+| All matches | GET | `/competitions/WC/matches` | Defaults to current edition (`season=2026`) |
+| Matches (edition) | GET | `/competitions/WC/matches?season={year}` | Full tournament fixture list |
+| Matches (date range) | GET | `/competitions/WC/matches?dateFrom={yyyy-MM-dd}&dateTo={yyyy-MM-dd}` | Same pattern as PL ingest |
+| Matches (group) | GET | `/competitions/WC/matches?group=GROUP_A` | Combine with `stage=GROUP_STAGE` |
+| Matches (knockout round) | GET | `/competitions/WC/matches?stage=QUARTER_FINALS` | Stage enum filter |
+| Matches (matchday) | GET | `/competitions/WC/matches?matchday=2` | Group stage only |
+| Group standings | GET | `/competitions/WC/standings` | Returns all groups in one response |
+| Standings (edition) | GET | `/competitions/WC/standings?season={year}` | Optional `date={yyyy-MM-dd}` filter |
+| Teams | GET | `/competitions/WC/teams` | 48 teams for 2026; includes crest URLs |
+| Teams (edition) | GET | `/competitions/WC/teams?season={year}` | |
+| Single match (live) | GET | `/matches/{id}` | For polling individual live scores |
+| Cross-competition matches | GET | `/matches?competitions=WC&dateFrom=…&dateTo=…` | Alternative to competition subresource |
+
+**Example calls** (mirror PL style in `backend/src/football/football.py`):
+
+```
+GET https://api.football-data.org/v4/competitions/WC/matches?dateFrom=2026-06-11&dateTo=2026-07-19
+GET https://api.football-data.org/v4/competitions/WC/standings
+GET https://api.football-data.org/v4/competitions/WC/matches?stage=GROUP_STAGE&group=GROUP_A
+GET https://api.football-data.org/v4/matches/537327
+```
+
+### 8.3 Match filters (competition subresource)
+
+| Filter | Format | Example |
+| ------ | ------ | ------- |
+| `season` | 4-digit year | `?season=2026` |
+| `stage` | Stage enum | `?stage=LAST_16` |
+| `group` | Group enum | `?group=GROUP_F` |
+| `matchday` | Integer | `?matchday=1` |
+| `status` | Status enum | `?status=FINISHED` |
+| `dateFrom` / `dateTo` | `yyyy-MM-dd` | Inclusive range |
+| `limit` / `offset` | 1–500 | Pagination |
+
+**Stage enum** (full list): `FINAL` | `THIRD_PLACE` | `SEMI_FINALS` | `QUARTER_FINALS` | `LAST_16` | `LAST_32` | `LAST_64` | `ROUND_4` | `ROUND_3` | `ROUND_2` | `ROUND_1` | `GROUP_STAGE` | … (see [lookup tables](https://docs.football-data.org/general/v4/lookup_tables.html))
+
+**Group enum**: `GROUP_A` | `GROUP_B` | … | `GROUP_L` (12 groups supported)
+
+### 8.4 Standings behaviour
+
+Official docs state standings return **404 for `CUP` and `PLAYOFFS` types** and return per-group lists only for `LEAGUE_CUP`. In practice:
+
+| Competition | `type` | `/standings` result (verified) |
+| ----------- | ------ | ------------------------------ |
+| WC 2026 | `CUP` | **200** — 12 group tables returned |
+| EC 2024 | `CUP` | **404** |
+
+Treat WC standings as **available for the running edition** but implement a **fallback** to compute group tables from finished `GROUP_STAGE` matches if the endpoint returns 404 (useful for other tournaments or plan changes).
+
+Standings response shape matches PL (`Table` model). Each standing entry:
+
+```json
+{
+  "stage": "ALL",
+  "type": "TOTAL",
+  "group": "Group A",
+  "table": [{ "position": 1, "team": { ... }, "playedGames": 0, "points": 0, ... }]
+}
+```
+
+### 8.5 Subscription and rate limits
+
+Verified with the project token:
+
+| Request | Result |
+| ------- | ------ |
+| `/competitions/WC` | 200 |
+| `/competitions/WC/matches` (current edition) | 200 — 104 matches |
+| `/competitions/WC/standings` | 200 — 12 groups |
+| `/competitions/WC/teams` | 200 — 48 teams |
+| `/competitions/WC/matches?season=2022` | **403** — past edition restricted on current plan |
+| `/competitions/EC/standings?season=2024` | **404** |
+
+Response headers to monitor: `X-RequestsAvailable`, `X-RequestCounter-Reset`, `X-API-Version` (v4).
+
+**Implication:** launch with **2026** as the default (and likely only) edition unless the subscription is upgraded for historical seasons. Persist fetched data to Mongo so past editions remain on the site even if API access lapses.
+
+### 8.6 Ingestion schedule
+
+Mirror the PL worker in `backend/src/football/football.py`:
+
+| Job | Frequency | Endpoint(s) | Notes |
+| --- | --------- | ----------- | ----- |
+| Full tournament sync | Daily + on deploy | `/competitions/WC/matches?dateFrom={start}&dateTo={end}` | Use season `startDate` / `endDate` from competition metadata |
+| Group standings sync | Daily; more often during group stage | `/competitions/WC/standings` | Upsert all 12 groups |
+| Teams sync | Weekly / on deploy | `/competitions/WC/teams` | Crest URLs and squad metadata |
+| Live match poll | Every 4s on match days | Re-fetch today's matches or `/matches/{id}` | Same scheduler pattern as PL `get_todays_matches` |
+| Standings refresh (live) | After live group matches | `/competitions/WC/standings` | During group stage only |
+
+Suggested tournament window for 2026 ingest: `2026-06-11` to `2026-07-19`.
+
+### 8.7 Auth and attribution
+
+- **Auth:** `X-Auth-Token: {token}` — reuse existing secret file.
+- **Optional headers:** `X-Unfold-Goals`, `X-Unfold-Bookings`, etc. (see [lookup tables](https://docs.football-data.org/general/v4/lookup_tables.html)) — not required for v1.
+- **Attribution:** Keep footer: “Data sourced from [football-data.org](https://www.football-data.org/)”.
+
+## 9. Live Updates
+
+### 9.1 Match scores
+
+Extend the existing WebSocket pattern:
+
+```javascript
+{ "messageType": "get_scores", "competition": "world-cup", "edition": "2026" }
+```
+
+Server returns `MatchList` filtered to the edition’s live/recent matches. Client updates `score-widget` elements by `match.id`, reusing `football.js` where possible.
+
+### 9.2 Group standings
+
+During group stage, live standings updates are **per group**:
+
+- WebSocket message: `{ "messageType": "get_world_cup_standings", "edition": "2026" }`
+- Response: map of `group → table rows`
+- Overview page updates each mini group table independently.
+
+Knockout rounds do not need live table updates (no standings table).
+
+## 10. UI Notes
+
+### 10.1 Overview stacking
+
+- Use a clear visual separator between knockout and group phases (`─── Group Stage ───`).
+- Knockout blocks use the same match card as PL; optional larger card for the Final.
+- Sticky jump nav at top on long pages: `Final · Semi-finals · … · Group A · …`
+
+### 10.2 Group pages
+
+- Standings table full width.
+- Fixtures below, grouped by `matchday` (World Cup group games are often labelled Matchday 1–3).
+
+### 10.3 Knockout pages
+
+- No standings table.
+- Emphasise winner progression: show score; for finished matches, subtle highlight on the advancing team.
+
+### 10.4 CSS
+
+- New file `world-cup.css` imported from `football-base.html` when `world_cup_section=true`.
+- Reuse `table.css` for all tables.
+- PL zone classes (`table-zone-ucl`, etc.) are not applied.
+
+### 10.5 Responsive
+
+- Overview group blocks: two columns on wide screens, one on narrow.
+- Knockout match cards: same responsive grid as `football-grid`.
+
+## 11. Route Summary
+
+
+| Method | Route                                   | Page                                               |
+| ------ | --------------------------------------- | -------------------------------------------------- |
+| GET    | `/football/world-cup/`                  | Tournament overview                                |
+| GET    | `/football/world-cup/groups/`           | Groups index                                       |
+| GET    | `/football/world-cup/groups/{group}/`   | Single group                                       |
+| GET    | `/football/world-cup/knockout/`         | Knockout index                                     |
+| GET    | `/football/world-cup/knockout/{round}/` | Single knockout round                              |
+| GET    | `/football/world-cup/matches/`          | All matches                                        |
+| GET    | `/football/world-cup/teams/{team_id}/`  | Team fixtures                                      |
+| WS     | `/football/ws/` (extended)              | Live scores                                        |
+| GET    | `/football/world-cup/api/`              | Optional simplified JSON (mirror `/football/api/`) |
+
+
+Query param on all HTML routes: `?edition=2026`.
+
+## 12. Implementation Phases
+
+### Phase 1 — Data + group stage (read-only)
+
+- [ ] WC ingestion worker + `wc_matches_{edition}` / `wc_standings_{edition}` collections
+- [ ] `world_cup_db.py` query helpers
+- [ ] Edition picker
+- [ ] Groups index + single group pages
+- [ ] Sidebar nav entries
+
+### Phase 2 — Overview + knockout pages
+
+- [ ] Overview page with group blocks (bottom) and knockout stacking (top)
+- [ ] Knockout index + per-round pages
+- [ ] Knockout visibility rules (show round only when fixtures exist)
+
+### Phase 3 — Live + polish
+
+- [ ] WebSocket live scores for WC
+- [ ] Live group standings on overview and group pages
+- [ ] All matches + team fixture pages
+- [ ] National team crest caching (if needed)
+
+### Phase 4 — Optional enhancements
+
+- [ ] Visual bracket diagram on knockout index
+- [ ] Push notifications for selected national teams
+- [ ] History API extension for WC competitions
+- [ ] Stats page filter for World Cup
+
+## 13. Open Questions
+
+
+| #   | Question                                             | Default assumption                                     |
+| --- | ---------------------------------------------------- | ------------------------------------------------------ |
+| 1   | Which editions to backfill?                          | **2026 only** at launch (API returns 403 for 2022 on current plan); store snapshots in Mongo |
+| 2   | 48-team (2026) vs 32-team format                     | **2026 confirmed:** 12 groups, `LAST_32` knockout; derive round list from match data per edition |
+| 3   | Third-place play-off on overview?                    | Yes, between semi-finals and final in knockout stack   |
+| 4   | Separate PWA manifest for WC?                        | No; stay within Football PWA                           |
+| 5   | WC nav always visible or only when edition has data? | Visible when any `wc_matches_`* collection exists      |
+| 6   | Shared or separate WebSocket endpoint?               | Extend existing `/football/ws/` with competition param |
+
+
+## 14. References
+
+
+| Resource            | Path                                             |
+| ------------------- | ------------------------------------------------ |
+| PL router           | `website/football/router.py`                     |
+| PL models           | `website/football/models.py`                     |
+| PL ingestion        | `backend/src/football/football.py`               |
+| Match template      | `website/templates/football/match_template.html` |
+| Table template      | `website/templates/football/table_template.html` |
+| Football base / nav | `website/templates/football/football-base.html`  |
+| Live scores JS      | `website/static/js/football/football.js`         |
+| Table live JS       | `website/static/js/football/table_live.js`       |
+| API docs            | https://docs.football-data.org/general/v4/competition.html |
+| Lookup tables       | https://docs.football-data.org/general/v4/lookup_tables.html |
+| Coverage / free tier | https://www.football-data.org/coverage          |
+
+
+---
+
+*Next step: begin Phase 1 — WC ingestion worker against edition 2026, using the endpoints in §8.*
