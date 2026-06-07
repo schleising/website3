@@ -467,7 +467,7 @@
     width: max-content;
     min-width: max-content;
     grid-template-columns: var(--world-cup-bracket-columns);
-    grid-template-rows: repeat(var(--world-cup-bracket-rows), var(--world-cup-bracket-row-size, 7.5rem));
+    grid-template-rows: repeat(var(--world-cup-bracket-rows), var(--world-cup-bracket-row-size, 6rem));
 }
 
 .world-cup-bracket-round-label {
