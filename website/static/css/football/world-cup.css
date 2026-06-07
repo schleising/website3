@@ -422,23 +422,26 @@
     -webkit-overflow-scrolling: touch;
 }
 
-.world-cup-bracket-grid {
-    display: flex;
-    gap: 0;
-    align-items: stretch;
-    min-width: min-content;
-}
-
-.world-cup-bracket-round {
+.world-cup-bracket-layout {
     display: flex;
     flex-direction: column;
     gap: 0.45rem;
-    min-width: 16rem;
-    padding-right: 0.875rem;
+    min-width: min-content;
 }
 
-.world-cup-bracket-round:not(:first-child) {
-    padding-left: 0.875rem;
+.world-cup-bracket-headers,
+.world-cup-bracket-body {
+    display: grid;
+    gap: 0;
+    grid-template-columns: var(--world-cup-bracket-columns);
+}
+
+.world-cup-bracket-headers {
+    grid-template-rows: auto;
+}
+
+.world-cup-bracket-body {
+    grid-template-rows: repeat(var(--world-cup-bracket-rows), var(--world-cup-bracket-row-size, 4rem));
 }
 
 .world-cup-bracket-round-label {
@@ -447,39 +450,12 @@
     color: var(--brand-strong);
     text-decoration: none;
     text-align: center;
+    padding: 0 0.25rem;
 }
 
 .world-cup-bracket-round-label:hover,
 .world-cup-bracket-round-label:focus-visible {
     text-decoration: underline;
-}
-
-.world-cup-bracket-round-grid {
-    display: grid;
-    grid-template-rows: repeat(var(--world-cup-bracket-rows), var(--world-cup-bracket-row-size, 4rem));
-    flex: 1 1 auto;
-    gap: 0;
-    position: relative;
-}
-
-.world-cup-bracket-connectors {
-    display: flex;
-    flex-direction: column;
-    gap: 0.45rem;
-    width: 1.75rem;
-    flex: 0 0 1.75rem;
-    align-self: stretch;
-}
-
-.world-cup-bracket-connector-label-spacer {
-    flex: 0 0 1.2rem;
-    min-height: 1.2rem;
-}
-
-.world-cup-bracket-connectors-grid {
-    display: grid;
-    grid-template-rows: repeat(var(--world-cup-bracket-rows), var(--world-cup-bracket-row-size, 4rem));
-    flex: 1 1 auto;
 }
 
 .world-cup-bracket-join {
@@ -513,27 +489,29 @@
     display: flex;
     align-items: center;
     width: 100%;
+    height: 100%;
     min-height: 0;
     position: relative;
+    padding: 0 0.25rem;
 }
 
-.world-cup-bracket-round:not(:last-child) .world-cup-bracket-slot-wrap::after {
+.world-cup-bracket-slot-wrap--outgoing::after {
     content: "";
     position: absolute;
     top: 50%;
-    right: -0.875rem;
-    width: 0.875rem;
+    right: -1.75rem;
+    width: 1.75rem;
     border-top: 0.125rem solid rgba(120, 154, 196, 0.72);
     pointer-events: none;
     transform: translateY(-50%);
 }
 
-.world-cup-bracket-round:not(:first-child) .world-cup-bracket-slot-wrap::before {
+.world-cup-bracket-slot-wrap--incoming::before {
     content: "";
     position: absolute;
     top: 50%;
-    left: -0.875rem;
-    width: 0.875rem;
+    left: -1.75rem;
+    width: 1.75rem;
     border-top: 0.125rem solid rgba(120, 154, 196, 0.72);
     pointer-events: none;
     transform: translateY(-50%);

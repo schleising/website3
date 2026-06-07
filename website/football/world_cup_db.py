@@ -591,8 +591,9 @@ def _bracket_slot_from_match(
 
 
 def _bracket_grid_position(match_index: int, round_index: int) -> tuple[int, int]:
-    row_start = (2 * match_index + 1) * (2**round_index)
-    row_span = (2 ** (round_index + 1)) - 1
+    """Place each match midway between its two feeder matches from the prior round."""
+    row_span = 2 ** (round_index + 1) - 1
+    row_start = 1 + match_index * (2 ** (round_index + 1))
     return row_start, row_span
 
 
