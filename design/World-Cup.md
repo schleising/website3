@@ -1,8 +1,8 @@
 # World Cup Section — Design Proposal
 
-Status: Draft (decisions locked — see §13)
-Date: 2026-05-27
-Scope: New World Cup area within the existing Football section
+Status: Implemented (2026 edition live — see §12)
+Date: 2026-05-27 (updated 2026-05-27)
+Scope: World Cup area within the existing Football section
 
 **Launch scope:** edition **2026 only**. During the tournament, the Football PWA opens on the World Cup overview (revert to PL default once the tournament ends).
 
@@ -27,9 +27,10 @@ The Premier League implementation is the template. Reuse:
 | Existing piece        | Path / pattern                                           | World Cup reuse                                                                 |
 | --------------------- | -------------------------------------------------------- | ------------------------------------------------------------------------------- |
 | Base layout + sidebar | `templates/football/football-base.html`                  | Extend; add WC nav block                                                        |
-| Match cards           | `templates/football/match_template.html`, `score-widget` | Same card component; filter by `stage` / `group`; **no H2H pill** (see §13 #10) |
-| League table grid     | `templates/football/table_template.html`, `table.css`    | Per-group tables; drop PL zone styling                                          |
-| Router module         | `website/football/router.py`                             | Add `world-cup` sub-routes or sibling router                                    |
+| Match cards           | `score-widget` in `football.css`                         | Shared `world_cup_match_card` macro (`_match_card.html`); **no H2H pill** (see §13 #10) |
+| League table grid     | `table.css`                                              | Per-group tables via `_group_table.html` / `_overview_standings.html`; no PL zone styling |
+| Router module         | `website/football/world_cup_router.py`                   | Included from `router.py` at `/football/world-cup`                              |
+| Team link hover       | `football.css` (`a.team-name`)                           | Animated underline on hover/focus — shared with PL match cards and tables       |
 | Pydantic models       | `website/football/models.py`                             | Reuse `Match` (`stage`, `group` already present), `Standing`, `Table`           |
 | Mongo upsert pattern  | `backend/src/football/football.py`                       | Parallel WC fetcher + collections                                               |
 | Live scores WebSocket | `WS /football/ws/`                                       | Extend with `competition: "world-cup"` param (same endpoint)                    |
@@ -205,15 +206,27 @@ Example: `/football/world-cup/groups/a/?edition=2026`
 
 `{group}` is a lowercase slug (`a`, `b`, …, `l` for a 12-group tournament). Map to API `GROUP_A`, etc.
 
-Reuse `table_template.html` partial for standings and `match_template.html` day-group pattern for fixtures.
+Standings via `_group_table.html`; fixtures use `world_cup_match_card` in day groups (same pattern as PL `match_template.html`).
 
 **Template:** `templates/football/world-cup/group.html`
 
 ### 4.4 Knockout index (`GET /football/world-cup/knockout/`)
 
-Bracket-style or round-list landing page. Shows only rounds that exist for the edition. Each round links to its dedicated page.
+Primary content is a **visual bracket diagram** at the top; a **Rounds** card list below links to per-round pages.
 
-For early design, a **round list** (consistent with PL patterns) is enough; a visual bracket diagram can be a later enhancement.
+**Bracket diagram** (`_knockout_bracket.html`, data from `build_knockout_bracket_diagram()` in `world_cup_db.py`):
+
+- Horizontally scrollable CSS grid aligned across all knockout rounds (R32 → Final).
+- Sticky round headers (synced horizontal scroll via `world_cup_bracket.js`).
+- Match slots reuse `world_cup_match_card` — same `score-widget` formatting as elsewhere (crests, scores, status).
+- Connector lines between rounds show winner progression (feed, join, and receive segments per parent match pair).
+- **2026 feeder labels:** unseeded knockout slots show mapped labels (e.g. `Winner Group A`, `Runner-up Group B`) from `WC_2026_KNOCKOUT_FIXTURES` in `world_cup_utils.py`, not generic `TBD`.
+- **Unknown teams:** placeholder crest `/images/football/crests/unknown_team.svg`; team names are plain text until a team id is known.
+- **Zebra column backgrounds:** alternating subtle brand-tinted bands per round column.
+- **Third-place play-off:** rendered in the **Final column**, a few grid rows below the Final card (label above the match card, not a separate panel).
+- Fine-grained grid rows (`BRACKET_CARD_GRID_ROWS = 2`) keep Round-of-32 cards stacked tightly with a small gap.
+
+**Rounds list:** cards for each stage that has fixtures (no empty-state message when the list is empty).
 
 **Template:** `templates/football/world-cup/knockout_index.html`
 
@@ -232,7 +245,7 @@ Example: `/football/world-cup/knockout/quarter-finals/?edition=2026`
 | `final`          | `FINAL`          |
 
 
-Shows all matches for that stage, grouped by date. Match cards show team names, crests, score, status — same as PL.
+Shows all matches for that stage, grouped by date. Uses `world_cup_match_card` with winner highlight on finished knockout matches.
 
 **Template:** `templates/football/world-cup/knockout_round.html`
 
@@ -242,13 +255,19 @@ Season-long fixture list equivalent to `/football/matches/all/`. All WC matches 
 
 Useful when the overview page is long.
 
-**Template:** reuse `match_template.html` with `world_cup_view=true` flag, or dedicated `world_cup_matches.html`.
+**Template:** `templates/football/world-cup/all_matches.html`
 
 ### 4.7 Team fixtures (`GET /football/world-cup/teams/{team_id}/`)
 
 Optional but consistent with PL `/football/matches/team/{team_id}/`. All matches for one national team across group and knockout stages.
 
-**Template:** reuse team matches layout from `match_template.html`.
+**Template:** `templates/football/world-cup/team_fixtures.html`
+
+### 4.8 Push notification subscriptions (`GET /football/world-cup/subscriptions/`)
+
+National-team notification preferences for the current edition. Reuses PL `subscriptions.js` and storage; WC team selections merge with existing PL selections.
+
+**Template:** `templates/football/world-cup/subscriptions.html`
 
 ## 5. Navigation
 
@@ -268,6 +287,7 @@ Competitions ▾
     Groups                     → /football/world-cup/groups/
     Knockout                   → /football/world-cup/knockout/
     All Matches                → /football/world-cup/matches/
+    Notifications              → /football/world-cup/subscriptions/
 ```
 
 The World Cup block is **hidden until** at least one `wc_matches_{edition}` collection exists in Mongo (see §13 #5).
@@ -298,9 +318,10 @@ During the 2026 tournament, configure the Football PWA (`football.schleising.net
 | From                      | To                                         |
 | ------------------------- | ------------------------------------------ |
 | Group table team name     | `/football/world-cup/teams/{id}/?edition=` |
-| Match card team name      | `/football/world-cup/teams/{id}/?edition=` |
+| Match card team name      | `/football/world-cup/teams/{id}/?edition=` (animated underline on hover — `a.team-name` in `football.css`) |
 | Overview knockout heading | Dedicated round page                       |
 | Overview group heading    | Single group page                          |
+| Bracket round header      | Dedicated round page                       |
 
 
 ## 6. Architecture
@@ -350,14 +371,19 @@ flowchart TB
 
 | File                                          | Responsibility                                                          |
 | --------------------------------------------- | ----------------------------------------------------------------------- |
-| `website/football/world_cup_db.py`            | Queries: matches by group, by stage, all groups standings, edition list |
-| `website/football/world_cup_utils.py`         | Stage ordering, group slug ↔ API name, knockout visibility rules        |
+| `website/football/world_cup_router.py`        | All `/football/world-cup/*` HTML routes + subscription API              |
+| `website/football/world_cup_db.py`            | Queries, overview assembly, `build_knockout_bracket_diagram()`          |
+| `website/football/world_cup_utils.py`         | Stage/group mapping, knockout ordering, 2026 fixture labels, crest URLs |
 | `backend/src/football/world_cup.py`           | Scheduled fetch + live poll for WC competition                          |
-| `website/templates/football/world-cup/*.html` | WC-specific templates                                                   |
-| `website/static/css/football/world-cup.css`   | Group grid, overview stacking, optional bracket styles                  |
+| `website/templates/football/world-cup/_match_card.html` | Shared `world_cup_match_card` macro for all WC fixture lists    |
+| `website/templates/football/world-cup/_team_link.html`  | Team badge + link/display helpers (`world_cup_team_badge`, etc.) |
+| `website/templates/football/world-cup/_knockout_bracket.html` | Bracket grid macro                                      |
+| `website/templates/football/world-cup/*.html` | Page templates + partials (`_group_table.html`, `_overview_standings.html`, …) |
+| `website/static/css/football/world-cup.css`   | Overview layout, group pages, bracket grid, zebra round columns         |
+| `website/static/js/football/world_cup_bracket.js` | Sticky header ↔ body horizontal scroll sync                      |
+| `website/static/js/football/world_cup_live.js`    | Live score updates for `score-widget` elements by `match.id`     |
 
-
-Router code can live in `website/football/router.py` (nested routes) or `website/football/world_cup_router.py` included with `prefix="/football/world-cup"`.
+Router: `world_cup_router` included from `website/football/router.py` with `prefix="/world-cup"`.
 
 ### 6.2 Overview page assembly (server-side)
 
@@ -433,9 +459,13 @@ class Standing:
 
 National teams use football-data.org team IDs (`Team.type`: `MEN_NATIONAL`).
 
-**Crest strategy:** cache locally at `/images/football/crests/wc/{team_id}.png`. The teams endpoint supplies source URLs on ingest; the website serves local assets only (consistent with PL crest handling, separate directory for national teams).
+**Crest strategy:** cache locally under `/images/football/crests/wc/` as `{team_id}.png` or `{team_id}.svg` (resolved by `resolve_world_cup_crest_url()`). The teams endpoint supplies source URLs on ingest; the website serves local assets only.
 
-Do not extend the club `ShortName` enum. Display `Team.name` or `Team.tla` (three-letter country code) directly.
+**Placeholder:** unseeded or unknown teams use `/images/football/crests/unknown_team.svg` via `Team.world_cup_local_crest` — same asset as PL placeholder crests.
+
+**Match cards:** every team row shows a crest (real or placeholder). Crests are always rendered; there is no conditional hide when `team.id` is `null`.
+
+Do not extend the club `ShortName` enum. Display via `Team.display_name` (falls back to `name` / `tla` / `TBD`).
 
 ## 8. API & Ingestion
 
@@ -572,7 +602,7 @@ Mirror the PL worker in `backend/src/football/football.py`:
 | Group standings sync     | Daily; more often during group stage | `/competitions/WC/standings`                             | Upsert all 12 groups                                         |
 | Teams sync               | Weekly / on deploy                   | `/competitions/WC/teams`                                 | Crest URLs and squad metadata                                |
 | Live match poll          | Every 4s while any match is in play  | Re-fetch today's matches or `/matches/{id}`              | Same scheduler pattern as PL `get_todays_matches`            |
-| Crest download           | On deploy + when teams sync runs     | `/competitions/WC/teams`                                 | Save to `/images/football/crests/wc/{team_id}.png`           |
+| Crest download           | On deploy + when teams sync runs     | `/competitions/WC/teams`                                 | Save to `/images/football/crests/wc/{team_id}.png` or `.svg`  |
 | Standings refresh (live) | After live group matches             | `/competitions/WC/standings`                             | During group stage only                                      |
 
 
@@ -613,7 +643,8 @@ Knockout rounds do not need live table updates (no standings table).
 ### 10.1 Overview stacking
 
 - Use a clear visual separator between knockout and group phases (`─── Group Stage ───`).
-- Knockout blocks use the same match card as PL; optional larger card for the Final.
+- Knockout blocks use `world_cup_match_card` (same `score-widget` shell as PL; no H2H pill).
+- Overview knockout sections only list matches where **both teams are confirmed** (`knockout_match_has_confirmed_teams`); the bracket diagram shows all scheduled slots including feeder labels.
 - Sticky jump nav at top on long pages: `Final · Third-place · Semi-finals · … · Group A · …`
 
 ### 10.2 Group pages
@@ -624,16 +655,25 @@ Knockout rounds do not need live table updates (no standings table).
 
 ### 10.3 Knockout pages
 
-- No standings table.
-- Emphasise winner progression: show score; for finished matches, subtle highlight on the advancing team.
+- No standings table on per-round pages.
+- Emphasise winner progression: finished matches highlight the advancing team (`world-cup-team-winner` — brand colour on team name, not bold).
+- Knockout index bracket: see §4.4.
 
-### 10.4 CSS
+### 10.4 Match cards and team links
 
-- New file `world-cup.css` imported from `football-base.html` when `world_cup_section=true`.
-- Reuse `table.css` for all tables.
+- **Component:** `world_cup_match_card` in `_match_card.html` — used on overview, groups, knockout (round pages and bracket), all matches, and team fixtures.
+- **Formatting:** matches PL `score-widget` layout (normal-weight team names, crest on every row).
+- **Clickable teams:** `a.team-name` links (WC → team fixtures page; PL → club page). Non-clickable placeholders use `<span class="team-name">` (feeder labels, TBD).
+- **Hover:** animated left-to-right underline over 250ms on `a.team-name` — defined in `football.css`, shared across PL and WC match cards and tables.
+
+### 10.5 CSS
+
+- `world-cup.css` loaded from `world-cup-base.html` (extends `football-base.html`).
+- Reuse `table.css` for all group/standings tables.
 - PL zone classes (`table-zone-ucl`, etc.) are not applied.
+- Bracket-specific layout vars: `--world-cup-bracket-row-size`, `--world-cup-bracket-round-width`, zebra `--0` / `--1` round bands.
 
-### 10.5 Responsive
+### 10.6 Responsive
 
 - Overview group blocks: two columns on wide screens, one on narrow.
 - Knockout match cards: same responsive grid as `football-grid`.
@@ -650,6 +690,8 @@ Knockout rounds do not need live table updates (no standings table).
 | GET    | `/football/world-cup/knockout/{round}/` | Single knockout round                              |
 | GET    | `/football/world-cup/matches/`          | All matches                                        |
 | GET    | `/football/world-cup/teams/{team_id}/`  | Team fixtures                                      |
+| GET    | `/football/world-cup/subscriptions/`    | National-team push notification preferences        |
+| PUT    | `/football/world-cup/subscriptions/`    | Save notification preferences (API)                |
 | WS     | `/football/ws/` (extended)              | Live scores                                        |
 | GET    | `/football/world-cup/api/`              | Optional simplified JSON (mirror `/football/api/`) |
 
@@ -682,8 +724,8 @@ Query param on all HTML routes: `?edition=2026` (default `2026` at launch; only 
 
 ### Phase 4 — Optional enhancements
 
-- [x] Visual bracket diagram on knockout index
-- [x] Push notifications for selected national teams
+- [x] Visual bracket diagram on knockout index (connectors, feeder labels, zebra columns, tight R32 stacking, third-place in Final column)
+- [x] Push notifications for selected national teams (`/football/world-cup/subscriptions/`)
 
 ## 13. Decisions
 
@@ -700,6 +742,9 @@ Query param on all HTML routes: `?edition=2026` (default `2026` at launch; only 
 | 8   | National team crests    | Local cache only at `/images/football/crests/wc/`                                                                  | §7.3, §8.6                    |
 | 9   | Group page mobile UX    | Sticky standings table; scrollable fixtures beneath                                                                | §4.3, §10.2                   |
 | 10  | Head-to-head            | **Out of scope** — single-tournament data only; no H2H page or match-card pill                                     | §2, §5.4                      |
+| 11  | WC match card           | Dedicated `world_cup_match_card` macro — PL `score-widget` format, shared team-link hover                          | §4.4, §10.4                   |
+| 12  | Bracket feeder labels   | **2026:** static `WC_2026_KNOCKOUT_FIXTURES` map for R32+ slots; `bracket_team_label()` at render time             | §4.4                          |
+| 13  | Third-place on bracket  | In Final column below Final match, not a separate footer block                                                     | §4.4                          |
 
 
 ## 14. References
@@ -707,13 +752,23 @@ Query param on all HTML routes: `?edition=2026` (default `2026` at launch; only 
 
 | Resource             | Path                                                                                                                         |
 | -------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| WC router            | `website/football/world_cup_router.py`                                                                                       |
+| WC DB / bracket      | `website/football/world_cup_db.py`                                                                                           |
+| WC utils / fixtures  | `website/football/world_cup_utils.py`                                                                                        |
+| Match card macro     | `website/templates/football/world-cup/_match_card.html`                                                                      |
+| Bracket partial      | `website/templates/football/world-cup/_knockout_bracket.html`                                                                |
+| WC base template     | `website/templates/football/world-cup/world-cup-base.html`                                                                   |
+| WC CSS               | `website/static/css/football/world-cup.css`                                                                                  |
 | PL router            | `website/football/router.py`                                                                                                 |
 | PL models            | `website/football/models.py`                                                                                                 |
 | PL ingestion         | `backend/src/football/football.py`                                                                                           |
-| Match template       | `website/templates/football/match_template.html`                                                                             |
-| Table template       | `website/templates/football/table_template.html`                                                                             |
+| Match template (PL)  | `website/templates/football/match_template.html`                                                                               |
+| Table template (PL)  | `website/templates/football/table_template.html`                                                                               |
 | Football base / nav  | `website/templates/football/football-base.html`                                                                              |
+| Team link styles     | `website/static/css/football/football.css` (`a.team-name` hover underline)                                                   |
 | Live scores JS       | `website/static/js/football/football.js`                                                                                     |
+| WC live JS           | `website/static/js/football/world_cup_live.js`                                                                               |
+| Bracket scroll JS    | `website/static/js/football/world_cup_bracket.js`                                                                            |
 | Table live JS        | `website/static/js/football/table_live.js`                                                                                   |
 | API docs             | [https://docs.football-data.org/general/v4/competition.html](https://docs.football-data.org/general/v4/competition.html)     |
 | Lookup tables        | [https://docs.football-data.org/general/v4/lookup_tables.html](https://docs.football-data.org/general/v4/lookup_tables.html) |
@@ -722,4 +777,4 @@ Query param on all HTML routes: `?edition=2026` (default `2026` at launch; only 
 
 ---
 
-*Next step: begin Phase 1 — ingest edition 2026 (matches, standings, teams, crests) per §8.*
+*All implementation phases (§12) are complete for the 2026 edition. Future work: ingest additional editions if API plan allows (`403` on past seasons today — see §8.5).*
