@@ -17,12 +17,16 @@ from .world_cup_utils import (
     WC_GROUP_STAGE,
     WC_KNOCKOUT_OVERVIEW_ORDER,
     WC_KNOCKOUT_ROUNDS,
+    WC_2026_KNOCKOUT_BRACKET_ORDER,
+    bracket_team_label,
     group_enum_to_slug,
     group_slug_to_enum,
     group_slug_to_label,
+    identify_knockout_fixture_number,
     knockout_winner_side,
     normalise_group_slug,
     filter_confirmed_knockout_matches,
+    order_knockout_matches_for_bracket,
     resolve_world_cup_crest_url,
     standings_label_to_slug,
     team_is_confirmed,
@@ -78,11 +82,20 @@ class BracketSlot(BaseModel):
     grid_row_span: int = 1
 
 
+class BracketConnector(BaseModel):
+    grid_row_start: int = 1
+    grid_row_span: int = 1
+    top_fraction: float = 0.25
+    bottom_fraction: float = 0.75
+    exit_fraction: float = 0.5
+
+
 class BracketRoundColumn(BaseModel):
     slug: str
     label: str
     round_url: str
     slots: list[BracketSlot] = Field(default_factory=list)
+    connectors: list[BracketConnector] = Field(default_factory=list)
 
 
 class KnockoutBracketDiagram(BaseModel):
@@ -514,12 +527,6 @@ def standings_from_api_table(table: Table) -> list[WorldCupGroupStandings]:
     return groups
 
 
-def _bracket_team_label(team: Team) -> str:
-    if not team_is_confirmed(team):
-        return "TBD"
-    return team.display_name
-
-
 def _bracket_score_value(score: int | None) -> str:
     if score is None:
         return "-"
@@ -541,6 +548,8 @@ def _bracket_status_label(match: Match) -> str:
 def _bracket_slot_from_match(
     match: Match,
     *,
+    stage: str,
+    fixture_number: int | None,
     grid_row_start: int,
     grid_row_span: int,
 ) -> BracketSlot:
@@ -558,8 +567,18 @@ def _bracket_slot_from_match(
 
     return BracketSlot(
         match_id=match.id,
-        home_label=_bracket_team_label(match.home_team),
-        away_label=_bracket_team_label(match.away_team),
+        home_label=bracket_team_label(
+            match.home_team,
+            stage=stage,
+            fixture_number=fixture_number,
+            side="home",
+        ),
+        away_label=bracket_team_label(
+            match.away_team,
+            stage=stage,
+            fixture_number=fixture_number,
+            side="away",
+        ),
         home_crest=home_crest,
         away_crest=away_crest,
         home_score=_bracket_score_value(match.score.full_time.home),
@@ -575,6 +594,64 @@ def _bracket_grid_position(match_index: int, round_index: int) -> tuple[int, int
     row_start = (2 * match_index + 1) * (2**round_index)
     row_span = (2 ** (round_index + 1)) - 1
     return row_start, row_span
+
+
+def _bracket_row_center(row_start: int, row_span: int) -> float:
+    return row_start + (row_span - 1) / 2
+
+
+def _bracket_connector_metrics(
+    child_match_index: int,
+    round_index: int,
+) -> tuple[int, int, float, float, float]:
+    top_row_start, top_row_span = _bracket_grid_position(child_match_index, round_index)
+    bottom_row_start, bottom_row_span = _bracket_grid_position(
+        child_match_index + 1,
+        round_index,
+    )
+    row_start = top_row_start
+    row_span = bottom_row_start + bottom_row_span - top_row_start
+
+    top_center = _bracket_row_center(top_row_start, top_row_span)
+    bottom_center = _bracket_row_center(bottom_row_start, bottom_row_span)
+    parent_index = child_match_index // 2
+    parent_row_start, parent_row_span = _bracket_grid_position(
+        parent_index,
+        round_index + 1,
+    )
+    exit_center = _bracket_row_center(parent_row_start, parent_row_span)
+
+    def centre_fraction(center: float) -> float:
+        return (center - row_start + 0.5) / row_span
+
+    return (
+        row_start,
+        row_span,
+        centre_fraction(top_center),
+        centre_fraction(bottom_center),
+        centre_fraction(exit_center),
+    )
+
+
+def _bracket_connectors_for_round(
+    match_count: int,
+    round_index: int,
+) -> list[BracketConnector]:
+    connectors: list[BracketConnector] = []
+    for child_match_index in range(0, match_count, 2):
+        row_start, row_span, top_fraction, bottom_fraction, exit_fraction = (
+            _bracket_connector_metrics(child_match_index, round_index)
+        )
+        connectors.append(
+            BracketConnector(
+                grid_row_start=row_start,
+                grid_row_span=row_span,
+                top_fraction=top_fraction,
+                bottom_fraction=bottom_fraction,
+                exit_fraction=exit_fraction,
+            )
+        )
+    return connectors
 
 
 async def build_knockout_bracket_diagram(
@@ -599,12 +676,19 @@ async def build_knockout_bracket_diagram(
     rounds: list[BracketRoundColumn] = []
 
     for round_index, ((stage, round_slug, label), matches) in enumerate(stage_matches):
+        ordered_matches = order_knockout_matches_for_bracket(stage, matches)
         slots: list[BracketSlot] = []
-        for match_index, match in enumerate(matches):
+        bracket_order = WC_2026_KNOCKOUT_BRACKET_ORDER.get(stage, ())
+        for match_index, match in enumerate(ordered_matches):
             row_start, row_span = _bracket_grid_position(match_index, round_index)
+            fixture_number = identify_knockout_fixture_number(stage, match)
+            if fixture_number is None and match_index < len(bracket_order):
+                fixture_number = bracket_order[match_index]
             slots.append(
                 _bracket_slot_from_match(
                     match,
+                    stage=stage,
+                    fixture_number=fixture_number,
                     grid_row_start=row_start,
                     grid_row_span=row_span,
                 )
@@ -616,14 +700,24 @@ async def build_knockout_bracket_diagram(
                 label=label,
                 round_url=f"{football_root}world-cup/knockout/{round_slug}/?edition={edition}",
                 slots=slots,
+                connectors=_bracket_connectors_for_round(len(slots), round_index),
             )
         )
 
     third_place_slot: BracketSlot | None = None
     third_place_matches = await retrieve_knockout_matches(edition, "THIRD_PLACE")
     if len(third_place_matches) > 0:
+        third_place_match = third_place_matches[0]
+        third_place_fixture = identify_knockout_fixture_number(
+            "THIRD_PLACE",
+            third_place_match,
+        )
+        if third_place_fixture is None:
+            third_place_fixture = 103
         third_place_slot = _bracket_slot_from_match(
-            third_place_matches[0],
+            third_place_match,
+            stage="THIRD_PLACE",
+            fixture_number=third_place_fixture,
             grid_row_start=1,
             grid_row_span=1,
         )
