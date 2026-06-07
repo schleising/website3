@@ -204,6 +204,7 @@ async function getProgress() {
             // Convert the estimated finish time from an ISO string to a Date object
             finishTime = new Date(data.estimatedFinishTime);
             document.getElementById('finish-time').innerText = finishTime.toLocaleString('en-GB', { weekday: 'long', hour12: false, hour: '2-digit', minute: '2-digit' });
+            document.getElementById('files-remaining').innerText = data.filesRemaining;
 
             // Update the progress value text
             document.getElementById('progress-value').innerText = data.percentComplete.toFixed(2) + '%';
