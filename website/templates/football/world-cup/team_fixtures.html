@@ -53,8 +53,9 @@
 </section>
 {% endif %}
 
+<div class="world-cup-overview-page">
 {% if jump_targets|length > 0 %}
-<section id="football-all-matches-toolbar" class="football-all-matches-toolbar" aria-label="Team fixtures quick navigation">
+<section class="world-cup-overview-jump-toolbar" aria-label="Team fixtures quick navigation">
   <details class="football-jump-menu" id="world-cup-jump-menu">
     <summary class="football-jump-trigger">Jump To</summary>
     <div class="football-jump-dropdown">
@@ -88,4 +89,5 @@
 {% else %}
 <p class="world-cup-empty-state">No fixtures found for this team.</p>
 {% endif %}
+</div>
 {% endblock %}

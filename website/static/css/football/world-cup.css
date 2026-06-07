@@ -287,6 +287,39 @@
     font-weight: 600;
 }
 
+.world-cup-overview-page {
+    --world-cup-jump-toolbar-offset: 2.5rem;
+    flex: 0 0 auto;
+    align-self: stretch;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    min-height: min-content;
+}
+
+.world-cup-overview-jump-toolbar {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    display: flex;
+    justify-content: flex-end;
+    width: 100%;
+    margin-bottom: 0.55rem;
+    flex: 0 0 auto;
+    pointer-events: none;
+}
+
+.world-cup-overview-jump-toolbar .football-jump-menu {
+    pointer-events: auto;
+}
+
+.world-cup-overview-knockout-block,
+.world-cup-overview-group-block,
+.world-cup-stage-divider,
+.world-cup-overview-page .football-day-group[id] {
+    scroll-margin-top: var(--world-cup-jump-toolbar-offset);
+}
+
 .world-cup-overview-layout {
     display: flex;
     flex-direction: column;
