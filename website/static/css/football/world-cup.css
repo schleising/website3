@@ -31,15 +31,6 @@
     font-size: 1rem;
 }
 
-.world-cup-group-card-header h4 a {
-    color: inherit;
-    text-decoration: none;
-}
-
-.world-cup-group-card-header h4 a:hover {
-    text-decoration: underline;
-}
-
 .world-cup-group-next {
     margin: 0.2rem 0 0;
     color: var(--text-subtle, #5f6b7a);
