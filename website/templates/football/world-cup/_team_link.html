@@ -1,7 +1,12 @@
-{% macro world_cup_team_name(team, football_root, edition) %}
+{% macro world_cup_team_display(team, football_root, edition, label_override=none) %}
+{% set label = label_override if label_override is not none else team.display_name %}
 {% if team.id is not none %}
-<a class="team-name" href="{{ football_root }}world-cup/teams/{{ team.id }}/?edition={{ edition }}">{{ team.display_name }}</a>
+<a class="team-name" href="{{ football_root }}world-cup/teams/{{ team.id }}/?edition={{ edition }}">{{ label }}</a>
 {% else %}
-<span class="team-name">{{ team.display_name }}</span>
+<span class="team-name">{{ label }}</span>
 {% endif %}
+{% endmacro %}
+
+{% macro world_cup_team_name(team, football_root, edition) %}
+{{ world_cup_team_display(team, football_root, edition) }}
 {% endmacro %}

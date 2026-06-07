@@ -53,7 +53,7 @@
 </section>
 {% endif %}
 
-{{ world_cup_knockout_bracket(knockout_bracket) }}
+{{ world_cup_knockout_bracket(knockout_bracket, football_root=football_root, edition=selected_edition) }}
 
 {% if knockout_rounds|length > 0 %}
 <h4 class="world-cup-knockout-round-list-heading">Rounds</h4>

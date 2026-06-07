@@ -69,15 +69,9 @@ class WorldCupOverviewGroupBlock(BaseModel):
 
 
 class BracketSlot(BaseModel):
-    match_id: int | None = None
+    match: Match
     home_label: str = "TBD"
     away_label: str = "TBD"
-    home_crest: str = "/images/football/crests/unknown_team.svg"
-    away_crest: str = "/images/football/crests/unknown_team.svg"
-    home_score: str = "-"
-    away_score: str = "-"
-    status_label: str = ""
-    winner_side: str | None = None
     grid_row_start: int = 1
     grid_row_span: int = 1
 
@@ -529,24 +523,6 @@ def standings_from_api_table(table: Table) -> list[WorldCupGroupStandings]:
     return groups
 
 
-def _bracket_score_value(score: int | None) -> str:
-    if score is None:
-        return "-"
-    return str(score)
-
-
-def _bracket_status_label(match: Match) -> str:
-    if match.status == MatchStatus.finished:
-        return "FT"
-    if match.status == MatchStatus.in_play:
-        if match.minute is not None:
-            return f"{match.minute}'"
-        return "Live"
-    if match.status == MatchStatus.paused:
-        return "HT"
-    return str(match.status)
-
-
 def _bracket_slot_from_match(
     match: Match,
     *,
@@ -555,20 +531,8 @@ def _bracket_slot_from_match(
     grid_row_start: int,
     grid_row_span: int,
 ) -> BracketSlot:
-    winner_side = knockout_winner_side(match)
-    home_crest = (
-        resolve_world_cup_crest_url(match.home_team.id)
-        if match.home_team.id is not None
-        else "/images/football/crests/unknown_team.svg"
-    )
-    away_crest = (
-        resolve_world_cup_crest_url(match.away_team.id)
-        if match.away_team.id is not None
-        else "/images/football/crests/unknown_team.svg"
-    )
-
     return BracketSlot(
-        match_id=match.id,
+        match=match,
         home_label=bracket_team_label(
             match.home_team,
             stage=stage,
@@ -581,12 +545,6 @@ def _bracket_slot_from_match(
             fixture_number=fixture_number,
             side="away",
         ),
-        home_crest=home_crest,
-        away_crest=away_crest,
-        home_score=_bracket_score_value(match.score.full_time.home),
-        away_score=_bracket_score_value(match.score.full_time.away),
-        status_label=_bracket_status_label(match),
-        winner_side=winner_side,
         grid_row_start=grid_row_start,
         grid_row_span=grid_row_span,
     )
