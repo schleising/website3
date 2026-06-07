@@ -283,10 +283,6 @@
     margin: 0;
 }
 
-.world-cup-score-widget .team-name {
-    font-weight: 600;
-}
-
 .world-cup-overview-page {
     --world-cup-jump-toolbar-offset: 2.5rem;
     flex: 0 0 auto;
@@ -559,6 +555,22 @@
     min-width: 0;
 }
 
+.world-cup-bracket-slot-wrap .team-and-badge,
+.world-cup-bracket-third-place .team-and-badge {
+    min-width: 0;
+}
+
+.world-cup-bracket-slot-wrap .team-badge,
+.world-cup-bracket-third-place .team-badge {
+    flex-shrink: 0;
+}
+
+.world-cup-bracket-slot-wrap .team-name,
+.world-cup-bracket-third-place .team-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
 .world-cup-bracket-third-place {
     display: flex;
     flex-direction: column;
@@ -628,10 +640,6 @@
 
 .world-cup-team-winner .team-name {
     color: var(--brand-strong);
-}
-
-.world-cup-team-winner .team-and-badge {
-    font-weight: 700;
 }
 
 .world-cup-score-widget--final {

@@ -1,5 +1,5 @@
-{% from "football/world-cup/_team_link.html" import world_cup_team_display %}
-{% macro world_cup_match_card(match, football_root='/football/', edition='', highlight_winner=false, home_label=none, away_label=none) %}
+{% from "football/world-cup/_team_link.html" import world_cup_team_badge, world_cup_team_display %}
+{% macro world_cup_match_card(match, football_root='/football/', edition='', highlight_winner=false, home_label=none, away_label=none, home_crest=none, away_crest=none) %}
 {% set winner_side = match|knockout_winner_side if highlight_winner else none %}
 <div class="score-widget site-card world-cup-score-widget{% if match.stage == 'FINAL' %} world-cup-score-widget--final{% endif %}" id="{{ match.id }}" data-match-time="{{ match.local_date.isoformat() if match.local_date else match.utc_date.isoformat() }}">
   <div class="date-and-time">
@@ -10,13 +10,7 @@
   </div>
   <div class="team{% if winner_side == 'home' %} world-cup-team-winner{% endif %}">
     <div class="team-and-badge">
-      {% if match.home_team.id is not none %}
-      <img
-        class="team-badge"
-        src="{{ match.home_team.world_cup_local_crest }}"
-        alt="{{ match.home_team.display_name }} crest"
-      >
-      {% endif %}
+      {{ world_cup_team_badge(match.home_team, home_label, home_crest) }}
       {{ world_cup_team_display(match.home_team, football_root, edition, home_label) }}
     </div>
     <div class="home-team-score">
@@ -25,13 +19,7 @@
   </div>
   <div class="team{% if winner_side == 'away' %} world-cup-team-winner{% endif %}">
     <div class="team-and-badge">
-      {% if match.away_team.id is not none %}
-      <img
-        class="team-badge"
-        src="{{ match.away_team.world_cup_local_crest }}"
-        alt="{{ match.away_team.display_name }} crest"
-      >
-      {% endif %}
+      {{ world_cup_team_badge(match.away_team, away_label, away_crest) }}
       {{ world_cup_team_display(match.away_team, football_root, edition, away_label) }}
     </div>
     <div class="away-team-score">

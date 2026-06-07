@@ -1,3 +1,11 @@
+{% macro world_cup_team_badge(team, label=none, crest_url=none) %}
+<img
+  class="team-badge"
+  src="{{ crest_url if crest_url is not none else team.world_cup_local_crest }}"
+  alt="{{ label if label is not none else team.display_name }} crest"
+>
+{% endmacro %}
+
 {% macro world_cup_team_display(team, football_root, edition, label_override=none) %}
 {% set label = label_override if label_override is not none else team.display_name %}
 {% if team.id is not none %}

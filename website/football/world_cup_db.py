@@ -30,6 +30,7 @@ from .world_cup_utils import (
     resolve_world_cup_crest_url,
     standings_label_to_slug,
     team_is_confirmed,
+    WC_CREST_UNKNOWN_URL,
 )
 
 WC_MATCH_COLLECTION_PATTERN = re.compile(r"^wc_matches_(\d{4})$")
@@ -72,6 +73,8 @@ class BracketSlot(BaseModel):
     match: Match
     home_label: str = "TBD"
     away_label: str = "TBD"
+    home_crest: str = WC_CREST_UNKNOWN_URL
+    away_crest: str = WC_CREST_UNKNOWN_URL
     grid_row_start: int = 1
     grid_row_span: int = 1
 
@@ -545,6 +548,8 @@ def _bracket_slot_from_match(
             fixture_number=fixture_number,
             side="away",
         ),
+        home_crest=match.home_team.world_cup_local_crest,
+        away_crest=match.away_team.world_cup_local_crest,
         grid_row_start=grid_row_start,
         grid_row_span=grid_row_span,
     )
