@@ -414,25 +414,38 @@
     gap: 0.75rem;
     padding: 0.65rem;
     margin-bottom: 0.75rem;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
 }
 
 .world-cup-bracket-scroll {
+    display: block;
+    width: 100%;
+    max-width: 100%;
     overflow-x: auto;
+    overflow-y: visible;
     padding-bottom: 0.35rem;
     -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+    touch-action: pan-x pan-y;
 }
 
 .world-cup-bracket-layout {
     display: flex;
     flex-direction: column;
     gap: 0.45rem;
-    min-width: min-content;
+    width: max-content;
+    min-width: max-content;
 }
 
 .world-cup-bracket-headers,
 .world-cup-bracket-body {
     display: grid;
     gap: 0;
+    width: max-content;
+    min-width: max-content;
     grid-template-columns: var(--world-cup-bracket-columns);
 }
 
@@ -509,10 +522,12 @@
     display: flex;
     align-items: center;
     width: 100%;
+    min-width: var(--world-cup-bracket-round-width, 16rem);
     height: 100%;
     min-height: 0;
     position: relative;
     padding: 0 var(--world-cup-bracket-cell-pad, 0.25rem);
+    box-sizing: border-box;
 }
 
 .world-cup-bracket-slot {
@@ -520,7 +535,10 @@
     flex-direction: column;
     gap: 0.12rem;
     width: 100%;
+    min-width: 0;
+    flex-shrink: 0;
     padding: 0.35rem 0.42rem;
+    box-sizing: border-box;
     border: 0.0625rem solid rgba(156, 183, 219, 0.55);
     border-radius: 0.45rem;
     background: rgba(255, 255, 255, 0.72);
@@ -569,7 +587,9 @@
     display: flex;
     flex-direction: column;
     gap: 0.35rem;
-    max-width: 16rem;
+    width: var(--world-cup-bracket-round-width, 16rem);
+    min-width: var(--world-cup-bracket-round-width, 16rem);
+    max-width: var(--world-cup-bracket-round-width, 16rem);
 }
 
 .world-cup-bracket-third-place-label {
