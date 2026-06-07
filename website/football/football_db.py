@@ -45,6 +45,12 @@ def _season_sort_value(season_key: str) -> int:
     return int(season_key.split("_")[0])
 
 
+def _confirmed_team_id(team: Team) -> int | None:
+    if isinstance(team.id, int):
+        return team.id
+    return None
+
+
 def _season_year_label(season_key: str) -> str:
     season_start, season_end = season_key.split("_", maxsplit=1)
     if season_start[:2] != season_end[:2]:
@@ -131,17 +137,24 @@ def _apply_position_outcome_labels(table_list: list[LiveTableItem]) -> None:
             )
 
         remaining_matches = max(total_matches_per_team - adjusted_played_games, 0)
-        max_points_by_team_id[table_item.team.id] = adjusted_points + (remaining_matches * 3)
-        adjusted_points_by_team_id[table_item.team.id] = adjusted_points
+        team_id = _confirmed_team_id(table_item.team)
+        if team_id is None:
+            continue
+        max_points_by_team_id[team_id] = adjusted_points + (remaining_matches * 3)
+        adjusted_points_by_team_id[team_id] = adjusted_points
         table_item.position_label = None
 
     # Guaranteed champion: current points are greater than every other team's max possible points.
     if team_count > 1:
         first_row = table_list[0]
-        first_points = adjusted_points_by_team_id[first_row.team.id]
+        first_team_id = _confirmed_team_id(first_row.team)
+        if first_team_id is None:
+            return
+        first_points = adjusted_points_by_team_id[first_team_id]
         max_other_points = max(
-            max_points_by_team_id[item.team.id]
+            max_points_by_team_id[team_id]
             for item in table_list[1:]
+            if (team_id := _confirmed_team_id(item.team)) is not None
         )
         if first_points > max_other_points:
             first_row.position_label = "C"
@@ -153,13 +166,20 @@ def _apply_position_outcome_labels(table_list: list[LiveTableItem]) -> None:
     if guaranteed_above_threshold == 0:
         return
 
-    current_points = [adjusted_points_by_team_id[item.team.id] for item in table_list]
+    current_points = [
+        adjusted_points_by_team_id[team_id]
+        for item in table_list
+        if (team_id := _confirmed_team_id(item.team)) is not None
+    ]
 
     for table_item in table_list:
         if table_item.position_label is not None:
             continue
 
-        max_points = max_points_by_team_id[table_item.team.id]
+        team_id = _confirmed_team_id(table_item.team)
+        if team_id is None:
+            continue
+        max_points = max_points_by_team_id[team_id]
         guaranteed_above = sum(1 for points in current_points if points > max_points)
 
         if guaranteed_above >= guaranteed_above_threshold:
@@ -272,7 +292,9 @@ async def _load_all_teams_from_tables() -> list[Team]:
 
             if isinstance(team_dict, dict):
                 team = Team.model_validate(team_dict)
-                teams_by_id[team.id] = team
+                team_id = _confirmed_team_id(team)
+                if team_id is not None:
+                    teams_by_id[team_id] = team
 
     return _sort_teams(teams_by_id)
 
@@ -290,7 +312,9 @@ async def _load_all_teams_from_matches() -> list[Team]:
 
                 if isinstance(team_dict, dict):
                     team = Team.model_validate(team_dict)
-                    teams_by_id[team.id] = team
+                    team_id = _confirmed_team_id(team)
+                    if team_id is not None:
+                        teams_by_id[team_id] = team
 
     return _sort_teams(teams_by_id)
 
@@ -347,9 +371,9 @@ async def retreive_team_matches(
         if len(matches) > 0:
             sample = matches[0]
             if sample.home_team.id == team_id:
-                team_name = str(sample.home_team.short_name)
+                team_name = sample.home_team.display_name
             elif sample.away_team.id == team_id:
-                team_name = str(sample.away_team.short_name)
+                team_name = sample.away_team.display_name
     else:
         matches: list[Match] = []
 
@@ -363,7 +387,7 @@ async def retreive_team_matches(
 
         if team_dict_db is not None:
             item = LiveTableItem.model_validate(team_dict_db)
-            team_name = item.team.short_name
+            team_name = item.team.display_name
 
     return (team_name, matches)
 

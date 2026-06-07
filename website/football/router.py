@@ -616,9 +616,12 @@ async def _get_current_season_teams(current_season_key: str) -> list[Team]:
     team_by_id: dict[int, Team] = {}
 
     for table_item in current_table:
-        team_by_id[table_item.team.id] = table_item.team
+        team_id = table_item.team.id
+        if not isinstance(team_id, int):
+            continue
+        team_by_id[team_id] = table_item.team
 
-    return sorted(team_by_id.values(), key=lambda team: team.short_name.lower())
+    return sorted(team_by_id.values(), key=lambda team: team.display_name.casefold())
 
 
 def _request_username(request: Request) -> str:
@@ -886,20 +889,23 @@ async def get_head_to_head_matches(
     validation_message: str | None = None
     team_primary_colours: dict[int, str] = {}
 
-    if selected_team_a is not None and selected_team_b is not None:
+    team_a_id = selected_team_a.id if selected_team_a is not None else None
+    team_b_id = selected_team_b.id if selected_team_b is not None else None
+
+    if isinstance(team_a_id, int) and isinstance(team_b_id, int):
         team_primary_colours = await retreive_team_primary_colours(
-            [selected_team_a.id, selected_team_b.id]
+            [team_a_id, team_b_id]
         )
 
     if team_a is not None or team_b is not None:
         if selected_team_a is None or selected_team_b is None:
             validation_message = "Please select two valid teams."
-        elif selected_team_a.id == selected_team_b.id:
+        elif not isinstance(team_a_id, int) or not isinstance(team_b_id, int):
+            validation_message = "Please select two valid teams."
+        elif team_a_id == team_b_id:
             validation_message = "Please choose two different teams."
         else:
-            matches = await retreive_head_to_head_matches_by_id(
-                selected_team_a.id, selected_team_b.id
-            )
+            matches = await retreive_head_to_head_matches_by_id(team_a_id, team_b_id)
             matches = update_match_timezone(matches)
 
             played_matches = [
@@ -967,13 +973,13 @@ async def get_head_to_head_matches(
             "selected_team_a": selected_team_a,
             "selected_team_b": selected_team_b,
             "team_a_primary_colour": (
-                team_primary_colours.get(selected_team_a.id)
-                if selected_team_a is not None
+                team_primary_colours.get(team_a_id)
+                if isinstance(team_a_id, int)
                 else None
             ),
             "team_b_primary_colour": (
-                team_primary_colours.get(selected_team_b.id)
-                if selected_team_b is not None
+                team_primary_colours.get(team_b_id)
+                if isinstance(team_b_id, int)
                 else None
             ),
             "summary": summary,
@@ -1421,7 +1427,7 @@ async def get_simplified_matches(request: Request) -> SimplifiedFootballData:
         simplified_football_data.table.append(
             SimplifiedTableRow(
                 position=table_item.position,
-                team=table_item.team.short_name,
+                team=table_item.team.display_name,
                 played=table_item.played_games,
                 won=table_item.won,
                 drawn=table_item.draw,
@@ -1766,7 +1772,9 @@ async def subscribe(
 ):
     current_season_key = await _get_current_season_key()
     current_teams = await _get_current_season_teams(current_season_key)
-    selected_team_ids = sorted({team.id for team in current_teams})
+    selected_team_ids = sorted(
+        team.id for team in current_teams if isinstance(team.id, int)
+    )
     username = _require_logged_in_username(request)
 
     existing_subscription = await get_push_subscription(

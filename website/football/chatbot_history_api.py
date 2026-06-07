@@ -69,11 +69,14 @@ def _season_bounds_utc(season_key: str) -> tuple[datetime, datetime]:
 
 
 def _team_aliases(team: Team) -> set[str]:
-    return {
-        _normalise_value(team.name),
-        _normalise_value(str(team.short_name)),
-        _normalise_value(team.tla),
-    }
+    aliases: set[str] = set()
+    if team.name is not None:
+        aliases.add(_normalise_value(team.name))
+    if team.short_name is not None:
+        aliases.add(_normalise_value(str(team.short_name)))
+    if team.tla is not None:
+        aliases.add(_normalise_value(team.tla))
+    return aliases
 
 
 def _team_matches_any(team: Team, team_filters: set[str]) -> bool:

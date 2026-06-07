@@ -305,7 +305,7 @@ def _build_placeholder_table_items(teams: list[Team]) -> list[TableItem]:
     ordered_teams = sorted(teams, key=lambda team: team.display_name.casefold())
 
     return [
-        TableItem(
+        TableItem.model_construct(
             position=index,
             team=team,
             played_games=0,
