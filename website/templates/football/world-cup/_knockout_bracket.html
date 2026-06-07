@@ -9,7 +9,7 @@
       <div class="world-cup-bracket-header-matrix" style="{{ bracket_vars }}">
         {% for round in bracket.rounds %}
         <a
-          class="world-cup-bracket-round-label"
+          class="world-cup-bracket-round-label world-cup-bracket-round-label--{{ loop.index0 % 2 }}"
           style="grid-column: {{ loop.index0 * 4 + 1 }};"
           href="{{ round.round_url }}"
         >{{ round.label }}</a>
@@ -26,6 +26,12 @@
       {% set connector_col = loop.index0 * 4 + 3 %}
       {% set recv_col = loop.index0 * 4 + 4 %}
       {% set is_last_round = loop.last %}
+      {% set round_band_span = 4 if not is_last_round else 1 %}
+      <div
+        class="world-cup-bracket-round-band world-cup-bracket-round-band--{{ loop.index0 % 2 }}"
+        style="grid-column: {{ round_col }} / span {{ round_band_span }}; grid-row: 1 / -1;"
+        aria-hidden="true"
+      ></div>
       {% for slot in round.slots %}
       <div
         class="world-cup-bracket-slot-wrap"
