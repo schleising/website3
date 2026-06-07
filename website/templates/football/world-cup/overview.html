@@ -117,7 +117,7 @@
         <h4 id="wc-group-heading-{{ block.slug }}">
           <a href="{{ football_root }}world-cup/groups/{{ block.slug }}/?edition={{ selected_edition }}">{{ block.label }}</a>
         </h4>
-        <p class="world-cup-qualification-note">Top two qualify</p>
+        <p class="world-cup-qualification-note">Top three qualify</p>
       </div>
       {% if block.table|length > 0 %}
       {{ world_cup_overview_standings(block.table, football_root, selected_edition, block.slug) }}

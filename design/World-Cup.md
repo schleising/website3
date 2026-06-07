@@ -133,7 +133,7 @@ Each group table uses the same columns as the PL table (Pos, Team, Pld, W, D, L,
 
 `world_cup_utils.py` must map between slug (`a`), match enum (`GROUP_A`), and standings label (`Group A`).
 
-Tie-breaker and “teams to advance” indicators (e.g. top two qualify) can be added as static labels per group section, not as dynamic zone CSS.
+Tie-breaker and “teams to advance” indicators (e.g. top three qualify for 2026) can be added as static labels per group section, not as dynamic zone CSS.
 
 ## 4. Page Inventory
 
