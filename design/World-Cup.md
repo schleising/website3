@@ -660,25 +660,25 @@ Query param on all HTML routes: `?edition=2026` (default `2026` at launch; only 
 
 ### Phase 1 — Data + group stage (read-only)
 
-- [ ] WC ingestion worker for edition **2026** → `wc_matches_2026` / `wc_standings_2026`
-- [ ] National team crest download to `/images/football/crests/wc/`
-- [ ] `world_cup_db.py` query helpers
-- [ ] Edition picker (single edition at launch)
-- [ ] Groups index + single group pages (sticky table mobile layout)
-- [ ] Sidebar: collapsible Competitions heading; WC block gated on `wc_matches_`* presence
+- [x] WC ingestion worker for edition **2026** → `wc_matches_2026` / `wc_standings_2026`
+- [x] National team crest download to `/images/football/crests/wc/`
+- [x] `world_cup_db.py` query helpers
+- [x] Edition picker (single edition at launch)
+- [x] Groups index + single group pages (sticky table mobile layout)
+- [x] Sidebar: collapsible Competitions heading; WC block gated on `wc_matches_`* presence
 
 ### Phase 2 — Overview + knockout pages
 
-- [ ] Overview page with group blocks (bottom) and knockout stacking (top, including third-place)
-- [ ] Knockout index + per-round pages
-- [ ] Knockout visibility rules (show round only when fixtures exist)
-- [ ] PWA `start_url` → `/football/world-cup/` (temporary — see §5.3)
+- [x] Overview page with group blocks (bottom) and knockout stacking (top, including third-place)
+- [x] Knockout index + per-round pages
+- [x] Knockout visibility rules (show round only when fixtures exist)
+- [x] PWA `start_url` → `/football/world-cup/` (temporary — see §5.3)
 
 ### Phase 3 — Live + polish
 
-- [ ] Extend `/football/ws/` with `competition: "world-cup"` for live scores
-- [ ] Live group standings on overview and group pages (`get_world_cup_standings` message)
-- [ ] All matches + team fixture pages
+- [x] Extend `/football/ws/` with `competition: "world-cup"` for live scores
+- [x] Live group standings on overview and group pages (`get_world_cup_standings` message)
+- [x] All matches + team fixture pages
 
 ### Phase 4 — Optional enhancements
 
