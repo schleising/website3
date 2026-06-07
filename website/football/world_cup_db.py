@@ -34,6 +34,7 @@ from .world_cup_utils import (
 )
 
 WC_MATCH_COLLECTION_PATTERN = re.compile(r"^wc_matches_(\d{4})$")
+BRACKET_CARD_GRID_ROWS = 2
 WC_STANDINGS_COLLECTION_PATTERN = re.compile(r"^wc_standings_(\d{4})$")
 WC_LIVE_DAYS_BEFORE_TODAY = 7
 WC_LIVE_DAYS_AFTER_TODAY = 6
@@ -556,10 +557,25 @@ def _bracket_slot_from_match(
 
 
 def _bracket_grid_position(match_index: int, round_index: int) -> tuple[int, int]:
-    """Place each match midway between its two feeder matches from the prior round."""
-    row_span = 2 ** (round_index + 1) - 1
-    row_start = 1 + match_index * (2 ** (round_index + 1))
-    return row_start, row_span
+    """Place each card on a fine grid; round-of-32 slots stack back-to-back."""
+    card_rows = BRACKET_CARD_GRID_ROWS
+    if round_index == 0:
+        return 1 + match_index * card_rows, card_rows
+
+    top_start, top_span = _bracket_grid_position(2 * match_index, round_index - 1)
+    bottom_start, bottom_span = _bracket_grid_position(
+        2 * match_index + 1,
+        round_index - 1,
+    )
+    top_center = _bracket_row_center(top_start, top_span)
+    bottom_center = _bracket_row_center(bottom_start, bottom_span)
+    card_center = (top_center + bottom_center) / 2
+    card_start = int(card_center - (card_rows - 1) / 2)
+    return card_start, card_rows
+
+
+def _bracket_grid_row_count(first_round_match_count: int) -> int:
+    return first_round_match_count * BRACKET_CARD_GRID_ROWS
 
 
 def _bracket_row_center(row_start: int, row_span: int) -> float:
@@ -648,7 +664,7 @@ async def build_knockout_bracket_diagram(
         return None
 
     first_round_count = len(stage_matches[0][1])
-    grid_rows = max(1, first_round_count * 2 - 1)
+    grid_rows = max(BRACKET_CARD_GRID_ROWS, _bracket_grid_row_count(first_round_count))
     rounds: list[BracketRoundColumn] = []
 
     for round_index, ((stage, round_slug, label), matches) in enumerate(stage_matches):

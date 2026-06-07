@@ -467,7 +467,7 @@
     width: max-content;
     min-width: max-content;
     grid-template-columns: var(--world-cup-bracket-columns);
-    grid-template-rows: repeat(var(--world-cup-bracket-rows), var(--world-cup-bracket-row-size, 6rem));
+    grid-template-rows: repeat(var(--world-cup-bracket-rows), var(--world-cup-bracket-row-size, 2.95rem));
 }
 
 .world-cup-bracket-round-label {
@@ -540,13 +540,13 @@
 
 .world-cup-bracket-slot-wrap {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     width: 100%;
     min-width: var(--world-cup-bracket-round-width, 17rem);
     height: 100%;
     min-height: 0;
     position: relative;
-    padding: 0 var(--world-cup-bracket-cell-pad, 0.25rem);
+    padding: 0 var(--world-cup-bracket-cell-pad, 0.25rem) var(--world-cup-bracket-card-gap, 0.35rem);
     box-sizing: border-box;
 }
 
