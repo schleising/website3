@@ -1,0 +1,141 @@
+{% extends "football/world-cup/world-cup-base.html" %}
+{% from "football/world-cup/_overview_standings.html" import world_cup_overview_standings %}
+{% from "football/world-cup/_match_card.html" import world_cup_match_card %}
+
+{% block title %}<title>Football - World Cup {{ selected_edition }}</title>{% endblock %}
+
+{% block header %}
+<h3 class="header-text football-header-text football-header-text--season">
+  <span class="football-header-title">{{ selected_edition_label }}</span>
+  {% if show_edition_selector|default(false) %}
+  <button
+    type="button"
+    id="world-cup-edition-open"
+    class="football-season-marker football-season-marker-button"
+    aria-controls="world-cup-edition-popup"
+    aria-expanded="false"
+    aria-label="Open edition selector"
+  >
+    {{ selected_edition }}
+  </button>
+  {% else %}
+  <span class="football-season-marker">{{ selected_edition }}</span>
+  {% endif %}
+</h3>
+{% endblock %}
+
+{% block football_content %}
+{% set football_root = football_root_path|default('/football/') %}
+
+{% if show_edition_selector|default(false) %}
+<div id="world-cup-edition-backdrop" class="football-season-backdrop hidden" aria-hidden="true"></div>
+<section
+  id="world-cup-edition-popup"
+  class="football-season-popup site-card hidden"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="world-cup-edition-popup-title"
+>
+  <div class="football-season-popup-header">
+    <h4 id="world-cup-edition-popup-title">Select Edition</h4>
+    <button type="button" id="world-cup-edition-close" class="football-season-close" aria-label="Close edition selector">x</button>
+  </div>
+  <form class="football-season-popup-form" method="get" action="{{ edition_switch_path }}">
+    <label class="football-season-label" for="world-cup-edition-select">Edition</label>
+    <select id="world-cup-edition-select" name="edition" class="football-season-select site-select">
+      {% for edition_option in available_editions %}
+      <option value="{{ edition_option.key }}" {% if edition_option.selected %}selected{% endif %}>{{ edition_option.label }}{% if edition_option.is_current %} (Current){% endif %}</option>
+      {% endfor %}
+    </select>
+    <div class="football-season-popup-actions">
+      <button type="submit" class="btn btn-primary football-season-go">Apply</button>
+    </div>
+  </form>
+</section>
+{% endif %}
+
+{% if jump_targets|length > 0 %}
+<section class="world-cup-overview-toolbar" aria-label="Tournament quick navigation">
+  <details class="football-jump-menu" id="world-cup-jump-menu">
+    <summary class="football-jump-trigger">Jump To</summary>
+    <div class="football-jump-dropdown">
+      {% for target in jump_targets %}
+      <a class="sub-level-nav football-jump-link" href="#{{ target.anchor }}">{{ target.label }}</a>
+      {% endfor %}
+    </div>
+  </details>
+</section>
+{% endif %}
+
+<div class="world-cup-overview-layout">
+  {% for section in overview_knockout_sections %}
+  {% if section.date_groups|length > 0 %}
+  <section
+    class="world-cup-overview-knockout-block site-card"
+    id="wc-round-{{ section.slug }}"
+    aria-labelledby="wc-round-heading-{{ section.slug }}"
+  >
+    <div class="world-cup-overview-block-header">
+      <h4 id="wc-round-heading-{{ section.slug }}">
+        <a href="{{ football_root }}world-cup/knockout/{{ section.slug }}/?edition={{ selected_edition }}">{{ section.label }}</a>
+      </h4>
+    </div>
+    {% for day_group in section.date_groups %}
+    {% if day_group.matches|length > 0 %}
+    <section class="football-day-group world-cup-overview-day-group" aria-label="{{ section.label }} {{ day_group.label }} fixtures">
+      <div class="football-day-heading">
+        <h5 class="football-day-title">{{ day_group.label }}</h5>
+      </div>
+      <div class="football-grid">
+        {% for match in day_group.matches %}
+        {% if match|knockout_match_has_confirmed_teams %}
+        {{ world_cup_match_card(match, highlight_winner=true) }}
+        {% endif %}
+        {% endfor %}
+      </div>
+    </section>
+    {% endif %}
+    {% endfor %}
+  </section>
+  {% endif %}
+  {% endfor %}
+
+  {% if group_blocks|length > 0 %}
+  <div class="world-cup-stage-divider" id="wc-group-stage" aria-hidden="true">
+    <span>Group Stage</span>
+  </div>
+
+  <div class="world-cup-overview-groups-grid">
+    {% for block in group_blocks %}
+    <section
+      class="world-cup-overview-group-block site-card"
+      id="wc-group-{{ block.slug }}"
+      aria-labelledby="wc-group-heading-{{ block.slug }}"
+    >
+      <div class="world-cup-overview-block-header">
+        <h4 id="wc-group-heading-{{ block.slug }}">
+          <a href="{{ football_root }}world-cup/groups/{{ block.slug }}/?edition={{ selected_edition }}">{{ block.label }}</a>
+        </h4>
+        <p class="world-cup-qualification-note">Top two qualify</p>
+      </div>
+      {% if block.table|length > 0 %}
+      {{ world_cup_overview_standings(block.table) }}
+      {% endif %}
+      {% for day_group in block.matchday_groups %}
+      <section class="football-day-group world-cup-overview-day-group" aria-label="{{ block.label }} {{ day_group.label }} fixtures">
+        <div class="football-day-heading">
+          <h5 class="football-day-title">{{ day_group.label }}</h5>
+        </div>
+        <div class="football-grid world-cup-overview-fixture-grid">
+          {% for match in day_group.matches %}
+          {{ world_cup_match_card(match) }}
+          {% endfor %}
+        </div>
+      </section>
+      {% endfor %}
+    </section>
+    {% endfor %}
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

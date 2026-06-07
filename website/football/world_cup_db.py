@@ -13,10 +13,13 @@ from .world_cup_utils import (
     WC_CURRENT_EDITION,
     WC_GROUP_ORDER,
     WC_GROUP_STAGE,
+    WC_KNOCKOUT_OVERVIEW_ORDER,
+    WC_KNOCKOUT_ROUNDS,
     group_enum_to_slug,
     group_slug_to_enum,
     group_slug_to_label,
     normalise_group_slug,
+    filter_confirmed_knockout_matches,
     standings_label_to_slug,
 )
 
@@ -37,6 +40,20 @@ class WorldCupGroupSummary(BaseModel):
     label: str
     table: list[TableItem] = Field(default_factory=list)
     next_match: Match | None = None
+
+
+class WorldCupKnockoutRound(BaseModel):
+    slug: str
+    stage: str
+    label: str
+    matches: list[Match] = Field(default_factory=list)
+
+
+class WorldCupOverviewGroupBlock(BaseModel):
+    slug: str
+    label: str
+    table: list[TableItem] = Field(default_factory=list)
+    matches: list[Match] = Field(default_factory=list)
 
 
 def _matches_collection_name(edition: str) -> str:
@@ -209,6 +226,98 @@ def normalise_group_table(table: list[TableItem], matches: list[Match]) -> list[
         return _build_placeholder_table_items(_unique_teams([item.team for item in table]))
 
     return table
+
+
+async def retrieve_distinct_knockout_stages(edition: str) -> set[str]:
+    collection = _get_matches_collection(edition)
+    if collection is None:
+        return set()
+
+    knockout_stages = [stage for stage, _, _ in WC_KNOCKOUT_ROUNDS]
+    cursor = collection.find({"stage": {"$in": knockout_stages}}, {"stage": 1})
+    stages: set[str] = set()
+    async for item in cursor:
+        stage_value = item.get("stage")
+        if isinstance(stage_value, str):
+            stages.add(stage_value)
+
+    return stages
+
+
+async def retrieve_knockout_matches(edition: str, stage: str) -> list[Match]:
+    collection = _get_matches_collection(edition)
+    if collection is None:
+        logging.error("No WC match collection for edition %s", edition)
+        return []
+
+    cursor = collection.find({"stage": stage}).sort("utc_date", ASCENDING)
+    return [Match.model_validate(item) async for item in cursor]
+
+
+async def list_available_knockout_rounds(edition: str) -> list[WorldCupKnockoutRound]:
+    present_stages = await retrieve_distinct_knockout_stages(edition)
+    rounds: list[WorldCupKnockoutRound] = []
+
+    for stage, round_slug, label in WC_KNOCKOUT_ROUNDS:
+        if stage not in present_stages:
+            continue
+
+        matches = filter_confirmed_knockout_matches(
+            await retrieve_knockout_matches(edition, stage)
+        )
+        if len(matches) == 0:
+            continue
+
+        rounds.append(
+            WorldCupKnockoutRound(
+                slug=round_slug,
+                stage=stage,
+                label=label,
+                matches=matches,
+            )
+        )
+
+    return rounds
+
+
+async def build_overview_knockout_sections(edition: str) -> list[WorldCupKnockoutRound]:
+    sections: list[WorldCupKnockoutRound] = []
+
+    for stage, round_slug, label in WC_KNOCKOUT_OVERVIEW_ORDER:
+        matches = filter_confirmed_knockout_matches(
+            await retrieve_knockout_matches(edition, stage)
+        )
+        if len(matches) == 0:
+            continue
+
+        sections.append(
+            WorldCupKnockoutRound(
+                slug=round_slug,
+                stage=stage,
+                label=label,
+                matches=matches,
+            )
+        )
+
+    return sections
+
+
+async def build_overview_group_blocks(edition: str) -> list[WorldCupOverviewGroupBlock]:
+    standings = await retrieve_all_group_standings(edition)
+    blocks: list[WorldCupOverviewGroupBlock] = []
+
+    for group in standings:
+        matches = await retrieve_group_matches(edition, group.group_slug)
+        blocks.append(
+            WorldCupOverviewGroupBlock(
+                slug=group.group_slug,
+                label=group.group_label,
+                table=normalise_group_table(group.table, matches),
+                matches=matches,
+            )
+        )
+
+    return blocks
 
 
 async def list_group_summaries(edition: str) -> list[WorldCupGroupSummary]:

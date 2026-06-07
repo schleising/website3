@@ -1,0 +1,27 @@
+{% macro world_cup_overview_standings(table_rows) %}
+<div class="world-cup-overview-standings" role="table" aria-label="Group standings">
+  <div class="world-cup-overview-standings-header" role="row">
+    <span class="world-cup-overview-standings-pos" role="columnheader">Pos</span>
+    <span class="world-cup-overview-standings-team" role="columnheader">Team</span>
+    <span class="world-cup-overview-standings-stat" role="columnheader">Pld</span>
+    <span class="world-cup-overview-standings-stat" role="columnheader">GD</span>
+    <span class="world-cup-overview-standings-stat" role="columnheader">Pts</span>
+  </div>
+  {% for table_item in table_rows %}
+  <div class="world-cup-overview-standings-row" role="row" data-team-id="{{ table_item.team.id }}">
+    <span class="world-cup-overview-standings-pos" role="cell">{{ table_item.position }}</span>
+    <span class="world-cup-overview-standings-team" role="cell">
+      <img
+        class="team-badge"
+        src="{{ table_item.team.world_cup_local_crest }}"
+        alt="{{ table_item.team.display_name }} crest"
+      >
+      <span class="team-name">{{ table_item.team.display_name }}</span>
+    </span>
+    <span class="world-cup-overview-standings-stat" role="cell">{{ table_item.played_games }}</span>
+    <span class="world-cup-overview-standings-stat" role="cell">{{ table_item.goal_difference }}</span>
+    <span class="world-cup-overview-standings-stat world-cup-overview-standings-points" role="cell">{{ table_item.points }}</span>
+  </div>
+  {% endfor %}
+</div>
+{% endmacro %}

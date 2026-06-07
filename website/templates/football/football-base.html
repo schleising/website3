@@ -63,7 +63,9 @@
   {% if show_world_cup_nav|default(false) %}
   <div class="football-competition-block">
     <p class="football-competition-label">World Cup</p>
+    <a href="{{ world_cup_overview_url|default(football_root ~ 'world-cup/') }}" class="sub-level-nav" data-history-mode="football-shell">Tournament Overview</a>
     <a href="{{ world_cup_groups_url|default(football_root ~ 'world-cup/groups/') }}" class="sub-level-nav" data-history-mode="football-shell">Groups</a>
+    <a href="{{ world_cup_knockout_url|default(football_root ~ 'world-cup/knockout/') }}" class="sub-level-nav" data-history-mode="football-shell">Knockout</a>
   </div>
   {% endif %}
 </details>
