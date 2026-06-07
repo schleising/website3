@@ -36,6 +36,7 @@ from .world_cup_utils import (
 WC_MATCH_COLLECTION_PATTERN = re.compile(r"^wc_matches_(\d{4})$")
 BRACKET_CARD_GRID_ROWS = 2
 THIRD_PLACE_LABEL_GRID_ROWS = 1
+THIRD_PLACE_GAP_GRID_ROWS = 2
 WC_STANDINGS_COLLECTION_PATTERN = re.compile(r"^wc_standings_(\d{4})$")
 WC_LIVE_DAYS_BEFORE_TODAY = 7
 WC_LIVE_DAYS_AFTER_TODAY = 6
@@ -579,6 +580,13 @@ def _bracket_grid_row_count(first_round_match_count: int) -> int:
     return first_round_match_count * BRACKET_CARD_GRID_ROWS
 
 
+def _third_place_grid_position(final_round_index: int) -> tuple[int, int]:
+    final_row_start, final_row_span = _bracket_grid_position(0, final_round_index)
+    third_place_span = THIRD_PLACE_LABEL_GRID_ROWS + BRACKET_CARD_GRID_ROWS
+    row_start = final_row_start + final_row_span + THIRD_PLACE_GAP_GRID_ROWS
+    return row_start, third_place_span
+
+
 def _bracket_row_center(row_start: int, row_span: int) -> float:
     return row_start + (row_span - 1) / 2
 
@@ -707,14 +715,19 @@ async def build_knockout_bracket_diagram(
         )
         if third_place_fixture is None:
             third_place_fixture = 103
-        third_place_span = (
-            THIRD_PLACE_LABEL_GRID_ROWS + BRACKET_CARD_GRID_ROWS
+        final_round_index = len(rounds) - 1
+        third_place_row_start, third_place_span = _third_place_grid_position(
+            final_round_index
+        )
+        grid_rows = max(
+            grid_rows,
+            third_place_row_start + third_place_span - 1,
         )
         third_place_slot = _bracket_slot_from_match(
             third_place_match,
             stage="THIRD_PLACE",
             fixture_number=third_place_fixture,
-            grid_row_start=grid_rows - third_place_span + 1,
+            grid_row_start=third_place_row_start,
             grid_row_span=third_place_span,
         )
 
