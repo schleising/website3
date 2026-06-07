@@ -1,20 +1,24 @@
 {% macro world_cup_knockout_bracket(bracket) %}
 {% if bracket and bracket.rounds|length > 0 %}
 {% set column_template %}{% for round in bracket.rounds %}var(--world-cup-bracket-round-width, 16rem) 0px 1.75rem{% if not loop.last %} 0px{% endif %}{% endfor %}{% endset %}
+{% set bracket_vars %}--world-cup-bracket-rows: {{ bracket.grid_rows }}; --world-cup-bracket-columns: {{ column_template }}; --world-cup-bracket-round-width: 16rem;{% endset %}
 <section class="world-cup-bracket-panel site-card" aria-label="Knockout bracket">
-  <div class="world-cup-bracket-scroll">
-    <div
-      class="world-cup-bracket-matrix"
-      style="--world-cup-bracket-rows: {{ bracket.grid_rows }}; --world-cup-bracket-columns: {{ column_template }}; --world-cup-bracket-round-width: 16rem;"
-    >
-      {% for round in bracket.rounds %}
-      <a
-        class="world-cup-bracket-round-label"
-        style="grid-column: {{ loop.index0 * 4 + 1 }}; grid-row: 1;"
-        href="{{ round.round_url }}"
-      >{{ round.label }}</a>
-      {% endfor %}
+  <div class="world-cup-bracket-sticky-headers">
+    <div class="world-cup-bracket-header-scroll">
+      <div class="world-cup-bracket-header-matrix" style="{{ bracket_vars }}">
+        {% for round in bracket.rounds %}
+        <a
+          class="world-cup-bracket-round-label"
+          style="grid-column: {{ loop.index0 * 4 + 1 }};"
+          href="{{ round.round_url }}"
+        >{{ round.label }}</a>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
 
+  <div class="world-cup-bracket-scroll">
+    <div class="world-cup-bracket-matrix" style="{{ bracket_vars }}">
       {% for round in bracket.rounds %}
       {% set round_col = loop.index0 * 4 + 1 %}
       {% set feed_col = loop.index0 * 4 + 2 %}
@@ -24,7 +28,7 @@
       {% for slot in round.slots %}
       <div
         class="world-cup-bracket-slot-wrap"
-        style="grid-column: {{ round_col }}; grid-row: {{ slot.grid_row_start + 1 }} / span {{ slot.grid_row_span }};"
+        style="grid-column: {{ round_col }}; grid-row: {{ slot.grid_row_start }} / span {{ slot.grid_row_span }};"
       >
         <article
           class="world-cup-bracket-slot{% if slot.winner_side == 'home' %} world-cup-bracket-slot--home-winner{% elif slot.winner_side == 'away' %} world-cup-bracket-slot--away-winner{% endif %}"
@@ -48,7 +52,7 @@
       {% if not is_last_round %}
       <div
         class="world-cup-bracket-line world-cup-bracket-line--feed"
-        style="grid-column: {{ feed_col }}; grid-row: {{ slot.grid_row_start + 1 }} / span {{ slot.grid_row_span }};"
+        style="grid-column: {{ feed_col }}; grid-row: {{ slot.grid_row_start }} / span {{ slot.grid_row_span }};"
         aria-hidden="true"
       ></div>
       {% endif %}
@@ -57,12 +61,12 @@
       {% for connector in round.connectors %}
       <div
         class="world-cup-bracket-join"
-        style="grid-column: {{ connector_col }}; grid-row: {{ connector.grid_row_start + 1 }} / span {{ connector.grid_row_span }}; --join-top: {{ connector.top_fraction }}; --join-bottom: {{ connector.bottom_fraction }};"
+        style="grid-column: {{ connector_col }}; grid-row: {{ connector.grid_row_start }} / span {{ connector.grid_row_span }}; --join-top: {{ connector.top_fraction }}; --join-bottom: {{ connector.bottom_fraction }};"
         aria-hidden="true"
       ></div>
       <div
         class="world-cup-bracket-line world-cup-bracket-line--recv"
-        style="grid-column: {{ recv_col }}; grid-row: {{ connector.exit_grid_row_start + 1 }} / span {{ connector.exit_grid_row_span }};"
+        style="grid-column: {{ recv_col }}; grid-row: {{ connector.exit_grid_row_start }} / span {{ connector.exit_grid_row_span }};"
         aria-hidden="true"
       ></div>
       {% endfor %}
