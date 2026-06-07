@@ -88,6 +88,8 @@ class BracketConnector(BaseModel):
     top_fraction: float = 0.25
     bottom_fraction: float = 0.75
     exit_fraction: float = 0.5
+    exit_grid_row_start: int = 1
+    exit_grid_row_span: int = 1
 
 
 class BracketRoundColumn(BaseModel):
@@ -604,7 +606,7 @@ def _bracket_row_center(row_start: int, row_span: int) -> float:
 def _bracket_connector_metrics(
     child_match_index: int,
     round_index: int,
-) -> tuple[int, int, float, float, float]:
+) -> tuple[int, int, float, float, float, int, int]:
     top_row_start, top_row_span = _bracket_grid_position(child_match_index, round_index)
     bottom_row_start, bottom_row_span = _bracket_grid_position(
         child_match_index + 1,
@@ -631,6 +633,8 @@ def _bracket_connector_metrics(
         centre_fraction(top_center),
         centre_fraction(bottom_center),
         centre_fraction(exit_center),
+        parent_row_start,
+        parent_row_span,
     )
 
 
@@ -640,9 +644,15 @@ def _bracket_connectors_for_round(
 ) -> list[BracketConnector]:
     connectors: list[BracketConnector] = []
     for child_match_index in range(0, match_count, 2):
-        row_start, row_span, top_fraction, bottom_fraction, exit_fraction = (
-            _bracket_connector_metrics(child_match_index, round_index)
-        )
+        (
+            row_start,
+            row_span,
+            top_fraction,
+            bottom_fraction,
+            exit_fraction,
+            exit_grid_row_start,
+            exit_grid_row_span,
+        ) = _bracket_connector_metrics(child_match_index, round_index)
         connectors.append(
             BracketConnector(
                 grid_row_start=row_start,
@@ -650,6 +660,8 @@ def _bracket_connectors_for_round(
                 top_fraction=top_fraction,
                 bottom_fraction=bottom_fraction,
                 exit_fraction=exit_fraction,
+                exit_grid_row_start=exit_grid_row_start,
+                exit_grid_row_span=exit_grid_row_span,
             )
         )
     return connectors

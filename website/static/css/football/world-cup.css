@@ -458,6 +458,36 @@
     text-decoration: underline;
 }
 
+.world-cup-bracket-line {
+    width: 0;
+    min-width: 0;
+    height: 100%;
+    position: relative;
+    overflow: visible;
+    pointer-events: none;
+    justify-self: center;
+}
+
+.world-cup-bracket-line--feed::before,
+.world-cup-bracket-line--recv::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    height: 0.125rem;
+    margin-top: -0.0625rem;
+    background: rgba(120, 154, 196, 0.72);
+}
+
+.world-cup-bracket-line--feed::before {
+    left: calc(-1 * var(--world-cup-bracket-cell-pad, 0.25rem));
+    right: 0;
+}
+
+.world-cup-bracket-line--recv::before {
+    left: 0;
+    right: calc(-1 * var(--world-cup-bracket-cell-pad, 0.25rem));
+}
+
 .world-cup-bracket-join {
     position: relative;
     pointer-events: none;
@@ -468,21 +498,11 @@
     position: absolute;
     left: 0;
     right: 0;
-    top: calc(var(--join-top, 0.25) * 100%);
-    bottom: calc((1 - var(--join-bottom, 0.75)) * 100%);
+    top: calc(var(--join-top, 0.25) * 100% - 0.0625rem);
+    bottom: calc((1 - var(--join-bottom, 0.75)) * 100% - 0.0625rem);
     border: 0.125rem solid rgba(120, 154, 196, 0.72);
     border-left: none;
     border-radius: 0 0.35rem 0.35rem 0;
-}
-
-.world-cup-bracket-join::after {
-    content: "";
-    position: absolute;
-    top: calc(var(--join-exit, 0.5) * 100%);
-    left: 50%;
-    right: 0;
-    border-top: 0.125rem solid rgba(120, 154, 196, 0.72);
-    transform: translateY(-50%);
 }
 
 .world-cup-bracket-slot-wrap {
@@ -492,29 +512,7 @@
     height: 100%;
     min-height: 0;
     position: relative;
-    padding: 0 0.25rem;
-}
-
-.world-cup-bracket-slot-wrap--outgoing::after {
-    content: "";
-    position: absolute;
-    top: 50%;
-    right: -1.75rem;
-    width: 1.75rem;
-    border-top: 0.125rem solid rgba(120, 154, 196, 0.72);
-    pointer-events: none;
-    transform: translateY(-50%);
-}
-
-.world-cup-bracket-slot-wrap--incoming::before {
-    content: "";
-    position: absolute;
-    top: 50%;
-    left: -1.75rem;
-    width: 1.75rem;
-    border-top: 0.125rem solid rgba(120, 154, 196, 0.72);
-    pointer-events: none;
-    transform: translateY(-50%);
+    padding: 0 var(--world-cup-bracket-cell-pad, 0.25rem);
 }
 
 .world-cup-bracket-slot {
