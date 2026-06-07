@@ -313,6 +313,20 @@
     pointer-events: auto;
 }
 
+.world-cup-jump-toolbar--scrollable .football-jump-menu[open] .football-jump-dropdown {
+    display: block;
+    max-height: min(70vh, 22rem);
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+}
+
+.world-cup-jump-toolbar--scrollable .football-jump-link {
+    overflow: visible;
+    white-space: nowrap;
+}
+
 .world-cup-overview-knockout-block,
 .world-cup-overview-group-block,
 .world-cup-stage-divider,
