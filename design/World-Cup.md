@@ -27,7 +27,7 @@ The Premier League implementation is the template. Reuse:
 | Existing piece        | Path / pattern                                           | World Cup reuse                                                       |
 | --------------------- | -------------------------------------------------------- | --------------------------------------------------------------------- |
 | Base layout + sidebar | `templates/football/football-base.html`                  | Extend; add WC nav block                                              |
-| Match cards           | `templates/football/match_template.html`, `score-widget` | Same card component; filter by `stage` / `group`                      |
+| Match cards           | `templates/football/match_template.html`, `score-widget` | Same card component; filter by `stage` / `group`; **no H2H pill** (see §13 #10) |
 | League table grid     | `templates/football/table_template.html`, `table.css`    | Per-group tables; drop PL zone styling                                |
 | Router module         | `website/football/router.py`                             | Add `world-cup` sub-routes or sibling router                          |
 | Pydantic models       | `website/football/models.py`                             | Reuse `Match` (`stage`, `group` already present), `Standing`, `Table` |
@@ -250,10 +250,6 @@ Optional but consistent with PL `/football/matches/team/{team_id}/`. All matches
 
 **Template:** reuse team matches layout from `match_template.html`.
 
-### 4.8 Head-to-head
-
-Existing `/football/head-to-head/` can work if national-team matches are stored in queryable collections. WC-specific H2H under `/football/world-cup/head-to-head/` is optional for v1.
-
 ## 5. Navigation
 
 ### 5.1 Football sidebar
@@ -302,7 +298,7 @@ During the 2026 tournament, configure the Football PWA (`football.schleising.net
 | From                      | To                                               |
 | ------------------------- | ------------------------------------------------ |
 | Group table team name     | `/football/world-cup/teams/{id}/?edition=`       |
-| Match card                | H2H pill → existing head-to-head with both teams |
+| Match card team name      | `/football/world-cup/teams/{id}/?edition=`       |
 | Overview knockout heading | Dedicated round page                             |
 | Overview group heading    | Single group page                                |
 
@@ -705,6 +701,7 @@ Query param on all HTML routes: `?edition=2026` (default `2026` at launch; only 
 | 7   | Sidebar structure | Collapsible **Competitions** heading grouping PL and WC | §5.1 |
 | 8   | National team crests | Local cache only at `/images/football/crests/wc/` | §7.3, §8.6 |
 | 9   | Group page mobile UX | Sticky standings table; scrollable fixtures beneath | §4.3, §10.2 |
+| 10  | Head-to-head | **Out of scope** — single-tournament data only; no H2H page or match-card pill | §2, §5.4 |
 
 
 ## 14. References
