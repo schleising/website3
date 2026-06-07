@@ -16,6 +16,9 @@ const footballRootPath = footballBasePath === "" ? "/" : `${footballBasePath}/`;
 const serviceWorkerPath = `${footballBasePath}/sw.js`;
 const serviceWorkerScope = footballRootPath;
 const subscriptionPreferencesUrl = `${footballRootPath}subscription/preferences/`;
+const subscriptionSaveUrl = String(
+    subscriptionSection?.dataset.subscriptionSaveUrl || subscriptionPreferencesUrl
+).trim();
 const currentUserSubscriptionPreferencesUrl = `${footballRootPath}subscription/preferences/current/`;
 const vapidPublicKey = "BAE-ATyX2xQGdyv9W5vcsI7qzA1FSui3UYNHgKFSKMmR12_7L9xQcVcDz8JbweMOTWb7npz6VMQMQC1BUylu00E";
 const subscriptionClientStorageKey = "football.subscriptionClientId.v1";
@@ -406,7 +409,7 @@ async function savePreferences() {
             team_ids: teamIds,
         };
 
-        await requestJson(subscriptionPreferencesUrl, "PUT", payload);
+        await requestJson(subscriptionSaveUrl, "PUT", payload);
         hasActiveSubscription = true;
         canManageSubscriptions = true;
         setStatus("Preferences saved.");

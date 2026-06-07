@@ -682,8 +682,8 @@ Query param on all HTML routes: `?edition=2026` (default `2026` at launch; only 
 
 ### Phase 4 — Optional enhancements
 
-- [ ] Visual bracket diagram on knockout index
-- [ ] Push notifications for selected national teams
+- [x] Visual bracket diagram on knockout index
+- [x] Push notifications for selected national teams
 
 ## 13. Decisions
 

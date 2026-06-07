@@ -1,11 +1,19 @@
 import logging
 
-from fastapi import APIRouter, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
+from ..account.csrf import validate_csrf
 from .football_utils import update_match_timezone
+from .models import (
+    SubscriptionPreferencesResponse,
+    SubscriptionPreferencesUpdateRequest,
+    PushSubscriptionDocument,
+)
+from .subscription_scope import get_wc_subscribable_team_ids, merge_subscription_team_ids
 from .world_cup_db import (
+    build_knockout_bracket_diagram,
     build_overview_group_blocks,
     build_overview_knockout_sections,
     get_available_wc_editions,
@@ -15,6 +23,7 @@ from .world_cup_db import (
     normalise_group_table,
     retrieve_all_edition_matches,
     retrieve_all_group_standings,
+    retrieve_distinct_teams,
     retrieve_group_matches,
     retrieve_group_standings,
     retrieve_knockout_matches,
@@ -96,7 +105,31 @@ async def _build_world_cup_context(
         "world_cup_groups_url": f"{world_cup_root}groups/",
         "world_cup_knockout_url": f"{world_cup_root}knockout/",
         "world_cup_matches_url": f"{world_cup_root}matches/",
+        "world_cup_subscriptions_url": f"{world_cup_root}subscriptions/",
         **mode_context,
+    }
+
+
+def _subscription_router_helpers():
+    from .football_db import get_push_subscription, upsert_push_subscription
+    from .router import (
+        _assert_subscription_owner,
+        _build_football_auth_links,
+        _get_current_season_teams,
+        _get_current_season_key,
+        _require_logged_in_username,
+        _request_username,
+    )
+
+    return {
+        "get_push_subscription": get_push_subscription,
+        "upsert_push_subscription": upsert_push_subscription,
+        "_assert_subscription_owner": _assert_subscription_owner,
+        "_build_football_auth_links": _build_football_auth_links,
+        "_get_current_season_teams": _get_current_season_teams,
+        "_get_current_season_key": _get_current_season_key,
+        "_require_logged_in_username": _require_logged_in_username,
+        "_request_username": _request_username,
     }
 
 
@@ -405,6 +438,10 @@ async def get_world_cup_knockout_index(
     context = await _build_world_cup_context(request, edition)
     selected_edition = context["selected_edition"]
     knockout_rounds = await list_available_knockout_rounds(selected_edition)
+    knockout_bracket = await build_knockout_bracket_diagram(
+        selected_edition,
+        football_root=str(context["football_root_path"]),
+    )
 
     context["edition_switch_path"] = f"{context['football_root_path']}world-cup/knockout/"
 
@@ -415,6 +452,7 @@ async def get_world_cup_knockout_index(
             "request": request,
             "title": "World Cup Knockout",
             "knockout_rounds": knockout_rounds,
+            "knockout_bracket": knockout_bracket,
             **context,
         },
     )
@@ -451,6 +489,105 @@ async def get_world_cup_all_matches(
             "all_matches_view": True,
             **context,
         },
+    )
+
+
+@world_cup_router.get("/subscriptions", response_class=HTMLResponse)
+@world_cup_router.get("/subscriptions/", response_class=HTMLResponse)
+async def get_world_cup_subscriptions_page(
+    request: Request,
+    edition: str | None = Query(default=None, pattern=r"^\d{4}$"),
+):
+    logging.debug("/football/world-cup/subscriptions/: %s", request)
+    helpers = _subscription_router_helpers()
+    context = await _build_world_cup_context(request, edition, show_edition_selector=False)
+    selected_edition = context["selected_edition"]
+    teams = await retrieve_distinct_teams(selected_edition)
+    auth_links = helpers["_build_football_auth_links"](request)
+    football_root = str(context["football_root_path"])
+
+    return TEMPLATES.TemplateResponse(
+        request,
+        "football/world-cup/subscriptions.html",
+        {
+            "request": request,
+            "title": "World Cup Notifications",
+            "live_matches": False,
+            "enable_live_updates": False,
+            "matches": [],
+            "teams": teams,
+            "can_manage_subscriptions": helpers["_request_username"](request)
+            != "Anonymous User",
+            "subscription_save_url": (
+                f"{football_root}world-cup/subscription/preferences/"
+            ),
+            **auth_links,
+            **context,
+        },
+    )
+
+
+@world_cup_router.put(
+    "/subscription/preferences",
+    response_model=SubscriptionPreferencesResponse,
+)
+@world_cup_router.put(
+    "/subscription/preferences/",
+    response_model=SubscriptionPreferencesResponse,
+)
+async def update_world_cup_subscription_preferences(
+    request: Request,
+    payload: SubscriptionPreferencesUpdateRequest,
+    _: None = Depends(validate_csrf),
+):
+    helpers = _subscription_router_helpers()
+    wc_valid_ids = await get_wc_subscribable_team_ids()
+    current_teams = await helpers["_get_current_season_teams"](
+        await helpers["_get_current_season_key"]()
+    )
+    pl_valid_ids = {team.id for team in current_teams if team.id is not None}
+
+    username = helpers["_require_logged_in_username"](request)
+    existing_subscription = await helpers["get_push_subscription"](
+        payload.subscription,
+        username=username,
+        client_id=payload.client_id,
+    )
+    helpers["_assert_subscription_owner"](existing_subscription, username)
+
+    existing_team_ids = (
+        existing_subscription.team_ids if existing_subscription is not None else []
+    )
+    selected_team_ids = merge_subscription_team_ids(
+        existing_team_ids=existing_team_ids,
+        submitted_team_ids=payload.team_ids,
+        scope_valid_ids=wc_valid_ids,
+        other_valid_ids=pl_valid_ids,
+    )
+
+    if len(selected_team_ids) == 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Select at least one valid team.",
+        )
+
+    subscription_doc = PushSubscriptionDocument(
+        subscription=payload.subscription,
+        team_ids=selected_team_ids,
+        username=username,
+        client_id=payload.client_id,
+    )
+    ok = await helpers["upsert_push_subscription"](subscription_doc)
+
+    if not ok:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Unable to save subscription preferences.",
+        )
+
+    return SubscriptionPreferencesResponse(
+        is_subscribed=True,
+        team_ids=selected_team_ids,
     )
 
 

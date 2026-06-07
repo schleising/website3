@@ -67,6 +67,9 @@
     <a href="{{ world_cup_groups_url|default(football_root ~ 'world-cup/groups/') }}" class="sub-level-nav" data-history-mode="football-shell">Groups</a>
     <a href="{{ world_cup_knockout_url|default(football_root ~ 'world-cup/knockout/') }}" class="sub-level-nav" data-history-mode="football-shell">Knockout</a>
     <a href="{{ world_cup_matches_url|default(football_root ~ 'world-cup/matches/') }}" class="sub-level-nav" data-history-mode="football-shell">All Matches</a>
+    {% if is_current_edition|default(false) %}
+    <a href="{{ world_cup_subscriptions_url|default(football_root ~ 'world-cup/subscriptions/') }}" class="sub-level-nav">Notifications</a>
+    {% endif %}
   </div>
   {% endif %}
 </details>

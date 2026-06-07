@@ -20,9 +20,12 @@ from .world_cup_utils import (
     group_enum_to_slug,
     group_slug_to_enum,
     group_slug_to_label,
+    knockout_winner_side,
     normalise_group_slug,
     filter_confirmed_knockout_matches,
+    resolve_world_cup_crest_url,
     standings_label_to_slug,
+    team_is_confirmed,
 )
 
 WC_MATCH_COLLECTION_PATTERN = re.compile(r"^wc_matches_(\d{4})$")
@@ -59,6 +62,42 @@ class WorldCupOverviewGroupBlock(BaseModel):
     label: str
     table: list[TableItem] = Field(default_factory=list)
     matches: list[Match] = Field(default_factory=list)
+
+
+class BracketSlot(BaseModel):
+    match_id: int | None = None
+    home_label: str = "TBD"
+    away_label: str = "TBD"
+    home_crest: str = "/images/football/crests/unknown_team.svg"
+    away_crest: str = "/images/football/crests/unknown_team.svg"
+    home_score: str = "-"
+    away_score: str = "-"
+    status_label: str = ""
+    winner_side: str | None = None
+    grid_row_start: int = 1
+    grid_row_span: int = 1
+
+
+class BracketRoundColumn(BaseModel):
+    slug: str
+    label: str
+    round_url: str
+    slots: list[BracketSlot] = Field(default_factory=list)
+
+
+class KnockoutBracketDiagram(BaseModel):
+    grid_rows: int = 1
+    rounds: list[BracketRoundColumn] = Field(default_factory=list)
+    third_place: BracketSlot | None = None
+
+
+WC_BRACKET_ROUND_STAGES: tuple[tuple[str, str, str], ...] = (
+    ("LAST_32", "round-of-32", "Round of 32"),
+    ("LAST_16", "round-of-16", "Round of 16"),
+    ("QUARTER_FINALS", "quarter-finals", "Quarter-finals"),
+    ("SEMI_FINALS", "semi-finals", "Semi-finals"),
+    ("FINAL", "final", "Final"),
+)
 
 
 def _matches_collection_name(edition: str) -> str:
@@ -473,3 +512,147 @@ def standings_from_api_table(table: Table) -> list[WorldCupGroupStandings]:
 
     groups.sort(key=lambda item: item.group_slug)
     return groups
+
+
+def _bracket_team_label(team: Team) -> str:
+    if not team_is_confirmed(team):
+        return "TBD"
+    return team.display_name
+
+
+def _bracket_score_value(score: int | None) -> str:
+    if score is None:
+        return "-"
+    return str(score)
+
+
+def _bracket_status_label(match: Match) -> str:
+    if match.status == MatchStatus.finished:
+        return "FT"
+    if match.status == MatchStatus.in_play:
+        if match.minute is not None:
+            return f"{match.minute}'"
+        return "Live"
+    if match.status == MatchStatus.paused:
+        return "HT"
+    return str(match.status)
+
+
+def _bracket_slot_from_match(
+    match: Match,
+    *,
+    grid_row_start: int,
+    grid_row_span: int,
+) -> BracketSlot:
+    winner_side = knockout_winner_side(match)
+    home_crest = (
+        resolve_world_cup_crest_url(match.home_team.id)
+        if match.home_team.id is not None
+        else "/images/football/crests/unknown_team.svg"
+    )
+    away_crest = (
+        resolve_world_cup_crest_url(match.away_team.id)
+        if match.away_team.id is not None
+        else "/images/football/crests/unknown_team.svg"
+    )
+
+    return BracketSlot(
+        match_id=match.id,
+        home_label=_bracket_team_label(match.home_team),
+        away_label=_bracket_team_label(match.away_team),
+        home_crest=home_crest,
+        away_crest=away_crest,
+        home_score=_bracket_score_value(match.score.full_time.home),
+        away_score=_bracket_score_value(match.score.full_time.away),
+        status_label=_bracket_status_label(match),
+        winner_side=winner_side,
+        grid_row_start=grid_row_start,
+        grid_row_span=grid_row_span,
+    )
+
+
+def _bracket_grid_position(match_index: int, round_index: int) -> tuple[int, int]:
+    row_start = (2 * match_index + 1) * (2**round_index)
+    row_span = (2 ** (round_index + 1)) - 1
+    return row_start, row_span
+
+
+async def build_knockout_bracket_diagram(
+    edition: str,
+    *,
+    football_root: str = "/football/",
+) -> KnockoutBracketDiagram | None:
+    stage_matches: list[tuple[tuple[str, str, str], list[Match]]] = []
+
+    for stage_meta in WC_BRACKET_ROUND_STAGES:
+        stage, round_slug, label = stage_meta
+        matches = await retrieve_knockout_matches(edition, stage)
+        if len(matches) == 0:
+            continue
+        stage_matches.append((stage_meta, matches))
+
+    if len(stage_matches) == 0:
+        return None
+
+    first_round_count = len(stage_matches[0][1])
+    grid_rows = max(1, first_round_count * 2 - 1)
+    rounds: list[BracketRoundColumn] = []
+
+    for round_index, ((stage, round_slug, label), matches) in enumerate(stage_matches):
+        slots: list[BracketSlot] = []
+        for match_index, match in enumerate(matches):
+            row_start, row_span = _bracket_grid_position(match_index, round_index)
+            slots.append(
+                _bracket_slot_from_match(
+                    match,
+                    grid_row_start=row_start,
+                    grid_row_span=row_span,
+                )
+            )
+
+        rounds.append(
+            BracketRoundColumn(
+                slug=round_slug,
+                label=label,
+                round_url=f"{football_root}world-cup/knockout/{round_slug}/?edition={edition}",
+                slots=slots,
+            )
+        )
+
+    third_place_slot: BracketSlot | None = None
+    third_place_matches = await retrieve_knockout_matches(edition, "THIRD_PLACE")
+    if len(third_place_matches) > 0:
+        third_place_slot = _bracket_slot_from_match(
+            third_place_matches[0],
+            grid_row_start=1,
+            grid_row_span=1,
+        )
+
+    return KnockoutBracketDiagram(
+        grid_rows=grid_rows,
+        rounds=rounds,
+        third_place=third_place_slot,
+    )
+
+
+async def retrieve_distinct_teams(edition: str) -> list[Team]:
+    collection = _get_matches_collection(edition)
+    if collection is None:
+        return []
+
+    teams_by_id: dict[int, Team] = {}
+    cursor = collection.find({}, {"home_team": 1, "away_team": 1})
+
+    async for document in cursor:
+        for field_name in ("home_team", "away_team"):
+            team_data = document.get(field_name)
+            if not isinstance(team_data, dict):
+                continue
+
+            team_id = team_data.get("id")
+            if not isinstance(team_id, int) or team_id <= 0:
+                continue
+
+            teams_by_id[team_id] = Team.model_validate(team_data)
+
+    return sorted(teams_by_id.values(), key=lambda team: team.display_name.casefold())

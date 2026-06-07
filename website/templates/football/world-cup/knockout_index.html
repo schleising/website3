@@ -1,4 +1,5 @@
 {% extends "football/world-cup/world-cup-base.html" %}
+{% from "football/world-cup/_knockout_bracket.html" import world_cup_knockout_bracket %}
 
 {% block title %}<title>Football - World Cup Knockout</title>{% endblock %}
 
@@ -52,7 +53,10 @@
 </section>
 {% endif %}
 
+{{ world_cup_knockout_bracket(knockout_bracket) }}
+
 {% if knockout_rounds|length > 0 %}
+<h4 class="world-cup-knockout-round-list-heading">Rounds</h4>
 <div class="world-cup-knockout-round-list">
   {% for round in knockout_rounds %}
   <a

@@ -1,0 +1,69 @@
+{% macro world_cup_knockout_bracket(bracket) %}
+{% if bracket and bracket.rounds|length > 0 %}
+<section class="world-cup-bracket-panel site-card" aria-label="Knockout bracket">
+  <div class="world-cup-bracket-scroll">
+    <div
+      class="world-cup-bracket-grid"
+      style="--world-cup-bracket-rows: {{ bracket.grid_rows }};"
+    >
+      {% for round in bracket.rounds %}
+      <div class="world-cup-bracket-round" aria-label="{{ round.label }}">
+        <a class="world-cup-bracket-round-label" href="{{ round.round_url }}">{{ round.label }}</a>
+        <div
+          class="world-cup-bracket-round-grid"
+          style="--world-cup-bracket-rows: {{ bracket.grid_rows }};"
+        >
+          {% for slot in round.slots %}
+          <article
+            class="world-cup-bracket-slot{% if slot.winner_side == 'home' %} world-cup-bracket-slot--home-winner{% elif slot.winner_side == 'away' %} world-cup-bracket-slot--away-winner{% endif %}"
+            style="grid-row: {{ slot.grid_row_start }} / span {{ slot.grid_row_span }};"
+            {% if slot.match_id %}data-match-id="{{ slot.match_id }}"{% endif %}
+          >
+            <div class="world-cup-bracket-team world-cup-bracket-team--home">
+              <img class="team-badge" src="{{ slot.home_crest }}" alt="" loading="lazy">
+              <span class="world-cup-bracket-team-name">{{ slot.home_label }}</span>
+              <span class="world-cup-bracket-score">{{ slot.home_score }}</span>
+            </div>
+            <div class="world-cup-bracket-team world-cup-bracket-team--away">
+              <img class="team-badge" src="{{ slot.away_crest }}" alt="" loading="lazy">
+              <span class="world-cup-bracket-team-name">{{ slot.away_label }}</span>
+              <span class="world-cup-bracket-score">{{ slot.away_score }}</span>
+            </div>
+            {% if slot.status_label %}
+            <span class="world-cup-bracket-status">{{ slot.status_label }}</span>
+            {% endif %}
+          </article>
+          {% endfor %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  {% if bracket.third_place %}
+  {% set slot = bracket.third_place %}
+  <div class="world-cup-bracket-third-place">
+    <h4 class="world-cup-bracket-third-place-label">Third-place play-off</h4>
+    <article
+      class="world-cup-bracket-slot world-cup-bracket-slot--third-place{% if slot.winner_side == 'home' %} world-cup-bracket-slot--home-winner{% elif slot.winner_side == 'away' %} world-cup-bracket-slot--away-winner{% endif %}"
+      {% if slot.match_id %}data-match-id="{{ slot.match_id }}"{% endif %}
+    >
+      <div class="world-cup-bracket-team world-cup-bracket-team--home">
+        <img class="team-badge" src="{{ slot.home_crest }}" alt="" loading="lazy">
+        <span class="world-cup-bracket-team-name">{{ slot.home_label }}</span>
+        <span class="world-cup-bracket-score">{{ slot.home_score }}</span>
+      </div>
+      <div class="world-cup-bracket-team world-cup-bracket-team--away">
+        <img class="team-badge" src="{{ slot.away_crest }}" alt="" loading="lazy">
+        <span class="world-cup-bracket-team-name">{{ slot.away_label }}</span>
+        <span class="world-cup-bracket-score">{{ slot.away_score }}</span>
+      </div>
+      {% if slot.status_label %}
+      <span class="world-cup-bracket-status">{{ slot.status_label }}</span>
+      {% endif %}
+    </article>
+  </div>
+  {% endif %}
+</section>
+{% endif %}
+{% endmacro %}

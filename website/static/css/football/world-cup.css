@@ -408,6 +408,143 @@
     grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
 }
 
+.world-cup-bracket-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 0.65rem;
+    margin-bottom: 0.75rem;
+}
+
+.world-cup-bracket-scroll {
+    overflow-x: auto;
+    padding-bottom: 0.35rem;
+    -webkit-overflow-scrolling: touch;
+}
+
+.world-cup-bracket-grid {
+    display: flex;
+    gap: 1.5rem;
+    align-items: stretch;
+    min-width: min-content;
+}
+
+.world-cup-bracket-round {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+    min-width: 11.5rem;
+}
+
+.world-cup-bracket-round-label {
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--brand-strong);
+    text-decoration: none;
+    text-align: center;
+}
+
+.world-cup-bracket-round-label:hover,
+.world-cup-bracket-round-label:focus-visible {
+    text-decoration: underline;
+}
+
+.world-cup-bracket-round-grid {
+    display: grid;
+    grid-template-rows: repeat(var(--world-cup-bracket-rows), minmax(1.35rem, auto));
+    flex: 1 1 auto;
+    gap: 0;
+    position: relative;
+}
+
+.world-cup-bracket-round:not(:last-child) .world-cup-bracket-round-grid::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    right: -0.75rem;
+    width: 0.75rem;
+    height: 100%;
+    pointer-events: none;
+    background:
+        linear-gradient(var(--brand-soft), var(--brand-soft)) 0 50% / 0.0625rem 100% no-repeat;
+    opacity: 0.35;
+}
+
+.world-cup-bracket-slot {
+    display: flex;
+    flex-direction: column;
+    gap: 0.12rem;
+    align-self: center;
+    width: 100%;
+    padding: 0.35rem 0.42rem;
+    border: 0.0625rem solid rgba(156, 183, 219, 0.55);
+    border-radius: 0.45rem;
+    background: rgba(255, 255, 255, 0.72);
+    position: relative;
+}
+
+.world-cup-bracket-team {
+    display: grid;
+    grid-template-columns: 1.1rem minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 0.78rem;
+    line-height: 1.2;
+}
+
+.world-cup-bracket-team .team-badge {
+    width: 1.1rem;
+    height: 1.1rem;
+    object-fit: contain;
+}
+
+.world-cup-bracket-team-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.world-cup-bracket-score {
+    font-weight: 700;
+    min-width: 1rem;
+    text-align: right;
+}
+
+.world-cup-bracket-status {
+    font-size: 0.68rem;
+    color: var(--text-subtle, #5f6b7a);
+    text-align: right;
+}
+
+.world-cup-bracket-slot--home-winner .world-cup-bracket-team--home .world-cup-bracket-team-name,
+.world-cup-bracket-slot--away-winner .world-cup-bracket-team--away .world-cup-bracket-team-name {
+    color: var(--brand-strong);
+    font-weight: 700;
+}
+
+.world-cup-bracket-third-place {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    max-width: 14rem;
+}
+
+.world-cup-bracket-third-place-label {
+    margin: 0;
+    font-size: 0.82rem;
+    color: var(--text-subtle, #5f6b7a);
+}
+
+.world-cup-bracket-slot--third-place {
+    align-self: flex-start;
+}
+
+.world-cup-knockout-round-list-heading {
+    margin: 0 0 0.45rem;
+    font-size: 0.92rem;
+    color: var(--text-subtle, #5f6b7a);
+}
+
 .world-cup-knockout-round-list {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));

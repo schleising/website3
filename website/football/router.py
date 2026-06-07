@@ -1664,18 +1664,12 @@ async def update_subscription_preferences(
     payload: SubscriptionPreferencesUpdateRequest,
     _: None = Depends(validate_csrf),
 ):
+    from .subscription_scope import get_wc_subscribable_team_ids, merge_subscription_team_ids
+
     current_season_key = await _get_current_season_key()
     current_teams = await _get_current_season_teams(current_season_key)
-    valid_team_ids = {team.id for team in current_teams}
-    selected_team_ids = sorted(
-        {team_id for team_id in payload.team_ids if team_id in valid_team_ids}
-    )
-
-    if len(selected_team_ids) == 0:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Select at least one valid current-season team.",
-        )
+    pl_valid_ids = {team.id for team in current_teams if team.id is not None}
+    wc_valid_ids = await get_wc_subscribable_team_ids()
 
     username = _require_logged_in_username(request)
     existing_subscription = await get_push_subscription(
@@ -1684,6 +1678,22 @@ async def update_subscription_preferences(
         client_id=payload.client_id,
     )
     _assert_subscription_owner(existing_subscription, username)
+
+    existing_team_ids = (
+        existing_subscription.team_ids if existing_subscription is not None else []
+    )
+    selected_team_ids = merge_subscription_team_ids(
+        existing_team_ids=existing_team_ids,
+        submitted_team_ids=payload.team_ids,
+        scope_valid_ids=pl_valid_ids,
+        other_valid_ids=wc_valid_ids,
+    )
+
+    if len(selected_team_ids) == 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Select at least one valid team.",
+        )
 
     subscription_doc = PushSubscriptionDocument(
         subscription=payload.subscription,

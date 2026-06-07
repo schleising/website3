@@ -134,6 +134,31 @@ function updateWorldCupScoreWidget(match) {
     statusElement.textContent = formatWorldCupMatchStatus(match);
     homeElement.textContent = match.score?.full_time?.home ?? "-";
     awayElement.textContent = match.score?.full_time?.away ?? "-";
+
+    updateWorldCupBracketSlot(match);
+}
+
+function updateWorldCupBracketSlot(match) {
+    const bracketSlot = document.querySelector(
+        `.world-cup-bracket-slot[data-match-id="${match.id}"]`
+    );
+    if (!bracketSlot) {
+        return;
+    }
+
+    const homeScore = bracketSlot.querySelector(".world-cup-bracket-team--home .world-cup-bracket-score");
+    const awayScore = bracketSlot.querySelector(".world-cup-bracket-team--away .world-cup-bracket-score");
+    const statusLabel = bracketSlot.querySelector(".world-cup-bracket-status");
+
+    if (homeScore) {
+        homeScore.textContent = match.score?.full_time?.home ?? "-";
+    }
+    if (awayScore) {
+        awayScore.textContent = match.score?.full_time?.away ?? "-";
+    }
+    if (statusLabel) {
+        statusLabel.textContent = formatWorldCupMatchStatus(match);
+    }
 }
 
 function formatWorldCupMatchStatus(match) {

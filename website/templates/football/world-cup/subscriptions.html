@@ -1,0 +1,67 @@
+{% extends "football/world-cup/world-cup-base.html" %}
+
+{% block world_cup_head %}
+<script defer src="/js/football/subscriptions.js?v1.7.2"></script>
+{% endblock %}
+
+{% block title %}<title>Football - {{ title }}</title>{% endblock %}
+
+{% block header %}
+<h3 class="header-text football-header-text football-header-text--season">
+  <span class="football-header-title">{{ title }}</span>
+  <span class="football-season-marker">{{ selected_edition }}</span>
+</h3>
+{% endblock %}
+
+{% block football_content %}
+<section
+  class="football-subscriptions site-card{% if not can_manage_subscriptions %} is-readonly{% endif %}"
+  data-can-manage-subscriptions="{{ 'true' if can_manage_subscriptions else 'false' }}"
+  data-csrf-token="{{ request.state.csrf_token|default('') }}"
+  data-subscription-save-url="{{ subscription_save_url }}"
+>
+  <p class="football-subscriptions-copy">
+    Choose the national teams you want push notifications for during {{ selected_edition_label }}.
+    Premier League selections on the main notifications page are kept when you save here.
+  </p>
+  {% if not can_manage_subscriptions %}
+  <p class="football-subscriptions-auth-message">
+    <a href="{{ login_url|default('/account/login/?next=' ~ request.url.path|urlencode) }}">Login</a> or <a href="{{ signup_url|default('/account/create/') }}">sign up</a> to subscribe and manage notification preferences.
+  </p>
+  {% endif %}
+
+  {% if teams|length > 0 %}
+  <div class="football-subscriptions-controls">
+    <label class="football-subscriptions-select-all" for="subscription-select-all">
+      <input id="subscription-select-all" type="checkbox"{% if not can_manage_subscriptions %} disabled{% endif %}>
+      Select / Deselect All
+    </label>
+    <p class="football-subscriptions-count" id="subscription-selected-count">0 selected</p>
+  </div>
+
+  <div class="football-subscriptions-grid" id="subscription-team-grid">
+    {% for team in teams %}
+    <label class="football-subscription-team" for="subscription-team-{{ team.id }}">
+      <input
+        type="checkbox"
+        id="subscription-team-{{ team.id }}"
+        class="football-subscription-checkbox"
+        value="{{ team.id }}"
+        {% if not can_manage_subscriptions %}disabled{% endif %}
+      >
+      <img class="team-badge" src="{{ team.world_cup_local_crest }}" alt="{{ team.display_name }} crest">
+      <span>{{ team.display_name }}</span>
+    </label>
+    {% endfor %}
+  </div>
+
+  <div class="football-subscriptions-actions">
+    <button type="button" class="btn btn-primary" id="subscription-save"{% if not can_manage_subscriptions %} disabled{% endif %}>Save Preferences</button>
+    <button type="button" class="btn btn-primary" id="subscription-unsubscribe" disabled>Unsubscribe</button>
+  </div>
+  <p class="football-subscriptions-status" id="subscription-status" aria-live="polite"></p>
+  {% else %}
+  <p class="football-subscriptions-status">No national teams are available for subscriptions yet.</p>
+  {% endif %}
+</section>
+{% endblock %}
