@@ -4,6 +4,8 @@ from pathlib import Path
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
+from .world_cup_utils import WC_CREST_UNKNOWN_URL, resolve_world_cup_crest_url
+
 
 def _normalise_optional_client_id(value) -> str | None:
     if value is None:
@@ -166,12 +168,17 @@ class MatchStatus(str, Enum):
 class Filters(BaseModel):
     season: str
 
+    @field_validator("season", mode="before")
+    @classmethod
+    def _coerce_season(cls, value) -> str:
+        return str(value)
+
 
 class Area(BaseModel):
     id: int
     name: str
     code: str
-    flag: str
+    flag: str | None = None
 
 
 class Competition(BaseModel):
@@ -183,14 +190,45 @@ class Competition(BaseModel):
 
 
 class Team(BaseModel):
-    id: int
-    name: str
-    short_name: ShortName = Field(..., alias="shortName")
-    tla: str
-    crest: str
+    id: int | None = None
+    name: str | None = None
+    short_name: ShortName | str | None = Field(default=None, alias="shortName")
+    tla: str | None = None
+    crest: str | None = None
 
     class Config:
         populate_by_name = True
+
+    @field_validator("short_name", mode="before")
+    @classmethod
+    def _coerce_short_name(cls, value) -> ShortName | str | None:
+        if value is None:
+            return None
+
+        if isinstance(value, ShortName):
+            return value
+
+        candidate = str(value)
+        try:
+            return ShortName(candidate)
+        except ValueError:
+            return candidate
+
+    @property
+    def display_name(self) -> str:
+        if self.short_name is not None:
+            return str(self.short_name)
+        if self.name is not None:
+            return self.name
+        if self.tla is not None:
+            return self.tla
+        return "TBD"
+
+    @property
+    def world_cup_local_crest(self) -> str:
+        if self.id is None:
+            return WC_CREST_UNKNOWN_URL
+        return resolve_world_cup_crest_url(self.id)
 
     @property
     def local_crest(self) -> str:
@@ -225,7 +263,7 @@ class TableItem(BaseModel):
     position: int
     team: Team
     played_games: int = Field(..., alias="playedGames")
-    form: str
+    form: str | None = None
     won: int
     draw: int
     lost: int
@@ -316,7 +354,7 @@ class Match(BaseModel):
     status: MatchStatus
     minute: int | None = None
     injury_time: int | None = Field(default=None, alias="injuryTime")
-    matchday: int
+    matchday: int | None = None
     stage: str
     group: str | None = None
     last_updated: datetime = Field(..., alias="lastUpdated")

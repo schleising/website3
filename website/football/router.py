@@ -44,6 +44,7 @@ from .football_db import (
 )
 
 from .football_utils import update_match_timezone, create_bet_standings
+from .world_cup_db import world_cup_nav_available
 from .chatbot_history_api import (
     football_history_api_router,
     query_football_history,
@@ -557,8 +558,16 @@ async def _build_football_season_context(
         else current_season_key
     )
 
+    show_world_cup_nav = await world_cup_nav_available()
+    world_cup_root = f"{football_root_path}world-cup/"
+
     return {
         "show_season_selector": show_selector,
+        "show_world_cup_nav": show_world_cup_nav,
+        "world_cup_overview_url": world_cup_root,
+        "world_cup_groups_url": f"{world_cup_root}groups/",
+        "world_cup_knockout_url": f"{world_cup_root}knockout/",
+        "world_cup_matches_url": f"{world_cup_root}matches/",
         "available_seasons": [
             {
                 "key": season_key,
@@ -1765,3 +1774,8 @@ async def unsubscribe(
         status="success",
         message="Unsubscribed.",
     )
+
+
+from .world_cup_router import world_cup_router
+
+football_router.include_router(world_cup_router, prefix="/world-cup")

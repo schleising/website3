@@ -1,3 +1,4 @@
+from datetime import timezone
 from typing import Self
 from zoneinfo import ZoneInfo
 from dataclasses import dataclass
@@ -72,8 +73,10 @@ def update_match_timezone(matches: list[Match]) -> list[Match]:
     local_tz = ZoneInfo("Europe/London")
 
     for match in matches:
-        # Convert the match time to local time
-        match.local_date = match.utc_date.astimezone(local_tz)
+        utc_date = match.utc_date
+        if utc_date.tzinfo is None:
+            utc_date = utc_date.replace(tzinfo=timezone.utc)
+        match.local_date = utc_date.astimezone(local_tz)
 
     return matches
 

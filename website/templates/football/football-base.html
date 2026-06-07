@@ -37,24 +37,36 @@
 {% endblock %}
 
 {% block head %}
-<link rel="stylesheet" href="/css/right-nav.css?v1.1.0">
-<link rel="stylesheet" href="/css/football/football.css?v1.5.32">
+<link rel="stylesheet" href="/css/right-nav.css?v1.1.1">
+<link rel="stylesheet" href="/css/football/football.css?v1.5.34">
 {% block football_head %}
 {% endblock %}
 {% endblock %}
 
 {% block sidebar %}
 {% set football_root = football_root_path|default('/football/') %}
-<a href="{{ table_url|default(football_root ~ 'table/') }}" class="sub-level-nav" data-history-mode="football-shell">{% if is_current_season|default(true) %}Live League Table{% else %}League Table{% endif %}</a>
-{% if is_current_season|default(true) %}
-<a href="{{ live_scores_url|default(football_root) }}" class="sub-level-nav" data-history-mode="replace">Latest Matches</a>
-{% endif %}
-<a href="{{ all_matches_url|default(football_root ~ 'matches/all/') }}" class="sub-level-nav" data-history-mode="football-shell">All Matches</a>
-<a href="{{ stats_url|default(football_root ~ 'stats/') }}{% if selected_season_key is defined %}?season_end={{ selected_season_key }}{% endif %}" class="sub-level-nav" data-history-mode="football-shell">Stats</a>
-<a href="{{ head_to_head_url|default(football_root ~ 'head-to-head/') }}{% if selected_season_key is defined %}?season={{ selected_season_key }}{% endif %}" class="sub-level-nav">Head to Head</a>
-{% if is_current_season|default(true) %}
-<a href="{{ subscriptions_url|default(football_root ~ 'subscriptions/') }}" class="sub-level-nav">Notifications</a>
-{% endif %}
+<details class="football-competitions-nav" open>
+  <summary class="football-competitions-summary">Competitions</summary>
+  <div class="football-competition-block">
+    <p class="football-competition-label">Premier League</p>
+    <a href="{{ table_url|default(football_root ~ 'table/') }}" class="sub-level-nav" data-history-mode="football-shell">{% if is_current_season|default(true) %}Live League Table{% else %}League Table{% endif %}</a>
+    {% if is_current_season|default(true) %}
+    <a href="{{ live_scores_url|default(football_root) }}" class="sub-level-nav" data-history-mode="replace">Latest Matches</a>
+    {% endif %}
+    <a href="{{ all_matches_url|default(football_root ~ 'matches/all/') }}" class="sub-level-nav" data-history-mode="football-shell">All Matches</a>
+    <a href="{{ stats_url|default(football_root ~ 'stats/') }}{% if selected_season_key is defined %}?season_end={{ selected_season_key }}{% endif %}" class="sub-level-nav" data-history-mode="football-shell">Stats</a>
+    <a href="{{ head_to_head_url|default(football_root ~ 'head-to-head/') }}{% if selected_season_key is defined %}?season={{ selected_season_key }}{% endif %}" class="sub-level-nav">Head to Head</a>
+    {% if is_current_season|default(true) %}
+    <a href="{{ subscriptions_url|default(football_root ~ 'subscriptions/') }}" class="sub-level-nav">Notifications</a>
+    {% endif %}
+  </div>
+  {% if show_world_cup_nav|default(false) %}
+  <div class="football-competition-block">
+    <p class="football-competition-label">World Cup</p>
+    <a href="{{ world_cup_groups_url|default(football_root ~ 'world-cup/groups/') }}" class="sub-level-nav" data-history-mode="football-shell">Groups</a>
+  </div>
+  {% endif %}
+</details>
 
 {% if show_season_selector|default(false) and available_seasons is defined %}
 <div id="football-season-backdrop" class="football-season-backdrop hidden" aria-hidden="true"></div>

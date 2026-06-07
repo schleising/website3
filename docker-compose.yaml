@@ -42,6 +42,7 @@ services:
       - mongodb
     volumes:
       - ./backend/src:/src:ro
+      - ./website/static/images/football/crests/wc:/crests/wc:rw
     restart: always
     extra_hosts:
         - "host.docker.internal:host-gateway"

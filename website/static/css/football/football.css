@@ -375,33 +375,34 @@ body.football-season-popup-open {
 }
 
 .football-header-text--season {
-    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
     width: 100%;
-    padding-right: 4.4rem;
+    min-width: 0;
 }
 
 .football-header-text--season .football-header-title {
     display: block;
+    flex: 1 1 auto;
     min-width: 0;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
+.football-header-text--season .football-season-marker,
+.football-header-text--season .football-season-marker-button {
+    margin-left: auto;
+    flex: 0 0 auto;
+}
+
 .football-season-marker-button {
-    margin-left: 0;
     border: 0.0625rem solid rgba(158, 184, 215, 0.9);
     min-height: 1.5rem;
     padding: 0.08rem 0.45rem;
     line-height: 1.1;
     cursor: pointer;
-}
-
-.football-header-text--season .football-season-marker-button {
-    position: absolute;
-    right: 0;
-    top: 50%;
-    transform: translateY(-50%);
 }
 
 .football-season-marker-button:hover,
@@ -1078,25 +1079,73 @@ body.football-season-popup-open {
     }
 
     .football-season-marker {
-        margin-left: auto;
         font-size: 0.68rem;
     }
 
-    .football-header-text--season {
-        display: flex;
-        align-items: center;
-        gap: 0.3rem;
-        padding-right: 0;
-    }
-
     .football-header-text--season .football-season-marker-button {
-        position: static;
-        top: auto;
-        right: auto;
-        transform: none;
         min-height: 2.15rem;
         padding: 0.25rem 0.65rem;
         font-size: 0.95rem;
         line-height: 1.2;
     }
+}
+
+.football-competitions-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    width: 100%;
+    min-width: 0;
+    padding: 0.12rem;
+}
+
+.football-competitions-summary {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+    color: var(--text-soft);
+    padding: 0.62rem 0.82rem;
+    margin: 0.12rem;
+    border-radius: 0.6rem;
+    line-height: 1.3;
+    font-weight: 700;
+    cursor: pointer;
+    list-style: none;
+}
+
+.football-competitions-summary::-webkit-details-marker,
+.football-competitions-summary::marker {
+    display: none;
+    content: "";
+}
+
+.football-competitions-summary:hover {
+    color: var(--brand-strong);
+    background-color: var(--surface-strong);
+}
+
+.football-competition-block {
+    display: flex;
+    flex-direction: column;
+    gap: 0.04rem;
+    width: 100%;
+    min-width: 0;
+    padding: 0 0.2rem 0.2rem 0.55rem;
+}
+
+.football-competition-label {
+    margin: 0.28rem 0.12rem 0.08rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    color: var(--text-soft);
+}
+
+.right-sidebar .football-competitions-nav .sub-level-nav {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+    white-space: normal;
+    overflow: visible;
 }

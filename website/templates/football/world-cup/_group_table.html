@@ -1,0 +1,47 @@
+{% macro world_cup_group_table(table_rows, title, compact=false) %}
+<div class="table-container world-cup-table-container{% if compact %} world-cup-table-container--compact{% endif %}" data-team-count="{{ table_rows|length }}" style="--table-row-count: {{ table_rows|length }};">
+  <section class="table-grid world-cup-table-grid" role="table" aria-label="{{ title }}">
+    <header class="table-grid-header sticky-header" role="rowgroup">
+      <div class="header-row" role="row">
+        <div class="header-data data table-cell table-col-pos" role="columnheader">Pos</div>
+        <div class="header-data data table-cell" role="columnheader">Team</div>
+        <div class="header-data data table-cell centre-align" role="columnheader">Pld</div>
+        <div class="header-data data table-cell centre-align medium-table" role="columnheader">W</div>
+        <div class="header-data data table-cell centre-align medium-table" role="columnheader">D</div>
+        <div class="header-data data table-cell centre-align medium-table" role="columnheader">L</div>
+        <div class="header-data data table-cell centre-align large-table" role="columnheader">F</div>
+        <div class="header-data data table-cell centre-align large-table" role="columnheader">A</div>
+        <div class="header-data data table-cell centre-align" role="columnheader">GD</div>
+        <div class="header-data data table-cell centre-align" role="columnheader">Pts</div>
+      </div>
+    </header>
+    <div class="table-grid-body" role="rowgroup">
+      {% for table_item in table_rows %}
+      <article class="data-row" role="row" data-team-id="{{ table_item.team.id }}">
+        <div class="row-data data table-cell position" role="cell">
+          <div class="table-position-value">{{ table_item.position }}</div>
+        </div>
+        <div class="row-data data table-cell world-cup-team-cell" role="cell">
+          <div class="team-and-badge">
+            <img
+              class="team-badge"
+              src="{{ table_item.team.world_cup_local_crest }}"
+              alt="{{ table_item.team.display_name }} crest"
+            >
+            <span class="team-name">{{ table_item.team.display_name }}</span>
+          </div>
+        </div>
+        <div class="row-data data table-cell centre-align table-played" role="cell">{{ table_item.played_games }}</div>
+        <div class="row-data data table-cell medium-table centre-align table-won" role="cell">{{ table_item.won }}</div>
+        <div class="row-data data table-cell medium-table centre-align table-draw" role="cell">{{ table_item.draw }}</div>
+        <div class="row-data data table-cell medium-table centre-align table-lost" role="cell">{{ table_item.lost }}</div>
+        <div class="row-data data table-cell large-table centre-align table-goals-for" role="cell">{{ table_item.goals_for }}</div>
+        <div class="row-data data table-cell large-table centre-align table-goals-against" role="cell">{{ table_item.goals_against }}</div>
+        <div class="row-data data table-cell centre-align table-goal-difference" role="cell">{{ table_item.goal_difference }}</div>
+        <div class="row-data data table-cell centre-align table-points" role="cell">{{ table_item.points }}</div>
+      </article>
+      {% endfor %}
+    </div>
+  </section>
+</div>
+{% endmacro %}

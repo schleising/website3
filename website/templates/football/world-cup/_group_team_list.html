@@ -1,0 +1,14 @@
+{% macro world_cup_group_team_list(table_rows) %}
+<ul class="world-cup-group-team-list">
+  {% for table_item in table_rows %}
+  <li class="world-cup-group-team">
+    <img
+      class="team-badge"
+      src="{{ table_item.team.world_cup_local_crest }}"
+      alt="{{ table_item.team.display_name }} crest"
+    >
+    <span class="team-name">{{ table_item.team.display_name }}</span>
+  </li>
+  {% endfor %}
+</ul>
+{% endmacro %}
