@@ -1,4 +1,5 @@
-{% macro world_cup_group_table(table_rows, title, compact=false, overview=false) %}
+{% from "football/world-cup/_team_link.html" import world_cup_team_name %}
+{% macro world_cup_group_table(table_rows, title, football_root, edition, compact=false, overview=false) %}
 <div class="table-container world-cup-table-container{% if compact %} world-cup-table-container--compact{% endif %}{% if overview %} world-cup-table-container--overview{% endif %}" data-team-count="{{ table_rows|length }}" style="--table-row-count: {{ table_rows|length }};">
   <section class="table-grid world-cup-table-grid" role="table" aria-label="{{ title }}">
     <header class="table-grid-header sticky-header" role="rowgroup">
@@ -28,7 +29,7 @@
               src="{{ table_item.team.world_cup_local_crest }}"
               alt="{{ table_item.team.display_name }} crest"
             >
-            <span class="team-name">{{ table_item.team.display_name }}</span>
+            {{ world_cup_team_name(table_item.team, football_root, edition) }}
           </div>
         </div>
         <div class="row-data data table-cell centre-align table-played" role="cell">{{ table_item.played_games }}</div>

@@ -56,14 +56,11 @@
 {% if group_summaries|length > 0 %}
 <div class="world-cup-groups-grid">
   {% for group in group_summaries %}
-  <a
-    class="world-cup-group-card-link"
-    href="{{ football_root }}world-cup/groups/{{ group.slug }}/?edition={{ selected_edition }}"
-    aria-label="Open {{ group.label }}"
-  >
     <section class="world-cup-group-card site-card">
       <div class="world-cup-group-card-header">
-        <h4>{{ group.label }}</h4>
+        <h4>
+          <a href="{{ football_root }}world-cup/groups/{{ group.slug }}/?edition={{ selected_edition }}">{{ group.label }}</a>
+        </h4>
         {% if group.next_match %}
         <p class="world-cup-group-next">
           Next: {{ group.next_match.home_team.display_name }} vs {{ group.next_match.away_team.display_name }}
@@ -75,10 +72,9 @@
         {% endif %}
       </div>
       {% if group.table|length > 0 %}
-      {{ world_cup_group_team_list(group.table) }}
+      {{ world_cup_group_team_list(group.table, football_root, selected_edition) }}
       {% endif %}
     </section>
-  </a>
   {% endfor %}
 </div>
 {% else %}

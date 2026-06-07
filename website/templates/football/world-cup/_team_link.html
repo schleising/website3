@@ -1,0 +1,7 @@
+{% macro world_cup_team_name(team, football_root, edition) %}
+{% if team.id is not none %}
+<a class="team-name" href="{{ football_root }}world-cup/teams/{{ team.id }}/?edition={{ edition }}">{{ team.display_name }}</a>
+{% else %}
+<span class="team-name">{{ team.display_name }}</span>
+{% endif %}
+{% endmacro %}

@@ -244,6 +244,36 @@ async def retrieve_distinct_knockout_stages(edition: str) -> set[str]:
     return stages
 
 
+async def retrieve_team_matches(edition: str, team_id: int) -> tuple[str, list[Match]]:
+    collection = _get_matches_collection(edition)
+    if collection is None:
+        logging.error("No WC match collection for edition %s", edition)
+        return ("", [])
+
+    cursor = collection.find(
+        {
+            "$or": [
+                {"home_team.id": team_id},
+                {"away_team.id": team_id},
+            ]
+        }
+    ).sort("utc_date", ASCENDING)
+    matches = [Match.model_validate(item) async for item in cursor]
+    if len(matches) == 0:
+        return ("", [])
+
+    team_name = ""
+    for match in matches:
+        if match.home_team.id == team_id:
+            team_name = match.home_team.display_name
+            break
+        if match.away_team.id == team_id:
+            team_name = match.away_team.display_name
+            break
+
+    return (team_name, matches)
+
+
 async def retrieve_knockout_matches(edition: str, stage: str) -> list[Match]:
     collection = _get_matches_collection(edition)
     if collection is None:

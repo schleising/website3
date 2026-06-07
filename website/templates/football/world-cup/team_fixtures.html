@@ -1,11 +1,11 @@
 {% extends "football/world-cup/world-cup-base.html" %}
 {% from "football/world-cup/_match_card.html" import world_cup_match_card %}
 
-{% block title %}<title>Football - {{ round_label }} - World Cup {{ selected_edition }}</title>{% endblock %}
+{% block title %}<title>Football - {{ team_name }} - World Cup {{ selected_edition }}</title>{% endblock %}
 
 {% block header %}
 <h3 class="header-text football-header-text football-header-text--season">
-  <span class="football-header-title">{{ round_label }} — {{ selected_edition_label }}</span>
+  <span class="football-header-title">{{ team_name }} — {{ selected_edition_label }}</span>
   {% if show_edition_selector|default(false) %}
   <button
     type="button"
@@ -25,6 +25,7 @@
 
 {% block football_content %}
 {% set football_root = football_root_path|default('/football/') %}
+
 {% if show_edition_selector|default(false) %}
 <div id="world-cup-edition-backdrop" class="football-season-backdrop hidden" aria-hidden="true"></div>
 <section
@@ -52,26 +53,39 @@
 </section>
 {% endif %}
 
+{% if jump_targets|length > 0 %}
+<section id="football-all-matches-toolbar" class="football-all-matches-toolbar" aria-label="Team fixtures quick navigation">
+  <details class="football-jump-menu" id="world-cup-jump-menu">
+    <summary class="football-jump-trigger">Jump To</summary>
+    <div class="football-jump-dropdown">
+      {% for target in jump_targets %}
+      <a class="sub-level-nav football-jump-link" href="#{{ target.anchor }}">{{ target.label }}</a>
+      {% endfor %}
+    </div>
+  </details>
+</section>
+{% endif %}
+
 {% if date_groups|length > 0 %}
-<div class="world-cup-knockout-round-layout">
+<div class="world-cup-team-fixtures-layout">
   {% for day_group in date_groups %}
   <section
     class="football-day-group"
-    aria-label="{{ round_label }} {{ day_group.label }} fixtures"
-    {% if day_group.anchor_id is defined %}id="{{ day_group.anchor_id }}"{% endif %}
+    aria-label="{{ team_name }} {{ day_group.label }} fixtures"
+    id="{{ day_group.anchor_id }}"
   >
     <div class="football-day-heading">
       <h4 class="football-day-title">{{ day_group.label }}</h4>
     </div>
     <div class="football-grid">
       {% for match in day_group.matches %}
-      {{ world_cup_match_card(match, football_root=football_root, edition=selected_edition, highlight_winner=highlight_knockout_winner|default(false)) }}
+      {{ world_cup_match_card(match, football_root=football_root, edition=selected_edition, highlight_winner=match.stage != 'GROUP_STAGE') }}
       {% endfor %}
     </div>
   </section>
   {% endfor %}
 </div>
 {% else %}
-<p class="world-cup-empty-state">No fixtures scheduled for this round yet.</p>
+<p class="world-cup-empty-state">No fixtures found for this team.</p>
 {% endif %}
 {% endblock %}

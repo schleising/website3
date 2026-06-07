@@ -1,4 +1,5 @@
-{% macro world_cup_match_card(match, highlight_winner=false) %}
+{% from "football/world-cup/_team_link.html" import world_cup_team_name %}
+{% macro world_cup_match_card(match, football_root='/football/', edition='', highlight_winner=false) %}
 {% set winner_side = match|knockout_winner_side if highlight_winner else none %}
 <div class="score-widget site-card world-cup-score-widget{% if match.stage == 'FINAL' %} world-cup-score-widget--final{% endif %}" id="{{ match.id }}" data-match-time="{{ match.local_date.isoformat() if match.local_date else match.utc_date.isoformat() }}">
   <div class="date-and-time">
@@ -16,7 +17,7 @@
         alt="{{ match.home_team.display_name }} crest"
       >
       {% endif %}
-      <span class="team-name">{{ match.home_team.display_name }}</span>
+      {{ world_cup_team_name(match.home_team, football_root, edition) }}
     </div>
     <div class="home-team-score">
       {% if match.score.full_time.home is none %}-{% else %}{{ match.score.full_time.home }}{% endif %}
@@ -31,7 +32,7 @@
         alt="{{ match.away_team.display_name }} crest"
       >
       {% endif %}
-      <span class="team-name">{{ match.away_team.display_name }}</span>
+      {{ world_cup_team_name(match.away_team, football_root, edition) }}
     </div>
     <div class="away-team-score">
       {% if match.score.full_time.away is none %}-{% else %}{{ match.score.full_time.away }}{% endif %}

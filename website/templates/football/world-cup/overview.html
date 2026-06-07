@@ -55,7 +55,7 @@
 {% endif %}
 
 {% if jump_targets|length > 0 %}
-<section class="world-cup-overview-toolbar" aria-label="Tournament quick navigation">
+<section id="football-all-matches-toolbar" class="football-all-matches-toolbar" aria-label="Tournament quick navigation">
   <details class="football-jump-menu" id="world-cup-jump-menu">
     <summary class="football-jump-trigger">Jump To</summary>
     <div class="football-jump-dropdown">
@@ -89,7 +89,7 @@
       <div class="football-grid">
         {% for match in day_group.matches %}
         {% if match|knockout_match_has_confirmed_teams %}
-        {{ world_cup_match_card(match, highlight_winner=true) }}
+        {{ world_cup_match_card(match, football_root=football_root, edition=selected_edition, highlight_winner=true) }}
         {% endif %}
         {% endfor %}
       </div>
@@ -119,7 +119,7 @@
         <p class="world-cup-qualification-note">Top two qualify</p>
       </div>
       {% if block.table|length > 0 %}
-      {{ world_cup_overview_standings(block.table) }}
+      {{ world_cup_overview_standings(block.table, football_root, selected_edition) }}
       {% endif %}
       {% for day_group in block.matchday_groups %}
       <section class="football-day-group world-cup-overview-day-group" aria-label="{{ block.label }} {{ day_group.label }} fixtures">
@@ -128,7 +128,7 @@
         </div>
         <div class="football-grid world-cup-overview-fixture-grid">
           {% for match in day_group.matches %}
-          {{ world_cup_match_card(match) }}
+          {{ world_cup_match_card(match, football_root=football_root, edition=selected_edition) }}
           {% endfor %}
         </div>
       </section>

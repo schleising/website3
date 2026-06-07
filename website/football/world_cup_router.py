@@ -17,6 +17,7 @@ from .world_cup_db import (
     retrieve_group_matches,
     retrieve_group_standings,
     retrieve_knockout_matches,
+    retrieve_team_matches,
     world_cup_nav_available,
 )
 from .world_cup_utils import (
@@ -323,6 +324,47 @@ async def get_world_cup_group(
             "group_label": group_slug_to_label(slug),
             "standings": standings,
             "matchday_groups": matchday_groups,
+            **context,
+        },
+    )
+
+
+@world_cup_router.get("/teams/{team_id}", response_class=HTMLResponse)
+@world_cup_router.get("/teams/{team_id}/", response_class=HTMLResponse)
+async def get_world_cup_team_fixtures(
+    request: Request,
+    team_id: int,
+    edition: str | None = Query(default=None, pattern=r"^\d{4}$"),
+):
+    logging.debug("/football/world-cup/teams/%s: %s", team_id, request)
+    context = await _build_world_cup_context(request, edition)
+    selected_edition = context["selected_edition"]
+
+    team_name, matches = await retrieve_team_matches(selected_edition, team_id)
+    if len(matches) == 0:
+        raise HTTPException(status_code=404, detail="Team not found")
+
+    matches = update_match_timezone(matches)
+    date_groups = _build_date_groups(matches)
+    jump_targets = [
+        {"label": day_group["label"], "anchor": day_group["anchor_id"]}
+        for day_group in date_groups
+    ]
+
+    context["edition_switch_path"] = (
+        f"{context['football_root_path']}world-cup/teams/{team_id}/"
+    )
+
+    return TEMPLATES.TemplateResponse(
+        request,
+        "football/world-cup/team_fixtures.html",
+        {
+            "request": request,
+            "title": team_name,
+            "team_name": team_name,
+            "team_id": team_id,
+            "date_groups": date_groups,
+            "jump_targets": jump_targets,
             **context,
         },
     )
