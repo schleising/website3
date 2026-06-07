@@ -38,6 +38,7 @@ BRACKET_CARD_GRID_ROWS = 2
 THIRD_PLACE_LABEL_GRID_ROWS = 1
 THIRD_PLACE_GAP_GRID_ROWS = 2
 WC_STANDINGS_COLLECTION_PATTERN = re.compile(r"^wc_standings_(\d{4})$")
+WC_LIVE_STANDINGS_COLLECTION_PATTERN = re.compile(r"^live_wc_standings_(\d{4})$")
 WC_LIVE_DAYS_BEFORE_TODAY = 7
 WC_LIVE_DAYS_AFTER_TODAY = 6
 LONDON_TZ = ZoneInfo("Europe/London")
@@ -123,6 +124,10 @@ def _standings_collection_name(edition: str) -> str:
     return f"wc_standings_{edition}"
 
 
+def _live_standings_collection_name(edition: str) -> str:
+    return f"live_wc_standings_{edition}"
+
+
 async def _list_collection_names() -> list[str]:
     if mongodb.current_db is None:
         return []
@@ -160,6 +165,20 @@ def _get_matches_collection(edition: str):
 
 def _get_standings_collection(edition: str):
     return mongodb.get_collection(_standings_collection_name(edition))
+
+
+def _get_live_standings_collection(edition: str):
+    return mongodb.get_collection(_live_standings_collection_name(edition))
+
+
+async def _retrieve_group_standings_from_collection(
+    collection, edition: str
+) -> list[WorldCupGroupStandings]:
+    if collection is None:
+        return []
+
+    cursor = collection.find({"edition": edition}).sort("group_slug", ASCENDING)
+    return [WorldCupGroupStandings.model_validate(item) async for item in cursor]
 
 
 def _wc_live_scores_window() -> tuple[datetime, datetime]:
@@ -227,13 +246,25 @@ async def retrieve_group_matches(edition: str, group_slug: str) -> list[Match]:
     return [Match.model_validate(item) async for item in cursor]
 
 
-async def retrieve_group_standings(edition: str, group_slug: str) -> WorldCupGroupStandings | None:
+async def retrieve_group_standings(
+    edition: str, group_slug: str, *, prefer_live: bool = True
+) -> WorldCupGroupStandings | None:
+    slug = normalise_group_slug(group_slug)
+
+    if prefer_live:
+        live_collection = _get_live_standings_collection(edition)
+        if live_collection is not None:
+            document = await live_collection.find_one(
+                {"group_slug": slug, "edition": edition}
+            )
+            if document is not None:
+                return WorldCupGroupStandings.model_validate(document)
+
     collection = _get_standings_collection(edition)
     if collection is None:
         logging.error("No WC standings collection for edition %s", edition)
         return None
 
-    slug = normalise_group_slug(group_slug)
     document = await collection.find_one({"group_slug": slug, "edition": edition})
     if document is None:
         return None
@@ -241,18 +272,37 @@ async def retrieve_group_standings(edition: str, group_slug: str) -> WorldCupGro
     return WorldCupGroupStandings.model_validate(document)
 
 
-async def retrieve_all_group_standings(edition: str) -> list[WorldCupGroupStandings]:
-    collection = _get_standings_collection(edition)
-    if collection is None:
-        return []
+async def retrieve_all_group_standings(
+    edition: str, *, prefer_live: bool = True
+) -> list[WorldCupGroupStandings]:
+    if prefer_live:
+        live_standings = await _retrieve_group_standings_from_collection(
+            _get_live_standings_collection(edition),
+            edition,
+        )
+        if len(live_standings) > 0:
+            return live_standings
 
-    cursor = collection.find({"edition": edition}).sort("group_slug", ASCENDING)
-    standings = [WorldCupGroupStandings.model_validate(item) async for item in cursor]
+    standings = await _retrieve_group_standings_from_collection(
+        _get_standings_collection(edition),
+        edition,
+    )
 
     if len(standings) > 0:
         return standings
 
     return await _compute_group_standings_from_matches(edition)
+
+
+async def retrieve_live_group_standings(edition: str) -> list[WorldCupGroupStandings]:
+    live_standings = await _retrieve_group_standings_from_collection(
+        _get_live_standings_collection(edition),
+        edition,
+    )
+    if len(live_standings) > 0:
+        return live_standings
+
+    return await retrieve_all_group_standings(edition, prefer_live=False)
 
 
 async def _compute_group_standings_from_matches(edition: str) -> list[WorldCupGroupStandings]:

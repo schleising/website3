@@ -85,7 +85,7 @@ from .models import (
 )
 from .world_cup_db import (
     retrieve_live_score_matches,
-    retrieve_all_group_standings,
+    retrieve_live_group_standings,
 )
 from .world_cup_utils import WC_CURRENT_EDITION
 
@@ -1494,7 +1494,7 @@ async def websocket_endpoint(websocket: WebSocket):
                     or websocket.query_params.get("edition")
                     or WC_CURRENT_EDITION
                 )
-                standings_groups = await retrieve_all_group_standings(edition)
+                standings_groups = await retrieve_live_group_standings(edition)
                 payload = WorldCupStandingsList(
                     edition=edition,
                     groups=[
