@@ -50,6 +50,16 @@ def group_slug_to_label(group_slug: str) -> str:
     return f"Group {normalise_group_slug(group_slug).upper()}"
 
 
+def adjacent_group_slugs(group_slug: str) -> tuple[str, str]:
+    slug = normalise_group_slug(group_slug)
+    index = WC_GROUP_ORDER.index(slug)
+    group_count = len(WC_GROUP_ORDER)
+    return (
+        WC_GROUP_ORDER[(index - 1) % group_count],
+        WC_GROUP_ORDER[(index + 1) % group_count],
+    )
+
+
 def standings_label_to_slug(label: str) -> str:
     return label.removeprefix("Group ").strip().lower()
 

@@ -205,6 +205,58 @@
     }
 }
 
+.world-cup-group-page {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    gap: 0.55rem;
+    min-height: 0;
+}
+
+.world-cup-group-nav-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    flex: 0 0 auto;
+}
+
+.world-cup-group-nav-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    border: 0.0625rem solid rgba(158, 184, 215, 0.95);
+    border-radius: 999rem;
+    background: rgba(255, 255, 255, 0.72);
+    color: var(--brand-strong);
+    padding: 0.28rem 0.72rem;
+    font-size: 0.84rem;
+    font-weight: 700;
+    line-height: 1.2;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.world-cup-group-nav-btn:hover,
+.world-cup-group-nav-btn:focus-visible {
+    background: rgba(255, 255, 255, 0.86);
+    border-color: var(--brand-soft);
+    color: var(--brand-strong);
+}
+
+.world-cup-group-nav-btn-chevron {
+    font-size: 1.1rem;
+    line-height: 1;
+}
+
+.world-cup-group-nav-btn--prev {
+    margin-right: auto;
+}
+
+.world-cup-group-nav-btn--next {
+    margin-left: auto;
+}
+
 .world-cup-group-layout {
     display: flex;
     flex-direction: column;
@@ -368,8 +420,14 @@
 }
 
 @media screen and (max-width: 44rem) {
-    .world-cup-group-layout {
+    .world-cup-group-page {
         height: calc(100dvh - 9rem);
+        overflow: hidden;
+    }
+
+    .world-cup-group-layout {
+        flex: 1 1 auto;
+        min-height: 0;
         overflow: hidden;
     }
 

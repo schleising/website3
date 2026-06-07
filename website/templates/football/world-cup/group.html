@@ -4,6 +4,10 @@
 
 {% block title %}<title>Football - {{ group_label }} - World Cup {{ selected_edition }}</title>{% endblock %}
 
+{% block world_cup_head %}
+<script defer src="/js/football/world_cup_group_nav.js?v1.0.0"></script>
+{% endblock %}
+
 {% block header %}
 <h3 class="header-text football-header-text football-header-text--season">
   <span class="football-header-title">{{ group_label }} — {{ selected_edition_label }}</span>
@@ -54,7 +58,28 @@
 </section>
 {% endif %}
 
-<div class="world-cup-group-layout">
+<div class="world-cup-group-page">
+  <nav class="world-cup-group-nav-toolbar" aria-label="Group navigation">
+    <a
+      class="world-cup-group-nav-btn world-cup-group-nav-btn--prev"
+      href="{{ prev_group.url }}"
+      aria-label="Previous group: {{ prev_group.label }}"
+      data-world-cup-group-nav="prev"
+    >
+      <span class="world-cup-group-nav-btn-chevron" aria-hidden="true">‹</span>
+      <span class="world-cup-group-nav-btn-label">{{ prev_group.label }}</span>
+    </a>
+    <a
+      class="world-cup-group-nav-btn world-cup-group-nav-btn--next"
+      href="{{ next_group.url }}"
+      aria-label="Next group: {{ next_group.label }}"
+      data-world-cup-group-nav="next"
+    >
+      <span class="world-cup-group-nav-btn-label">{{ next_group.label }}</span>
+      <span class="world-cup-group-nav-btn-chevron" aria-hidden="true">›</span>
+    </a>
+  </nav>
+  <div class="world-cup-group-layout">
   <section class="world-cup-group-standings-panel" aria-label="{{ group_label }} standings">
     <p class="world-cup-qualification-note">Top two teams qualify for the knockout stage.</p>
     {% if standings.table|length > 0 %}
@@ -88,5 +113,6 @@
     <p class="world-cup-empty-state">No fixtures scheduled for this group yet.</p>
     {% endif %}
   </section>
+  </div>
 </div>
 {% endblock %}

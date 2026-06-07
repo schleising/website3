@@ -22,6 +22,7 @@ from .world_cup_db import (
 )
 from .world_cup_utils import (
     WC_GROUP_ORDER,
+    adjacent_group_slugs,
     edition_label,
     filter_confirmed_knockout_matches,
     group_slug_to_label,
@@ -314,6 +315,19 @@ async def get_world_cup_group(
         f"{context['football_root_path']}world-cup/groups/{slug}/"
     )
 
+    football_root_path = str(context["football_root_path"])
+    edition_query = f"?edition={selected_edition}"
+    prev_slug, next_slug = adjacent_group_slugs(slug)
+
+    def _group_nav_target(group_slug_value: str) -> dict:
+        return {
+            "slug": group_slug_value,
+            "label": group_slug_to_label(group_slug_value),
+            "url": (
+                f"{football_root_path}world-cup/groups/{group_slug_value}/{edition_query}"
+            ),
+        }
+
     return TEMPLATES.TemplateResponse(
         request,
         "football/world-cup/group.html",
@@ -322,6 +336,8 @@ async def get_world_cup_group(
             "title": group_slug_to_label(slug),
             "group_slug": slug,
             "group_label": group_slug_to_label(slug),
+            "prev_group": _group_nav_target(prev_slug),
+            "next_group": _group_nav_target(next_slug),
             "standings": standings,
             "matchday_groups": matchday_groups,
             **context,
