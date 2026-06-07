@@ -35,6 +35,7 @@ from .world_cup_utils import (
 
 WC_MATCH_COLLECTION_PATTERN = re.compile(r"^wc_matches_(\d{4})$")
 BRACKET_CARD_GRID_ROWS = 2
+THIRD_PLACE_LABEL_GRID_ROWS = 1
 WC_STANDINGS_COLLECTION_PATTERN = re.compile(r"^wc_standings_(\d{4})$")
 WC_LIVE_DAYS_BEFORE_TODAY = 7
 WC_LIVE_DAYS_AFTER_TODAY = 6
@@ -706,12 +707,15 @@ async def build_knockout_bracket_diagram(
         )
         if third_place_fixture is None:
             third_place_fixture = 103
+        third_place_span = (
+            THIRD_PLACE_LABEL_GRID_ROWS + BRACKET_CARD_GRID_ROWS
+        )
         third_place_slot = _bracket_slot_from_match(
             third_place_match,
             stage="THIRD_PLACE",
             fixture_number=third_place_fixture,
-            grid_row_start=1,
-            grid_row_span=1,
+            grid_row_start=grid_rows - third_place_span + 1,
+            grid_row_span=third_place_span,
         )
 
     return KnockoutBracketDiagram(

@@ -71,25 +71,28 @@
       {% endfor %}
       {% endif %}
       {% endfor %}
+      {% if bracket.third_place %}
+      {% set slot = bracket.third_place %}
+      {% set final_round_col = (bracket.rounds|length - 1) * 4 + 1 %}
+      <div
+        class="world-cup-bracket-slot-wrap world-cup-bracket-third-place-slot"
+        style="grid-column: {{ final_round_col }}; grid-row: {{ slot.grid_row_start }} / span {{ slot.grid_row_span }};"
+      >
+        <h4 class="world-cup-bracket-third-place-label">Third-place play-off</h4>
+        {{ world_cup_match_card(
+          slot.match,
+          football_root=football_root,
+          edition=edition,
+          highlight_winner=true,
+          home_label=slot.home_label,
+          away_label=slot.away_label,
+          home_crest=slot.home_crest,
+          away_crest=slot.away_crest
+        ) }}
+      </div>
+      {% endif %}
     </div>
   </div>
-
-  {% if bracket.third_place %}
-  {% set slot = bracket.third_place %}
-  <div class="world-cup-bracket-third-place">
-    <h4 class="world-cup-bracket-third-place-label">Third-place play-off</h4>
-    {{ world_cup_match_card(
-      slot.match,
-      football_root=football_root,
-      edition=edition,
-      highlight_winner=true,
-      home_label=slot.home_label,
-      away_label=slot.away_label,
-      home_crest=slot.home_crest,
-      away_crest=slot.away_crest
-    ) }}
-  </div>
-  {% endif %}
 </section>
 {% endif %}
 {% endmacro %}

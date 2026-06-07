@@ -583,34 +583,41 @@
 }
 
 .world-cup-bracket-slot-wrap .team-and-badge,
-.world-cup-bracket-third-place .team-and-badge {
+.world-cup-bracket-third-place-slot .team-and-badge {
     min-width: 0;
 }
 
 .world-cup-bracket-slot-wrap .team-badge,
-.world-cup-bracket-third-place .team-badge {
+.world-cup-bracket-third-place-slot .team-badge {
     flex-shrink: 0;
 }
 
 .world-cup-bracket-slot-wrap .team-name,
-.world-cup-bracket-third-place .team-name {
+.world-cup-bracket-third-place-slot .team-name {
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
-.world-cup-bracket-third-place {
-    display: flex;
+.world-cup-bracket-third-place-slot {
     flex-direction: column;
-    gap: 0.35rem;
-    width: var(--world-cup-bracket-round-width, 17rem);
-    min-width: var(--world-cup-bracket-round-width, 17rem);
-    max-width: var(--world-cup-bracket-round-width, 17rem);
+    align-items: stretch;
+    align-self: end;
+    justify-content: flex-end;
+    gap: 0.25rem;
+    padding-bottom: 0;
+}
+
+.world-cup-bracket-third-place-slot .score-widget {
+    flex: 0 0 auto;
 }
 
 .world-cup-bracket-third-place-label {
     margin: 0;
+    width: 100%;
+    flex: 0 0 auto;
     font-size: 0.82rem;
     color: var(--text-subtle, #5f6b7a);
+    text-align: center;
 }
 
 .world-cup-knockout-round-list-heading {
