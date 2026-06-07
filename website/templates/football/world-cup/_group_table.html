@@ -1,6 +1,6 @@
 {% from "football/world-cup/_team_link.html" import world_cup_team_name %}
-{% macro world_cup_group_table(table_rows, title, football_root, edition, compact=false, overview=false) %}
-<div class="table-container world-cup-table-container{% if compact %} world-cup-table-container--compact{% endif %}{% if overview %} world-cup-table-container--overview{% endif %}" data-team-count="{{ table_rows|length }}" style="--table-row-count: {{ table_rows|length }};">
+{% macro world_cup_group_table(table_rows, title, football_root, edition, compact=false, overview=false, group_slug='') %}
+<div class="table-container world-cup-table-container{% if compact %} world-cup-table-container--compact{% endif %}{% if overview %} world-cup-table-container--overview{% endif %}" data-team-count="{{ table_rows|length }}" data-group-slug="{{ group_slug }}" style="--table-row-count: {{ table_rows|length }};">
   <section class="table-grid world-cup-table-grid" role="table" aria-label="{{ title }}">
     <header class="table-grid-header sticky-header" role="rowgroup">
       <div class="header-row" role="row">
@@ -18,7 +18,7 @@
     </header>
     <div class="table-grid-body" role="rowgroup">
       {% for table_item in table_rows %}
-      <article class="data-row" role="row" data-team-id="{{ table_item.team.id }}">
+      <article class="data-row" role="row" data-team-id="{{ table_item.team.id }}" data-position="{{ table_item.position }}">
         <div class="row-data data table-cell position" role="cell">
           <div class="table-position-value">{{ table_item.position }}</div>
         </div>

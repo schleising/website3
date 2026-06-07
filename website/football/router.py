@@ -70,6 +70,8 @@ from .models import (
     MatchList,
     LiveTableList,
     LiveTableItem,
+    WorldCupStandingsList,
+    WorldCupStandingsGroupPayload,
     SimplifiedMatch,
     SimplifiedTableRow,
     SimplifiedFootballData,
@@ -81,6 +83,11 @@ from .models import (
     SubscriptionPreferencesResponse,
     SubscriptionOperationResponse,
 )
+from .world_cup_db import (
+    retrieve_live_score_matches,
+    retrieve_all_group_standings,
+)
+from .world_cup_utils import WC_CURRENT_EDITION
 
 TEMPLATES = Jinja2Templates("/app/templates")
 
@@ -1448,19 +1455,51 @@ async def websocket_endpoint(websocket: WebSocket):
 
             if msg["messageType"] == "get_scores":
                 logging.debug("Football Websocket")
-                if bool(msg.get("currentDayOnly", False)):
-                    start_date, end_date = _today_scores_window()
-                else:
-                    start_date, end_date = _live_scores_window()
 
-                matches = await retreive_matches(
-                    start_date, end_date, selected_season_key
-                )
+                if msg.get("competition") == "world-cup":
+                    edition = (
+                        msg.get("edition")
+                        or websocket.query_params.get("edition")
+                        or WC_CURRENT_EDITION
+                    )
+                    matches = await retrieve_live_score_matches(
+                        edition,
+                        current_day_only=bool(msg.get("currentDayOnly", False)),
+                    )
+                else:
+                    if bool(msg.get("currentDayOnly", False)):
+                        start_date, end_date = _today_scores_window()
+                    else:
+                        start_date, end_date = _live_scores_window()
+
+                    matches = await retreive_matches(
+                        start_date, end_date, selected_season_key
+                    )
+
                 logging.debug("Got matches")
 
                 match_list = MatchList(matches=matches)
 
                 await websocket.send_text(match_list.model_dump_json())
+
+            elif msg.get("messageType") == "get_world_cup_standings":
+                edition = (
+                    msg.get("edition")
+                    or websocket.query_params.get("edition")
+                    or WC_CURRENT_EDITION
+                )
+                standings_groups = await retrieve_all_group_standings(edition)
+                payload = WorldCupStandingsList(
+                    edition=edition,
+                    groups=[
+                        WorldCupStandingsGroupPayload(
+                            group_slug=group.group_slug,
+                            table=group.table,
+                        )
+                        for group in standings_groups
+                    ],
+                )
+                await websocket.send_text(payload.model_dump_json())
 
     except WebSocketDisconnect:
         logging.info("Football Socket Closed")

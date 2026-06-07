@@ -509,6 +509,16 @@ class LiveTableList(BaseModel):
     table_list: list[LiveTableItem]
 
 
+class WorldCupStandingsGroupPayload(BaseModel):
+    group_slug: str
+    table: list[TableItem]
+
+
+class WorldCupStandingsList(BaseModel):
+    edition: str
+    groups: list[WorldCupStandingsGroupPayload]
+
+
 # Simplified match type for gpt4
 class SimplifiedMatch(BaseModel):
     status: str

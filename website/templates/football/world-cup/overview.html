@@ -120,7 +120,7 @@
         <p class="world-cup-qualification-note">Top two qualify</p>
       </div>
       {% if block.table|length > 0 %}
-      {{ world_cup_overview_standings(block.table, football_root, selected_edition) }}
+      {{ world_cup_overview_standings(block.table, football_root, selected_edition, block.slug) }}
       {% endif %}
       {% for day_group in block.matchday_groups %}
       <section class="football-day-group world-cup-overview-day-group" aria-label="{{ block.label }} {{ day_group.label }} fixtures">

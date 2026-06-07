@@ -1,6 +1,6 @@
 {% from "football/world-cup/_team_link.html" import world_cup_team_name %}
-{% macro world_cup_overview_standings(table_rows, football_root, edition) %}
-<div class="world-cup-overview-standings" role="table" aria-label="Group standings">
+{% macro world_cup_overview_standings(table_rows, football_root, edition, group_slug='') %}
+<div class="world-cup-overview-standings" id="wc-standings-{{ group_slug }}" role="table" aria-label="Group standings" data-group-slug="{{ group_slug }}">
   <div class="world-cup-overview-standings-header" role="row">
     <span class="world-cup-overview-standings-pos" role="columnheader">Pos</span>
     <span class="world-cup-overview-standings-team" role="columnheader">Team</span>
@@ -12,8 +12,8 @@
     <span class="world-cup-overview-standings-stat" role="columnheader">Pts</span>
   </div>
   {% for table_item in table_rows %}
-  <div class="world-cup-overview-standings-row" role="row" data-team-id="{{ table_item.team.id }}">
-    <span class="world-cup-overview-standings-pos" role="cell">{{ table_item.position }}</span>
+  <div class="world-cup-overview-standings-row" role="row" data-team-id="{{ table_item.team.id }}" data-position="{{ table_item.position }}">
+    <span class="world-cup-overview-standings-pos world-cup-overview-standings-position" role="cell">{{ table_item.position }}</span>
     <span class="world-cup-overview-standings-team" role="cell">
       <img
         class="team-badge"
@@ -22,11 +22,11 @@
       >
       {{ world_cup_team_name(table_item.team, football_root, edition) }}
     </span>
-    <span class="world-cup-overview-standings-stat" role="cell">{{ table_item.played_games }}</span>
-    <span class="world-cup-overview-standings-stat world-cup-overview-standings-stat--desktop" role="cell">{{ table_item.won }}</span>
-    <span class="world-cup-overview-standings-stat world-cup-overview-standings-stat--desktop" role="cell">{{ table_item.draw }}</span>
-    <span class="world-cup-overview-standings-stat world-cup-overview-standings-stat--desktop" role="cell">{{ table_item.lost }}</span>
-    <span class="world-cup-overview-standings-stat" role="cell">{{ table_item.goal_difference }}</span>
+    <span class="world-cup-overview-standings-stat world-cup-overview-standings-played" role="cell">{{ table_item.played_games }}</span>
+    <span class="world-cup-overview-standings-stat world-cup-overview-standings-stat--desktop world-cup-overview-standings-won" role="cell">{{ table_item.won }}</span>
+    <span class="world-cup-overview-standings-stat world-cup-overview-standings-stat--desktop world-cup-overview-standings-draw" role="cell">{{ table_item.draw }}</span>
+    <span class="world-cup-overview-standings-stat world-cup-overview-standings-stat--desktop world-cup-overview-standings-lost" role="cell">{{ table_item.lost }}</span>
+    <span class="world-cup-overview-standings-stat world-cup-overview-standings-goal-difference" role="cell">{{ table_item.goal_difference }}</span>
     <span class="world-cup-overview-standings-stat world-cup-overview-standings-points" role="cell">{{ table_item.points }}</span>
   </div>
   {% endfor %}

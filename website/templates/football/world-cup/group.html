@@ -83,7 +83,7 @@
   <section class="world-cup-group-standings-panel" aria-label="{{ group_label }} standings">
     <p class="world-cup-qualification-note">Top two teams qualify for the knockout stage.</p>
     {% if standings.table|length > 0 %}
-    {{ world_cup_group_table(standings.table, group_label, football_root, selected_edition) }}
+    {{ world_cup_group_table(standings.table, group_label, football_root, selected_edition, group_slug=group_slug) }}
     {% else %}
     <p class="world-cup-empty-state">No teams assigned to this group yet.</p>
     {% endif %}

@@ -13,6 +13,7 @@ from .world_cup_db import (
     list_available_knockout_rounds,
     list_group_summaries,
     normalise_group_table,
+    retrieve_all_edition_matches,
     retrieve_all_group_standings,
     retrieve_group_matches,
     retrieve_group_standings,
@@ -69,9 +70,13 @@ async def _build_world_cup_context(
         if requested_edition in available_editions
         else current_edition
     )
+    is_current_edition = selected_edition == current_edition
 
     return {
         "world_cup_section": True,
+        "is_current_edition": is_current_edition,
+        "enable_live_updates": is_current_edition,
+        "enable_live_standings": False,
         "show_world_cup_nav": await world_cup_nav_available(),
         "show_edition_selector": show_edition_selector and len(available_editions) > 1,
         "available_editions": [
@@ -243,6 +248,8 @@ async def get_world_cup_overview(
 
     context["edition_switch_path"] = f"{context['football_root_path']}world-cup/"
 
+    context["enable_live_standings"] = context["is_current_edition"]
+
     return TEMPLATES.TemplateResponse(
         request,
         "football/world-cup/overview.html",
@@ -328,6 +335,8 @@ async def get_world_cup_group(
             ),
         }
 
+    context["enable_live_standings"] = context["is_current_edition"]
+
     return TEMPLATES.TemplateResponse(
         request,
         "football/world-cup/group.html",
@@ -406,6 +415,40 @@ async def get_world_cup_knockout_index(
             "request": request,
             "title": "World Cup Knockout",
             "knockout_rounds": knockout_rounds,
+            **context,
+        },
+    )
+
+
+@world_cup_router.get("/matches", response_class=HTMLResponse)
+@world_cup_router.get("/matches/", response_class=HTMLResponse)
+async def get_world_cup_all_matches(
+    request: Request,
+    edition: str | None = Query(default=None, pattern=r"^\d{4}$"),
+):
+    logging.debug("/football/world-cup/matches/: %s", request)
+    context = await _build_world_cup_context(request, edition)
+    selected_edition = context["selected_edition"]
+
+    matches = await retrieve_all_edition_matches(selected_edition)
+    matches = update_match_timezone(matches)
+    date_groups = _build_date_groups(matches)
+    jump_targets = [
+        {"label": day_group["label"], "anchor": day_group["anchor_id"]}
+        for day_group in date_groups
+    ]
+
+    context["edition_switch_path"] = f"{context['football_root_path']}world-cup/matches/"
+
+    return TEMPLATES.TemplateResponse(
+        request,
+        "football/world-cup/all_matches.html",
+        {
+            "request": request,
+            "title": "World Cup All Matches",
+            "date_groups": date_groups,
+            "jump_targets": jump_targets,
+            "all_matches_view": True,
             **context,
         },
     )

@@ -2,11 +2,13 @@ from __future__ import annotations
 
 import logging
 import re
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
+from zoneinfo import ZoneInfo
 
 from pydantic import BaseModel, Field
 from pymongo import ASCENDING
 
+from ..database.database import get_data_by_date
 from . import mongodb
 from .models import Match, MatchStatus, Table, TableItem, Team
 from .world_cup_utils import (
@@ -25,6 +27,9 @@ from .world_cup_utils import (
 
 WC_MATCH_COLLECTION_PATTERN = re.compile(r"^wc_matches_(\d{4})$")
 WC_STANDINGS_COLLECTION_PATTERN = re.compile(r"^wc_standings_(\d{4})$")
+WC_LIVE_DAYS_BEFORE_TODAY = 7
+WC_LIVE_DAYS_AFTER_TODAY = 6
+LONDON_TZ = ZoneInfo("Europe/London")
 
 
 class WorldCupGroupStandings(BaseModel):
@@ -101,6 +106,57 @@ def _get_matches_collection(edition: str):
 
 def _get_standings_collection(edition: str):
     return mongodb.get_collection(_standings_collection_name(edition))
+
+
+def _wc_live_scores_window() -> tuple[datetime, datetime]:
+    today_start = datetime.now(tz=LONDON_TZ).replace(
+        hour=0, minute=0, second=0, microsecond=0
+    )
+    window_start = today_start - timedelta(days=WC_LIVE_DAYS_BEFORE_TODAY)
+    window_end = (today_start + timedelta(days=WC_LIVE_DAYS_AFTER_TODAY)).replace(
+        hour=23, minute=59, second=59, microsecond=0
+    )
+    return window_start, window_end
+
+
+def _wc_today_scores_window() -> tuple[datetime, datetime]:
+    today_start = datetime.now(tz=LONDON_TZ).replace(
+        hour=0, minute=0, second=0, microsecond=0
+    )
+    today_end = today_start.replace(hour=23, minute=59, second=59, microsecond=0)
+    return today_start, today_end
+
+
+async def retrieve_matches_in_window(
+    edition: str, date_from: datetime, date_to: datetime
+) -> list[Match]:
+    collection = _get_matches_collection(edition)
+    if collection is None:
+        logging.error("No WC match collection for edition %s", edition)
+        return []
+
+    return await get_data_by_date(collection, "utc_date", date_from, date_to, Match)
+
+
+async def retrieve_live_score_matches(
+    edition: str, *, current_day_only: bool = False
+) -> list[Match]:
+    if current_day_only:
+        start_date, end_date = _wc_today_scores_window()
+    else:
+        start_date, end_date = _wc_live_scores_window()
+
+    return await retrieve_matches_in_window(edition, start_date, end_date)
+
+
+async def retrieve_all_edition_matches(edition: str) -> list[Match]:
+    collection = _get_matches_collection(edition)
+    if collection is None:
+        logging.error("No WC match collection for edition %s", edition)
+        return []
+
+    cursor = collection.find({}).sort("utc_date", ASCENDING)
+    return [Match.model_validate(item) async for item in cursor]
 
 
 async def retrieve_group_matches(edition: str, group_slug: str) -> list[Match]:
