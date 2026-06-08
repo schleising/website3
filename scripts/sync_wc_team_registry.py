@@ -122,35 +122,6 @@ def _commons_by_country(old_flag_registry: dict[str, dict[str, str]]) -> dict[st
     return {entry["country"]: entry["commons_file"] for entry in old_flag_registry.values()}
 
 
-def _remap_crests(
-    old_flag_registry: dict[str, dict[str, str]],
-    new_flag_registry: dict[str, dict[str, str]],
-) -> list[str]:
-    country_to_old_id = {
-        entry["country"]: team_id for team_id, entry in old_flag_registry.items()
-    }
-    # Snapshot originals first — ids can chain (A->B, B->C) during remapping.
-    originals: dict[str, bytes] = {}
-    for country, old_id in country_to_old_id.items():
-        source = CREST_DIR / f"{old_id}.svg"
-        if source.is_file():
-            originals[country] = source.read_bytes()
-
-    actions: list[str] = []
-    for new_id, entry in new_flag_registry.items():
-        country = entry["country"]
-        old_id = country_to_old_id.get(country)
-        if old_id is None or old_id == new_id:
-            continue
-        destination = CREST_DIR / f"{new_id}.svg"
-        if country in originals:
-            destination.write_bytes(originals[country])
-            actions.append(f"copied {old_id}.svg -> {new_id}.svg ({country})")
-        elif not destination.is_file():
-            actions.append(f"pending download: {new_id}.svg ({country})")
-    return actions
-
-
 def _remove_orphan_crests(flag_registry: dict[str, dict[str, str]]) -> list[str]:
     removed: list[str] = []
     valid_ids = set(flag_registry)
@@ -248,16 +219,15 @@ def main() -> int:
     if args.dry_run:
         return 0
 
-    crest_actions = _remap_crests(old_flag_registry, new_flag_registry)
     _save_json(TEAM_REGISTRY_PATH, new_team_registry)
     _save_json(FLAG_REGISTRY_PATH, new_flag_registry)
 
     print(f"Wrote {TEAM_REGISTRY_PATH.name} ({len(new_team_registry)} teams)")
     print(f"Wrote {FLAG_REGISTRY_PATH.name} ({len(new_flag_registry)} flags)")
-    if crest_actions:
-        print("Crest actions:")
-        for action in crest_actions:
-            print(f"  {action}")
+    print(
+        "Re-download flags after id changes: "
+        "python scripts/fetch_wc_flags.py --force"
+    )
 
     removed = _remove_orphan_crests(new_flag_registry)
     if removed:
