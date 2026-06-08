@@ -14,7 +14,7 @@ from .models import (
 from .subscription_scope import get_wc_subscribable_team_ids, merge_subscription_team_ids
 from .world_cup_db import (
     build_knockout_bracket_diagram,
-    build_overview_group_blocks,
+    build_overview_group_stage_sections,
     build_overview_knockout_sections,
     get_available_wc_editions,
     infer_current_wc_edition,
@@ -208,7 +208,7 @@ def _build_date_groups(matches: list) -> list[dict]:
 
 def _build_overview_jump_targets(
     knockout_sections: list,
-    group_blocks: list,
+    group_stage_sections: list,
 ) -> list[dict]:
     jump_targets: list[dict] = []
 
@@ -222,16 +222,33 @@ def _build_overview_jump_targets(
             }
         )
 
-    if len(group_blocks) > 0:
-        jump_targets.append({"label": "Group Stage", "anchor": "wc-group-stage"})
-
-    for block in group_blocks:
-        jump_targets.append(
-            {
-                "label": block.label,
-                "anchor": f"wc-group-{block.slug}",
-            }
+    for stage_section in group_stage_sections:
+        stage_label = (
+            stage_section["label"]
+            if isinstance(stage_section, dict)
+            else stage_section.label
         )
+        stage_anchor = (
+            stage_section["anchor"]
+            if isinstance(stage_section, dict)
+            else stage_section.anchor
+        )
+        jump_targets.append({"label": stage_label, "anchor": stage_anchor})
+
+        blocks = (
+            stage_section["blocks"]
+            if isinstance(stage_section, dict)
+            else stage_section.blocks
+        )
+        for block in blocks:
+            block_label = block["label"] if isinstance(block, dict) else block.label
+            block_slug = block["slug"] if isinstance(block, dict) else block.slug
+            jump_targets.append(
+                {
+                    "label": block_label,
+                    "anchor": f"wc-group-{block_slug}",
+                }
+            )
 
     return jump_targets
 
@@ -261,7 +278,7 @@ async def get_world_cup_overview(
     selected_edition = context["selected_edition"]
 
     knockout_rounds = await build_overview_knockout_sections(selected_edition)
-    group_blocks = await build_overview_group_blocks(selected_edition)
+    group_stage_sections = await build_overview_group_stage_sections(selected_edition)
 
     overview_knockout_sections: list[dict] = []
     for round_section in knockout_rounds:
@@ -297,15 +314,25 @@ async def get_world_cup_overview(
             }
         )
 
-    overview_group_blocks: list[dict] = []
-    for block in group_blocks:
-        matches = update_match_timezone(block.matches)
-        overview_group_blocks.append(
+    overview_group_stage_sections: list[dict] = []
+    for stage_section in group_stage_sections:
+        overview_blocks: list[dict] = []
+        for block in stage_section.blocks:
+            matches = update_match_timezone(block.matches)
+            overview_blocks.append(
+                {
+                    "slug": block.slug,
+                    "label": block.label,
+                    "table": block.table,
+                    "matchday_groups": _build_matchday_groups(matches),
+                }
+            )
+
+        overview_group_stage_sections.append(
             {
-                "slug": block.slug,
-                "label": block.label,
-                "table": block.table,
-                "matchday_groups": _build_matchday_groups(matches),
+                "label": stage_section.label,
+                "anchor": stage_section.anchor,
+                "blocks": overview_blocks,
             }
         )
 
@@ -323,10 +350,10 @@ async def get_world_cup_overview(
             **context,
             "title": "World Cup Overview",
             "overview_knockout_sections": overview_knockout_sections,
-            "group_blocks": overview_group_blocks,
+            "group_stage_sections": overview_group_stage_sections,
             "jump_targets": _build_overview_jump_targets(
                 overview_knockout_sections,
-                group_blocks,
+                overview_group_stage_sections,
             ),
         },
     )

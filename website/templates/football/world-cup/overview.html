@@ -101,13 +101,13 @@
   {% endif %}
   {% endfor %}
 
-  {% if group_blocks|length > 0 %}
-  <div class="world-cup-stage-divider" id="wc-group-stage" aria-hidden="true">
-    <span>Group Stage</span>
+  {% for stage_section in group_stage_sections|default([]) %}
+  <div class="world-cup-stage-divider" id="{{ stage_section.anchor }}" aria-hidden="true">
+    <span>{{ stage_section.label }}</span>
   </div>
 
   <div class="world-cup-overview-groups-grid">
-    {% for block in group_blocks %}
+    {% for block in stage_section.blocks %}
     <section
       class="world-cup-overview-group-block site-card"
       id="wc-group-{{ block.slug }}"
@@ -137,7 +137,7 @@
     </section>
     {% endfor %}
   </div>
-  {% endif %}
+  {% endfor %}
 </div>
 </div>
 {% endblock %}

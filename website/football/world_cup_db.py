@@ -16,6 +16,8 @@ from .world_cup_utils import (
     WC_GROUP_STAGE,
     edition_has_group_stage,
     group_order_for_edition,
+    group_stage_overview_anchor,
+    overview_group_stages_for_edition,
     WC_KNOCKOUT_OVERVIEW_ORDER,
     WC_KNOCKOUT_ROUNDS,
     bracket_team_label,
@@ -73,6 +75,12 @@ class WorldCupOverviewGroupBlock(BaseModel):
     label: str
     table: list[TableItem] = Field(default_factory=list)
     matches: list[Match] = Field(default_factory=list)
+
+
+class WorldCupOverviewGroupStageSection(BaseModel):
+    label: str
+    anchor: str
+    blocks: list[WorldCupOverviewGroupBlock] = Field(default_factory=list)
 
 
 class BracketSlot(BaseModel):
@@ -500,25 +508,49 @@ async def build_overview_knockout_sections(edition: str) -> list[WorldCupKnockou
     return sections
 
 
-async def build_overview_group_blocks(edition: str) -> list[WorldCupOverviewGroupBlock]:
+async def _build_overview_group_block(
+    edition: str,
+    group: WorldCupGroupStandings,
+) -> WorldCupOverviewGroupBlock:
+    matches = await retrieve_group_matches(edition, group.group_slug)
+    return WorldCupOverviewGroupBlock(
+        slug=group.group_slug,
+        label=group.group_label,
+        table=normalise_group_table(group.table, matches),
+        matches=matches,
+    )
+
+
+async def build_overview_group_stage_sections(
+    edition: str,
+) -> list[WorldCupOverviewGroupStageSection]:
     if not edition_has_group_stage(edition):
         return []
 
     standings = await retrieve_all_group_standings(edition)
-    blocks: list[WorldCupOverviewGroupBlock] = []
+    standings_by_slug = {group.group_slug: group for group in standings}
+    sections: list[WorldCupOverviewGroupStageSection] = []
 
-    for group in standings:
-        matches = await retrieve_group_matches(edition, group.group_slug)
-        blocks.append(
-            WorldCupOverviewGroupBlock(
-                slug=group.group_slug,
-                label=group.group_label,
-                table=normalise_group_table(group.table, matches),
-                matches=matches,
+    for stage_label, stage_slugs in overview_group_stages_for_edition(edition):
+        blocks: list[WorldCupOverviewGroupBlock] = []
+        for slug in stage_slugs:
+            group = standings_by_slug.get(slug)
+            if group is None:
+                continue
+            blocks.append(await _build_overview_group_block(edition, group))
+
+        if len(blocks) == 0:
+            continue
+
+        sections.append(
+            WorldCupOverviewGroupStageSection(
+                label=stage_label,
+                anchor=group_stage_overview_anchor(stage_label),
+                blocks=blocks,
             )
         )
 
-    return blocks
+    return sections
 
 
 async def list_group_summaries(edition: str) -> list[WorldCupGroupSummary]:

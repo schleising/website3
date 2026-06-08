@@ -31,15 +31,32 @@ WC_EDITION_REGISTRY: dict[str, dict[str, object]] = {
         "has_group_stage": True,
         "has_knockout_stage": False,
         "group_order": WC_1950_GROUP_ORDER,
+        "group_stages": (WC_GROUP_ORDER_4_NUMERIC, ("final",)),
+        "group_stage_labels": ("First round", "Final round"),
     },
     "1954": {"has_group_stage": True, "group_order": WC_GROUP_ORDER_4_NUMERIC},
     "1958": {"has_group_stage": True, "group_order": WC_GROUP_ORDER_4_NUMERIC},
     "1962": {"has_group_stage": True, "group_order": WC_GROUP_ORDER_4_NUMERIC},
     "1966": {"has_group_stage": True, "group_order": WC_GROUP_ORDER_4_NUMERIC},
     "1970": {"has_group_stage": True, "group_order": WC_GROUP_ORDER_4_NUMERIC},
-    "1974": {"has_group_stage": True, "group_order": ("1", "2", "3", "4", "a", "b")},
-    "1978": {"has_group_stage": True, "group_order": ("1", "2", "3", "4", "a", "b")},
-    "1982": {"has_group_stage": True, "group_order": WC_1982_GROUP_ORDER},
+    "1974": {
+        "has_group_stage": True,
+        "group_order": ("1", "2", "3", "4", "a", "b"),
+        "group_stages": (("1", "2", "3", "4"), ("a", "b")),
+        "group_stage_labels": ("First group stage", "Second group stage"),
+    },
+    "1978": {
+        "has_group_stage": True,
+        "group_order": ("1", "2", "3", "4", "a", "b"),
+        "group_stages": (("1", "2", "3", "4"), ("a", "b")),
+        "group_stage_labels": ("First group stage", "Second group stage"),
+    },
+    "1982": {
+        "has_group_stage": True,
+        "group_order": WC_1982_GROUP_ORDER,
+        "group_stages": (("1", "2", "3", "4", "5", "6"), ("a", "b", "c", "d")),
+        "group_stage_labels": ("First group stage", "Second group stage"),
+    },
     "1986": {"has_group_stage": True, "group_order": WC_GROUP_ORDER_6_LETTER},
     "1990": {"has_group_stage": True, "group_order": WC_GROUP_ORDER_6_LETTER},
     "1994": {"has_group_stage": True, "group_order": WC_GROUP_ORDER_6_LETTER},
@@ -167,6 +184,54 @@ def group_order_for_edition(edition: str) -> tuple[str, ...]:
         if isinstance(group_order, tuple) and len(group_order) > 0:
             return group_order
     return WC_GROUP_ORDER
+
+
+def group_stages_for_edition(edition: str) -> tuple[tuple[str, ...], ...]:
+    entry = WC_EDITION_REGISTRY.get(edition)
+    if entry is not None:
+        group_stages = entry.get("group_stages")
+        if isinstance(group_stages, tuple) and len(group_stages) > 0:
+            return group_stages
+    return (group_order_for_edition(edition),)
+
+
+def group_stage_labels_for_edition(edition: str) -> tuple[str, ...]:
+    entry = WC_EDITION_REGISTRY.get(edition)
+    if entry is not None:
+        labels = entry.get("group_stage_labels")
+        if isinstance(labels, tuple) and len(labels) > 0:
+            return labels
+    return ("Group Stage",)
+
+
+def overview_group_order_for_edition(edition: str) -> tuple[str, ...]:
+    """Later group phases first so the overview reads top-down toward the group stage."""
+    stages = group_stages_for_edition(edition)
+    if len(stages) <= 1:
+        return stages[0]
+    return tuple(slug for stage in reversed(stages) for slug in stage)
+
+
+def overview_group_stages_for_edition(
+    edition: str,
+) -> tuple[tuple[str, tuple[str, ...]], ...]:
+    """Return labelled group stages in overview order (later phases first)."""
+    stages = group_stages_for_edition(edition)
+    labels = group_stage_labels_for_edition(edition)
+    if len(labels) != len(stages):
+        labels = tuple(f"Group stage {index + 1}" for index in range(len(stages)))
+    if len(stages) <= 1:
+        return ((labels[0], stages[0]),)
+    return tuple(
+        (label, slugs) for label, slugs in zip(labels, stages, strict=True)
+    )[::-1]
+
+
+def group_stage_overview_anchor(label: str) -> str:
+    if label == "Group Stage":
+        return "wc-group-stage"
+    normalized = re.sub(r"[^a-z0-9]+", "-", label.casefold()).strip("-")
+    return f"wc-group-stage-{normalized}"
 
 WC_KNOCKOUT_ROUNDS: tuple[tuple[str, str, str], ...] = (
     ("LAST_32", "round-of-32", "Round of 32"),
