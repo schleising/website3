@@ -71,6 +71,11 @@ html.suppress-sidebar-hover .right-sidebar .sub-level-nav:hover:not(.is-current)
     padding: 0.3rem;
 }
 
+.left-sidebar,
+.right-sidebar {
+    user-select: none;
+}
+
 .left-sidebar .sub-level-nav-container,
 .right-sidebar .sub-level-nav-container {
     white-space: nowrap;
