@@ -81,6 +81,16 @@ def world_cup_edition_query(edition: str) -> str:
     return f"?edition={edition}"
 
 
+def world_cup_edition_switch_url_for_edition(switch_path: str, edition: str) -> str:
+    """Return an edition-switch URL for a different edition on the same page."""
+    return re.sub(
+        r"\?edition=\d{4}",
+        world_cup_edition_query(edition),
+        switch_path,
+        count=1,
+    )
+
+
 def edition_has_group_stage(edition: str) -> bool:
     entry = WC_EDITION_REGISTRY.get(edition)
     if entry is not None:

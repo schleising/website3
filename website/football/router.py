@@ -549,6 +549,8 @@ async def _build_football_season_context(
     request: Request,
     requested_season_key: str | None,
     show_selector: bool = True,
+    *,
+    season_switch_path: str | None = None,
 ) -> dict:
     mode_context = _build_football_mode_context(request)
     football_root_path = str(mode_context["football_root_path"])
@@ -594,8 +596,8 @@ async def _build_football_season_context(
         "current_season_short_label": get_season_short_label(current_season_key),
         "current_competition_name": get_competition_name_for_season(current_season_key),
         "is_current_season": selected_season_key == current_season_key,
-        "season_switch_path": table_root_url,
-        "current_season_url": f"{table_root_url}?season={current_season_key}",
+        "season_switch_path": season_switch_path or table_root_url,
+        "current_season_url": f"{season_switch_path or table_root_url}?season={current_season_key}",
         "live_scores_url": football_root_path,
         "table_url": f"{table_root_url}?season={selected_season_key}",
         "all_matches_url": f"{football_root_path}matches/all/?season={selected_season_key}",
@@ -722,7 +724,12 @@ async def get_all_season_matches(
     request: Request,
     season: str | None = Query(default=None),
 ):
-    season_context = await _build_football_season_context(request, season)
+    football_root_path = str(_build_football_mode_context(request)["football_root_path"])
+    season_context = await _build_football_season_context(
+        request,
+        season,
+        season_switch_path=f"{football_root_path}matches/all/",
+    )
     selected_season_key = season_context["selected_season_key"]
 
     start_date, end_date = _season_matches_window(selected_season_key)
@@ -760,7 +767,12 @@ async def get_months_matches(
     month: int = Path(ge=1, le=12),
     season: str | None = Query(default=None),
 ):
-    season_context = await _build_football_season_context(request, season)
+    football_root_path = str(_build_football_mode_context(request)["football_root_path"])
+    season_context = await _build_football_season_context(
+        request,
+        season,
+        season_switch_path=f"{football_root_path}matches/{month}/",
+    )
     selected_season_key = season_context["selected_season_key"]
 
     year = _year_for_season_month(month, selected_season_key)
@@ -800,7 +812,12 @@ async def get_teams_matches(
     team_id: int,
     season: str | None = Query(default=None),
 ):
-    season_context = await _build_football_season_context(request, season)
+    football_root_path = str(_build_football_mode_context(request)["football_root_path"])
+    season_context = await _build_football_season_context(
+        request,
+        season,
+        season_switch_path=f"{football_root_path}matches/team/{team_id}/",
+    )
     selected_season_key = season_context["selected_season_key"]
 
     team_name, matches = await retreive_team_matches(team_id, selected_season_key)

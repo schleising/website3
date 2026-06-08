@@ -51,6 +51,7 @@ from .world_cup_utils import (
     knockout_match_has_confirmed_teams,
     knockout_winner_side,
     world_cup_edition_query,
+    world_cup_edition_switch_url_for_edition,
     build_group_matchday_groups,
     world_cup_display_score,
     world_cup_score_annotation,
@@ -89,6 +90,14 @@ def _redirect_to_world_cup_overview(context: dict) -> RedirectResponse:
     return RedirectResponse(url=overview_url, status_code=302)
 
 
+def _assign_edition_switch_path(context: dict, switch_path: str) -> None:
+    context["edition_switch_path"] = switch_path
+    context["current_edition_url"] = world_cup_edition_switch_url_for_edition(
+        switch_path,
+        str(context["current_edition"]),
+    )
+
+
 async def _build_world_cup_context(
     request: Request,
     requested_edition: str | None,
@@ -115,7 +124,7 @@ async def _build_world_cup_context(
     has_group_playoffs = await edition_has_group_playoff_matches(selected_edition)
     edition_query = world_cup_edition_query(selected_edition)
 
-    return {
+    context = {
         "world_cup_section": True,
         "is_current_edition": is_current_edition,
         "has_group_stage": has_group_stage,
@@ -141,11 +150,6 @@ async def _build_world_cup_context(
         "selected_edition_label": edition_label(selected_edition),
         "current_edition": current_edition,
         "edition_query": edition_query,
-        "edition_switch_path": (
-            f"{world_cup_root}groups/{edition_query}"
-            if has_group_stage
-            else f"{world_cup_root}{edition_query}"
-        ),
         "world_cup_overview_url": f"{world_cup_root}{edition_query}",
         "world_cup_groups_url": f"{world_cup_root}groups/{edition_query}",
         "world_cup_playoffs_url": f"{world_cup_root}playoffs/{edition_query}",
@@ -155,6 +159,13 @@ async def _build_world_cup_context(
         "world_cup_subscriptions_url": f"{world_cup_root}subscriptions/{edition_query}",
         **mode_context,
     }
+    default_switch_path = (
+        f"{world_cup_root}groups/{edition_query}"
+        if has_group_stage
+        else f"{world_cup_root}{edition_query}"
+    )
+    _assign_edition_switch_path(context, default_switch_path)
+    return context
 
 
 def _subscription_router_helpers():
@@ -382,8 +393,9 @@ async def get_world_cup_overview(
             }
         )
 
-    context["edition_switch_path"] = (
-        f"{context['football_root_path']}world-cup/{context['edition_query']}"
+    _assign_edition_switch_path(
+        context,
+        f"{context['football_root_path']}world-cup/{context['edition_query']}",
     )
 
     context["enable_live_standings"] = context["is_current_edition"]
@@ -421,8 +433,9 @@ async def get_world_cup_groups_index(
 
     group_stage_sections = await list_group_stage_summary_sections(selected_edition)
 
-    context["edition_switch_path"] = (
-        f"{context['football_root_path']}world-cup/groups/{context['edition_query']}"
+    _assign_edition_switch_path(
+        context,
+        f"{context['football_root_path']}world-cup/groups/{context['edition_query']}",
     )
 
     return TEMPLATES.TemplateResponse(
@@ -463,8 +476,9 @@ async def get_world_cup_playoffs(
             }
         )
 
-    context["edition_switch_path"] = (
-        f"{context['football_root_path']}world-cup/playoffs/{context['edition_query']}"
+    _assign_edition_switch_path(
+        context,
+        f"{context['football_root_path']}world-cup/playoffs/{context['edition_query']}",
     )
 
     return TEMPLATES.TemplateResponse(
@@ -514,8 +528,9 @@ async def get_world_cup_group(
     standings = standings.model_copy(update={"table": prepared_table})
     matchday_groups = _build_matchday_groups(matches)
 
-    context["edition_switch_path"] = (
-        f"{context['football_root_path']}world-cup/groups/{slug}/{context['edition_query']}"
+    _assign_edition_switch_path(
+        context,
+        f"{context['football_root_path']}world-cup/groups/{slug}/{context['edition_query']}",
     )
 
     football_root_path = str(context["football_root_path"])
@@ -572,8 +587,9 @@ async def get_world_cup_team_fixtures(
         for day_group in date_groups
     ]
 
-    context["edition_switch_path"] = (
-        f"{context['football_root_path']}world-cup/teams/{team_id}/{context['edition_query']}"
+    _assign_edition_switch_path(
+        context,
+        f"{context['football_root_path']}world-cup/teams/{team_id}/{context['edition_query']}",
     )
 
     return TEMPLATES.TemplateResponse(
@@ -608,8 +624,9 @@ async def get_world_cup_knockout_index(
         football_root=str(context["football_root_path"]),
     )
 
-    context["edition_switch_path"] = (
-        f"{context['football_root_path']}world-cup/knockout/{context['edition_query']}"
+    _assign_edition_switch_path(
+        context,
+        f"{context['football_root_path']}world-cup/knockout/{context['edition_query']}",
     )
 
     return TEMPLATES.TemplateResponse(
@@ -640,8 +657,9 @@ async def get_world_cup_summary(
     synopsis = edition_summary_synopsis(selected_edition)
     rules_sections = edition_summary_rules_sections(selected_edition)
 
-    context["edition_switch_path"] = (
-        f"{context['football_root_path']}world-cup/summary/{context['edition_query']}"
+    _assign_edition_switch_path(
+        context,
+        f"{context['football_root_path']}world-cup/summary/{context['edition_query']}",
     )
 
     return TEMPLATES.TemplateResponse(
@@ -676,8 +694,9 @@ async def get_world_cup_all_matches(
         for day_group in date_groups
     ]
 
-    context["edition_switch_path"] = (
-        f"{context['football_root_path']}world-cup/matches/{context['edition_query']}"
+    _assign_edition_switch_path(
+        context,
+        f"{context['football_root_path']}world-cup/matches/{context['edition_query']}",
     )
 
     return TEMPLATES.TemplateResponse(
@@ -821,8 +840,9 @@ async def get_world_cup_knockout_round(
     matches = update_match_timezone(matches)
     date_groups = _build_date_groups(matches)
 
-    context["edition_switch_path"] = (
-        f"{context['football_root_path']}world-cup/knockout/{slug}/{context['edition_query']}"
+    _assign_edition_switch_path(
+        context,
+        f"{context['football_root_path']}world-cup/knockout/{slug}/{context['edition_query']}",
     )
 
     return TEMPLATES.TemplateResponse(

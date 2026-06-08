@@ -299,10 +299,12 @@
 .football-season-popup-actions {
     display: flex;
     flex-wrap: wrap;
+    align-items: center;
     gap: 0.55rem;
 }
 
 .football-season-current-btn {
+    margin-left: auto;
     text-decoration: none;
     display: inline-flex;
     align-items: center;
