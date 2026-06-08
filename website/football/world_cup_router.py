@@ -41,6 +41,7 @@ from .world_cup_utils import (
     knockout_match_has_confirmed_teams,
     knockout_winner_side,
     world_cup_edition_query,
+    build_group_matchday_groups,
     world_cup_display_score,
     world_cup_score_annotation,
     normalise_group_slug,
@@ -149,6 +150,9 @@ def _subscription_router_helpers():
 
 
 def _build_matchday_groups(matches: list) -> list[dict]:
+    if len(matches) > 0 and matches[0].stage == "GROUP_STAGE":
+        return build_group_matchday_groups(matches)
+
     grouped_matches: dict[int, list] = {}
 
     for match in matches:

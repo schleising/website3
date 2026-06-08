@@ -31,6 +31,7 @@ from .world_cup_utils import (
     group_order_for_edition,
     group_slug_to_enum,
     group_slug_to_label,
+    normalize_group_stage_matchdays,
     standings_label_to_slug,
 )
 
@@ -295,7 +296,7 @@ def openfootball_matches_to_models(edition: str) -> list[Match]:
                     raw_match.get("time"),
                 ),
                 status=MatchStatus.finished if has_result else MatchStatus.scheduled,
-                matchday=matchday,
+                matchday=matchday if stage != WC_GROUP_STAGE else None,
                 stage=stage,
                 group=group_enum,
                 last_updated=now,
@@ -307,7 +308,7 @@ def openfootball_matches_to_models(edition: str) -> list[Match]:
             )
         )
 
-    return matches
+    return normalize_group_stage_matchdays(matches)
 
 
 class _GroupStats(BaseModel):

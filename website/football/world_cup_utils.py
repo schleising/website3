@@ -36,6 +36,90 @@ def edition_has_group_stage(edition: str) -> bool:
     return True
 
 
+def _group_matches_into_date_buckets(matches: list["Match"]) -> list[list["Match"]]:
+    sorted_matches = sorted(matches, key=lambda match: match.utc_date)
+    date_buckets: list[list["Match"]] = []
+    current_date = None
+    current_bucket: list["Match"] = []
+
+    for match in sorted_matches:
+        match_date = match.utc_date.date()
+        if match_date != current_date:
+            if current_bucket:
+                date_buckets.append(current_bucket)
+            current_bucket = [match]
+            current_date = match_date
+        else:
+            current_bucket.append(match)
+
+    if current_bucket:
+        date_buckets.append(current_bucket)
+
+    return date_buckets
+
+
+def group_matchday_buckets(matches: list["Match"]) -> list[tuple[int, list["Match"]]]:
+    """Group fixtures into per-group Matchday 1, 2 and 3 buckets."""
+    if len(matches) == 0:
+        return []
+
+    date_buckets = _group_matches_into_date_buckets(matches)
+    buckets: list[tuple[int, list["Match"]]] = []
+    matchday = 1
+    index = 0
+
+    while index < len(date_buckets):
+        bucket = date_buckets[index]
+        if (
+            len(bucket) == 1
+            and index + 1 < len(date_buckets)
+            and len(date_buckets[index + 1]) == 1
+        ):
+            combined = sorted(
+                bucket + date_buckets[index + 1],
+                key=lambda match: match.utc_date,
+            )
+            buckets.append((matchday, combined))
+            index += 2
+        else:
+            buckets.append((matchday, bucket))
+            index += 1
+        matchday += 1
+
+    return buckets
+
+
+def build_group_matchday_groups(matches: list["Match"]) -> list[dict]:
+    return [
+        {
+            "label": f"Matchday {matchday}",
+            "matches": bucket_matches,
+        }
+        for matchday, bucket_matches in group_matchday_buckets(matches)
+    ]
+
+
+def normalize_group_stage_matchdays(matches: list["Match"]) -> list["Match"]:
+    """Rewrite group-stage matchday values to 1, 2 and 3 within each group."""
+    group_matches: dict[str, list["Match"]] = {}
+    other_matches: list["Match"] = []
+
+    for match in matches:
+        if match.stage == WC_GROUP_STAGE and match.group is not None:
+            group_matches.setdefault(match.group, []).append(match)
+        else:
+            other_matches.append(match)
+
+    normalized = list(other_matches)
+    for group_matches_list in group_matches.values():
+        for matchday, bucket_matches in group_matchday_buckets(group_matches_list):
+            for match in bucket_matches:
+                normalized.append(match.model_copy(update={"matchday": matchday}))
+
+    normalized.sort(key=lambda match: match.utc_date)
+    return normalized
+
+
 def group_order_for_edition(edition: str) -> tuple[str, ...]:
     entry = WC_EDITION_REGISTRY.get(edition)
     if entry is not None:
