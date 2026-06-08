@@ -1,87 +1,342 @@
 {
-  "764": {"country": "Argentina", "commons_file": "Flag_of_Argentina.svg"},
-  "802": {"country": "Australia", "commons_file": "Flag_of_Australia.svg"},
-  "758": {"country": "Austria", "commons_file": "Flag_of_Austria.svg"},
-  "805": {"country": "Belgium", "commons_file": "Flag_of_Belgium.svg"},
-  "7825": {"country": "Bolivia", "commons_file": "Flag_of_Bolivia.svg"},
-  "759": {"country": "Brazil", "commons_file": "Flag_of_Brazil.svg"},
-  "7827": {"country": "Algeria", "commons_file": "Flag_of_Algeria.svg"},
-  "9110": {"country": "Angola", "commons_file": "Flag_of_Angola.svg"},
-  "9111": {"country": "Bosnia-Herzegovina", "commons_file": "Flag_of_Bosnia_and_Herzegovina.svg"},
-  "9112": {"country": "Bulgaria", "commons_file": "Flag_of_Bulgaria.svg"},
-  "792": {"country": "Cameroon", "commons_file": "Flag_of_Cameroon.svg"},
-  "816": {"country": "Canada", "commons_file": "Flag_of_Canada.svg"},
-  "7819": {"country": "Chile", "commons_file": "Flag_of_Chile.svg"},
-  "9113": {"country": "China", "commons_file": "Flag_of_the_People's_Republic_of_China.svg"},
-  "7830": {"country": "Colombia", "commons_file": "Flag_of_Colombia.svg"},
-  "815": {"country": "Costa Rica", "commons_file": "Flag_of_Costa_Rica.svg"},
-  "799": {"country": "Croatia", "commons_file": "Flag_of_Croatia.svg"},
-  "9114": {"country": "Cuba", "commons_file": "Flag_of_Cuba.svg"},
-  "822": {"country": "Czech Republic", "commons_file": "Flag_of_the_Czech_Republic.svg"},
-  "1935": {"country": "Czechoslovakia", "commons_file": "Flag_of_Czechoslovakia.svg"},
-  "9115": {"country": "Côte d'Ivoire", "commons_file": "Flag_of_Cote_d'Ivoire.svg"},
-  "778": {"country": "Denmark", "commons_file": "Flag_of_Denmark.svg"},
-  "9116": {"country": "Dutch East Indies", "commons_file": "Flag_of_the_Netherlands.svg"},
-  "9117": {"country": "East Germany", "commons_file": "Flag_of_East_Germany.svg"},
-  "840": {"country": "Ecuador", "commons_file": "Flag_of_Ecuador.svg"},
-  "818": {"country": "Egypt", "commons_file": "Flag_of_Egypt.svg"},
-  "9118": {"country": "El Salvador", "commons_file": "Flag_of_El_Salvador.svg"},
-  "770": {"country": "England", "commons_file": "Flag_of_England.svg"},
-  "773": {"country": "France", "commons_file": "Flag_of_France.svg"},
-  "761": {"country": "Germany", "commons_file": "Flag_of_Germany.svg"},
-  "9119": {"country": "Greece", "commons_file": "Flag_of_Greece.svg"},
-  "9120": {"country": "Haiti", "commons_file": "Flag_of_Haiti.svg"},
-  "9121": {"country": "Honduras", "commons_file": "Flag_of_Honduras.svg"},
-  "1930": {"country": "Hungary", "commons_file": "Flag_of_Hungary.svg"},
-  "9122": {"country": "Iceland", "commons_file": "Flag_of_Iceland.svg"},
-  "769": {"country": "Iran", "commons_file": "Flag_of_Iran.svg"},
-  "9123": {"country": "Iraq", "commons_file": "Flag_of_Iraq.svg"},
-  "9124": {"country": "Ireland", "commons_file": "Flag_of_Ireland.svg"},
-  "9125": {"country": "Israel", "commons_file": "Flag_of_Israel.svg"},
-  "1934": {"country": "Italy", "commons_file": "Flag_of_Italy.svg"},
-  "9126": {"country": "Jamaica", "commons_file": "Flag_of_Jamaica.svg"},
-  "783": {"country": "Japan", "commons_file": "Flag_of_Japan.svg"},
-  "9127": {"country": "Kuwait", "commons_file": "Flag_of_Kuwait.svg"},
-  "765": {"country": "Mexico", "commons_file": "Flag_of_Mexico.svg"},
-  "791": {"country": "Morocco", "commons_file": "Flag_of_Morocco.svg"},
-  "803": {"country": "Netherlands", "commons_file": "Flag_of_the_Netherlands.svg"},
-  "9128": {"country": "New Zealand", "commons_file": "Flag_of_New_Zealand.svg"},
-  "9129": {"country": "Nigeria", "commons_file": "Flag_of_Nigeria.svg"},
-  "9130": {"country": "North Korea", "commons_file": "Flag_of_North_Korea.svg"},
-  "9131": {"country": "Northern Ireland", "commons_file": "Flag_of_Northern_Ireland.svg"},
-  "9132": {"country": "Norway", "commons_file": "Flag_of_Norway.svg"},
-  "9133": {"country": "Panama", "commons_file": "Flag_of_Panama.svg"},
-  "7831": {"country": "Paraguay", "commons_file": "Flag_of_Paraguay.svg"},
-  "7828": {"country": "Peru", "commons_file": "Flag_of_Peru.svg"},
-  "8062": {"country": "Poland", "commons_file": "Flag_of_Poland.svg"},
-  "801": {"country": "Portugal", "commons_file": "Flag_of_Portugal.svg"},
-  "9460": {"country": "Qatar", "commons_file": "Flag_of_Qatar.svg"},
-  "774": {"country": "Romania", "commons_file": "Flag_of_Romania.svg"},
-  "784": {"country": "Russia", "commons_file": "Flag_of_Russia.svg"},
-  "8030": {"country": "Saudi Arabia", "commons_file": "Flag_of_Saudi_Arabia.svg"},
-  "9134": {"country": "Scotland", "commons_file": "Flag_of_Scotland.svg"},
-  "828": {"country": "Senegal", "commons_file": "Flag_of_Senegal.svg"},
-  "8873": {"country": "Serbia", "commons_file": "Flag_of_Serbia.svg"},
-  "9135": {"country": "Serbia and Montenegro", "commons_file": "Flag_of_Serbia_and_Montenegro.svg"},
-  "9136": {"country": "Slovakia", "commons_file": "Flag_of_Slovakia.svg"},
-  "9137": {"country": "Slovenia", "commons_file": "Flag_of_Slovenia.svg"},
-  "9138": {"country": "South Africa", "commons_file": "Flag_of_South_Africa.svg"},
-  "771": {"country": "South Korea", "commons_file": "Flag_of_South_Korea.svg"},
-  "9139": {"country": "Soviet Union", "commons_file": "Flag_of_the_Soviet_Union.svg"},
-  "760": {"country": "Spain", "commons_file": "Flag_of_Spain.svg"},
-  "825": {"country": "Sweden", "commons_file": "Flag_of_Sweden.svg"},
-  "836": {"country": "Switzerland", "commons_file": "Flag_of_Switzerland.svg"},
-  "9140": {"country": "Togo", "commons_file": "Flag_of_Togo.svg"},
-  "9141": {"country": "Trinidad and Tobago", "commons_file": "Flag_of_Trinidad_and_Tobago.svg"},
-  "798": {"country": "Tunisia", "commons_file": "Flag_of_Tunisia.svg"},
-  "9142": {"country": "Turkey", "commons_file": "Flag_of_Turkey.svg"},
-  "8110": {"country": "Ukraine", "commons_file": "Flag_of_Ukraine.svg"},
-  "9143": {"country": "United Arab Emirates", "commons_file": "Flag_of_the_United_Arab_Emirates.svg"},
-  "804": {"country": "United States", "commons_file": "Flag_of_the_United_States.svg"},
-  "779": {"country": "Uruguay", "commons_file": "Flag_of_Uruguay.svg"},
-  "8601": {"country": "Wales", "commons_file": "Flag_of_Wales.svg"},
-  "9144": {"country": "West Germany", "commons_file": "Flag_of_West_Germany.svg"},
-  "9145": {"country": "Yugoslavia", "commons_file": "Flag_of_Yugoslavia.svg"},
-  "9146": {"country": "Zaire", "commons_file": "Flag_of_Zaire.svg"},
-  "788": {"country": "Ghana", "commons_file": "Flag_of_Ghana.svg"}
+  "778": {
+    "country": "Algeria",
+    "commons_file": "Flag_of_Algeria.svg"
+  },
+  "9110": {
+    "country": "Angola",
+    "commons_file": "Flag_of_Angola.svg"
+  },
+  "762": {
+    "country": "Argentina",
+    "commons_file": "Flag_of_Argentina.svg"
+  },
+  "779": {
+    "country": "Australia",
+    "commons_file": "Flag_of_Australia.svg"
+  },
+  "816": {
+    "country": "Austria",
+    "commons_file": "Flag_of_Austria.svg"
+  },
+  "805": {
+    "country": "Belgium",
+    "commons_file": "Flag_of_Belgium.svg"
+  },
+  "9111": {
+    "country": "Bolivia",
+    "commons_file": "Flag_of_Bolivia.svg"
+  },
+  "1060": {
+    "country": "Bosnia-Herzegovina",
+    "commons_file": "Flag_of_Bosnia_and_Herzegovina.svg"
+  },
+  "764": {
+    "country": "Brazil",
+    "commons_file": "Flag_of_Brazil.svg"
+  },
+  "9112": {
+    "country": "Bulgaria",
+    "commons_file": "Flag_of_Bulgaria.svg"
+  },
+  "9115": {
+    "country": "Cameroon",
+    "commons_file": "Flag_of_Cameroon.svg"
+  },
+  "828": {
+    "country": "Canada",
+    "commons_file": "Flag_of_Canada.svg"
+  },
+  "9120": {
+    "country": "Chile",
+    "commons_file": "Flag_of_Chile.svg"
+  },
+  "9113": {
+    "country": "China",
+    "commons_file": "Flag_of_the_People's_Republic_of_China.svg"
+  },
+  "818": {
+    "country": "Colombia",
+    "commons_file": "Flag_of_Colombia.svg"
+  },
+  "9123": {
+    "country": "Costa Rica",
+    "commons_file": "Flag_of_Costa_Rica.svg"
+  },
+  "799": {
+    "country": "Croatia",
+    "commons_file": "Flag_of_Croatia.svg"
+  },
+  "9114": {
+    "country": "Cuba",
+    "commons_file": "Flag_of_Cuba.svg"
+  },
+  "798": {
+    "country": "Czech Republic",
+    "commons_file": "Flag_of_the_Czech_Republic.svg"
+  },
+  "9147": {
+    "country": "Czechoslovakia",
+    "commons_file": "Flag_of_Czechoslovakia.svg"
+  },
+  "1935": {
+    "country": "Côte d'Ivoire",
+    "commons_file": "Flag_of_Cote_d'Ivoire.svg"
+  },
+  "9128": {
+    "country": "Denmark",
+    "commons_file": "Flag_of_Denmark.svg"
+  },
+  "9116": {
+    "country": "Dutch East Indies",
+    "commons_file": "Flag_of_the_Netherlands.svg"
+  },
+  "9117": {
+    "country": "East Germany",
+    "commons_file": "Flag_of_East_Germany.svg"
+  },
+  "791": {
+    "country": "Ecuador",
+    "commons_file": "Flag_of_Ecuador.svg"
+  },
+  "825": {
+    "country": "Egypt",
+    "commons_file": "Flag_of_Egypt.svg"
+  },
+  "9118": {
+    "country": "El Salvador",
+    "commons_file": "Flag_of_El_Salvador.svg"
+  },
+  "770": {
+    "country": "England",
+    "commons_file": "Flag_of_England.svg"
+  },
+  "773": {
+    "country": "France",
+    "commons_file": "Flag_of_France.svg"
+  },
+  "759": {
+    "country": "Germany",
+    "commons_file": "Flag_of_Germany.svg"
+  },
+  "763": {
+    "country": "Ghana",
+    "commons_file": "Flag_of_Ghana.svg"
+  },
+  "9119": {
+    "country": "Greece",
+    "commons_file": "Flag_of_Greece.svg"
+  },
+  "836": {
+    "country": "Haiti",
+    "commons_file": "Flag_of_Haiti.svg"
+  },
+  "9121": {
+    "country": "Honduras",
+    "commons_file": "Flag_of_Honduras.svg"
+  },
+  "9132": {
+    "country": "Hungary",
+    "commons_file": "Flag_of_Hungary.svg"
+  },
+  "9122": {
+    "country": "Iceland",
+    "commons_file": "Flag_of_Iceland.svg"
+  },
+  "840": {
+    "country": "Iran",
+    "commons_file": "Flag_of_Iran.svg"
+  },
+  "8062": {
+    "country": "Iraq",
+    "commons_file": "Flag_of_Iraq.svg"
+  },
+  "9124": {
+    "country": "Ireland",
+    "commons_file": "Flag_of_Ireland.svg"
+  },
+  "9125": {
+    "country": "Israel",
+    "commons_file": "Flag_of_Israel.svg"
+  },
+  "9133": {
+    "country": "Italy",
+    "commons_file": "Flag_of_Italy.svg"
+  },
+  "9126": {
+    "country": "Jamaica",
+    "commons_file": "Flag_of_Jamaica.svg"
+  },
+  "766": {
+    "country": "Japan",
+    "commons_file": "Flag_of_Japan.svg"
+  },
+  "9127": {
+    "country": "Kuwait",
+    "commons_file": "Flag_of_Kuwait.svg"
+  },
+  "769": {
+    "country": "Mexico",
+    "commons_file": "Flag_of_Mexico.svg"
+  },
+  "815": {
+    "country": "Morocco",
+    "commons_file": "Flag_of_Morocco.svg"
+  },
+  "8601": {
+    "country": "Netherlands",
+    "commons_file": "Flag_of_the_Netherlands.svg"
+  },
+  "783": {
+    "country": "New Zealand",
+    "commons_file": "Flag_of_New_Zealand.svg"
+  },
+  "9129": {
+    "country": "Nigeria",
+    "commons_file": "Flag_of_Nigeria.svg"
+  },
+  "9130": {
+    "country": "North Korea",
+    "commons_file": "Flag_of_North_Korea.svg"
+  },
+  "9131": {
+    "country": "Northern Ireland",
+    "commons_file": "Flag_of_Northern_Ireland.svg"
+  },
+  "8872": {
+    "country": "Norway",
+    "commons_file": "Flag_of_Norway.svg"
+  },
+  "1836": {
+    "country": "Panama",
+    "commons_file": "Flag_of_Panama.svg"
+  },
+  "761": {
+    "country": "Paraguay",
+    "commons_file": "Flag_of_Paraguay.svg"
+  },
+  "9134": {
+    "country": "Peru",
+    "commons_file": "Flag_of_Peru.svg"
+  },
+  "9138": {
+    "country": "Poland",
+    "commons_file": "Flag_of_Poland.svg"
+  },
+  "765": {
+    "country": "Portugal",
+    "commons_file": "Flag_of_Portugal.svg"
+  },
+  "8030": {
+    "country": "Qatar",
+    "commons_file": "Flag_of_Qatar.svg"
+  },
+  "9142": {
+    "country": "Romania",
+    "commons_file": "Flag_of_Romania.svg"
+  },
+  "9148": {
+    "country": "Russia",
+    "commons_file": "Flag_of_Russia.svg"
+  },
+  "801": {
+    "country": "Saudi Arabia",
+    "commons_file": "Flag_of_Saudi_Arabia.svg"
+  },
+  "8873": {
+    "country": "Scotland",
+    "commons_file": "Flag_of_Scotland.svg"
+  },
+  "804": {
+    "country": "Senegal",
+    "commons_file": "Flag_of_Senegal.svg"
+  },
+  "9149": {
+    "country": "Serbia",
+    "commons_file": "Flag_of_Serbia.svg"
+  },
+  "9135": {
+    "country": "Serbia and Montenegro",
+    "commons_file": "Flag_of_Serbia_and_Montenegro.svg"
+  },
+  "9136": {
+    "country": "Slovakia",
+    "commons_file": "Flag_of_Slovakia.svg"
+  },
+  "9137": {
+    "country": "Slovenia",
+    "commons_file": "Flag_of_Slovenia.svg"
+  },
+  "774": {
+    "country": "South Africa",
+    "commons_file": "Flag_of_South_Africa.svg"
+  },
+  "772": {
+    "country": "South Korea",
+    "commons_file": "Flag_of_South_Korea.svg"
+  },
+  "9139": {
+    "country": "Soviet Union",
+    "commons_file": "Flag_of_the_Soviet_Union.svg"
+  },
+  "760": {
+    "country": "Spain",
+    "commons_file": "Flag_of_Spain.svg"
+  },
+  "792": {
+    "country": "Sweden",
+    "commons_file": "Flag_of_Sweden.svg"
+  },
+  "788": {
+    "country": "Switzerland",
+    "commons_file": "Flag_of_Switzerland.svg"
+  },
+  "9140": {
+    "country": "Togo",
+    "commons_file": "Flag_of_Togo.svg"
+  },
+  "9141": {
+    "country": "Trinidad and Tobago",
+    "commons_file": "Flag_of_Trinidad_and_Tobago.svg"
+  },
+  "802": {
+    "country": "Tunisia",
+    "commons_file": "Flag_of_Tunisia.svg"
+  },
+  "803": {
+    "country": "Turkey",
+    "commons_file": "Flag_of_Turkey.svg"
+  },
+  "771": {
+    "country": "United States",
+    "commons_file": "Flag_of_the_United_States.svg"
+  },
+  "9150": {
+    "country": "Ukraine",
+    "commons_file": "Flag_of_Ukraine.svg"
+  },
+  "9143": {
+    "country": "United Arab Emirates",
+    "commons_file": "Flag_of_the_United_Arab_Emirates.svg"
+  },
+  "758": {
+    "country": "Uruguay",
+    "commons_file": "Flag_of_Uruguay.svg"
+  },
+  "9151": {
+    "country": "Wales",
+    "commons_file": "Flag_of_Wales.svg"
+  },
+  "9144": {
+    "country": "West Germany",
+    "commons_file": "Flag_of_West_Germany.svg"
+  },
+  "9145": {
+    "country": "Yugoslavia",
+    "commons_file": "Flag_of_Yugoslavia.svg"
+  },
+  "9146": {
+    "country": "Zaire",
+    "commons_file": "Flag_of_Zaire.svg"
+  }
 }

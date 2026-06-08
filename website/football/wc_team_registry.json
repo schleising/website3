@@ -1,88 +1,432 @@
 {
-  "Algeria": {"id": 7827, "tla": "ALG", "short_name": "Algeria"},
-  "Angola": {"id": 9110, "tla": "ANG", "short_name": "Angola"},
-  "Argentina": {"id": 764, "tla": "ARG", "short_name": "Argentina"},
-  "Australia": {"id": 802, "tla": "AUS", "short_name": "Australia"},
-  "Austria": {"id": 758, "tla": "AUT", "short_name": "Austria"},
-  "Belgium": {"id": 805, "tla": "BEL", "short_name": "Belgium"},
-  "Bolivia": {"id": 7825, "tla": "BOL", "short_name": "Bolivia"},
-  "Bosnia-Herzegovina": {"id": 9111, "tla": "BIH", "short_name": "Bosnia"},
-  "Brazil": {"id": 759, "tla": "BRA", "short_name": "Brazil"},
-  "Bulgaria": {"id": 9112, "tla": "BUL", "short_name": "Bulgaria"},
-  "Cameroon": {"id": 792, "tla": "CMR", "short_name": "Cameroon"},
-  "Canada": {"id": 816, "tla": "CAN", "short_name": "Canada"},
-  "Chile": {"id": 7819, "tla": "CHI", "short_name": "Chile"},
-  "China": {"id": 9113, "tla": "CHN", "short_name": "China"},
-  "Colombia": {"id": 7830, "tla": "COL", "short_name": "Colombia"},
-  "Costa Rica": {"id": 815, "tla": "CRC", "short_name": "Costa Rica"},
-  "Croatia": {"id": 799, "tla": "CRO", "short_name": "Croatia"},
-  "Cuba": {"id": 9114, "tla": "CUB", "short_name": "Cuba"},
-  "Czech Republic": {"id": 822, "tla": "CZE", "short_name": "Czech Republic"},
-  "Czechoslovakia": {"id": 1935, "tla": "TCH", "short_name": "Czechoslovakia"},
-  "Côte d'Ivoire": {"id": 9115, "tla": "CIV", "short_name": "Ivory Coast"},
-  "Denmark": {"id": 778, "tla": "DEN", "short_name": "Denmark"},
-  "Dutch East Indies": {"id": 9116, "tla": "IDN", "short_name": "Dutch East Indies"},
-  "East Germany": {"id": 9117, "tla": "GDR", "short_name": "East Germany"},
-  "Ecuador": {"id": 840, "tla": "ECU", "short_name": "Ecuador"},
-  "Egypt": {"id": 818, "tla": "EGY", "short_name": "Egypt"},
-  "El Salvador": {"id": 9118, "tla": "SLV", "short_name": "El Salvador"},
-  "England": {"id": 770, "tla": "ENG", "short_name": "England"},
-  "France": {"id": 773, "tla": "FRA", "short_name": "France"},
-  "Germany": {"id": 761, "tla": "GER", "short_name": "Germany"},
-  "Ghana": {"id": 788, "tla": "GHA", "short_name": "Ghana"},
-  "Greece": {"id": 9119, "tla": "GRE", "short_name": "Greece"},
-  "Haiti": {"id": 9120, "tla": "HAI", "short_name": "Haiti"},
-  "Honduras": {"id": 9121, "tla": "HON", "short_name": "Honduras"},
-  "Hungary": {"id": 1930, "tla": "HUN", "short_name": "Hungary"},
-  "Iceland": {"id": 9122, "tla": "ISL", "short_name": "Iceland"},
-  "Iran": {"id": 769, "tla": "IRN", "short_name": "Iran"},
-  "Iraq": {"id": 9123, "tla": "IRQ", "short_name": "Iraq"},
-  "Ireland": {"id": 9124, "tla": "IRL", "short_name": "Ireland"},
-  "Israel": {"id": 9125, "tla": "ISR", "short_name": "Israel"},
-  "Italy": {"id": 1934, "tla": "ITA", "short_name": "Italy"},
-  "Jamaica": {"id": 9126, "tla": "JAM", "short_name": "Jamaica"},
-  "Japan": {"id": 783, "tla": "JPN", "short_name": "Japan"},
-  "Kuwait": {"id": 9127, "tla": "KUW", "short_name": "Kuwait"},
-  "Mexico": {"id": 765, "tla": "MEX", "short_name": "Mexico"},
-  "Morocco": {"id": 791, "tla": "MAR", "short_name": "Morocco"},
-  "Netherlands": {"id": 803, "tla": "NED", "short_name": "Netherlands"},
-  "New Zealand": {"id": 9128, "tla": "NZL", "short_name": "New Zealand"},
-  "Nigeria": {"id": 9129, "tla": "NGA", "short_name": "Nigeria"},
-  "North Korea": {"id": 9130, "tla": "PRK", "short_name": "North Korea"},
-  "Northern Ireland": {"id": 9131, "tla": "NIR", "short_name": "Northern Ireland"},
-  "Norway": {"id": 9132, "tla": "NOR", "short_name": "Norway"},
-  "Panama": {"id": 9133, "tla": "PAN", "short_name": "Panama"},
-  "Paraguay": {"id": 7831, "tla": "PAR", "short_name": "Paraguay"},
-  "Peru": {"id": 7828, "tla": "PER", "short_name": "Peru"},
-  "Poland": {"id": 8062, "tla": "POL", "short_name": "Poland"},
-  "Portugal": {"id": 801, "tla": "POR", "short_name": "Portugal"},
-  "Qatar": {"id": 9460, "tla": "QAT", "short_name": "Qatar"},
-  "Romania": {"id": 774, "tla": "ROU", "short_name": "Romania"},
-  "Russia": {"id": 784, "tla": "RUS", "short_name": "Russia"},
-  "Saudi Arabia": {"id": 8030, "tla": "KSA", "short_name": "Saudi Arabia"},
-  "Scotland": {"id": 9134, "tla": "SCO", "short_name": "Scotland"},
-  "Senegal": {"id": 828, "tla": "SEN", "short_name": "Senegal"},
-  "Serbia": {"id": 8873, "tla": "SRB", "short_name": "Serbia"},
-  "Serbia and Montenegro": {"id": 9135, "tla": "SCG", "short_name": "Serbia & Montenegro"},
-  "Slovakia": {"id": 9136, "tla": "SVK", "short_name": "Slovakia"},
-  "Slovenia": {"id": 9137, "tla": "SVN", "short_name": "Slovenia"},
-  "South Africa": {"id": 9138, "tla": "RSA", "short_name": "South Africa"},
-  "South Korea": {"id": 771, "tla": "KOR", "short_name": "South Korea"},
-  "Soviet Union": {"id": 9139, "tla": "URS", "short_name": "Soviet Union"},
-  "Spain": {"id": 760, "tla": "ESP", "short_name": "Spain"},
-  "Sweden": {"id": 825, "tla": "SWE", "short_name": "Sweden"},
-  "Switzerland": {"id": 836, "tla": "SUI", "short_name": "Switzerland"},
-  "Togo": {"id": 9140, "tla": "TOG", "short_name": "Togo"},
-  "Trinidad and Tobago": {"id": 9141, "tla": "TRI", "short_name": "Trinidad and Tobago"},
-  "Tunisia": {"id": 798, "tla": "TUN", "short_name": "Tunisia"},
-  "Turkey": {"id": 9142, "tla": "TUR", "short_name": "Turkey"},
-  "Ukraine": {"id": 8110, "tla": "UKR", "short_name": "Ukraine"},
-  "United Arab Emirates": {"id": 9143, "tla": "UAE", "short_name": "UAE"},
-  "United States": {"id": 804, "tla": "USA", "short_name": "USA"},
-  "Uruguay": {"id": 779, "tla": "URU", "short_name": "Uruguay"},
-  "USA": {"id": 804, "tla": "USA", "short_name": "USA"},
-  "Wales": {"id": 8601, "tla": "WAL", "short_name": "Wales"},
-  "West Germany": {"id": 9144, "tla": "FRG", "short_name": "West Germany"},
-  "Yugoslavia": {"id": 9145, "tla": "YUG", "short_name": "Yugoslavia"},
-  "Zaire": {"id": 9146, "tla": "ZAI", "short_name": "Zaire"}
+  "Algeria": {
+    "id": 778,
+    "tla": "ALG",
+    "short_name": "Algeria"
+  },
+  "Angola": {
+    "id": 9110,
+    "tla": "ANG",
+    "short_name": "Angola"
+  },
+  "Argentina": {
+    "id": 762,
+    "tla": "ARG",
+    "short_name": "Argentina"
+  },
+  "Australia": {
+    "id": 779,
+    "tla": "AUS",
+    "short_name": "Australia"
+  },
+  "Austria": {
+    "id": 816,
+    "tla": "AUT",
+    "short_name": "Austria"
+  },
+  "Belgium": {
+    "id": 805,
+    "tla": "BEL",
+    "short_name": "Belgium"
+  },
+  "Bolivia": {
+    "id": 9111,
+    "tla": "BOL",
+    "short_name": "Bolivia"
+  },
+  "Bosnia-Herzegovina": {
+    "id": 1060,
+    "tla": "BIH",
+    "short_name": "Bosnia-H."
+  },
+  "Brazil": {
+    "id": 764,
+    "tla": "BRA",
+    "short_name": "Brazil"
+  },
+  "Bulgaria": {
+    "id": 9112,
+    "tla": "BUL",
+    "short_name": "Bulgaria"
+  },
+  "Cameroon": {
+    "id": 9115,
+    "tla": "CMR",
+    "short_name": "Cameroon"
+  },
+  "Canada": {
+    "id": 828,
+    "tla": "CAN",
+    "short_name": "Canada"
+  },
+  "Chile": {
+    "id": 9120,
+    "tla": "CHI",
+    "short_name": "Chile"
+  },
+  "China": {
+    "id": 9113,
+    "tla": "CHN",
+    "short_name": "China"
+  },
+  "Colombia": {
+    "id": 818,
+    "tla": "COL",
+    "short_name": "Colombia"
+  },
+  "Costa Rica": {
+    "id": 9123,
+    "tla": "CRC",
+    "short_name": "Costa Rica"
+  },
+  "Croatia": {
+    "id": 799,
+    "tla": "CRO",
+    "short_name": "Croatia"
+  },
+  "Cuba": {
+    "id": 9114,
+    "tla": "CUB",
+    "short_name": "Cuba"
+  },
+  "Czech Republic": {
+    "id": 798,
+    "tla": "CZE",
+    "short_name": "Czechia"
+  },
+  "Czechoslovakia": {
+    "id": 9147,
+    "tla": "TCH",
+    "short_name": "Czechoslovakia"
+  },
+  "Côte d'Ivoire": {
+    "id": 1935,
+    "tla": "CIV",
+    "short_name": "Ivory Coast"
+  },
+  "Denmark": {
+    "id": 9128,
+    "tla": "DEN",
+    "short_name": "Denmark"
+  },
+  "Dutch East Indies": {
+    "id": 9116,
+    "tla": "IDN",
+    "short_name": "Dutch East Indies"
+  },
+  "East Germany": {
+    "id": 9117,
+    "tla": "GDR",
+    "short_name": "East Germany"
+  },
+  "Ecuador": {
+    "id": 791,
+    "tla": "ECU",
+    "short_name": "Ecuador"
+  },
+  "Egypt": {
+    "id": 825,
+    "tla": "EGY",
+    "short_name": "Egypt"
+  },
+  "El Salvador": {
+    "id": 9118,
+    "tla": "SLV",
+    "short_name": "El Salvador"
+  },
+  "England": {
+    "id": 770,
+    "tla": "ENG",
+    "short_name": "England"
+  },
+  "France": {
+    "id": 773,
+    "tla": "FRA",
+    "short_name": "France"
+  },
+  "Germany": {
+    "id": 759,
+    "tla": "GER",
+    "short_name": "Germany"
+  },
+  "Ghana": {
+    "id": 763,
+    "tla": "GHA",
+    "short_name": "Ghana"
+  },
+  "Greece": {
+    "id": 9119,
+    "tla": "GRE",
+    "short_name": "Greece"
+  },
+  "Haiti": {
+    "id": 836,
+    "tla": "HAI",
+    "short_name": "Haiti"
+  },
+  "Honduras": {
+    "id": 9121,
+    "tla": "HON",
+    "short_name": "Honduras"
+  },
+  "Hungary": {
+    "id": 9132,
+    "tla": "HUN",
+    "short_name": "Hungary"
+  },
+  "Iceland": {
+    "id": 9122,
+    "tla": "ISL",
+    "short_name": "Iceland"
+  },
+  "Iran": {
+    "id": 840,
+    "tla": "IRN",
+    "short_name": "Iran"
+  },
+  "Iraq": {
+    "id": 8062,
+    "tla": "IRQ",
+    "short_name": "Iraq"
+  },
+  "Ireland": {
+    "id": 9124,
+    "tla": "IRL",
+    "short_name": "Ireland"
+  },
+  "Israel": {
+    "id": 9125,
+    "tla": "ISR",
+    "short_name": "Israel"
+  },
+  "Italy": {
+    "id": 9133,
+    "tla": "ITA",
+    "short_name": "Italy"
+  },
+  "Jamaica": {
+    "id": 9126,
+    "tla": "JAM",
+    "short_name": "Jamaica"
+  },
+  "Japan": {
+    "id": 766,
+    "tla": "JPN",
+    "short_name": "Japan"
+  },
+  "Kuwait": {
+    "id": 9127,
+    "tla": "KUW",
+    "short_name": "Kuwait"
+  },
+  "Mexico": {
+    "id": 769,
+    "tla": "MEX",
+    "short_name": "Mexico"
+  },
+  "Morocco": {
+    "id": 815,
+    "tla": "MAR",
+    "short_name": "Morocco"
+  },
+  "Netherlands": {
+    "id": 8601,
+    "tla": "NED",
+    "short_name": "Netherlands"
+  },
+  "New Zealand": {
+    "id": 783,
+    "tla": "NZL",
+    "short_name": "New Zealand"
+  },
+  "Nigeria": {
+    "id": 9129,
+    "tla": "NGA",
+    "short_name": "Nigeria"
+  },
+  "North Korea": {
+    "id": 9130,
+    "tla": "PRK",
+    "short_name": "North Korea"
+  },
+  "Northern Ireland": {
+    "id": 9131,
+    "tla": "NIR",
+    "short_name": "Northern Ireland"
+  },
+  "Norway": {
+    "id": 8872,
+    "tla": "NOR",
+    "short_name": "Norway"
+  },
+  "Panama": {
+    "id": 1836,
+    "tla": "PAN",
+    "short_name": "Panama"
+  },
+  "Paraguay": {
+    "id": 761,
+    "tla": "PAR",
+    "short_name": "Paraguay"
+  },
+  "Peru": {
+    "id": 9134,
+    "tla": "PER",
+    "short_name": "Peru"
+  },
+  "Poland": {
+    "id": 9138,
+    "tla": "POL",
+    "short_name": "Poland"
+  },
+  "Portugal": {
+    "id": 765,
+    "tla": "POR",
+    "short_name": "Portugal"
+  },
+  "Qatar": {
+    "id": 8030,
+    "tla": "QAT",
+    "short_name": "Qatar"
+  },
+  "Romania": {
+    "id": 9142,
+    "tla": "ROU",
+    "short_name": "Romania"
+  },
+  "Russia": {
+    "id": 9148,
+    "tla": "RUS",
+    "short_name": "Russia"
+  },
+  "Saudi Arabia": {
+    "id": 801,
+    "tla": "KSA",
+    "short_name": "Saudi Arabia"
+  },
+  "Scotland": {
+    "id": 8873,
+    "tla": "SCO",
+    "short_name": "Scotland"
+  },
+  "Senegal": {
+    "id": 804,
+    "tla": "SEN",
+    "short_name": "Senegal"
+  },
+  "Serbia": {
+    "id": 9149,
+    "tla": "SRB",
+    "short_name": "Serbia"
+  },
+  "Serbia and Montenegro": {
+    "id": 9135,
+    "tla": "SCG",
+    "short_name": "Serbia & Montenegro"
+  },
+  "Slovakia": {
+    "id": 9136,
+    "tla": "SVK",
+    "short_name": "Slovakia"
+  },
+  "Slovenia": {
+    "id": 9137,
+    "tla": "SVN",
+    "short_name": "Slovenia"
+  },
+  "South Africa": {
+    "id": 774,
+    "tla": "RSA",
+    "short_name": "South Africa"
+  },
+  "South Korea": {
+    "id": 772,
+    "tla": "KOR",
+    "short_name": "Korea Republic"
+  },
+  "Soviet Union": {
+    "id": 9139,
+    "tla": "URS",
+    "short_name": "Soviet Union"
+  },
+  "Spain": {
+    "id": 760,
+    "tla": "ESP",
+    "short_name": "Spain"
+  },
+  "Sweden": {
+    "id": 792,
+    "tla": "SWE",
+    "short_name": "Sweden"
+  },
+  "Switzerland": {
+    "id": 788,
+    "tla": "SUI",
+    "short_name": "Switzerland"
+  },
+  "Togo": {
+    "id": 9140,
+    "tla": "TOG",
+    "short_name": "Togo"
+  },
+  "Trinidad and Tobago": {
+    "id": 9141,
+    "tla": "TRI",
+    "short_name": "Trinidad and Tobago"
+  },
+  "Tunisia": {
+    "id": 802,
+    "tla": "TUN",
+    "short_name": "Tunisia"
+  },
+  "Turkey": {
+    "id": 803,
+    "tla": "TUR",
+    "short_name": "Turkey"
+  },
+  "USA": {
+    "id": 771,
+    "tla": "USA",
+    "short_name": "USA"
+  },
+  "Ukraine": {
+    "id": 9150,
+    "tla": "UKR",
+    "short_name": "Ukraine"
+  },
+  "United Arab Emirates": {
+    "id": 9143,
+    "tla": "UAE",
+    "short_name": "UAE"
+  },
+  "United States": {
+    "id": 771,
+    "tla": "USA",
+    "short_name": "USA"
+  },
+  "Uruguay": {
+    "id": 758,
+    "tla": "URY",
+    "short_name": "Uruguay"
+  },
+  "Wales": {
+    "id": 9151,
+    "tla": "WAL",
+    "short_name": "Wales"
+  },
+  "West Germany": {
+    "id": 9144,
+    "tla": "FRG",
+    "short_name": "West Germany"
+  },
+  "Yugoslavia": {
+    "id": 9145,
+    "tla": "YUG",
+    "short_name": "Yugoslavia"
+  },
+  "Zaire": {
+    "id": 9146,
+    "tla": "ZAI",
+    "short_name": "Zaire"
+  }
 }

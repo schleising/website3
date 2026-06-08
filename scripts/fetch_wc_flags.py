@@ -141,6 +141,24 @@ def main() -> int:
 
     if args.audit:
         issues = _audit_existing(flag_registry)
+        registry_team_ids = {
+            str(entry["id"])
+            for entry in team_registry.values()
+            if entry.get("id") is not None
+        }
+        if registry_team_ids != set(flag_registry):
+            missing = sorted(registry_team_ids - set(flag_registry), key=int)
+            extra = sorted(set(flag_registry) - registry_team_ids, key=int)
+            if missing:
+                issues.append(
+                    "team registry ids missing from flag registry: "
+                    + ", ".join(missing)
+                )
+            if extra:
+                issues.append(
+                    "flag registry ids missing from team registry: "
+                    + ", ".join(extra)
+                )
         if len(issues) == 0:
             print("No flag issues found.")
             return 0
