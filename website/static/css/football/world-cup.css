@@ -687,7 +687,6 @@
 .world-cup-score-widget--result .world-cup-team-winner .team-name,
 .world-cup-score-widget--result .world-cup-team-winner a.team-name {
     color: var(--brand-strong);
-    font-weight: 700;
 }
 
 .world-cup-score-widget--result .world-cup-team-winner .team-badge {
@@ -697,8 +696,6 @@
 .world-cup-score-widget--result .world-cup-team-winner .home-team-score,
 .world-cup-score-widget--result .world-cup-team-winner .away-team-score {
     min-width: 1.15rem;
-    font-size: 0.95rem;
-    font-weight: 800;
     font-variant-numeric: tabular-nums;
     color: var(--brand-strong);
     text-align: right;
@@ -707,13 +704,11 @@
 .world-cup-score-widget--result .world-cup-team-loser .team-name,
 .world-cup-score-widget--result .world-cup-team-loser a.team-name {
     color: var(--text-soft, #5f6b7a);
-    font-weight: 500;
 }
 
 .world-cup-score-widget--result .world-cup-team-loser .home-team-score,
 .world-cup-score-widget--result .world-cup-team-loser .away-team-score {
     color: var(--text-soft, #5f6b7a);
-    font-weight: 600;
     font-variant-numeric: tabular-nums;
     text-align: right;
     opacity: 0.85;
