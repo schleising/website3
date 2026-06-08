@@ -242,8 +242,12 @@ def filter_confirmed_knockout_matches(matches: list["Match"]) -> list["Match"]:
     return [match for match in matches if knockout_match_has_confirmed_teams(match)]
 
 
-def _knockout_fixture_key(match: "Match") -> tuple[str, frozenset[int | None]]:
-    return (match.stage, frozenset((match.home_team.id, match.away_team.id)))
+def _knockout_fixture_key(match: "Match") -> tuple[str, str]:
+    if knockout_match_has_confirmed_teams(match):
+        home_id, away_id = match.home_team.id, match.away_team.id
+        team_ids = sorted((home_id, away_id))
+        return (match.stage, f"teams:{team_ids[0]}:{team_ids[1]}")
+    return (match.stage, f"match:{match.id}")
 
 
 def filter_superseded_knockout_replays(matches: list["Match"]) -> list["Match"]:
@@ -252,7 +256,7 @@ def filter_superseded_knockout_replays(matches: list["Match"]) -> list["Match"]:
     if len(knockout_matches) <= 1:
         return matches
 
-    fixtures: dict[tuple[str, frozenset[int | None]], list["Match"]] = {}
+    fixtures: dict[tuple[str, str], list["Match"]] = {}
     for match in knockout_matches:
         fixtures.setdefault(_knockout_fixture_key(match), []).append(match)
 
