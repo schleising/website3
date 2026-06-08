@@ -15,7 +15,9 @@ from .world_cup_utils import (
     WC_CURRENT_EDITION,
     WC_GROUP_STAGE,
     edition_has_group_stage,
+    edition_has_knockout_stage,
     group_order_for_edition,
+    group_stages_for_edition,
     group_index_stages_for_edition,
     group_stage_overview_anchor,
     overview_group_stages_for_edition,
@@ -46,6 +48,7 @@ WC_STANDINGS_COLLECTION_PATTERN = re.compile(r"^wc_standings_(\d{4})$")
 WC_LIVE_STANDINGS_COLLECTION_PATTERN = re.compile(r"^live_wc_standings_(\d{4})$")
 WC_LIVE_DAYS_BEFORE_TODAY = 7
 WC_LIVE_DAYS_AFTER_TODAY = 6
+WC_CURRENT_GROUP_QUALIFICATION_SPOTS = 3
 LONDON_TZ = ZoneInfo("Europe/London")
 
 
@@ -409,6 +412,152 @@ def normalise_group_table(table: list[TableItem], matches: list[Match]) -> list[
     return table
 
 
+def _clear_position_labels(table: list[TableItem]) -> None:
+    for table_item in table:
+        table_item.position_label = None
+
+
+def _apply_guaranteed_qualification_labels(
+    table: list[TableItem],
+    *,
+    qualification_spots: int = WC_CURRENT_GROUP_QUALIFICATION_SPOTS,
+) -> list[TableItem]:
+    if len(table) == 0 or len(table) <= qualification_spots:
+        _clear_position_labels(table)
+        return table
+
+    team_count = len(table)
+    total_matches_per_team = max(team_count - 1, 0)
+    max_points_by_team_id: dict[int, int] = {}
+    adjusted_points_by_team_id: dict[int, int] = {}
+
+    for table_item in table:
+        team_id = table_item.team.id
+        if team_id is None:
+            continue
+        remaining_matches = max(total_matches_per_team - table_item.played_games, 0)
+        max_points_by_team_id[team_id] = table_item.points + (remaining_matches * 3)
+        adjusted_points_by_team_id[team_id] = table_item.points
+        table_item.position_label = None
+
+    cutoff_row = table[qualification_spots]
+    cutoff_team_id = cutoff_row.team.id
+    if cutoff_team_id is None:
+        return table
+
+    cutoff_max_points = max_points_by_team_id[cutoff_team_id]
+
+    for table_item in table[:qualification_spots]:
+        team_id = table_item.team.id
+        if team_id is None:
+            continue
+        if adjusted_points_by_team_id[team_id] > cutoff_max_points:
+            table_item.position_label = "Q"
+
+    return table
+
+
+def qualified_team_ids_for_next_round(
+    edition: str,
+    group_slug: str,
+    all_matches: list[Match],
+) -> set[int]:
+    slug = normalise_group_slug(group_slug)
+    stages = group_stages_for_edition(edition)
+    stage_index = next(
+        (index for index, stage_slugs in enumerate(stages) if slug in stage_slugs),
+        None,
+    )
+    if stage_index is None:
+        return set()
+
+    team_ids: set[int] = set()
+    knockout_stages = {stage for stage, _, _ in WC_KNOCKOUT_ROUNDS}
+
+    if stage_index < len(stages) - 1:
+        next_group_slugs = {
+            group_slug_value
+            for subsequent_stage in stages[stage_index + 1 :]
+            for group_slug_value in subsequent_stage
+        }
+        for match in all_matches:
+            if match.stage != WC_GROUP_STAGE or match.group is None:
+                continue
+            match_group_slug = group_enum_to_slug(match.group)
+            if match_group_slug not in next_group_slugs:
+                continue
+            for team in (match.home_team, match.away_team):
+                if team.id is not None:
+                    team_ids.add(team.id)
+        return team_ids
+
+    if not edition_has_knockout_stage(edition):
+        return set()
+
+    for match in all_matches:
+        if match.stage not in knockout_stages:
+            continue
+        for team in (match.home_team, match.away_team):
+            if team.id is not None:
+                team_ids.add(team.id)
+
+    return team_ids
+
+
+def _apply_historic_qualification_labels(
+    table: list[TableItem],
+    qualified_team_ids: set[int],
+) -> list[TableItem]:
+    _clear_position_labels(table)
+    for table_item in table:
+        team_id = table_item.team.id
+        if team_id is not None and team_id in qualified_team_ids:
+            table_item.position_label = "Q"
+    return table
+
+
+async def prepare_group_table_for_display(
+    edition: str,
+    group_slug: str,
+    table: list[TableItem],
+    matches: list[Match],
+    *,
+    all_edition_matches: list[Match] | None = None,
+) -> list[TableItem]:
+    prepared = normalise_group_table(table, matches)
+    if not _group_has_results(prepared):
+        _clear_position_labels(prepared)
+        return prepared
+
+    if edition == WC_CURRENT_EDITION:
+        return _apply_guaranteed_qualification_labels(prepared)
+
+    edition_matches = all_edition_matches
+    if edition_matches is None:
+        edition_matches = await retrieve_all_edition_matches(edition)
+
+    qualified_team_ids = qualified_team_ids_for_next_round(
+        edition,
+        group_slug,
+        edition_matches,
+    )
+    return _apply_historic_qualification_labels(prepared, qualified_team_ids)
+
+
+def apply_live_qualification_labels(
+    edition: str,
+    groups: list[WorldCupGroupStandings],
+) -> None:
+    if edition != WC_CURRENT_EDITION:
+        return
+
+    for group in groups:
+        if not _group_has_results(group.table):
+            _clear_position_labels(group.table)
+            continue
+        _apply_guaranteed_qualification_labels(group.table)
+
+
 async def retrieve_distinct_knockout_stages(edition: str) -> set[str]:
     collection = _get_matches_collection(edition)
     if collection is None:
@@ -517,12 +666,21 @@ async def build_overview_knockout_sections(edition: str) -> list[WorldCupKnockou
 async def _build_overview_group_block(
     edition: str,
     group: WorldCupGroupStandings,
+    *,
+    all_edition_matches: list[Match] | None = None,
 ) -> WorldCupOverviewGroupBlock:
     matches = await retrieve_group_matches(edition, group.group_slug)
+    table = await prepare_group_table_for_display(
+        edition,
+        group.group_slug,
+        group.table,
+        matches,
+        all_edition_matches=all_edition_matches,
+    )
     return WorldCupOverviewGroupBlock(
         slug=group.group_slug,
         label=group.group_label,
-        table=normalise_group_table(group.table, matches),
+        table=table,
         matches=matches,
     )
 
@@ -535,6 +693,11 @@ async def build_overview_group_stage_sections(
 
     standings = await retrieve_all_group_standings(edition)
     standings_by_slug = {group.group_slug: group for group in standings}
+    all_edition_matches = (
+        None
+        if edition == WC_CURRENT_EDITION
+        else await retrieve_all_edition_matches(edition)
+    )
     sections: list[WorldCupOverviewGroupStageSection] = []
 
     for stage_label, stage_slugs in overview_group_stages_for_edition(edition):
@@ -543,7 +706,13 @@ async def build_overview_group_stage_sections(
             group = standings_by_slug.get(slug)
             if group is None:
                 continue
-            blocks.append(await _build_overview_group_block(edition, group))
+            blocks.append(
+                await _build_overview_group_block(
+                    edition,
+                    group,
+                    all_edition_matches=all_edition_matches,
+                )
+            )
 
         if len(blocks) == 0:
             continue
@@ -562,12 +731,21 @@ async def build_overview_group_stage_sections(
 async def _build_group_summary(
     edition: str,
     group: WorldCupGroupStandings,
+    *,
+    all_edition_matches: list[Match] | None = None,
 ) -> WorldCupGroupSummary:
     matches = await retrieve_group_matches(edition, group.group_slug)
+    table = await prepare_group_table_for_display(
+        edition,
+        group.group_slug,
+        group.table,
+        matches,
+        all_edition_matches=all_edition_matches,
+    )
     return WorldCupGroupSummary(
         slug=group.group_slug,
         label=group.group_label,
-        table=normalise_group_table(group.table, matches),
+        table=table,
         next_match=_select_next_match(matches),
     )
 
@@ -592,8 +770,17 @@ async def list_group_stage_summary_sections(
         return []
 
     standings = await retrieve_all_group_standings(edition)
+    all_edition_matches = (
+        None
+        if edition == WC_CURRENT_EDITION
+        else await retrieve_all_edition_matches(edition)
+    )
     summaries_by_slug = {
-        group.group_slug: await _build_group_summary(edition, group)
+        group.group_slug: await _build_group_summary(
+            edition,
+            group,
+            all_edition_matches=all_edition_matches,
+        )
         for group in standings
     }
     sections: list[WorldCupGroupStageSummarySection] = []

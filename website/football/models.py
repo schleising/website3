@@ -271,6 +271,7 @@ class TableItem(BaseModel):
     goals_for: int = Field(..., alias="goalsFor")
     goals_against: int = Field(..., alias="goalsAgainst")
     goal_difference: int = Field(..., alias="goalDifference")
+    position_label: str | None = None
 
     class Config:
         populate_by_name = True

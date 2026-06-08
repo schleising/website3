@@ -20,7 +20,7 @@
       {% for table_item in table_rows %}
       <article class="data-row" role="row" data-team-id="{{ table_item.team.id }}" data-position="{{ table_item.position }}">
         <div class="row-data data table-cell position" role="cell">
-          <div class="table-position-value">{{ table_item.position }}</div>
+          <div class="table-position-value">{{ table_item.position_label or table_item.position }}</div>
         </div>
         <div class="row-data data table-cell world-cup-team-cell" role="cell">
           <div class="team-and-badge">

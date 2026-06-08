@@ -20,7 +20,8 @@ from .world_cup_db import (
     infer_current_wc_edition,
     list_available_knockout_rounds,
     list_group_stage_summary_sections,
-    normalise_group_table,
+    prepare_group_table_for_display,
+    apply_live_qualification_labels,
     retrieve_all_edition_matches,
     retrieve_all_group_standings,
     retrieve_distinct_teams,
@@ -413,9 +414,13 @@ async def get_world_cup_group(
 
     matches = await retrieve_group_matches(selected_edition, slug)
     matches = update_match_timezone(matches)
-    standings = standings.model_copy(
-        update={"table": normalise_group_table(standings.table, matches)}
+    prepared_table = await prepare_group_table_for_display(
+        selected_edition,
+        slug,
+        standings.table,
+        matches,
     )
+    standings = standings.model_copy(update={"table": prepared_table})
     matchday_groups = _build_matchday_groups(matches)
 
     context["edition_switch_path"] = (

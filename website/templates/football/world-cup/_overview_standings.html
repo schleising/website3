@@ -13,7 +13,7 @@
   </div>
   {% for table_item in table_rows %}
   <div class="world-cup-overview-standings-row" role="row" data-team-id="{{ table_item.team.id }}" data-position="{{ table_item.position }}">
-    <span class="world-cup-overview-standings-pos world-cup-overview-standings-position" role="cell">{{ table_item.position }}</span>
+    <span class="world-cup-overview-standings-pos world-cup-overview-standings-position" role="cell">{{ table_item.position_label or table_item.position }}</span>
     <span class="world-cup-overview-standings-team" role="cell">
       <img
         class="team-badge"

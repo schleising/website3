@@ -57,9 +57,19 @@ function updateTextIfChanged(element, value) {
     }
 }
 
+function worldCupPositionDisplayValue(tableItem) {
+    if (tableItem.position_label) {
+        return tableItem.position_label;
+    }
+    return tableItem.position;
+}
+
 function updateOverviewStandingsRow(row, tableItem) {
     row.dataset.position = String(tableItem.position);
-    updateTextIfChanged(row.querySelector(".world-cup-overview-standings-position"), tableItem.position);
+    updateTextIfChanged(
+        row.querySelector(".world-cup-overview-standings-position"),
+        worldCupPositionDisplayValue(tableItem)
+    );
     updateTextIfChanged(row.querySelector(".world-cup-overview-standings-played"), tableItem.played_games);
     updateTextIfChanged(row.querySelector(".world-cup-overview-standings-won"), tableItem.won);
     updateTextIfChanged(row.querySelector(".world-cup-overview-standings-draw"), tableItem.draw);
@@ -70,7 +80,10 @@ function updateOverviewStandingsRow(row, tableItem) {
 
 function updateGroupTableRow(row, tableItem) {
     row.dataset.position = String(tableItem.position);
-    updateTextIfChanged(row.querySelector(".table-position-value"), tableItem.position);
+    updateTextIfChanged(
+        row.querySelector(".table-position-value"),
+        worldCupPositionDisplayValue(tableItem)
+    );
     updateTextIfChanged(row.querySelector(".table-played"), tableItem.played_games);
     updateTextIfChanged(row.querySelector(".table-won"), tableItem.won);
     updateTextIfChanged(row.querySelector(".table-draw"), tableItem.draw);
