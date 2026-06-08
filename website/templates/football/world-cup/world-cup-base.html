@@ -7,8 +7,8 @@
 {% if enable_live_updates|default(false) %}
 <script defer src="/js/football/world_cup_live.js?v1.0.2"></script>
 {% endif %}
-{% if all_matches_view|default(false) %}
-<script defer src="/js/football/world_cup_all_matches_view.js?v1.0.0"></script>
+{% if all_matches_view|default(false) or (jump_targets is defined and jump_targets|length > 0) %}
+<script defer src="/js/football/world_cup_all_matches_view.js?v1.0.1"></script>
 {% endif %}
 {% if enable_live_standings|default(false) %}
 <script defer src="/js/football/world_cup_standings_live.js?v1.0.0"></script>
