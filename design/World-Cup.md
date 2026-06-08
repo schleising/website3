@@ -1,10 +1,10 @@
 # World Cup Section — Design Proposal
 
-Status: Implemented (2026 edition live — see §12). Historical editions imported (§15); tie-breaker / play-off / replay rules (§16).
-Date: 2026-05-27 (updated 2026-05-27 — §7.3 flag/ID plan)
+Status: Implemented — **2026** live via football-data.org; **1930–2022** static in Mongo (§15); historic **Summary** page (§4.10); tie-breaker / play-off / replay rules (§16).
+Date: 2026-05-27 (updated 2026-05-27 — §4.10 Summary, §5.2/§5.5 picker & redirects, Phases 5–6 complete)
 Scope: World Cup area within the existing Football section
 
-**Launch scope:** edition **2026** live via football-data.org. **Next:** one-off import of past editions into Mongo (static, like older PL seasons) and edition-pill switching between them (§15).
+**Launch scope:** edition **2026** live via football-data.org. **Historic editions** **1930–2022** imported from openfootball (§15); edition pill switches between all years in Mongo. **Summary** nav and page for every edition except **2026** (§4.10).
 
 ## 1. Goal
 
@@ -154,7 +154,7 @@ Store a per-edition flag in `WC_EDITION_REGISTRY` (or derive from match data: no
 - No `GROUP_STAGE` matches in Mongo; all matches are knockout rounds (map upstream `round` labels to `LAST_16`, `QUARTER_FINALS`, `SEMI_FINALS`, `FINAL`, etc.).
 - `wc_standings_{year}` is **empty or omitted** — do not compute group tables.
 - Overview page shows **knockout blocks only** (no `─── Group Stage ───` section, no group jump anchors).
-- **Groups** sidebar link and `/groups/` routes are **unavailable** for that edition (hide in nav when `has_group_stage` is false; group URLs return 404 or redirect to overview).
+- **Groups** sidebar link and `/groups/` routes are **unavailable** for that edition (hide in nav when `has_group_stage` is false; group URLs redirect to overview — §5.5).
 - Knockout index, per-round pages, all-matches, and team fixtures work as today — the tournament is entirely knockout.
 - Live standings WebSocket (`get_world_cup_standings`) is a no-op when there is no group stage.
 
@@ -224,7 +224,7 @@ The flagship page. Vertical layout, **read top-to-bottom as the tournament clima
 - Knockout sections are rendered in **reverse round order** (Final first, earliest knockout last among knockout blocks).
 - A knockout section is **omitted until** the edition has at least one match for that stage (scheduled, live, or finished). As the tournament advances, new sections appear at the top; the Final section is always the uppermost block when it exists.
 - Group sections are shown **only when the edition has a group stage** (`has_group_stage` — §3.4). Omitted entirely for **1934** and **1938** (knockout-only overview).
-- When groups exist: sections in fixed order A → B → C → …, each with mini standings table and compact fixtures.
+- When groups exist: sections in fixed order A → B → C → …, each with mini standings table, standings rules **?** help beside the group heading (§10.5), and compact fixtures.
 - Each knockout block contains:
   - Round heading with link to the dedicated round page.
   - Match cards for that round, grouped by matchday or date.
@@ -242,7 +242,7 @@ Landing page listing all groups as cards. Each card shows:
 
 Links through to per-group pages. Can redirect to overview `#group-a` anchors if preferred; keep as a distinct route for sidebar nav clarity.
 
-**Not available** for editions without a group stage (**1934**, **1938** — §3.4): hide the sidebar **Groups** link when `has_group_stage` is false; visiting `/groups/?edition=1934` returns 404 or redirects to the knockout/overview page.
+**Not available** for editions without a group stage (**1934**, **1938** — §3.4): hide the sidebar **Groups** link when `has_group_stage` is false; visiting `/groups/?edition=1934` **redirects** to the tournament overview (§5.5).
 
 **Template:** `templates/football/world-cup/groups_index.html`
 
@@ -250,12 +250,13 @@ Links through to per-group pages. Can redirect to overview `#group-a` anchors if
 
 Example: `/football/world-cup/groups/a/?edition=2026`
 
-**Not available** for **1934** / **1938** (404). Same guard for any `{group}` when the selected edition has no group stage.
+**Not available** for **1934** / **1938** (redirect to overview). Same guard for any invalid `{group}` slug or edition without a group stage (§5.5).
 
 
 | Section   | Content                                                                                                   |
 | --------- | --------------------------------------------------------------------------------------------------------- |
 | Header    | `Group A — FIFA World Cup 2026` + edition picker                                                          |
+| Nav       | Prev/next group links; standings rules **?** help (left of next-group button — §10.5)                       |
 | Standings | Full group table (sticky on mobile — see §10.2)                                                           |
 | Fixtures  | All group-stage matches for that group, grouped by matchday or date (scrolls beneath the table on mobile) |
 
@@ -268,12 +269,12 @@ Standings via `_group_table.html`; fixtures use `world_cup_match_card` in day gr
 
 ### 4.4 Knockout index (`GET /football/world-cup/knockout/`)
 
-Primary content is a **visual bracket diagram** at the top; a **Rounds** card list below links to per-round pages.
+Primary content is the **visual bracket diagram** only — no separate **Rounds** shortcut list below the bracket.
 
 **Bracket diagram** (`_knockout_bracket.html`, data from `build_knockout_bracket_diagram()` in `world_cup_db.py`):
 
 - Horizontally scrollable CSS grid aligned across all knockout rounds (R32 → Final).
-- Sticky round headers (synced horizontal scroll via `world_cup_bracket.js`).
+- Sticky round headers (synced horizontal scroll via `world_cup_bracket.js`). Headers are **plain text labels**, not links to per-round pages.
 - Match slots reuse `world_cup_match_card` — same `score-widget` formatting as elsewhere (country flags, scores, status).
 - Connector lines between rounds show winner progression (feed, join, and receive segments per parent match pair).
 - **2026 feeder labels:** unseeded knockout slots show mapped labels (e.g. `Winner Group A`, `Runner-up Group B`) from `WC_2026_KNOCKOUT_FIXTURES` in `world_cup_utils.py`, not generic `TBD`.
@@ -282,7 +283,7 @@ Primary content is a **visual bracket diagram** at the top; a **Rounds** card li
 - **Third-place play-off:** rendered in the **Final column**, a few grid rows below the Final card (label above the match card, not a separate panel).
 - Fine-grained grid rows (`BRACKET_CARD_GRID_ROWS = 2`) keep Round-of-32 cards stacked tightly with a small gap.
 
-**Rounds list:** cards for each stage that has fixtures (no empty-state message when the list is empty).
+Per-round detail pages remain at `/knockout/{round}/` (§4.5) but are reached from overview headings and direct URLs, not from a rounds list on the knockout index.
 
 **Template:** `templates/football/world-cup/knockout_index.html`
 
@@ -333,6 +334,26 @@ National-team notification preferences for the current edition. Reuses PL `subsc
 
 **Template:** `templates/football/world-cup/subscriptions.html`
 
+### 4.10 Summary — historic editions (`GET /football/world-cup/summary/`)
+
+Context page for every **historic** edition (`edition_is_historic()` — all years except **2026**). Not shown in the sidebar for the live tournament.
+
+**Content (top to bottom):**
+
+| Section | Source |
+| ------- | ------ |
+| **Teams** | Distinct national teams in `wc_matches_{year}` (`retrieve_distinct_teams`) — crest + link to team fixtures |
+| **Rules for this edition** | `edition_summary_rules_sections()` — tournament format, group standings, group play-offs (only **1954** and **1958** when play-off data exists), knockout ties |
+| **Tournament synopsis** | `wc_edition_summaries.json` — host, dates, winner, runner-up, top scorer, intro, highlights, round-by-round narrative |
+
+**Behaviour**
+
+- Sidebar **Summary** link visible when `show_summary_nav` (`edition != WC_CURRENT_EDITION`).
+- Visiting `/summary/?edition=2026` **redirects** to the tournament overview.
+- Edition picker uses per-route `edition_switch_path` → `/summary/?edition=`.
+
+**Template:** `templates/football/world-cup/summary.html`
+
 ## 5. Navigation
 
 ### 5.1 Football sidebar
@@ -352,7 +373,8 @@ Competitions ▾
     Play-offs                  → /football/world-cup/playoffs/  (only when edition has group play-offs — §16.4)
     Knockout                   → /football/world-cup/knockout/  (hidden when edition has no knockout stage — §16.5)
     All Matches                → /football/world-cup/matches/
-    Notifications              → /football/world-cup/subscriptions/
+    Summary                    → /football/world-cup/summary/  (historic editions only — §4.10)
+    Notifications              → /football/world-cup/subscriptions/  (current edition only)
 ```
 
 The World Cup block is **hidden until** at least one `wc_matches_{edition}` collection exists in Mongo (see §13 #5).
@@ -374,13 +396,17 @@ Mirror the **Premier League season pill** pattern:
 | Past values | Static DB snapshot — no API re-fetch | Static DB snapshot — one-off import (§15) |
 
 
-**Behaviour (already implemented for 2026; extends automatically when more collections exist):**
+**Behaviour:**
 
 - Button in page header shows the selected edition year (e.g. `2026`).
 - Popup lists editions discovered from `wc_matches_{edition}` collections (newest first).
 - Default when `?edition=` is missing or invalid: current edition (`WC_CURRENT_EDITION` / `infer_current_wc_edition()`).
 - When only one edition exists in Mongo, show the year as a static pill (no popup) — same as a single-season PL view.
-- Applying a new edition keeps the user on the same page type via per-route `edition_switch_path`.
+- **Apply** submits the popup form to per-route `edition_switch_path` (overview, groups, summary, matches, etc.) with `?edition=` from the select.
+- **Current Edition** / **Current Season** button (right-aligned in the popup actions row) appears when the selected value is not current; links to `current_edition_url` / `season_switch_path?season={current}` on the **same page type**. Hidden on the current edition/season.
+- Shared popup partial: `templates/football/world-cup/_edition_picker.html`. JS: `world_cup_edition_picker.js`. PL season popup in `football-base.html` sidebar block.
+
+**Premier League parallel:** season picker popup includes the same **Current Season** button pattern (`football-season-current-btn` in `football.css`); `season_switch_path` is set per route (table, all matches, month, team fixtures).
 
 ### 5.3 PWA default route (temporary)
 
@@ -399,8 +425,25 @@ During the 2026 tournament, configure the Football PWA (`football.schleising.net
 | Match card team name      | `/football/world-cup/teams/{id}/?edition=` (animated underline on hover — `a.team-name` in `football.css`) |
 | Overview knockout heading | Dedicated round page                       |
 | Overview group heading    | Single group page                          |
-| Bracket round header      | Dedicated round page                       |
+| Bracket round header      | *(none — labels are not links)*             |
+| Summary team name         | Team fixtures page                         |
 
+
+### 5.5 Edition switching and redirects
+
+When the user changes edition (picker **Apply** or **Current Edition**) the site keeps the same page type via `edition_switch_path`. If that page does not exist for the target edition, `_redirect_to_world_cup_overview()` sends a **302** to `/football/world-cup/?edition=` instead of a 404.
+
+**Redirect triggers (examples):**
+
+| Situation | Redirect |
+| --------- | -------- |
+| Edition has no group stage → `/groups/` or `/groups/{slug}/` | Overview |
+| Invalid or missing group slug | Overview |
+| Edition has no knockout stage → `/knockout/` | Overview |
+| Invalid round slug or empty knockout round | Overview |
+| Edition has no group play-offs → `/playoffs/` | Overview |
+| Historic-only **Summary** with `edition=2026` | Overview |
+| Team with no matches in selected edition | Overview |
 
 ## 6. Architecture
 
@@ -824,22 +867,38 @@ Knockout rounds do not need live table updates (no standings table).
 
 ### 10.4 Match cards and team links
 
-- **Component:** `world_cup_match_card` in `_match_card.html` — used on overview, groups, knockout (round pages and bracket), all matches, and team fixtures.
+- **Component:** `world_cup_match_card` in `_match_card.html` — used on overview, groups, knockout (round pages and bracket), all matches, team fixtures, and summary (none — summary lists teams only).
 - **Formatting:** matches PL `score-widget` layout (normal-weight team names, country flag on every row).
 - **Clickable teams:** `a.team-name` links (WC → team fixtures page; PL → club page). Non-clickable placeholders use `<span class="team-name">` (feeder labels, TBD).
 - **Hover:** animated left-to-right underline over 250ms on `a.team-name` — defined in `football.css`, shared across PL and WC match cards and tables.
+- **Score annotations:** `world_cup_score_annotation()` supplies optional text beside the status — `(replay)`, `(aet)`, or penalty notation. Rendered as `<span class="world-cup-score-annotation">` in the match card (`football.css`).
 
-### 10.5 CSS
+### 10.5 Standings rules help
+
+Contextual **?** popover explaining group-table ranking and **Q** / **P** / **C** labels for the selected edition (`standings_rules_visitor_lines()` → `_standings_rules_help.html` macro; toggle via `world_cup_standings_rules.js`).
+
+| Page | Placement |
+| ---- | --------- |
+| **Overview** group blocks | Same row as the group heading, right side of `world-cup-overview-block-header-actions` |
+| **Single group** page | Top nav toolbar, left of the next-group button (`world-cup-group-nav-toolbar-end`) |
+
+Not shown when the edition has no group stage. Play-off **Q** / **P** legend lines appear only when `edition_had_group_playoffs(edition)` (**1954**, **1958**); other 1930–1954 editions get a simple **Q** legend.
+
+### 10.6 CSS
 
 - `world-cup.css` loaded from `world-cup-base.html` (extends `football-base.html`).
 - Reuse `table.css` for all group/standings tables.
 - PL zone classes (`table-zone-ucl`, etc.) are not applied.
 - Bracket-specific layout vars: `--world-cup-bracket-row-size`, `--world-cup-bracket-round-width`, zebra `--0` / `--1` round bands.
 
-### 10.6 Responsive
+### 10.7 Responsive
 
 - Overview group blocks: two columns on wide screens, one on narrow.
 - Knockout match cards: same responsive grid as `football-grid`.
+
+### 10.8 Edition picker popup layout
+
+Popup actions row: **Apply** (submit) on the left; **Current Edition** / **Current Season** link on the right (`.football-season-current-btn { margin-left: auto; }` in `football.css`). Hidden when the selected edition/season is already current.
 
 ## 11. Route Summary
 
@@ -852,6 +911,8 @@ Knockout rounds do not need live table updates (no standings table).
 | GET    | `/football/world-cup/knockout/`         | Knockout index                                     |
 | GET    | `/football/world-cup/knockout/{round}/` | Single knockout round                              |
 | GET    | `/football/world-cup/matches/`          | All matches                                        |
+| GET    | `/football/world-cup/playoffs/`         | Group play-offs (**1954**, **1958** only — §16.4)  |
+| GET    | `/football/world-cup/summary/`          | Historic edition summary (§4.10)                   |
 | GET    | `/football/world-cup/teams/{team_id}/`  | Team fixtures                                      |
 | GET    | `/football/world-cup/subscriptions/`    | National-team push notification preferences        |
 | PUT    | `/football/world-cup/subscriptions/`    | Save notification preferences (API)                |
@@ -894,11 +955,20 @@ Query param on all HTML routes: `?edition={year}` (default = current edition via
 
 See §15. Summary:
 
-- [ ] `WC_EDITION_REGISTRY` including `has_group_stage` (§3.4)
-- [ ] Two-tier team/flag registries + Wikimedia SVG fetch per §7.3.3 (tier-A IDs from 2026 live data; tier-B synthetic IDs for all other nations)
-- [ ] One-off import script: external dataset → `wc_matches_{year}` / `wc_standings_{year}` (standings step skipped for 1934/1938)
-- [ ] Pilot editions: **2022**, **2018** (then earlier tournaments as datasets allow)
-- [ ] Edition pill lists all imported years; live ingest + WebSocket remain **current edition only**
+- [x] `WC_EDITION_REGISTRY` including `has_group_stage` (§3.4) — **1930–2026**
+- [x] Two-tier team/flag registries + Wikimedia SVG fetch per §7.3.3 (tier-A IDs from 2026 live data; tier-B synthetic IDs for all other nations)
+- [x] One-off import script: `scripts/import_wc_historical_edition.py` → `wc_matches_{year}` / `wc_standings_{year}` (standings skipped for 1934/1938)
+- [x] All editions **1930–2022** imported from openfootball
+- [x] Edition pill lists all imported years; live ingest + WebSocket remain **current edition only**
+
+### Phase 6 — Historic summary and polish
+
+- [x] **Summary** page for historic editions (`wc_edition_summaries.json`, §4.10)
+- [x] Edition-aware **Rules for this edition** on Summary (`edition_summary_rules_sections()`; group play-offs section only when `edition_had_group_playoffs()`)
+- [x] Standings rules **?** help on overview and group pages
+- [x] Shared `_edition_picker.html` with **Current Edition** button; PL **Current Season** button restored
+- [x] Redirect-to-overview when switching edition to an invalid page type (§5.5)
+- [x] Knockout index: bracket only (no Rounds shortcut list)
 
 ## 13. Decisions
 
@@ -918,6 +988,10 @@ See §15. Summary:
 | 11  | WC match card           | Dedicated `world_cup_match_card` macro — PL `score-widget` format, shared team-link hover                          | §4.4, §10.4                   |
 | 12  | Bracket feeder labels   | **2026:** static `WC_2026_KNOCKOUT_FIXTURES` map for R32+ slots; `bracket_team_label()` at render time             | §4.4                          |
 | 13  | Third-place on bracket  | In Final column below Final match, not a separate footer block                                                     | §4.4                          |
+| 14  | Invalid edition pages   | **302 redirect** to tournament overview — not 404                                                                    | §5.5                          |
+| 15  | Historic summary        | **Summary** nav + page for all editions except current (`2026`); synopsis in `wc_edition_summaries.json`           | §4.10                         |
+| 16  | Edition picker UX       | Shared partial; **Apply** keeps page type; **Current Edition** jumps to same route with current year                 | §5.2, §10.8                   |
+| 17  | Summary play-off rules  | **Group play-offs** section on Summary only when play-off data exists (**1954**, **1958**) — definite wording      | §4.10, §16.4                  |
 
 
 ## 15. Historical Editions — Static Backfill
@@ -960,7 +1034,7 @@ https://raw.githubusercontent.com/openfootball/worldcup.json/master/2018/worldcu
 
 **openfootball match shape:** `team1`, `team2`, `date`, `time`, `round`, `group`, `score` (`ft`, `ht`, `et`, `p`), `ground`. Map `round` values (`Matchday 1`, `Round of 16`, `Final`, …) to internal `stage` / `matchday` enums. Derive group standings from finished group-stage matches (openfootball does not ship standings tables).
 
-**Older tournaments (pre-2018):** Source datasets live in [openfootball/worldcup](https://github.com/openfootball/worldcup) (football.txt format) and can be converted to JSON with the repo’s `fbtxt2json` tool, or supplemented from [jfjelstul/worldcup](https://github.com/jfjelstul/worldcup) (`data-json/`, 1930–2022) if an edition is missing from worldcup.json. Import v1 can target **1998–2022** (32-team era) first; earlier editions need per-edition config (§3.4). Remember **1934** and **1938** have no group field on matches — import as knockout-only.
+**Older tournaments (pre-2018):** Source datasets live in [openfootball/worldcup](https://github.com/openfootball/worldcup) (football.txt format) and can be converted to JSON with the repo’s `fbtxt2json` tool, or supplemented from [jfjelstul/worldcup](https://github.com/jfjelstul/worldcup) (`data-json/`, 1930–2022) if an edition is missing from worldcup.json. **All editions 1930–2022** are now imported. Remember **1934** and **1938** have no group field on matches — import as knockout-only.
 
 **Not used for history:** football-data.org `?season={year}` (403 on current plan — §8.5).
 
@@ -999,24 +1073,24 @@ Idempotent upsert so the script can be re-run safely while developing; once depl
 
 ### 15.6 Implementation checklist
 
-1. `WC_EDITION_REGISTRY` with `has_group_stage` per year (`False` for 1934, 1938).
-2. `wc_team_registry.json` + `wc_flag_registry.json` — two-tier ID strategy and Wikimedia SVG mapping (§7.3); flag fetch + audit scripts.
-3. openfootball → `Match` normaliser (stage, score, status=`FINISHED` for played games).
-4. Group standings computer — edition-aware (§16); **skip** when `has_group_stage` is false.
-5. `edition_has_group_stage()`, play-off and knockout-stage guards in router and sidebar (§16.4, §16.5).
-6. Import CLI; run for **2022** and **2018**; confirm group-stage pages.
-7. Import **1934** or **1938** as knockout-only smoke test (no groups nav, overview without group blocks).
-8. Confirm edition pill lists new years and defaults to **2026** on `/football/world-cup/`.
-9. Extend to earlier editions as needed.
+1. [x] `WC_EDITION_REGISTRY` with `has_group_stage` per year (`False` for 1934, 1938).
+2. [x] `wc_team_registry.json` + `wc_flag_registry.json` — two-tier ID strategy and Wikimedia SVG mapping (§7.3); flag fetch + audit scripts.
+3. [x] openfootball → `Match` normaliser (stage, score, status=`FINISHED` for played games).
+4. [x] Group standings computer — edition-aware (§16); **skip** when `has_group_stage` is false.
+5. [x] `edition_has_group_stage()`, play-off and knockout-stage guards in router and sidebar (§16.4, §16.5).
+6. [x] Import CLI; all editions **1930–2022** imported.
+7. [x] **1934** and **1938** knockout-only smoke test (no groups nav, overview without group blocks).
+8. [x] Edition pill lists all years and defaults to **2026** on `/football/world-cup/`.
+9. [x] Historic **Summary** page and `wc_edition_summaries.json` synopses (§4.10).
 
 ### 15.7 Acceptance criteria
 
-- [ ] **2022** and **2018** fully browsable from Mongo with no football-data.org calls.
-- [ ] **2026** still live via football-data.org; switching to 2022 via the pill shows frozen data.
-- [ ] Edition pill behaviour matches the PL season pill (default = current, popup when multiple editions exist).
-- [ ] Historical collections are never updated by the live worker.
-- [ ] All teams show the correct country flag SVG (including historical nations in past editions); tier-A IDs match 2026 live data across all editions (§7.3.4).
-- [ ] **1934** and **1938**: knockout-only overview, no Groups sidebar link, `/groups/` returns 404; knockout and all-matches work.
+- [x] **1930–2022** fully browsable from Mongo with no football-data.org calls.
+- [x] **2026** still live via football-data.org; switching to 2022 via the pill shows frozen data.
+- [x] Edition pill behaviour matches the PL season pill (default = current, popup when multiple editions exist; **Current Edition** button).
+- [x] Historical collections are never updated by the live worker.
+- [x] All teams show the correct country flag SVG (including historical nations in past editions); tier-A IDs match 2026 live data across all editions (§7.3.4).
+- [x] **1934** and **1938**: knockout-only overview, no Groups sidebar link, `/groups/` **redirects** to overview; knockout and all-matches work.
 
 ## 16. Historical tie-breakers, group play-offs and knockout replays
 
@@ -1134,9 +1208,20 @@ When a knockout tie was drawn, some early tournaments scheduled a **replay** rat
 
 “—” = not applicable or no instances in the imported dataset.
 
-### 16.8 Not yet implemented
+### 16.8 Summary page and visitor copy
 
-1. **1930 group play-offs** — rules documented for the era; no play-off fixtures in the current openfootball JSON (may appear if a richer source is imported).
+**Synopsis data:** `website/football/wc_edition_summaries.json` — one entry per historic edition (1930–2022): host, dates, winner, runner-up, top scorer, intro, highlights, and optional round-by-round sections.
+
+**Summary rules sections** (`edition_summary_rules_sections()`):
+
+| Section | When included |
+| ------- | ------------- |
+| Tournament format | Always (edition-specific: knockout-only, 1950 final round, two-phase 1974/78/82, etc.) |
+| Group standings | When `edition_has_group_stage()` — reuses `standings_rules_visitor_lines()` |
+| Group play-offs | Only when `edition_had_group_playoffs(edition)` (**1954**, **1958**) — uses definite “FIFA scheduled…” wording, not “sometimes” |
+| Knockout ties | When edition has knockout stage — replay summary for 1934/1938; ET/pens era from 1970 |
+
+**1930 group play-offs:** rules documented for the era; no play-off fixtures in the current openfootball JSON (may appear if a richer source is imported). Summary omits the play-offs section for editions without play-off data.
 
 **Implementation helpers:**
 
@@ -1146,10 +1231,16 @@ When a knockout tie was drawn, some early tournaments scheduled a **replay** rat
 | `edition_points_per_win()` | `world_cup_utils.py` | 2 vs 3 points per win |
 | `edition_uses_goal_average()` | `world_cup_utils.py` | 1958–1966 → GA column |
 | `edition_hides_goal_difference_column()` | `world_cup_utils.py` | 1930–1954 → hide GD/GA column |
+| `edition_had_group_playoffs()` | `world_cup_utils.py` | True only for **1954**, **1958** (imported play-off data) |
+| `standings_rules_visitor_lines()` | `world_cup_utils.py` | Popover + Summary group-standing copy |
+| `edition_summary_rules_sections()` | `world_cup_utils.py` | Summary “Rules for this edition” blocks |
+| `edition_summary_synopsis()` | `world_cup_utils.py` | Load synopsis from `wc_edition_summaries.json` |
+| `edition_is_historic()` | `world_cup_utils.py` | `edition != WC_CURRENT_EDITION` → Summary nav |
 | `sort_group_table_rows()` | `world_cup_utils.py` | Edition-aware ordering (1930–1954 play-offs; 1958 GA + play-offs) |
 | `prepare_group_table_for_display()` | `world_cup_db.py` | Sort + Q/P/C labels |
 | `filter_superseded_knockout_replays()` | `world_cup_utils.py` | Knockout view: replay leg only |
 | `world_cup_score_annotation()` | `world_cup_utils.py` | `(replay)`, `(aet)`, pens |
+| `world_cup_edition_switch_url_for_edition()` | `world_cup_utils.py` | Build **Current Edition** URL from `edition_switch_path` |
 | `_normalize_knockout_replays()` | `world_cup_import.py` | Import both replay legs |
 
 ## 14. References
@@ -1159,9 +1250,13 @@ When a knockout tie was drawn, some early tournaments scheduled a **replay** rat
 | -------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
 | WC router            | `website/football/world_cup_router.py`                                                                                       |
 | WC DB / bracket      | `website/football/world_cup_db.py`                                                                                           |
-| WC utils / fixtures  | `website/football/world_cup_utils.py` (tie-breakers, play-offs, replays — §16)                                               |
+| WC utils / fixtures  | `website/football/world_cup_utils.py` (tie-breakers, play-offs, replays, summary — §16)                                      |
+| Edition summaries    | `website/football/wc_edition_summaries.json`                                                                                 |
 | WC historical import | `scripts/import_wc_historical_edition.py`, `website/football/world_cup_import.py`                                              |
 | Match card macro     | `website/templates/football/world-cup/_match_card.html`                                                                      |
+| Edition picker       | `website/templates/football/world-cup/_edition_picker.html`                                                                  |
+| Summary template     | `website/templates/football/world-cup/summary.html`                                                                          |
+| Standings rules help | `website/templates/football/world-cup/_standings_rules_help.html`, `website/static/js/football/world_cup_standings_rules.js` |
 | Bracket partial      | `website/templates/football/world-cup/_knockout_bracket.html`                                                                |
 | WC base template     | `website/templates/football/world-cup/world-cup-base.html`                                                                   |
 | WC CSS               | `website/static/css/football/world-cup.css`                                                                                  |
@@ -1190,4 +1285,4 @@ When a knockout tie was drawn, some early tournaments scheduled a **replay** rat
 
 ---
 
-*Phases 1–4 (§12) are complete for the 2026 live edition. **Next:** Phase 5 — one-off static import of past World Cups (§15); edition pill switches between them like the PL season pill.*
+*Phases 1–6 (§12) are complete: **2026** live; **1930–2022** static in Mongo; edition pill and **Current Edition** button; historic **Summary** page; standings rules help; bracket-only knockout index.*
