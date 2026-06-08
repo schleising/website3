@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from .models import Match, Team
+    from .models import Match, TableItem, Team
 
 WC_CURRENT_EDITION = "2026"
 WC_CREST_UNKNOWN_URL = "/images/football/crests/unknown_team.svg"
@@ -91,6 +91,82 @@ def edition_has_knockout_stage(edition: str) -> bool:
     if entry is not None:
         return bool(entry.get("has_knockout_stage", True))
     return True
+
+
+def edition_points_per_win(edition: str) -> int:
+    """Two points per win through 1990; three points from 1994 onward."""
+    return 2 if int(edition) <= 1990 else 3
+
+
+def compute_group_table_points(won: int, draw: int, edition: str) -> int:
+    return won * edition_points_per_win(edition) + draw
+
+
+def edition_uses_goal_average(edition: str) -> bool:
+    year = int(edition)
+    return 1958 <= year <= 1966
+
+
+def format_goal_average(goals_for: int, goals_against: int) -> str:
+    if goals_against == 0:
+        if goals_for == 0:
+            return "0.00"
+        return "∞"
+    return f"{goals_for / goals_against:.2f}"
+
+
+def _goal_average_sort_components(goals_for: int, goals_against: int) -> tuple[int, float, int]:
+    """Ascending sort key so a higher goal average ranks above a lower one."""
+    if goals_against == 0:
+        return (0, 0.0, -goals_for)
+    return (1, -(goals_for / goals_against), -goals_for)
+
+
+def group_table_row_sort_key(
+    *,
+    won: int,
+    draw: int,
+    goals_for: int,
+    goals_against: int,
+    goal_difference: int,
+    team_display_name: str,
+    edition: str,
+) -> tuple[int | float | str, ...]:
+    points = compute_group_table_points(won, draw, edition)
+    base: tuple[int | float | str, ...] = (-points,)
+    if edition_uses_goal_average(edition):
+        return base + _goal_average_sort_components(goals_for, goals_against) + (
+            team_display_name.casefold(),
+        )
+
+    # 1970 onward: goal difference, then goals scored.
+    # 1930–1954: playoffs decided ties; interim GD/GF ordering until that is modelled.
+    return base + (-goal_difference, -goals_for, team_display_name.casefold())
+
+
+def sort_group_table_rows(table: list["TableItem"], edition: str) -> list["TableItem"]:
+    ordered_rows = sorted(
+        table,
+        key=lambda row: group_table_row_sort_key(
+            won=row.won,
+            draw=row.draw,
+            goals_for=row.goals_for,
+            goals_against=row.goals_against,
+            goal_difference=row.goal_difference,
+            team_display_name=row.team.display_name,
+            edition=edition,
+        ),
+    )
+
+    return [
+        row.model_copy(
+            update={
+                "position": position,
+                "points": compute_group_table_points(row.won, row.draw, edition),
+            },
+        )
+        for position, row in enumerate(ordered_rows, start=1)
+    ]
 
 
 def _group_matches_into_date_buckets(matches: list["Match"]) -> list[list["Match"]]:

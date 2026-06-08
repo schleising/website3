@@ -17,6 +17,7 @@ from .world_cup_utils import (
     edition_has_group_stage,
     edition_has_knockout_stage,
     is_final_group_stage_group,
+    sort_group_table_rows,
     group_order_for_edition,
     group_stages_for_edition,
     group_index_stages_for_edition,
@@ -555,6 +556,8 @@ async def prepare_group_table_for_display(
     if not _group_has_results(prepared):
         _clear_position_labels(prepared)
         return prepared
+
+    prepared = sort_group_table_rows(prepared, edition)
 
     if edition == WC_CURRENT_EDITION:
         return _apply_guaranteed_qualification_labels(prepared)

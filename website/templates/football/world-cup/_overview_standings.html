@@ -8,7 +8,7 @@
     <span class="world-cup-overview-standings-stat world-cup-overview-standings-stat--desktop" role="columnheader">W</span>
     <span class="world-cup-overview-standings-stat world-cup-overview-standings-stat--desktop" role="columnheader">D</span>
     <span class="world-cup-overview-standings-stat world-cup-overview-standings-stat--desktop" role="columnheader">L</span>
-    <span class="world-cup-overview-standings-stat" role="columnheader">GD</span>
+    <span class="world-cup-overview-standings-stat" role="columnheader">{% if edition|edition_uses_goal_average %}GA{% else %}GD{% endif %}</span>
     <span class="world-cup-overview-standings-stat" role="columnheader">Pts</span>
   </div>
   {% for table_item in table_rows %}
@@ -26,7 +26,7 @@
     <span class="world-cup-overview-standings-stat world-cup-overview-standings-stat--desktop world-cup-overview-standings-won" role="cell">{{ table_item.won }}</span>
     <span class="world-cup-overview-standings-stat world-cup-overview-standings-stat--desktop world-cup-overview-standings-draw" role="cell">{{ table_item.draw }}</span>
     <span class="world-cup-overview-standings-stat world-cup-overview-standings-stat--desktop world-cup-overview-standings-lost" role="cell">{{ table_item.lost }}</span>
-    <span class="world-cup-overview-standings-stat world-cup-overview-standings-goal-difference" role="cell">{{ table_item.goal_difference }}</span>
+    <span class="world-cup-overview-standings-stat world-cup-overview-standings-goal-difference" role="cell">{% if edition|edition_uses_goal_average %}{{ table_item.goals_for|format_goal_average(table_item.goals_against) }}{% else %}{{ table_item.goal_difference }}{% endif %}</span>
     <span class="world-cup-overview-standings-stat world-cup-overview-standings-points" role="cell">{{ table_item.points }}</span>
   </div>
   {% endfor %}

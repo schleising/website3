@@ -35,7 +35,9 @@ from .world_cup_utils import (
     adjacent_group_slugs,
     edition_has_group_stage,
     edition_has_knockout_stage,
+    edition_uses_goal_average,
     edition_label,
+    format_goal_average,
     group_order_for_edition,
     filter_confirmed_knockout_matches,
     group_slug_to_label,
@@ -60,6 +62,8 @@ TEMPLATES.env.filters["knockout_match_has_confirmed_teams"] = (
 )
 TEMPLATES.env.filters["world_cup_display_score"] = world_cup_display_score
 TEMPLATES.env.filters["world_cup_score_annotation"] = world_cup_score_annotation
+TEMPLATES.env.filters["edition_uses_goal_average"] = edition_uses_goal_average
+TEMPLATES.env.filters["format_goal_average"] = format_goal_average
 
 
 def _football_context_helpers():

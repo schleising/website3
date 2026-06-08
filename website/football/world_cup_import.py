@@ -26,12 +26,14 @@ from .models import (
 )
 from .world_cup_utils import (
     WC_GROUP_STAGE,
+    compute_group_table_points,
     edition_has_group_stage,
     group_enum_to_slug,
     group_order_for_edition,
     group_slug_to_enum,
     group_slug_to_label,
     normalize_group_stage_matchdays,
+    sort_group_table_rows,
     standings_label_to_slug,
 )
 
@@ -360,10 +362,6 @@ class _GroupStats(BaseModel):
     goals_against: int = 0
 
     @property
-    def points(self) -> int:
-        return self.won * 3 + self.draw
-
-    @property
     def goal_difference(self) -> int:
         return self.goals_for - self.goals_against
 
@@ -416,30 +414,24 @@ def compute_group_standings(matches: list[Match], edition: str) -> list[WorldCup
         if group_stats is None:
             continue
 
-        ordered_rows = sorted(
-            group_stats.values(),
-            key=lambda row: (
-                -row.points,
-                -row.goal_difference,
-                -row.goals_for,
-                row.team.display_name.casefold(),
-            ),
+        table = sort_group_table_rows(
+            [
+                TableItem(
+                    position=index,
+                    team=row.team,
+                    played_games=row.played,
+                    won=row.won,
+                    draw=row.draw,
+                    lost=row.lost,
+                    points=compute_group_table_points(row.won, row.draw, edition),
+                    goals_for=row.goals_for,
+                    goals_against=row.goals_against,
+                    goal_difference=row.goal_difference,
+                )
+                for index, row in enumerate(group_stats.values(), start=1)
+            ],
+            edition,
         )
-        table = [
-            TableItem(
-                position=position,
-                team=row.team,
-                played_games=row.played,
-                won=row.won,
-                draw=row.draw,
-                lost=row.lost,
-                points=row.points,
-                goals_for=row.goals_for,
-                goals_against=row.goals_against,
-                goal_difference=row.goal_difference,
-            )
-            for position, row in enumerate(ordered_rows, start=1)
-        ]
         documents.append(
             WorldCupGroupStandingsDocument(
                 edition=edition,

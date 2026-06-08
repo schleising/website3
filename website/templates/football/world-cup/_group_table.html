@@ -12,7 +12,7 @@
         <div class="header-data data table-cell centre-align medium-table" role="columnheader">L</div>
         <div class="header-data data table-cell centre-align large-table" role="columnheader">F</div>
         <div class="header-data data table-cell centre-align large-table" role="columnheader">A</div>
-        <div class="header-data data table-cell centre-align" role="columnheader">GD</div>
+        <div class="header-data data table-cell centre-align" role="columnheader">{% if edition|edition_uses_goal_average %}GA{% else %}GD{% endif %}</div>
         <div class="header-data data table-cell centre-align" role="columnheader">Pts</div>
       </div>
     </header>
@@ -38,7 +38,7 @@
         <div class="row-data data table-cell medium-table centre-align table-lost" role="cell">{{ table_item.lost }}</div>
         <div class="row-data data table-cell large-table centre-align table-goals-for" role="cell">{{ table_item.goals_for }}</div>
         <div class="row-data data table-cell large-table centre-align table-goals-against" role="cell">{{ table_item.goals_against }}</div>
-        <div class="row-data data table-cell centre-align table-goal-difference" role="cell">{{ table_item.goal_difference }}</div>
+        <div class="row-data data table-cell centre-align table-goal-difference" role="cell">{% if edition|edition_uses_goal_average %}{{ table_item.goals_for|format_goal_average(table_item.goals_against) }}{% else %}{{ table_item.goal_difference }}{% endif %}</div>
         <div class="row-data data table-cell centre-align table-points" role="cell">{{ table_item.points }}</div>
       </article>
       {% endfor %}
