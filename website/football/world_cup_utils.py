@@ -15,6 +15,30 @@ WC_CREST_STATIC_DIR = (
 )
 WC_GROUP_STAGE = "GROUP_STAGE"
 WC_GROUP_ORDER = tuple(chr(code) for code in range(ord("a"), ord("l") + 1))
+WC_2022_GROUP_ORDER = tuple(chr(code) for code in range(ord("a"), ord("h") + 1))
+
+WC_EDITION_REGISTRY: dict[str, dict[str, object]] = {
+    "1934": {"has_group_stage": False, "group_order": ()},
+    "1938": {"has_group_stage": False, "group_order": ()},
+    "2022": {"has_group_stage": True, "group_order": WC_2022_GROUP_ORDER},
+    "2026": {"has_group_stage": True, "group_order": WC_GROUP_ORDER},
+}
+
+
+def edition_has_group_stage(edition: str) -> bool:
+    entry = WC_EDITION_REGISTRY.get(edition)
+    if entry is not None:
+        return bool(entry.get("has_group_stage", True))
+    return True
+
+
+def group_order_for_edition(edition: str) -> tuple[str, ...]:
+    entry = WC_EDITION_REGISTRY.get(edition)
+    if entry is not None:
+        group_order = entry.get("group_order")
+        if isinstance(group_order, tuple) and len(group_order) > 0:
+            return group_order
+    return WC_GROUP_ORDER
 
 WC_KNOCKOUT_ROUNDS: tuple[tuple[str, str, str], ...] = (
     ("LAST_32", "round-of-32", "Round of 32"),
@@ -51,13 +75,17 @@ def group_slug_to_label(group_slug: str) -> str:
     return f"Group {normalise_group_slug(group_slug).upper()}"
 
 
-def adjacent_group_slugs(group_slug: str) -> tuple[str, str]:
+def adjacent_group_slugs(
+    group_slug: str,
+    edition: str | None = None,
+) -> tuple[str, str]:
     slug = normalise_group_slug(group_slug)
-    index = WC_GROUP_ORDER.index(slug)
-    group_count = len(WC_GROUP_ORDER)
+    group_order = group_order_for_edition(edition or WC_CURRENT_EDITION)
+    index = group_order.index(slug)
+    group_count = len(group_order)
     return (
-        WC_GROUP_ORDER[(index - 1) % group_count],
-        WC_GROUP_ORDER[(index + 1) % group_count],
+        group_order[(index - 1) % group_count],
+        group_order[(index + 1) % group_count],
     )
 
 

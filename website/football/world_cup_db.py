@@ -13,8 +13,9 @@ from . import mongodb
 from .models import Match, MatchStatus, Table, TableItem, Team
 from .world_cup_utils import (
     WC_CURRENT_EDITION,
-    WC_GROUP_ORDER,
     WC_GROUP_STAGE,
+    edition_has_group_stage,
+    group_order_for_edition,
     WC_KNOCKOUT_OVERVIEW_ORDER,
     WC_KNOCKOUT_ROUNDS,
     WC_2026_KNOCKOUT_BRACKET_ORDER,
@@ -275,6 +276,9 @@ async def retrieve_group_standings(
 async def retrieve_all_group_standings(
     edition: str, *, prefer_live: bool = True
 ) -> list[WorldCupGroupStandings]:
+    if not edition_has_group_stage(edition):
+        return []
+
     if prefer_live:
         live_standings = await _retrieve_group_standings_from_collection(
             _get_live_standings_collection(edition),
@@ -317,7 +321,8 @@ async def _compute_group_standings_from_matches(edition: str) -> list[WorldCupGr
         if isinstance(group_value, str):
             discovered_slugs.add(group_enum_to_slug(group_value))
 
-    ordered_slugs = [slug for slug in WC_GROUP_ORDER if slug in discovered_slugs]
+    edition_group_order = group_order_for_edition(edition)
+    ordered_slugs = [slug for slug in edition_group_order if slug in discovered_slugs]
     ordered_slugs.extend(sorted(discovered_slugs - set(ordered_slugs)))
 
     return [
@@ -493,6 +498,9 @@ async def build_overview_knockout_sections(edition: str) -> list[WorldCupKnockou
 
 
 async def build_overview_group_blocks(edition: str) -> list[WorldCupOverviewGroupBlock]:
+    if not edition_has_group_stage(edition):
+        return []
+
     standings = await retrieve_all_group_standings(edition)
     blocks: list[WorldCupOverviewGroupBlock] = []
 
@@ -511,6 +519,9 @@ async def build_overview_group_blocks(edition: str) -> list[WorldCupOverviewGrou
 
 
 async def list_group_summaries(edition: str) -> list[WorldCupGroupSummary]:
+    if not edition_has_group_stage(edition):
+        return []
+
     standings = await retrieve_all_group_standings(edition)
     summaries: list[WorldCupGroupSummary] = []
 

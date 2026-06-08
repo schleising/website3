@@ -31,9 +31,10 @@ from .world_cup_db import (
     world_cup_nav_available,
 )
 from .world_cup_utils import (
-    WC_GROUP_ORDER,
     adjacent_group_slugs,
+    edition_has_group_stage,
     edition_label,
+    group_order_for_edition,
     filter_confirmed_knockout_matches,
     group_slug_to_label,
     is_valid_round_slug,
@@ -80,10 +81,13 @@ async def _build_world_cup_context(
         else current_edition
     )
     is_current_edition = selected_edition == current_edition
+    has_group_stage = edition_has_group_stage(selected_edition)
 
     return {
         "world_cup_section": True,
         "is_current_edition": is_current_edition,
+        "has_group_stage": has_group_stage,
+        "show_groups_nav": has_group_stage,
         "enable_live_updates": is_current_edition,
         "enable_live_standings": False,
         "show_world_cup_nav": await world_cup_nav_available(),
@@ -100,7 +104,9 @@ async def _build_world_cup_context(
         "selected_edition": selected_edition,
         "selected_edition_label": edition_label(selected_edition),
         "current_edition": current_edition,
-        "edition_switch_path": f"{world_cup_root}groups/",
+        "edition_switch_path": (
+            f"{world_cup_root}groups/" if has_group_stage else world_cup_root
+        ),
         "world_cup_overview_url": world_cup_root,
         "world_cup_groups_url": f"{world_cup_root}groups/",
         "world_cup_knockout_url": f"{world_cup_root}knockout/",
@@ -206,9 +212,9 @@ def _build_overview_jump_targets(
     return jump_targets
 
 
-def _validate_group_slug(group_slug: str) -> str:
+def _validate_group_slug(group_slug: str, edition: str) -> str:
     slug = normalise_group_slug(group_slug)
-    if slug not in WC_GROUP_ORDER:
+    if slug not in group_order_for_edition(edition):
         raise HTTPException(status_code=404, detail="Group not found")
     return slug
 
@@ -309,6 +315,8 @@ async def get_world_cup_groups_index(
     logging.debug("/football/world-cup/groups/: %s", request)
     context = await _build_world_cup_context(request, edition)
     selected_edition = context["selected_edition"]
+    if not context["has_group_stage"]:
+        raise HTTPException(status_code=404, detail="This edition has no group stage")
     group_summaries = await list_group_summaries(selected_edition)
 
     context["edition_switch_path"] = f"{context['football_root_path']}world-cup/groups/"
@@ -333,9 +341,11 @@ async def get_world_cup_group(
     edition: str | None = Query(default=None, pattern=r"^\d{4}$"),
 ):
     logging.debug("/football/world-cup/groups/%s: %s", group_slug, request)
-    slug = _validate_group_slug(group_slug)
     context = await _build_world_cup_context(request, edition)
     selected_edition = context["selected_edition"]
+    if not context["has_group_stage"]:
+        raise HTTPException(status_code=404, detail="This edition has no group stage")
+    slug = _validate_group_slug(group_slug, selected_edition)
 
     standings = await retrieve_group_standings(selected_edition, slug)
     if standings is None:
@@ -357,7 +367,7 @@ async def get_world_cup_group(
 
     football_root_path = str(context["football_root_path"])
     edition_query = f"?edition={selected_edition}"
-    prev_slug, next_slug = adjacent_group_slugs(slug)
+    prev_slug, next_slug = adjacent_group_slugs(slug, selected_edition)
 
     def _group_nav_target(group_slug_value: str) -> dict:
         return {
