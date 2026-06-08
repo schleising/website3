@@ -27,7 +27,11 @@ WC_EDITION_REGISTRY: dict[str, dict[str, object]] = {
     "1930": {"has_group_stage": True, "group_order": WC_GROUP_ORDER_4_NUMERIC},
     "1934": {"has_group_stage": False, "group_order": ()},
     "1938": {"has_group_stage": False, "group_order": ()},
-    "1950": {"has_group_stage": True, "group_order": WC_1950_GROUP_ORDER},
+    "1950": {
+        "has_group_stage": True,
+        "has_knockout_stage": False,
+        "group_order": WC_1950_GROUP_ORDER,
+    },
     "1954": {"has_group_stage": True, "group_order": WC_GROUP_ORDER_4_NUMERIC},
     "1958": {"has_group_stage": True, "group_order": WC_GROUP_ORDER_4_NUMERIC},
     "1962": {"has_group_stage": True, "group_order": WC_GROUP_ORDER_4_NUMERIC},
@@ -62,6 +66,13 @@ def edition_has_group_stage(edition: str) -> bool:
     entry = WC_EDITION_REGISTRY.get(edition)
     if entry is not None:
         return bool(entry.get("has_group_stage", True))
+    return True
+
+
+def edition_has_knockout_stage(edition: str) -> bool:
+    entry = WC_EDITION_REGISTRY.get(edition)
+    if entry is not None:
+        return bool(entry.get("has_knockout_stage", True))
     return True
 
 

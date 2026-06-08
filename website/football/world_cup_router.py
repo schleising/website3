@@ -33,6 +33,7 @@ from .world_cup_db import (
 from .world_cup_utils import (
     adjacent_group_slugs,
     edition_has_group_stage,
+    edition_has_knockout_stage,
     edition_label,
     group_order_for_edition,
     filter_confirmed_knockout_matches,
@@ -95,13 +96,16 @@ async def _build_world_cup_context(
     )
     is_current_edition = selected_edition == current_edition
     has_group_stage = edition_has_group_stage(selected_edition)
+    has_knockout_stage = edition_has_knockout_stage(selected_edition)
     edition_query = world_cup_edition_query(selected_edition)
 
     return {
         "world_cup_section": True,
         "is_current_edition": is_current_edition,
         "has_group_stage": has_group_stage,
+        "has_knockout_stage": has_knockout_stage,
         "show_groups_nav": has_group_stage,
+        "show_knockout_nav": has_knockout_stage,
         "enable_live_updates": is_current_edition,
         "enable_live_standings": False,
         "show_world_cup_nav": await world_cup_nav_available(),
@@ -472,6 +476,9 @@ async def get_world_cup_knockout_index(
 ):
     logging.debug("/football/world-cup/knockout/: %s", request)
     context = await _build_world_cup_context(request, edition)
+    if not context["has_knockout_stage"]:
+        return _redirect_to_world_cup_overview(context)
+
     selected_edition = context["selected_edition"]
     knockout_rounds = await list_available_knockout_rounds(selected_edition)
     knockout_bracket = await build_knockout_bracket_diagram(
@@ -641,6 +648,9 @@ async def get_world_cup_knockout_round(
     logging.debug("/football/world-cup/knockout/%s: %s", round_slug, request)
     slug = _validate_round_slug(round_slug)
     context = await _build_world_cup_context(request, edition)
+    if not context["has_knockout_stage"]:
+        return _redirect_to_world_cup_overview(context)
+
     selected_edition = context["selected_edition"]
     stage = round_slug_to_stage(slug)
 
