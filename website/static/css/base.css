@@ -197,6 +197,8 @@ h3.header-text {
     background: linear-gradient(180deg, #fbfdff 0%, #f0f6fd 100%);
     box-shadow: var(--shadow);
     width: max-content;
+    min-width: max-content;
+    overflow-x: auto;
 }
 
 .right-sidebar.hidden-sidebar {

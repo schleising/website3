@@ -762,7 +762,8 @@
 }
 
 .right-sidebar .feed-sidebar-link {
-    width: 100%;
+    width: max-content;
+    min-width: 100%;
     display: flex;
     align-items: center;
     justify-content: flex-end;
@@ -779,7 +780,7 @@
 .feed-category-name {
     text-align: right;
     overflow: visible;
-    text-overflow: clip;
+    text-overflow: unset;
     white-space: nowrap;
     flex: 0 0 auto;
     order: 1;
@@ -1686,7 +1687,7 @@ body.feed-category-color-popup-open {
     .feed-category-name {
         text-align: right;
         overflow: visible;
-        text-overflow: clip;
+        text-overflow: unset;
         white-space: nowrap;
         word-break: normal;
     }
@@ -1834,10 +1835,10 @@ body.feed-category-color-popup-open {
 .right-sidebar .feed-sidebar-feed-label {
     display: block;
     min-width: 0;
-    max-width: 100%;
-    overflow: hidden;
+    max-width: none;
+    overflow: visible;
     white-space: nowrap;
-    text-overflow: clip;
+    text-overflow: unset;
     text-align: right;
     line-height: 1.22;
 }

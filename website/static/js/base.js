@@ -731,11 +731,7 @@ function measureSidebarContentWidth(sidebar) {
     const sidebarBorder = (parseFloat(sidebarStyle.borderLeftWidth) || 0) + (parseFloat(sidebarStyle.borderRightWidth) || 0);
     const intrinsicWidth = Math.ceil(maxLinkWidth + contentPad + sidebarPad + sidebarBorder);
     const fallbackWidth = Math.ceil(content.scrollWidth);
-    // If nav links exist, prefer intrinsic link measurement to avoid scrollWidth inflation
-    // from hidden/fixed descendants during breakpoint transitions.
-    const measuredWidth = links.length > 0
-        ? intrinsicWidth
-        : Math.max(fallbackWidth, intrinsicWidth);
+    const measuredWidth = Math.max(intrinsicWidth, fallbackWidth);
 
     if (sidebarIsHidden) {
         sidebar.style.display = styleSnapshot.display;

@@ -71,6 +71,19 @@ html.suppress-sidebar-hover .right-sidebar .sub-level-nav:hover:not(.is-current)
     padding: 0.3rem;
 }
 
+.left-sidebar .sub-level-nav-container,
+.right-sidebar .sub-level-nav-container {
+    white-space: nowrap;
+    width: max-content;
+    min-width: 100%;
+}
+
+.sidebar .sub-level-nav {
+    overflow: visible;
+    text-overflow: unset;
+    max-width: none;
+}
+
 .site-dropdown-trigger {
     width: 100%;
     display: inline-flex;
