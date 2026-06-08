@@ -1161,7 +1161,7 @@ a.team-name:focus-visible::after {
 }
 
 .football-competition-summary::after {
-    content: "▾";
+    content: "▼";
     flex: 0 0 auto;
     font-size: 0.75rem;
     line-height: 1;
