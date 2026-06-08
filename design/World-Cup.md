@@ -1,6 +1,6 @@
 # World Cup Section — Design Proposal
 
-Status: Implemented (2026 edition live — see §12). Historical editions planned (§15).
+Status: Implemented (2026 edition live — see §12). Historical editions imported (§15); tie-breaker / play-off / replay rules (§16).
 Date: 2026-05-27 (updated 2026-05-27 — §7.3 flag/ID plan)
 Scope: World Cup area within the existing Football section
 
@@ -133,7 +133,7 @@ Each group table uses the same columns as the PL table (Pos, Team, Pld, W, D, L,
 
 `world_cup_utils.py` must map between slug (`a`), match enum (`GROUP_A`), and standings label (`Group A`).
 
-Tie-breaker and “teams to advance” indicators (e.g. top three qualify for 2026) can be added as static labels per group section, not as dynamic zone CSS.
+Position outcome labels (**Q**, **P**, **C**) and tie-breaker columns (**GD** vs **GA**) are applied at display time — see **§16** for the full per-edition rules.
 
 ### 3.4 Edition format — group stage vs knockout-only
 
@@ -172,6 +172,20 @@ def list_groups_for_edition(edition: str) -> list[str]:
 
 Do not assume group pages exist for every imported edition. The edition pill still switches between 1934/1938 and group-stage tournaments; only the available nav items and overview layout change.
 
+### 3.5 Multi-stage group formats
+
+Some editions use **more than one group phase** before the knockout stage. These are configured in `WC_EDITION_REGISTRY` via `group_stages` and `group_stage_labels`:
+
+
+| Edition | Stages | Notes |
+| ------- | ------ | ----- |
+| **1950** | First round (groups 1–4) → Final round (`final`) | No knockout stage — winner decided in the final group (§16.5) |
+| **1974**, **1978** | First group stage (1–4) → Second group stage (A–B) | Top teams from stage 1 feed stage 2 |
+| **1982** | First group stage (1–6) → Second group stage (A–D) | Six groups then four |
+
+
+Overview and groups index show **stage dividers** when multiple phases exist. Overview lists later phases **above** earlier ones (top-down toward the opening group stage). Group prev/next navigation cycles **within the same stage only**.
+
 ## 4. Page Inventory
 
 All routes live under `/football/world-cup/` (PWA mode: `/world-cup/` with existing `football_root_path` stripping).
@@ -193,6 +207,9 @@ The flagship page. Vertical layout, **read top-to-bottom as the tournament clima
 │  Round of 16                        │
 ├─────────────────────────────────────┤
 │  Round of 32                        │  ← 48-team editions only
+├─────────────────────────────────────┤
+│  ─── Group play-offs ───            │  ← 1954, 1958, … when play-offs exist (§16.4)
+│  Group N play-off (per tie)         │
 ├─────────────────────────────────────┤
 │  ─── Group Stage ───                │
 │  Group A  (table + compact fixtures)│
@@ -302,7 +319,15 @@ Optional but consistent with PL `/football/matches/team/{team_id}/`. All matches
 
 **Template:** `templates/football/world-cup/team_fixtures.html`
 
-### 4.8 Push notification subscriptions (`GET /football/world-cup/subscriptions/`)
+### 4.8 Group play-offs (`GET /football/world-cup/playoffs/`)
+
+Dedicated page listing **group-stage play-off** ties (not knockout replays — §16.6). Shown in sidebar **Play-offs** only when the selected edition has at least one `GROUP_PLAYOFF` match in Mongo.
+
+Each section is one group play-off (e.g. `Group 3 play-off`), with match cards and winner highlight. Overview shows the same ties under a **Group play-offs** divider with a **Play-off** badge; play-offs do **not** appear in the knockout index, bracket, or per-round knockout pages.
+
+**Template:** `templates/football/world-cup/playoffs.html`
+
+### 4.9 Push notification subscriptions (`GET /football/world-cup/subscriptions/`)
 
 National-team notification preferences for the current edition. Reuses PL `subscriptions.js` and storage; WC team selections merge with existing PL selections.
 
@@ -324,7 +349,8 @@ Competitions ▾
   World Cup                    ← only shown when a wc_matches_* collection exists
     Tournament Overview        → /football/world-cup/
     Groups                     → /football/world-cup/groups/  (hidden when edition has no group stage — §3.4)
-    Knockout                   → /football/world-cup/knockout/
+    Play-offs                  → /football/world-cup/playoffs/  (only when edition has group play-offs — §16.4)
+    Knockout                   → /football/world-cup/knockout/  (hidden when edition has no knockout stage — §16.5)
     All Matches                → /football/world-cup/matches/
     Notifications              → /football/world-cup/subscriptions/
 ```
@@ -949,8 +975,9 @@ Single operator-run script (not a scheduled job):
 | 2 | Map country names → `Team` records via `wc_team_registry.json` (tier-A football-data.org IDs for 2026-squad nations; tier-B synthetic IDs for all others — §7.3.1) |
 | 3 | Assign stable `match.id` per edition (synthetic int; consistent across re-runs of the same import) |
 | 4 | Upsert all matches → `wc_matches_{year}` |
-| 5 | If `has_group_stage` (§3.4): compute group standings → `wc_standings_{year}`; else skip (1934, 1938) |
-| 6 | Verify match counts and spot-check Final score; **do not schedule re-fetch** |
+| 5 | If `has_group_stage` (§3.4): compute group standings with edition-specific points and tie-breakers (§16) → `wc_standings_{year}`; else skip (1934, 1938) |
+| 6 | Normalise group play-offs (`GROUP_PLAYOFF`) and knockout replays (both legs, `knockout_replay` flag) — §16.4, §16.6 |
+| 7 | Verify match counts and spot-check Final score; **do not schedule re-fetch** |
 
 
 **Suggested module:** `scripts/import_wc_historical_edition.py --year 2022` (or under `backend/src/football/`).
@@ -975,8 +1002,8 @@ Idempotent upsert so the script can be re-run safely while developing; once depl
 1. `WC_EDITION_REGISTRY` with `has_group_stage` per year (`False` for 1934, 1938).
 2. `wc_team_registry.json` + `wc_flag_registry.json` — two-tier ID strategy and Wikimedia SVG mapping (§7.3); flag fetch + audit scripts.
 3. openfootball → `Match` normaliser (stage, score, status=`FINISHED` for played games).
-4. Group standings computer — **skip** when `has_group_stage` is false.
-5. `edition_has_group_stage()` guards in router, sidebar, overview, and `list_groups_for_edition()`.
+4. Group standings computer — edition-aware (§16); **skip** when `has_group_stage` is false.
+5. `edition_has_group_stage()`, play-off and knockout-stage guards in router and sidebar (§16.4, §16.5).
 6. Import CLI; run for **2022** and **2018**; confirm group-stage pages.
 7. Import **1934** or **1938** as knockout-only smoke test (no groups nav, overview without group blocks).
 8. Confirm edition pill lists new years and defaults to **2026** on `/football/world-cup/`.
@@ -991,6 +1018,140 @@ Idempotent upsert so the script can be re-run safely while developing; once depl
 - [ ] All teams show the correct country flag SVG (including historical nations in past editions); tier-A IDs match 2026 live data across all editions (§7.3.4).
 - [ ] **1934** and **1938**: knockout-only overview, no Groups sidebar link, `/groups/` returns 404; knockout and all-matches work.
 
+## 16. Historical tie-breakers, group play-offs and knockout replays
+
+Implemented in `world_cup_utils.py` (sorting, labels, replay filtering), `world_cup_db.py` (`prepare_group_table_for_display()`), and `world_cup_import.py` (openfootball normalisation). Group standings are **recomputed on import** and **re-sorted at display time** so Mongo snapshots stay consistent with these rules.
+
+### 16.1 Points per win
+
+| Editions | Win | Draw |
+| -------- | --- | ---- |
+| **1930–1990** (all group-stage tournaments) | **2** | 1 |
+| **1994–2022** and **2026** (current) | **3** | 1 |
+
+There was no World Cup in 1942 or 1946. The 1990 tournament is the last edition under the two-point-win rule.
+
+### 16.2 Group table tie-breakers (ordering)
+
+After sorting by **points** (descending), ties are split using the rules below. Team name (case-insensitive) is the final fallback everywhere.
+
+
+| Era | Editions | Tie-breaker after points |
+| --- | -------- | ------------------------ |
+| **Play-off era** | **1930–1954** | **Group play-off** result decides **2nd vs 3rd** ties when one team is already clear in 1st (same rule as 1958 §16.2). Other ties: **goals scored**, then team name. **No GD/GA column** in tables (`edition_hides_goal_difference_column()`). |
+| **Goal average** | **1958–1966** | **Goal average** (goals for ÷ goals against). Teams with **zero goals conceded** rank above any finite average; among those, higher **goals for** wins. Table column shows **GA** (formatted to two decimals; `∞` when conceded is 0 but goals were scored). |
+| **Goal difference** | **1970–1990** | **Goal difference**, then **goals scored**. Column shows **GD**. |
+| **Goal difference (3-point wins)** | **1994–2022** | Same as 1970–1990. Column shows **GD**. |
+| **Current (2026)** | **2026** | Upstream football-data.org standings order; site applies live **Q** labels for mathematically clinched top-three spots (§16.3). Column shows **GD**. |
+
+#### 1958 special case (group play-off era)
+
+**1958** uses goal average for display and for most ties, but **group play-off** rules override ordering when teams are fighting for the **last knockout spot**:
+
+
+| Situation | Rule |
+| --------- | ---- |
+| **1st vs 2nd** tied on points | Goal average decides immediately (no play-off). |
+| **2nd vs 3rd** tied on points (one group winner already clear above them) | Goal average **ignored**; table order follows the **group play-off** result. |
+| **Play-off drawn after extra time** | Goal average from the **group stage** decides who advances. |
+
+Example: 1958 Group 3 — Sweden qualified outright; Wales and Hungary tied on points; Hungary had the better goal average but **Wales** ranks second because Wales won the play-off.
+
+### 16.3 Position labels in group tables
+
+The **Pos** column may show a letter instead of the numeric rank:
+
+
+| Label | Meaning | When |
+| ----- | ------- | ---- |
+| **Q** | Qualified | Team advanced **without** needing a group play-off (direct qualifier). Historic: group winner, or runner-up when no play-off was required. **2026 only:** top three with a **mathematically clinched** spot (live tables). |
+| **P** | Play-off | Team took part in a **group play-off** for the last knockout place (**1930–1958** era when a play-off exists for that group). Both participants receive **P**, whether they won or lost. |
+| **C** | Champion | **1950 only:** winner of the **final round** group when the edition has **no knockout stage** (`has_knockout_stage: false`). Replaces the position number for the leader once the group is complete. |
+
+Numeric position is still stored internally for sorting; the label is display-only (`position_label` on `TableItem`).
+
+### 16.4 Group play-offs (1930–1958)
+
+FIFA used **group play-offs** (a single extra match between two tied teams) in some early tournaments when the last qualification place was undecided.
+
+
+| Topic | Behaviour |
+| ----- | --------- |
+| **Era flag** | `edition_in_group_playoff_era()` — calendar years **1930–1958** inclusive. |
+| **Data in openfootball** | Play-offs present in source JSON for **1954** (2) and **1958** (3). None in the current import for 1930, 1950, etc. |
+| **Mongo `stage`** | `GROUP_PLAYOFF` with `group` set (e.g. `GROUP_3`). Legacy imports may incorrectly store play-offs as `LAST_16`; code falls back to detecting same-group team pairs. |
+| **Qualification** | Group winner plus **play-off winner** advance. Implemented via `knockout_qualifier_team_ids_from_group()` — not by mining knockout fixtures (avoids marking the play-off loser as qualified). |
+| **UI** | Overview **Group play-offs** section; **Play-offs** nav + `/playoffs/` page. **Excluded** from knockout index, bracket, and knockout round pages. |
+| **Knockout nav pollution** | `filter_group_playoffs_from_knockout_matches()` removes legacy `LAST_16` play-off fixtures from real knockout rounds. |
+
+### 16.5 Editions without a knockout stage
+
+| Edition | Behaviour |
+| ------- | --------- |
+| **1950** | `has_knockout_stage: false`. Two group phases (§3.5); **Final round** winner gets **C**. No **Knockout** sidebar link. No **Q**/**P** labels (no knockout to qualify for). |
+
+### 16.6 Knockout replays
+
+When a knockout tie was drawn, some early tournaments scheduled a **replay** rather than extra time or penalties.
+
+
+| Topic | Behaviour |
+| ----- | --------- |
+| **Import** | Both the **original draw** and the **replay** are stored in `wc_matches_{year}`. Replay legs are tagged `knockout_replay: true` (openfootball rounds containing `Replay`, e.g. `Quarter-finals, Replays`). |
+| **Overview, All matches, Team fixtures** | **Both** legs are shown (chronological). |
+| **Knockout index, round pages, bracket** | **Replay only** — `retrieve_knockout_matches(..., supersede_replays=True)` drops the superseded first leg via `filter_superseded_knockout_replays()`. |
+| **Score annotation** | Replay leg shows **`(replay)`** in the match status area (same slot as **`(aet)`**). Penalty notation still takes precedence on replay legs that went to pens. |
+
+**Replays in openfootball import (current dataset):**
+
+
+| Edition | Replay ties |
+| ------- | ----------- |
+| **1934** | Quarter-finals: Italy 1–1 Spain → replay 1–0 |
+| **1938** | First round: Cuba–Romania; Germany–Switzerland. Quarter-finals: Brazil–Czechoslovakia |
+| **1930–1958** (group-stage years) | None in worldcup.json |
+| **1962 onward** | None in worldcup.json (extra time / penalties era) |
+
+### 16.7 Per-edition summary
+
+| Edition | Groups | Knockout | Pts/win | Table sort (after pts) | GA column | Group play-off | Pos labels | Knockout replay |
+| ------- | ------ | -------- | ------- | ---------------------- | --------- | -------------- | ---------- | --------------- |
+| **1930** | 4× numeric | Yes | 2 | GF, name (play-off if data) | — | Era only; none in data | Q | — |
+| **1934** | No | Yes | — | — | — | — | — | QF replay |
+| **1938** | No | Yes | — | — | — | — | — | 3 replays |
+| **1950** | 4 + final | **No** | 2 | GF, name | — | — | **C** (final round) | — |
+| **1954** | 4× numeric | Yes | 2 | Play-off (2nd/3rd), else GF | — | **2** (Groups 2, 4) | Q / **P** | — |
+| **1958** | 4× numeric | Yes | 2 | **§16.2** (GA + play-off rules) | **GA** | **3** (Groups 1, 3, 4) | Q / **P** | — |
+| **1962** | 4× numeric | Yes | 2 | Goal average | **GA** | — | Q | — |
+| **1966** | 4× numeric | Yes | 2 | Goal average | **GA** | — | Q | — |
+| **1970** | 4× numeric | Yes | 2 | GD, GF | GD | — | Q | — |
+| **1974** | 4 + 2 (§3.5) | Yes | 2 | GD, GF | GD | — | Q (per stage rules) | — |
+| **1978** | 4 + 2 | Yes | 2 | GD, GF | GD | — | Q | — |
+| **1982** | 6 + 4 | Yes | 2 | GD, GF | GD | — | Q | — |
+| **1986–1990** | 6× letter | Yes | 2 | GD, GF | GD | — | Q | — |
+| **1994–2022** | varies | Yes | **3** | GD, GF | GD | — | Q | — |
+| **2026** | 12× letter | Yes | **3** | API order + live **Q** (top 3) | GD | — | **Q** (live) | — |
+
+“—” = not applicable or no instances in the imported dataset.
+
+### 16.8 Not yet implemented
+
+1. **1930 group play-offs** — rules documented for the era; no play-off fixtures in the current openfootball JSON (may appear if a richer source is imported).
+
+**Implementation helpers:**
+
+
+| Function | Module | Purpose |
+| -------- | ------ | ------- |
+| `edition_points_per_win()` | `world_cup_utils.py` | 2 vs 3 points per win |
+| `edition_uses_goal_average()` | `world_cup_utils.py` | 1958–1966 → GA column |
+| `edition_hides_goal_difference_column()` | `world_cup_utils.py` | 1930–1954 → hide GD/GA column |
+| `sort_group_table_rows()` | `world_cup_utils.py` | Edition-aware ordering (1930–1954 play-offs; 1958 GA + play-offs) |
+| `prepare_group_table_for_display()` | `world_cup_db.py` | Sort + Q/P/C labels |
+| `filter_superseded_knockout_replays()` | `world_cup_utils.py` | Knockout view: replay leg only |
+| `world_cup_score_annotation()` | `world_cup_utils.py` | `(replay)`, `(aet)`, pens |
+| `_normalize_knockout_replays()` | `world_cup_import.py` | Import both replay legs |
+
 ## 14. References
 
 
@@ -998,7 +1159,8 @@ Idempotent upsert so the script can be re-run safely while developing; once depl
 | -------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
 | WC router            | `website/football/world_cup_router.py`                                                                                       |
 | WC DB / bracket      | `website/football/world_cup_db.py`                                                                                           |
-| WC utils / fixtures  | `website/football/world_cup_utils.py`                                                                                        |
+| WC utils / fixtures  | `website/football/world_cup_utils.py` (tie-breakers, play-offs, replays — §16)                                               |
+| WC historical import | `scripts/import_wc_historical_edition.py`, `website/football/world_cup_import.py`                                              |
 | Match card macro     | `website/templates/football/world-cup/_match_card.html`                                                                      |
 | Bracket partial      | `website/templates/football/world-cup/_knockout_bracket.html`                                                                |
 | WC base template     | `website/templates/football/world-cup/world-cup-base.html`                                                                   |

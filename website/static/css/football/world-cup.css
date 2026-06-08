@@ -87,6 +87,19 @@
         minmax(2.8rem, 0.78fr);
 }
 
+.world-cup-table-container--no-gd {
+    --table-grid-columns:
+        minmax(1.55rem, 0.42fr)
+        minmax(10.8rem, 2.52fr)
+        minmax(2.7rem, 0.76fr)
+        minmax(2.4rem, 0.64fr)
+        minmax(2.4rem, 0.64fr)
+        minmax(2.4rem, 0.64fr)
+        minmax(2.4rem, 0.64fr)
+        minmax(2.4rem, 0.64fr)
+        minmax(2.8rem, 0.78fr);
+}
+
 .world-cup-table-container .table-col-pos,
 .world-cup-table-container .data-row > .position {
     grid-column: auto;
@@ -186,6 +199,25 @@
     }
 }
 
+.world-cup-overview-standings--no-gd .world-cup-overview-standings-header,
+.world-cup-overview-standings--no-gd .world-cup-overview-standings-row {
+    grid-template-columns: 1.35rem minmax(0, 1fr) 1.65rem 1.85rem;
+}
+
+@media screen and (min-width: 44rem) {
+    .world-cup-overview-standings--no-gd .world-cup-overview-standings-header,
+    .world-cup-overview-standings--no-gd .world-cup-overview-standings-row {
+        grid-template-columns:
+            1.35rem
+            minmax(0, 1fr)
+            1.65rem
+            1.45rem
+            1.45rem
+            1.45rem
+            1.85rem;
+    }
+}
+
 @media screen and (max-width: 75rem) {
     .world-cup-table-container:not(.world-cup-table-container--overview) {
         --table-grid-columns:
@@ -198,6 +230,17 @@
             minmax(2.7rem, 0.76fr)
             minmax(2.7rem, 0.76fr);
     }
+
+    .world-cup-table-container--no-gd:not(.world-cup-table-container--overview) {
+        --table-grid-columns:
+            minmax(1.45rem, 0.46fr)
+            minmax(9.3rem, 2.38fr)
+            minmax(2.5rem, 0.74fr)
+            minmax(2.3rem, 0.62fr)
+            minmax(2.3rem, 0.62fr)
+            minmax(2.3rem, 0.62fr)
+            minmax(2.7rem, 0.76fr);
+    }
 }
 
 @media screen and (max-width: 63rem) {
@@ -207,6 +250,14 @@
             minmax(8.28rem, 2.74fr)
             minmax(2.24rem, 0.8fr)
             minmax(2.36rem, 0.86fr)
+            minmax(2.36rem, 0.86rem);
+    }
+
+    .world-cup-table-container--no-gd:not(.world-cup-table-container--overview) {
+        --table-grid-columns:
+            minmax(1.42rem, 0.52fr)
+            minmax(8.28rem, 2.74fr)
+            minmax(2.24rem, 0.8fr)
             minmax(2.36rem, 0.86fr);
     }
 }

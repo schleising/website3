@@ -16,6 +16,7 @@ from .world_cup_utils import (
     WC_GROUP_STAGE,
     edition_has_group_stage,
     edition_has_knockout_stage,
+    edition_hides_goal_difference_column,
     edition_in_group_playoff_era,
     filter_group_playoffs_from_knockout_matches,
     find_group_playoff_match,
@@ -579,7 +580,9 @@ async def prepare_group_table_for_display(
 
     edition_matches = all_edition_matches
     if edition_matches is None and (
-        edition == "1958" or edition_in_group_playoff_era(edition)
+        edition == "1958"
+        or edition_hides_goal_difference_column(edition)
+        or edition_in_group_playoff_era(edition)
     ):
         edition_matches = await retrieve_all_edition_matches(edition)
 

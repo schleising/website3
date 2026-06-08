@@ -1,6 +1,6 @@
 {% from "football/world-cup/_team_link.html" import world_cup_team_name %}
 {% macro world_cup_overview_standings(table_rows, football_root, edition, group_slug='') %}
-<div class="world-cup-overview-standings" id="wc-standings-{{ group_slug }}" role="table" aria-label="Group standings" data-group-slug="{{ group_slug }}">
+<div class="world-cup-overview-standings{% if edition|edition_hides_goal_difference_column %} world-cup-overview-standings--no-gd{% endif %}" id="wc-standings-{{ group_slug }}" role="table" aria-label="Group standings" data-group-slug="{{ group_slug }}">
   <div class="world-cup-overview-standings-header" role="row">
     <span class="world-cup-overview-standings-pos" role="columnheader">Pos</span>
     <span class="world-cup-overview-standings-team" role="columnheader">Team</span>
@@ -8,7 +8,9 @@
     <span class="world-cup-overview-standings-stat world-cup-overview-standings-stat--desktop" role="columnheader">W</span>
     <span class="world-cup-overview-standings-stat world-cup-overview-standings-stat--desktop" role="columnheader">D</span>
     <span class="world-cup-overview-standings-stat world-cup-overview-standings-stat--desktop" role="columnheader">L</span>
+    {% if not edition|edition_hides_goal_difference_column %}
     <span class="world-cup-overview-standings-stat" role="columnheader">{% if edition|edition_uses_goal_average %}GA{% else %}GD{% endif %}</span>
+    {% endif %}
     <span class="world-cup-overview-standings-stat" role="columnheader">Pts</span>
   </div>
   {% for table_item in table_rows %}
@@ -26,7 +28,9 @@
     <span class="world-cup-overview-standings-stat world-cup-overview-standings-stat--desktop world-cup-overview-standings-won" role="cell">{{ table_item.won }}</span>
     <span class="world-cup-overview-standings-stat world-cup-overview-standings-stat--desktop world-cup-overview-standings-draw" role="cell">{{ table_item.draw }}</span>
     <span class="world-cup-overview-standings-stat world-cup-overview-standings-stat--desktop world-cup-overview-standings-lost" role="cell">{{ table_item.lost }}</span>
+    {% if not edition|edition_hides_goal_difference_column %}
     <span class="world-cup-overview-standings-stat world-cup-overview-standings-goal-difference" role="cell">{% if edition|edition_uses_goal_average %}{{ table_item.goals_for|format_goal_average(table_item.goals_against) }}{% else %}{{ table_item.goal_difference }}{% endif %}</span>
+    {% endif %}
     <span class="world-cup-overview-standings-stat world-cup-overview-standings-points" role="cell">{{ table_item.points }}</span>
   </div>
   {% endfor %}

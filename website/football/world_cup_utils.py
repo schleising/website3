@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import re
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Callable
 
 if TYPE_CHECKING:
     from .models import Match, TableItem, Team
@@ -106,6 +106,12 @@ def compute_group_table_points(won: int, draw: int, edition: str) -> int:
 def edition_uses_goal_average(edition: str) -> bool:
     year = int(edition)
     return 1958 <= year <= 1966
+
+
+def edition_hides_goal_difference_column(edition: str) -> bool:
+    """1930–1954: no GD/GA column; ties use play-offs where applicable."""
+    year = int(edition)
+    return 1930 <= year <= 1954
 
 
 _GROUP_PLAYOFF_ROUND_RE = re.compile(r"^Group\s+(\d+)\s+Play-off$", re.IGNORECASE)
@@ -310,6 +316,13 @@ def _sort_rows_by_goal_average(rows: list["TableItem"]) -> list["TableItem"]:
     )
 
 
+def _sort_rows_by_goals_for(rows: list["TableItem"]) -> list["TableItem"]:
+    return sorted(
+        rows,
+        key=lambda row: (-row.goals_for, row.team.display_name.casefold()),
+    )
+
+
 def _playoff_total_goals(match: "Match") -> tuple[int, int] | None:
     home_ft = match.score.full_time.home
     away_ft = match.score.full_time.away
@@ -338,51 +351,63 @@ def _playoff_winner_team_id(match: "Match") -> int | None:
     return None
 
 
-def _order_1958_playoff_tie(
+def _order_playoff_tie(
     rows: list["TableItem"],
     playoff_match: "Match | None",
+    *,
+    fallback_sort: Callable[[list["TableItem"]], list["TableItem"]],
 ) -> list["TableItem"]:
     if playoff_match is None or len(rows) != 2:
-        return _sort_rows_by_goal_average(rows)
+        return fallback_sort(rows)
 
     team_ids = {row.team.id for row in rows if row.team.id is not None}
     home_id = playoff_match.home_team.id
     away_id = playoff_match.away_team.id
     if home_id not in team_ids or away_id not in team_ids:
-        return _sort_rows_by_goal_average(rows)
+        return fallback_sort(rows)
 
     winner_id = _playoff_winner_team_id(playoff_match)
     if winner_id is None:
-        return _sort_rows_by_goal_average(rows)
+        return fallback_sort(rows)
 
     winners = [row for row in rows if row.team.id == winner_id]
     losers = [row for row in rows if row.team.id != winner_id]
     return winners + losers
 
 
-def _resolve_1958_points_tier(
+def _resolve_points_tier_with_playoff(
     rows: list["TableItem"],
     *,
     start_position: int,
     teams_above: int,
     playoff_match: "Match | None",
+    default_sort: Callable[[list["TableItem"]], list["TableItem"]],
+    playoff_draw_fallback: Callable[[list["TableItem"]], list["TableItem"]],
 ) -> list["TableItem"]:
     if len(rows) <= 1:
         return rows
 
     if len(rows) == 2 and teams_above == 1 and start_position == 2:
-        return _order_1958_playoff_tie(rows, playoff_match)
+        return _order_playoff_tie(
+            rows,
+            playoff_match,
+            fallback_sort=playoff_draw_fallback,
+        )
 
-    return _sort_rows_by_goal_average(rows)
+    return default_sort(rows)
 
 
-def _sort_group_table_rows_1958(
+def _sort_group_table_rows_by_points_tiers(
     table: list["TableItem"],
+    edition: str,
     playoff_match: "Match | None",
+    *,
+    default_sort: Callable[[list["TableItem"]], list["TableItem"]],
+    playoff_draw_fallback: Callable[[list["TableItem"]], list["TableItem"]],
 ) -> list["TableItem"]:
     tiers_by_points: dict[int, list["TableItem"]] = {}
     for row in table:
-        points = compute_group_table_points(row.won, row.draw, "1958")
+        points = compute_group_table_points(row.won, row.draw, edition)
         tiers_by_points.setdefault(points, []).append(row)
 
     ordered_rows: list["TableItem"] = []
@@ -392,17 +417,46 @@ def _sort_group_table_rows_1958(
     for points in sorted(tiers_by_points.keys(), reverse=True):
         tier_rows = tiers_by_points[points]
         ordered_rows.extend(
-            _resolve_1958_points_tier(
+            _resolve_points_tier_with_playoff(
                 tier_rows,
                 start_position=position,
                 teams_above=teams_above,
                 playoff_match=playoff_match,
+                default_sort=default_sort,
+                playoff_draw_fallback=playoff_draw_fallback,
             )
         )
         teams_above += len(tier_rows)
         position += len(tier_rows)
 
     return ordered_rows
+
+
+def _sort_group_table_rows_1958(
+    table: list["TableItem"],
+    playoff_match: "Match | None",
+) -> list["TableItem"]:
+    return _sort_group_table_rows_by_points_tiers(
+        table,
+        "1958",
+        playoff_match,
+        default_sort=_sort_rows_by_goal_average,
+        playoff_draw_fallback=_sort_rows_by_goal_average,
+    )
+
+
+def _sort_group_table_rows_playoff_era(
+    table: list["TableItem"],
+    edition: str,
+    playoff_match: "Match | None",
+) -> list["TableItem"]:
+    return _sort_group_table_rows_by_points_tiers(
+        table,
+        edition,
+        playoff_match,
+        default_sort=_sort_rows_by_goals_for,
+        playoff_draw_fallback=_sort_rows_by_goals_for,
+    )
 
 
 def group_table_row_sort_key(
@@ -423,7 +477,6 @@ def group_table_row_sort_key(
         )
 
     # 1970 onward: goal difference, then goals scored.
-    # 1930–1954: playoffs decided ties; interim GD/GF ordering until that is modelled.
     return base + (-goal_difference, -goals_for, team_display_name.casefold())
 
 
@@ -434,17 +487,24 @@ def sort_group_table_rows(
     group_slug: str | None = None,
     edition_matches: list["Match"] | None = None,
 ) -> list["TableItem"]:
-    if edition == "1958":
-        playoff_match = (
-            find_group_playoff_match(
-                edition_matches,
-                group_slug,
-                table=table,
-            )
-            if edition_matches is not None and group_slug is not None
-            else None
+    playoff_match = (
+        find_group_playoff_match(
+            edition_matches,
+            group_slug,
+            table=table,
         )
+        if edition_matches is not None and group_slug is not None
+        else None
+    )
+
+    if edition == "1958":
         ordered_rows = _sort_group_table_rows_1958(table, playoff_match)
+    elif edition_hides_goal_difference_column(edition):
+        ordered_rows = _sort_group_table_rows_playoff_era(
+            table,
+            edition,
+            playoff_match,
+        )
     else:
         ordered_rows = sorted(
             table,

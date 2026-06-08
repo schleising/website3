@@ -1,6 +1,6 @@
 {% from "football/world-cup/_team_link.html" import world_cup_team_name %}
 {% macro world_cup_group_table(table_rows, title, football_root, edition, compact=false, overview=false, group_slug='') %}
-<div class="table-container world-cup-table-container{% if compact %} world-cup-table-container--compact{% endif %}{% if overview %} world-cup-table-container--overview{% endif %}" data-team-count="{{ table_rows|length }}" data-group-slug="{{ group_slug }}" style="--table-row-count: {{ table_rows|length }};">
+<div class="table-container world-cup-table-container{% if compact %} world-cup-table-container--compact{% endif %}{% if overview %} world-cup-table-container--overview{% endif %}{% if edition|edition_hides_goal_difference_column %} world-cup-table-container--no-gd{% endif %}" data-team-count="{{ table_rows|length }}" data-group-slug="{{ group_slug }}" style="--table-row-count: {{ table_rows|length }};">
   <section class="table-grid world-cup-table-grid" role="table" aria-label="{{ title }}">
     <header class="table-grid-header sticky-header" role="rowgroup">
       <div class="header-row" role="row">
@@ -12,7 +12,9 @@
         <div class="header-data data table-cell centre-align medium-table" role="columnheader">L</div>
         <div class="header-data data table-cell centre-align large-table" role="columnheader">F</div>
         <div class="header-data data table-cell centre-align large-table" role="columnheader">A</div>
+        {% if not edition|edition_hides_goal_difference_column %}
         <div class="header-data data table-cell centre-align" role="columnheader">{% if edition|edition_uses_goal_average %}GA{% else %}GD{% endif %}</div>
+        {% endif %}
         <div class="header-data data table-cell centre-align" role="columnheader">Pts</div>
       </div>
     </header>
@@ -38,7 +40,9 @@
         <div class="row-data data table-cell medium-table centre-align table-lost" role="cell">{{ table_item.lost }}</div>
         <div class="row-data data table-cell large-table centre-align table-goals-for" role="cell">{{ table_item.goals_for }}</div>
         <div class="row-data data table-cell large-table centre-align table-goals-against" role="cell">{{ table_item.goals_against }}</div>
+        {% if not edition|edition_hides_goal_difference_column %}
         <div class="row-data data table-cell centre-align table-goal-difference" role="cell">{% if edition|edition_uses_goal_average %}{{ table_item.goals_for|format_goal_average(table_item.goals_against) }}{% else %}{{ table_item.goal_difference }}{% endif %}</div>
+        {% endif %}
         <div class="row-data data table-cell centre-align table-points" role="cell">{{ table_item.points }}</div>
       </article>
       {% endfor %}
