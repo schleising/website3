@@ -34,63 +34,6 @@
     const currentCategory = String(currentUrl.searchParams.get("category") || "all").trim() || "all";
     const currentFeedId = String(currentUrl.searchParams.get("feed_id") || "").trim();
     const expandedStorageKey = "feeds-sidebar-expanded-category-v1";
-    const minimumShortLabelChars = 7;
-
-    function middleEllipsis(label, maxChars) {
-        const text = String(label || "").trim();
-        if (text.length <= maxChars) {
-            return text;
-        }
-
-        const leftChars = Math.ceil((maxChars - 1) / 2);
-        const rightChars = Math.floor((maxChars - 1) / 2);
-        return `${text.slice(0, leftChars)}…${text.slice(text.length - rightChars)}`;
-    }
-
-    function maxFeedLabelChars() {
-        return window.matchMedia("(max-width: 52rem)").matches ? 22 : 30;
-    }
-
-    function fitFeedLabelToWidth(feedLink, fullLabel) {
-        if (!(feedLink instanceof HTMLElement)) {
-            return;
-        }
-
-        const labelNode = feedLink.querySelector(".feed-sidebar-feed-label");
-        if (!(labelNode instanceof HTMLElement)) {
-            return;
-        }
-
-        const normalizedFullLabel = String(fullLabel || "").trim();
-        labelNode.textContent = normalizedFullLabel;
-        if (normalizedFullLabel === "") {
-            return;
-        }
-
-        // Reset to full label first; if it already fits we keep it unchanged.
-        if (labelNode.scrollWidth <= labelNode.clientWidth + 1) {
-            return;
-        }
-
-        let low = minimumShortLabelChars;
-        let high = normalizedFullLabel.length;
-        let bestFit = middleEllipsis(normalizedFullLabel, minimumShortLabelChars);
-
-        while (low <= high) {
-            const candidateChars = Math.floor((low + high) / 2);
-            const candidateText = middleEllipsis(normalizedFullLabel, candidateChars);
-            labelNode.textContent = candidateText;
-
-            if (labelNode.scrollWidth <= labelNode.clientWidth + 1) {
-                bestFit = candidateText;
-                low = candidateChars + 1;
-            } else {
-                high = candidateChars - 1;
-            }
-        }
-
-        labelNode.textContent = bestFit;
-    }
 
     function applySidebarFeedLabelShortening(includeHidden = false) {
         const selector = includeHidden
@@ -102,8 +45,12 @@
                 return;
             }
 
-            const fullLabel = String(link.dataset.fullTitle || "").trim();
-            fitFeedLabelToWidth(link, fullLabel);
+            const labelNode = link.querySelector(".feed-sidebar-feed-label");
+            if (!(labelNode instanceof HTMLElement)) {
+                return;
+            }
+
+            labelNode.textContent = String(link.dataset.fullTitle || "").trim();
         });
     }
 
@@ -266,7 +213,7 @@
                 feedLink.dataset.fullTitle = feed.title;
                 const feedLabel = document.createElement("span");
                 feedLabel.className = "feed-sidebar-feed-label";
-                feedLabel.textContent = middleEllipsis(feed.title, maxFeedLabelChars());
+                feedLabel.textContent = feed.title;
                 feedLink.appendChild(feedLabel);
                 feedLink.title = feed.title;
 
@@ -309,7 +256,6 @@
                 if (shouldExpand) {
                     setExpanded(categoryKey);
                     applySidebarFeedLabelShortening();
-                    window.requestAnimationFrame(applySidebarFeedLabelShortening);
                 } else {
                     setExpanded("");
                 }
@@ -396,11 +342,12 @@
     }, { passive: true });
 
     function requestSidebarWidthSync() {
-        if (typeof window.syncSidebarWidths === "function") {
-            window.requestAnimationFrame(() => {
-                window.syncSidebarWidths();
-            });
+        if (typeof window.syncSidebarWidths !== "function") {
+            return;
         }
+
+        window.syncSidebarWidths();
+        applySidebarFeedLabelShortening(true);
     }
 
     renderSidebarPanels({ preserveExpanded: true });

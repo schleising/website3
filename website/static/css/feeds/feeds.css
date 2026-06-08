@@ -761,9 +761,29 @@
     flex-wrap: nowrap;
 }
 
+.right-sidebar:has(#feeds-sidebar-feed-groups) {
+    overflow-x: hidden;
+}
+
+.right-sidebar:has(#feeds-sidebar-feed-groups) .sub-level-nav-container {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
+}
+
+.right-sidebar:has(#feeds-sidebar-feed-groups) .feed-sidebar-feed-panel {
+    max-width: 100%;
+    overflow: hidden;
+}
+
+.right-sidebar:has(#feeds-sidebar-feed-groups) .feed-sidebar-feed-list {
+    max-width: 100%;
+    overflow: hidden;
+}
+
 .right-sidebar .feed-sidebar-link {
-    width: max-content;
-    min-width: 100%;
+    width: 100%;
     display: flex;
     align-items: center;
     justify-content: flex-end;
@@ -1677,6 +1697,7 @@ body.feed-category-color-popup-open {
         justify-content: flex-end;
         text-align: right;
         overflow: visible;
+        width: 100%;
     }
 
     .feed-category-link {
@@ -1821,6 +1842,9 @@ body.feed-category-color-popup-open {
     align-items: center;
     justify-content: flex-end;
     gap: 0.35rem;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
     font-size: 0.78rem;
     padding: 0.16rem 0.85rem 0.16rem 0.6rem;
     margin-right: 0;
@@ -1835,10 +1859,11 @@ body.feed-category-color-popup-open {
 .right-sidebar .feed-sidebar-feed-label {
     display: block;
     min-width: 0;
-    max-width: none;
-    overflow: visible;
+    flex: 1 1 auto;
+    max-width: 100%;
+    overflow: hidden;
     white-space: nowrap;
-    text-overflow: unset;
+    text-overflow: ellipsis;
     text-align: right;
     line-height: 1.22;
 }

@@ -734,10 +734,11 @@ function measureSidebarContentWidth(sidebar) {
         sidebar.style.right = "auto";
     }
 
+    const expandFeedPanels = !sidebarUsesCollapsedFeedSizing(sidebar);
     const measuredWidth = withSidebarFullyExpanded(content, () => {
         void sidebar.offsetWidth;
         return Math.ceil(sidebar.getBoundingClientRect().width);
-    });
+    }, { expandFeedPanels });
 
     if (sidebarIsHidden) {
         sidebar.style.display = styleSnapshot.display;
@@ -754,21 +755,32 @@ function measureSidebarContentWidth(sidebar) {
     return measuredWidth;
 }
 
-function withSidebarFullyExpanded(content, measureFn) {
+function sidebarUsesCollapsedFeedSizing(sidebar) {
+    const content = sidebar.querySelector(".sub-level-nav-container");
+    if (!content) {
+        return false;
+    }
+
+    return content.querySelector("#feeds-sidebar-feed-groups") !== null;
+}
+
+function withSidebarFullyExpanded(content, measureFn, options = {}) {
+    const expandFeedPanels = options.expandFeedPanels !== false;
+
     const detailsStates = [];
     for (const details of content.querySelectorAll("details")) {
         detailsStates.push([details, details.open]);
         details.open = true;
     }
 
-    const hiddenPanels = [];
+    const feedPanelStates = [];
     for (const panel of content.querySelectorAll(".feed-sidebar-feed-panel")) {
         if (!(panel instanceof HTMLElement)) {
             continue;
         }
 
-        hiddenPanels.push([panel, panel.hidden]);
-        panel.hidden = false;
+        feedPanelStates.push([panel, panel.hidden]);
+        panel.hidden = !expandFeedPanels;
     }
 
     void content.offsetWidth;
@@ -780,7 +792,7 @@ function withSidebarFullyExpanded(content, measureFn) {
             details.open = open;
         }
 
-        for (const [panel, hidden] of hiddenPanels) {
+        for (const [panel, hidden] of feedPanelStates) {
             panel.hidden = hidden;
         }
     }
