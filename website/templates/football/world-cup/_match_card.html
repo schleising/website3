@@ -5,7 +5,11 @@
   <div class="date-and-time">
     <div class="match-start">{{ match.local_date.strftime('%a %d %b %H:%M %Z') if match.local_date else match.utc_date.strftime('%a %d %b %H:%M %Z') }}</div>
     <div class="match-meta-actions">
-      <div class="match-status">{{ match.status }}</div>
+      <div class="match-status">
+        {{ match.status }}
+        {% set score_annotation = match|world_cup_score_annotation %}
+        {% if score_annotation %}<span class="world-cup-score-annotation">{{ score_annotation }}</span>{% endif %}
+      </div>
     </div>
   </div>
   <div class="team{% if winner_side == 'home' %} world-cup-team-winner{% endif %}">

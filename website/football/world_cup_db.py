@@ -27,6 +27,7 @@ from .world_cup_utils import (
     knockout_winner_side,
     normalise_group_slug,
     filter_confirmed_knockout_matches,
+    filter_superseded_knockout_replays,
     order_knockout_matches_for_bracket,
     resolve_world_cup_crest_url,
     standings_label_to_slug,
@@ -230,7 +231,8 @@ async def retrieve_all_edition_matches(edition: str) -> list[Match]:
         return []
 
     cursor = collection.find({}).sort("utc_date", ASCENDING)
-    return [Match.model_validate(item) async for item in cursor]
+    matches = [Match.model_validate(item) async for item in cursor]
+    return filter_superseded_knockout_replays(matches)
 
 
 async def retrieve_group_matches(edition: str, group_slug: str) -> list[Match]:
@@ -446,7 +448,8 @@ async def retrieve_knockout_matches(edition: str, stage: str) -> list[Match]:
         return []
 
     cursor = collection.find({"stage": stage}).sort("utc_date", ASCENDING)
-    return [Match.model_validate(item) async for item in cursor]
+    matches = [Match.model_validate(item) async for item in cursor]
+    return filter_superseded_knockout_replays(matches)
 
 
 async def list_available_knockout_rounds(edition: str) -> list[WorldCupKnockoutRound]:

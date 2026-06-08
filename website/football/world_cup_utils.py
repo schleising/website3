@@ -25,6 +25,10 @@ WC_EDITION_REGISTRY: dict[str, dict[str, object]] = {
 }
 
 
+def world_cup_edition_query(edition: str) -> str:
+    return f"?edition={edition}"
+
+
 def edition_has_group_stage(edition: str) -> bool:
     entry = WC_EDITION_REGISTRY.get(edition)
     if entry is not None:
@@ -154,6 +158,43 @@ def filter_confirmed_knockout_matches(matches: list["Match"]) -> list["Match"]:
     return [match for match in matches if knockout_match_has_confirmed_teams(match)]
 
 
+def _knockout_fixture_key(match: "Match") -> tuple[str, frozenset[int | None]]:
+    return (match.stage, frozenset((match.home_team.id, match.away_team.id)))
+
+
+def filter_superseded_knockout_replays(matches: list["Match"]) -> list["Match"]:
+    """Drop the original fixture when the same knockout tie was replayed."""
+    knockout_matches = [match for match in matches if match.stage != WC_GROUP_STAGE]
+    if len(knockout_matches) <= 1:
+        return matches
+
+    fixtures: dict[tuple[str, frozenset[int | None]], list["Match"]] = {}
+    for match in knockout_matches:
+        fixtures.setdefault(_knockout_fixture_key(match), []).append(match)
+
+    kept_knockout_ids: set[int] = set()
+    for fixture_matches in fixtures.values():
+        if len(fixture_matches) == 1:
+            kept_knockout_ids.add(fixture_matches[0].id)
+            continue
+        fixture_matches.sort(key=lambda item: item.utc_date)
+        kept_knockout_ids.add(fixture_matches[-1].id)
+
+    return [
+        match
+        for match in matches
+        if match.stage == WC_GROUP_STAGE or match.id in kept_knockout_ids
+    ]
+
+
+def _winner_side_from_scores(home: int, away: int) -> str | None:
+    if home > away:
+        return "home"
+    if away > home:
+        return "away"
+    return None
+
+
 def knockout_winner_side(match: "Match") -> str | None:
     from .models import MatchStatus
 
@@ -164,11 +205,38 @@ def knockout_winner_side(match: "Match") -> str | None:
     away_score = match.score.full_time.away
     if home_score is None or away_score is None:
         return None
-    if home_score > away_score:
-        return "home"
-    if away_score > home_score:
-        return "away"
+
+    winner_side = _winner_side_from_scores(home_score, away_score)
+    if winner_side is not None:
+        return winner_side
+
+    penalties = match.score.penalties
+    if penalties is not None and penalties.home is not None and penalties.away is not None:
+        return _winner_side_from_scores(penalties.home, penalties.away)
+
+    extra_time = match.score.extra_time
+    if extra_time is not None and extra_time.home is not None and extra_time.away is not None:
+        return _winner_side_from_scores(extra_time.home, extra_time.away)
+
     return None
+
+
+def world_cup_score_annotation(match: "Match") -> str | None:
+    score = match.score
+    if score.penalties is None:
+        return None
+
+    home_pens = score.penalties.home
+    away_pens = score.penalties.away
+    if home_pens is None or away_pens is None:
+        return None
+
+    home_score = score.full_time.home
+    away_score = score.full_time.away
+    if home_score is None or away_score is None or home_score != away_score:
+        return None
+
+    return f"({home_pens}-{away_pens} pens)"
 
 
 # FIFA match numbers and feeder labels for the 2026 World Cup knockout bracket.

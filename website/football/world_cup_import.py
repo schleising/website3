@@ -102,6 +102,39 @@ def _score_winner(home: int | None, away: int | None) -> str | None:
     return "DRAW"
 
 
+def _parse_score_pair(score_pair: Any) -> tuple[int | None, int | None]:
+    if isinstance(score_pair, list) and len(score_pair) == 2:
+        return score_pair[0], score_pair[1]
+    return None, None
+
+
+def _resolve_match_winner(
+    home_ft: int | None,
+    away_ft: int | None,
+    *,
+    home_et: int | None = None,
+    away_et: int | None = None,
+    home_pens: int | None = None,
+    away_pens: int | None = None,
+) -> tuple[str | None, str]:
+    if home_ft is None or away_ft is None:
+        return None, "REGULAR"
+
+    winner = _score_winner(home_ft, away_ft)
+    if winner not in {None, "DRAW"}:
+        return winner, "REGULAR"
+
+    if home_pens is not None and away_pens is not None:
+        return _score_winner(home_pens, away_pens), "PENALTY_SHOOTOUT"
+
+    if home_et is not None and away_et is not None:
+        extra_time_winner = _score_winner(home_et, away_et)
+        if extra_time_winner not in {None, "DRAW"}:
+            return extra_time_winner, "EXTRA_TIME"
+
+    return "DRAW", "REGULAR"
+
+
 def _parse_score(score_payload: dict[str, Any] | None) -> Score:
     if score_payload is None:
         return Score(
@@ -111,18 +144,37 @@ def _parse_score(score_payload: dict[str, Any] | None) -> Score:
             half_time=HalfTime(home=None, away=None),
         )
 
-    full_time = score_payload.get("ft")
-    half_time = score_payload.get("ht")
-    home_ft = full_time[0] if isinstance(full_time, list) and len(full_time) == 2 else None
-    away_ft = full_time[1] if isinstance(full_time, list) and len(full_time) == 2 else None
-    home_ht = half_time[0] if isinstance(half_time, list) and len(half_time) == 2 else None
-    away_ht = half_time[1] if isinstance(half_time, list) and len(half_time) == 2 else None
+    home_ft, away_ft = _parse_score_pair(score_payload.get("ft"))
+    home_ht, away_ht = _parse_score_pair(score_payload.get("ht"))
+    home_et, away_et = _parse_score_pair(score_payload.get("et"))
+    home_pens, away_pens = _parse_score_pair(score_payload.get("p"))
+    winner, duration = _resolve_match_winner(
+        home_ft,
+        away_ft,
+        home_et=home_et,
+        away_et=away_et,
+        home_pens=home_pens,
+        away_pens=away_pens,
+    )
+
+    extra_time = (
+        FullTime(home=home_et, away=away_et)
+        if home_et is not None and away_et is not None
+        else None
+    )
+    penalties = (
+        FullTime(home=home_pens, away=away_pens)
+        if home_pens is not None and away_pens is not None
+        else None
+    )
 
     return Score(
-        winner=_score_winner(home_ft, away_ft),
-        duration="REGULAR",
+        winner=winner,
+        duration=duration,
         full_time=FullTime(home=home_ft, away=away_ft),
         half_time=HalfTime(home=home_ht, away=away_ht),
+        extra_time=extra_time,
+        penalties=penalties,
     )
 
 
@@ -161,6 +213,42 @@ def _season_for_edition(edition: str) -> Season:
     )
 
 
+def _raw_fixture_key(raw_match: dict[str, Any]) -> frozenset[str]:
+    return frozenset(
+        {
+            str(raw_match.get("team1", "")).strip().casefold(),
+            str(raw_match.get("team2", "")).strip().casefold(),
+        }
+    )
+
+
+def _collapse_knockout_replays(raw_matches: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    replay_fixtures: set[frozenset[str]] = set()
+    for raw_match in raw_matches:
+        round_name = str(raw_match.get("round", "")).casefold()
+        if "replay" in round_name:
+            replay_fixtures.add(_raw_fixture_key(raw_match))
+
+    if len(replay_fixtures) == 0:
+        return raw_matches
+
+    collapsed: list[dict[str, Any]] = []
+    for raw_match in raw_matches:
+        round_name = str(raw_match.get("round", "")).strip()
+        if "replay" in round_name.casefold():
+            normalized_match = dict(raw_match)
+            normalized_match["round"] = round_name.split(",")[0].strip()
+            collapsed.append(normalized_match)
+            continue
+
+        if _raw_fixture_key(raw_match) in replay_fixtures:
+            continue
+
+        collapsed.append(raw_match)
+
+    return collapsed
+
+
 def fetch_openfootball_matches(edition: str) -> list[dict[str, Any]]:
     url = f"{OPENFOOTBALL_BASE_URL}/{edition}/worldcup.json"
     with urlopen(url, timeout=60) as response:
@@ -173,7 +261,7 @@ def fetch_openfootball_matches(edition: str) -> list[dict[str, Any]]:
 
 def openfootball_matches_to_models(edition: str) -> list[Match]:
     registry = _load_team_registry()
-    raw_matches = fetch_openfootball_matches(edition)
+    raw_matches = _collapse_knockout_replays(fetch_openfootball_matches(edition))
     season = _season_for_edition(edition)
     now = datetime.now(tz=UTC)
     matches: list[Match] = []

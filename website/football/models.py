@@ -328,6 +328,8 @@ class Score(BaseModel):
     duration: str
     full_time: FullTime = Field(..., alias="fullTime")
     half_time: HalfTime = Field(..., alias="halfTime")
+    extra_time: FullTime | None = Field(default=None, alias="extraTime")
+    penalties: FullTime | None = None
 
     class Config:
         populate_by_name = True

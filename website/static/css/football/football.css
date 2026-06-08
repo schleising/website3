@@ -787,6 +787,14 @@ h3.header-text.football-header-text--season {
     white-space: nowrap;
 }
 
+.world-cup-score-annotation {
+    display: inline-block;
+    margin-left: 0.35rem;
+    font-size: 0.78em;
+    font-weight: 600;
+    opacity: 0.85;
+}
+
 .match-h2h-pill {
     display: inline-flex;
     align-items: center;
