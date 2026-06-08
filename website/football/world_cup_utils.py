@@ -171,11 +171,17 @@ def standings_rules_visitor_lines(edition: str) -> list[str]:
         ]
 
     if edition_hides_goal_difference_column(edition):
-        return [
-            points_rule,
-            "When two teams tied for the last qualifying place, a play-off decided who advanced — the play-off winner is listed above the loser.",
-            "Q marks a direct qualifier. P marks a team that played in a group play-off.",
-        ]
+        lines = [points_rule]
+        if edition_had_group_playoffs(edition):
+            lines.extend(
+                [
+                    "When two teams tied for the last qualifying place, a play-off decided who advanced — the play-off winner is listed above the loser.",
+                    "Q marks a direct qualifier. P marks a team that played in a group play-off.",
+                ]
+            )
+        else:
+            lines.append("Q marks teams who advanced to the knockout stage.")
+        return lines
 
     return [
         points_rule,
@@ -207,6 +213,11 @@ _GROUP_PLAYOFF_SUMMARY: dict[str, str] = {
         "the play-off result decided who advanced — not goal average."
     ),
 }
+
+
+def edition_had_group_playoffs(edition: str) -> bool:
+    """True when this edition had group play-off matches in imported data."""
+    return edition in _GROUP_PLAYOFF_SUMMARY
 
 
 def edition_is_historic(edition: str) -> bool:
@@ -253,10 +264,12 @@ def edition_summary_rules_sections(edition: str) -> list[dict[str, list[str]]]:
             format_lines.append("Top two from each group advanced to the knockout stage.")
         elif year >= 1986:
             format_lines.append("Top two from each group advanced to the knockout stage.")
-        elif year >= 1958:
+        elif edition_had_group_playoffs(edition):
             format_lines.append(
                 "The group winner and runner-up (or play-off winner) advanced."
             )
+        elif year >= 1958:
+            format_lines.append("Top two from each group advanced to the knockout stage.")
         else:
             format_lines.append("The top two from each group advanced.")
 
@@ -268,21 +281,17 @@ def edition_summary_rules_sections(edition: str) -> list[dict[str, list[str]]]:
         if len(standing_lines) > 0:
             sections.append({"title": "Group standings", "lines": standing_lines})
 
-    playoff_lines: list[str] = []
-    if edition_in_group_playoff_era(edition) and has_knockout:
-        playoff_lines.append(
-            "When teams finished level on points for the last qualifying place, "
-            "FIFA sometimes scheduled a single group play-off match."
+    if edition_had_group_playoffs(edition) and has_knockout:
+        sections.append(
+            {
+                "title": "Group play-offs",
+                "lines": [
+                    "When teams finished level on points for the last qualifying place, "
+                    "FIFA scheduled a single group play-off match.",
+                    _GROUP_PLAYOFF_SUMMARY[edition],
+                ],
+            }
         )
-        if edition in _GROUP_PLAYOFF_SUMMARY:
-            playoff_lines.append(_GROUP_PLAYOFF_SUMMARY[edition])
-        elif year <= 1954:
-            playoff_lines.append(
-                "Play-off fixtures are not in the imported data for this edition, "
-                "but the rules applied where ties occurred."
-            )
-    if len(playoff_lines) > 0:
-        sections.append({"title": "Group play-offs", "lines": playoff_lines})
 
     knockout_lines: list[str] = []
     if has_knockout:
