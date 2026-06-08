@@ -48,6 +48,14 @@ WC_COMPETITION = Competition(
 )
 _TEAM_REGISTRY_PATH = Path(__file__).with_name("wc_team_registry.json")
 _MATCHDAY_RE = re.compile(r"^Matchday\s+(\d+)$", re.IGNORECASE)
+_GROUP_PLAYOFF_RE = re.compile(r"^Group\s+\d+\s+Play-off$", re.IGNORECASE)
+_ROUND_ALIASES: dict[str, str] = {
+    "Quarterfinals": "Quarter-finals",
+    "Semifinals": "Semi-finals",
+    "Third place match": "Third-place match",
+    "Third place play-off": "Third-place match",
+    "Third-place play-off": "Third-place match",
+}
 
 
 class WorldCupGroupStandingsDocument(BaseModel):
@@ -81,8 +89,9 @@ def _team_from_name(name: str, registry: dict[str, dict[str, object]]) -> Team:
 
 def _parse_openfootball_datetime(date_value: str, time_value: str | None) -> datetime:
     if time_value:
+        time_part = time_value.strip().split()[0]
         local = datetime.strptime(
-            f"{date_value} {time_value}",
+            f"{date_value} {time_part}",
             "%Y-%m-%d %H:%M",
         )
         return local.replace(tzinfo=UTC)
@@ -179,10 +188,30 @@ def _parse_score(score_payload: dict[str, Any] | None) -> Score:
     )
 
 
-def _map_openfootball_round(round_name: str) -> tuple[str, int | None, str | None]:
-    matchday_match = _MATCHDAY_RE.match(round_name.strip())
+def _map_openfootball_round(
+    round_name: str,
+    *,
+    raw_match: dict[str, Any] | None = None,
+) -> tuple[str, int | None, str | None]:
+    stripped = round_name.strip()
+    base_round = stripped.split(",")[0].strip()
+
+    matchday_match = _MATCHDAY_RE.match(base_round)
     if matchday_match is not None:
         return WC_GROUP_STAGE, int(matchday_match.group(1)), None
+
+    if base_round == "First round":
+        if raw_match is not None and raw_match.get("group"):
+            return WC_GROUP_STAGE, None, None
+        return "LAST_16", None, None
+
+    if base_round == "Final Round":
+        return WC_GROUP_STAGE, None, None
+
+    if _GROUP_PLAYOFF_RE.match(base_round):
+        return "LAST_16", None, None
+
+    canonical_round = _ROUND_ALIASES.get(base_round, base_round)
 
     mapping = {
         "Preliminary round": ("LAST_16", None),
@@ -196,11 +225,22 @@ def _map_openfootball_round(round_name: str) -> tuple[str, int | None, str | Non
         "3rd place playoff": ("THIRD_PLACE", None),
         "Final": ("FINAL", None),
     }
-    mapped = mapping.get(round_name.strip())
+    mapped = mapping.get(canonical_round)
     if mapped is None:
         raise ValueError(f"Unsupported openfootball round: {round_name}")
     stage, group = mapped
     return stage, None, group
+
+
+def _group_enum_for_raw_match(raw_match: dict[str, Any], round_name: str) -> str | None:
+    base_round = round_name.strip().split(",")[0].strip()
+    if base_round == "Final Round":
+        return group_slug_to_enum("final")
+
+    group_label = raw_match.get("group")
+    if group_label is None:
+        return None
+    return group_slug_to_enum(standings_label_to_slug(str(group_label)))
 
 
 def _season_for_edition(edition: str) -> Season:
@@ -269,14 +309,13 @@ def openfootball_matches_to_models(edition: str) -> list[Match]:
 
     for index, raw_match in enumerate(raw_matches, start=1):
         round_name = str(raw_match.get("round", "")).strip()
-        stage, matchday, _ = _map_openfootball_round(round_name)
+        stage, matchday, _ = _map_openfootball_round(round_name, raw_match=raw_match)
 
         group_enum: str | None = None
         if stage == WC_GROUP_STAGE:
-            group_label = raw_match.get("group")
-            if group_label is None:
+            group_enum = _group_enum_for_raw_match(raw_match, round_name)
+            if group_enum is None:
                 raise ValueError(f"Group-stage match missing group: {raw_match}")
-            group_enum = group_slug_to_enum(standings_label_to_slug(str(group_label)))
 
         home_name = str(raw_match.get("team1", "")).strip()
         away_name = str(raw_match.get("team2", "")).strip()

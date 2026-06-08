@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Import a historical World Cup edition from openfootball into MongoDB."""
+"""Import historical World Cup editions from openfootball into MongoDB."""
 
 from __future__ import annotations
 
@@ -16,7 +16,7 @@ WEBSITE_DIR = ROOT / "website"
 FOOTBALL_DIR = WEBSITE_DIR / "football"
 DEFAULT_HOST = "macmini2"
 DEFAULT_DB = "web_database"
-SUPPORTED_EDITIONS = ("1934", "2022")
+LIVE_EDITION = "2026"
 
 
 def _load_football_module(module_name: str):
@@ -55,16 +55,41 @@ world_cup_utils = _load_football_module("world_cup_utils")
 world_cup_import = _load_import_dependencies()
 write_edition_to_mongo = world_cup_import.write_edition_to_mongo
 edition_has_group_stage = world_cup_utils.edition_has_group_stage
+WC_OPENFOOTBALL_EDITIONS = world_cup_utils.WC_OPENFOOTBALL_EDITIONS
+
+
+def import_edition(
+    edition: str,
+    *,
+    database,
+    drop_existing: bool,
+) -> tuple[int, int]:
+    matches_collection = database[f"wc_matches_{edition}"]
+    standings_collection = (
+        database[f"wc_standings_{edition}"]
+        if edition_has_group_stage(edition)
+        else None
+    )
+    return write_edition_to_mongo(
+        edition,
+        matches_collection=matches_collection,
+        standings_collection=standings_collection,
+        drop_existing=drop_existing,
+    )
 
 
 def main() -> int:
+    historical_editions = [
+        edition for edition in WC_OPENFOOTBALL_EDITIONS if edition != LIVE_EDITION
+    ]
     parser = argparse.ArgumentParser(
-        description="Import a historical World Cup edition from openfootball."
+        description="Import historical World Cup editions from openfootball."
     )
     parser.add_argument(
         "edition",
-        choices=SUPPORTED_EDITIONS,
-        help="Edition year to import (1934 or 2022 for this first pass).",
+        nargs="?",
+        choices=[*historical_editions, "all"],
+        help="Edition year to import, or 'all' for every historical edition.",
     )
     parser.add_argument(
         "--host",
@@ -82,7 +107,15 @@ def main() -> int:
         action="store_true",
         help="Drop target collections before importing.",
     )
+    parser.add_argument(
+        "--skip-existing",
+        action="store_true",
+        help="Skip editions that already have a wc_matches_{year} collection.",
+    )
     args = parser.parse_args()
+
+    if args.edition is None:
+        parser.error("edition is required (year or 'all')")
 
     mongo_uri = (
         args.mongo_uri
@@ -94,27 +127,39 @@ def main() -> int:
     client.admin.command("ping")
     database = client[args.database]
 
-    matches_collection = database[f"wc_matches_{args.edition}"]
-    standings_collection = (
-        database[f"wc_standings_{args.edition}"]
-        if edition_has_group_stage(args.edition)
-        else None
-    )
+    editions = historical_editions if args.edition == "all" else [args.edition]
+    failures: list[str] = []
 
-    match_count, standings_count = write_edition_to_mongo(
-        args.edition,
-        matches_collection=matches_collection,
-        standings_collection=standings_collection,
-        drop_existing=args.drop,
-    )
-    print(
-        f"Imported {match_count} matches into wc_matches_{args.edition}"
-        + (
-            f" and {standings_count} group standings into wc_standings_{args.edition}"
-            if standings_count > 0
-            else ""
-        )
-    )
+    for edition in editions:
+        collection_name = f"wc_matches_{edition}"
+        if args.skip_existing and collection_name in database.list_collection_names():
+            print(f"Skipping {edition}: {collection_name} already exists")
+            continue
+
+        try:
+            match_count, standings_count = import_edition(
+                edition,
+                database=database,
+                drop_existing=args.drop,
+            )
+        except Exception as error:
+            failures.append(f"{edition}: {error}")
+            print(f"FAILED {edition}: {error}")
+            continue
+
+        summary = f"Imported {match_count} matches into {collection_name}"
+        if standings_count > 0:
+            summary += (
+                f" and {standings_count} group standings into wc_standings_{edition}"
+            )
+        print(summary)
+
+    if len(failures) > 0:
+        print("Import failures:")
+        for failure in failures:
+            print(f"  - {failure}")
+        return 1
+
     return 0
 
 

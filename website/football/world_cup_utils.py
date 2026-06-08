@@ -15,14 +15,42 @@ WC_CREST_STATIC_DIR = (
 )
 WC_GROUP_STAGE = "GROUP_STAGE"
 WC_GROUP_ORDER = tuple(chr(code) for code in range(ord("a"), ord("l") + 1))
-WC_2022_GROUP_ORDER = tuple(chr(code) for code in range(ord("a"), ord("h") + 1))
+WC_GROUP_ORDER_4_NUMERIC = ("1", "2", "3", "4")
+WC_GROUP_ORDER_6_LETTER = tuple(chr(code) for code in range(ord("a"), ord("f") + 1))
+WC_GROUP_ORDER_8_LETTER = tuple(chr(code) for code in range(ord("a"), ord("h") + 1))
+WC_1950_GROUP_ORDER = (*WC_GROUP_ORDER_4_NUMERIC, "final")
+WC_1982_GROUP_ORDER = ("1", "2", "3", "4", "5", "6", "a", "b", "c", "d")
+WC_2022_GROUP_ORDER = WC_GROUP_ORDER_8_LETTER
 
 WC_EDITION_REGISTRY: dict[str, dict[str, object]] = {
+    "1930": {"has_group_stage": True, "group_order": WC_GROUP_ORDER_4_NUMERIC},
     "1934": {"has_group_stage": False, "group_order": ()},
     "1938": {"has_group_stage": False, "group_order": ()},
+    "1950": {"has_group_stage": True, "group_order": WC_1950_GROUP_ORDER},
+    "1954": {"has_group_stage": True, "group_order": WC_GROUP_ORDER_4_NUMERIC},
+    "1958": {"has_group_stage": True, "group_order": WC_GROUP_ORDER_4_NUMERIC},
+    "1962": {"has_group_stage": True, "group_order": WC_GROUP_ORDER_4_NUMERIC},
+    "1966": {"has_group_stage": True, "group_order": WC_GROUP_ORDER_4_NUMERIC},
+    "1970": {"has_group_stage": True, "group_order": WC_GROUP_ORDER_4_NUMERIC},
+    "1974": {"has_group_stage": True, "group_order": ("1", "2", "3", "4", "a", "b")},
+    "1978": {"has_group_stage": True, "group_order": ("1", "2", "3", "4", "a", "b")},
+    "1982": {"has_group_stage": True, "group_order": WC_1982_GROUP_ORDER},
+    "1986": {"has_group_stage": True, "group_order": WC_GROUP_ORDER_6_LETTER},
+    "1990": {"has_group_stage": True, "group_order": WC_GROUP_ORDER_6_LETTER},
+    "1994": {"has_group_stage": True, "group_order": WC_GROUP_ORDER_6_LETTER},
+    "1998": {"has_group_stage": True, "group_order": WC_GROUP_ORDER_8_LETTER},
+    "2002": {"has_group_stage": True, "group_order": WC_GROUP_ORDER_8_LETTER},
+    "2006": {"has_group_stage": True, "group_order": WC_GROUP_ORDER_8_LETTER},
+    "2010": {"has_group_stage": True, "group_order": WC_GROUP_ORDER_8_LETTER},
+    "2014": {"has_group_stage": True, "group_order": WC_GROUP_ORDER_8_LETTER},
+    "2018": {"has_group_stage": True, "group_order": WC_GROUP_ORDER_8_LETTER},
     "2022": {"has_group_stage": True, "group_order": WC_2022_GROUP_ORDER},
     "2026": {"has_group_stage": True, "group_order": WC_GROUP_ORDER},
 }
+
+WC_OPENFOOTBALL_EDITIONS: tuple[str, ...] = tuple(
+    sorted(WC_EDITION_REGISTRY.keys(), key=int)
+)
 
 
 def world_cup_edition_query(edition: str) -> str:
@@ -160,7 +188,10 @@ def group_enum_to_slug(group_enum: str) -> str:
 
 
 def group_slug_to_label(group_slug: str) -> str:
-    return f"Group {normalise_group_slug(group_slug).upper()}"
+    slug = normalise_group_slug(group_slug)
+    if slug == "final":
+        return "Final round"
+    return f"Group {slug.upper()}"
 
 
 def adjacent_group_slugs(
@@ -178,7 +209,10 @@ def adjacent_group_slugs(
 
 
 def standings_label_to_slug(label: str) -> str:
-    return label.removeprefix("Group ").strip().lower()
+    normalized = label.strip()
+    if normalized.casefold() == "final round":
+        return "final"
+    return normalized.removeprefix("Group ").strip().lower()
 
 
 def edition_label(edition: str) -> str:
