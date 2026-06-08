@@ -28,7 +28,7 @@ from .world_cup_utils import (
     normalise_group_slug,
     filter_confirmed_knockout_matches,
     filter_superseded_knockout_replays,
-    order_knockout_matches_for_bracket,
+    order_knockout_stages_for_bracket,
     resolve_world_cup_crest_url,
     standings_label_to_slug,
     team_is_confirmed,
@@ -736,12 +736,14 @@ async def build_knockout_bracket_diagram(
     if len(stage_matches) == 0:
         return None
 
+    stage_matches = order_knockout_stages_for_bracket(stage_matches)
+
     first_round_count = len(stage_matches[0][1])
     grid_rows = max(BRACKET_CARD_GRID_ROWS, _bracket_grid_row_count(first_round_count))
     rounds: list[BracketRoundColumn] = []
 
     for round_index, ((stage, round_slug, label), matches) in enumerate(stage_matches):
-        ordered_matches = order_knockout_matches_for_bracket(stage, matches)
+        ordered_matches = matches
         slots: list[BracketSlot] = []
         bracket_order = WC_2026_KNOCKOUT_BRACKET_ORDER.get(stage, ())
         for match_index, match in enumerate(ordered_matches):

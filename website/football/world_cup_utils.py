@@ -505,6 +505,155 @@ def _feeder_signature(label: str) -> str:
     return label.strip().casefold()
 
 
+def knockout_winner_team_id(match: "Match") -> int | None:
+    side = knockout_winner_side(match)
+    if side is None:
+        return None
+
+    team = match.home_team if side == "home" else match.away_team
+    if not team_is_confirmed(team):
+        return None
+    return team.id
+
+
+def knockout_round_team_ids(match: "Match") -> tuple[int | None, int | None]:
+    home_id = match.home_team.id if team_is_confirmed(match.home_team) else None
+    away_id = match.away_team.id if team_is_confirmed(match.away_team) else None
+    return home_id, away_id
+
+
+def _knockout_stage_has_fixture_order(stage: str, matches: list["Match"]) -> bool:
+    if len(matches) <= 1:
+        return True
+    if stage not in WC_2026_KNOCKOUT_BRACKET_ORDER:
+        return False
+    return all(
+        identify_knockout_fixture_number(stage, match) is not None for match in matches
+    )
+
+
+def _find_bracket_feeder_match(
+    prev_matches: list["Match"],
+    *,
+    team_id: int | None,
+    team: "Team",
+    prev_stage: str,
+    used_ids: set[int],
+) -> "Match | None":
+    if team_id is not None:
+        winner_match = None
+        participant_match = None
+        for match in prev_matches:
+            if match.id in used_ids:
+                continue
+            if not knockout_match_has_confirmed_teams(match):
+                continue
+            if team_id not in {match.home_team.id, match.away_team.id}:
+                continue
+            participant_match = match
+            if knockout_winner_team_id(match) == team_id:
+                winner_match = match
+                break
+        if winner_match is not None:
+            return winner_match
+        if participant_match is not None:
+            return participant_match
+
+    label = bracket_feeder_label_from_team(team)
+    if label is not None:
+        winner_match = _FEEDER_WINNER_MATCH_RE.match(label)
+        if winner_match is not None:
+            fixture_num = int(winner_match.group(1))
+            if fixture_num in WC_2026_KNOCKOUT_FIXTURES.get(prev_stage, {}):
+                for match in prev_matches:
+                    if match.id in used_ids:
+                        continue
+                    if identify_knockout_fixture_number(prev_stage, match) == fixture_num:
+                        return match
+    return None
+
+
+def order_knockout_round_by_next_round(
+    prev_matches: list["Match"],
+    next_ordered: list["Match"],
+    *,
+    prev_stage: str,
+) -> list["Match"] | None:
+    if len(prev_matches) != 2 * len(next_ordered):
+        return None
+
+    result: list["Match | None"] = [None] * len(prev_matches)
+    used_ids: set[int] = set()
+
+    for next_idx, next_match in enumerate(next_ordered):
+        home_id, away_id = knockout_round_team_ids(next_match)
+        slot_teams = (
+            (0, home_id, next_match.home_team),
+            (1, away_id, next_match.away_team),
+        )
+        for slot_offset, team_id, team in slot_teams:
+            feeder = _find_bracket_feeder_match(
+                prev_matches,
+                team_id=team_id,
+                team=team,
+                prev_stage=prev_stage,
+                used_ids=used_ids,
+            )
+            if feeder is None:
+                return None
+            result[2 * next_idx + slot_offset] = feeder
+            used_ids.add(feeder.id)
+
+    ordered: list["Match"] = []
+    for match in result:
+        if match is None:
+            return None
+        ordered.append(match)
+    return ordered
+
+
+def order_knockout_stages_for_bracket(
+    stage_matches: list[tuple[tuple[str, str, str], list["Match"]]],
+) -> list[tuple[tuple[str, str, str], list["Match"]]]:
+    if len(stage_matches) == 0:
+        return stage_matches
+
+    if all(
+        _knockout_stage_has_fixture_order(stage, matches)
+        for (stage, _, _), matches in stage_matches
+    ):
+        return [
+            (meta, order_knockout_matches_for_bracket(meta[0], matches))
+            for meta, matches in stage_matches
+        ]
+
+    ordered_by_stage: dict[str, list["Match"]] = {}
+    last_meta, last_matches = stage_matches[-1]
+    ordered_by_stage[last_meta[0]] = sorted(last_matches, key=lambda match: match.utc_date)
+
+    for index in range(len(stage_matches) - 2, -1, -1):
+        meta, prev_matches = stage_matches[index]
+        stage = meta[0]
+        next_stage = stage_matches[index + 1][0][0]
+        next_ordered = ordered_by_stage[next_stage]
+
+        reordered = order_knockout_round_by_next_round(
+            prev_matches,
+            next_ordered,
+            prev_stage=stage,
+        )
+        if reordered is not None:
+            ordered_by_stage[stage] = reordered
+            continue
+
+        if _knockout_stage_has_fixture_order(stage, prev_matches):
+            ordered_by_stage[stage] = order_knockout_matches_for_bracket(stage, prev_matches)
+        else:
+            ordered_by_stage[stage] = sorted(prev_matches, key=lambda match: match.utc_date)
+
+    return [(meta, ordered_by_stage[meta[0]]) for meta, _ in stage_matches]
+
+
 def identify_knockout_fixture_number(stage: str, match: "Match") -> int | None:
     fixtures = WC_2026_KNOCKOUT_FIXTURES.get(stage)
     if fixtures is None:
