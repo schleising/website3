@@ -41,6 +41,7 @@ from .world_cup_utils import (
     knockout_match_has_confirmed_teams,
     knockout_winner_side,
     world_cup_edition_query,
+    world_cup_display_score,
     world_cup_score_annotation,
     normalise_group_slug,
     normalise_round_slug,
@@ -54,6 +55,7 @@ TEMPLATES.env.filters["knockout_winner_side"] = knockout_winner_side
 TEMPLATES.env.filters["knockout_match_has_confirmed_teams"] = (
     knockout_match_has_confirmed_teams
 )
+TEMPLATES.env.filters["world_cup_display_score"] = world_cup_display_score
 TEMPLATES.env.filters["world_cup_score_annotation"] = world_cup_score_annotation
 
 

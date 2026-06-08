@@ -221,22 +221,59 @@ def knockout_winner_side(match: "Match") -> str | None:
     return None
 
 
+def world_cup_display_score(match: "Match") -> tuple[int | None, int | None]:
+    """Return the scoreline to show in match cards."""
+    home_ft = match.score.full_time.home
+    away_ft = match.score.full_time.away
+    if home_ft is None or away_ft is None:
+        return home_ft, away_ft
+
+    penalties = match.score.penalties
+    if (
+        penalties is not None
+        and penalties.home is not None
+        and penalties.away is not None
+        and home_ft == away_ft
+    ):
+        return home_ft, away_ft
+
+    extra_time = match.score.extra_time
+    if (
+        extra_time is not None
+        and extra_time.home is not None
+        and extra_time.away is not None
+        and home_ft == away_ft
+    ):
+        return extra_time.home, extra_time.away
+
+    return home_ft, away_ft
+
+
 def world_cup_score_annotation(match: "Match") -> str | None:
     score = match.score
-    if score.penalties is None:
-        return None
-
-    home_pens = score.penalties.home
-    away_pens = score.penalties.away
-    if home_pens is None or away_pens is None:
-        return None
-
     home_score = score.full_time.home
     away_score = score.full_time.away
     if home_score is None or away_score is None or home_score != away_score:
         return None
 
-    return f"({home_pens}-{away_pens} pens)"
+    penalties = score.penalties
+    if (
+        penalties is not None
+        and penalties.home is not None
+        and penalties.away is not None
+    ):
+        return f"({penalties.home}-{penalties.away} pens)"
+
+    extra_time = score.extra_time
+    if (
+        extra_time is not None
+        and extra_time.home is not None
+        and extra_time.away is not None
+        and extra_time.home != extra_time.away
+    ):
+        return "(aet)"
+
+    return None
 
 
 # FIFA match numbers and feeder labels for the 2026 World Cup knockout bracket.
