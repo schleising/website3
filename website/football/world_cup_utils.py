@@ -161,6 +161,132 @@ def find_group_playoff_match(
     return None
 
 
+def edition_in_group_playoff_era(edition: str) -> bool:
+    year = int(edition)
+    return 1930 <= year <= 1958
+
+
+def playoff_participant_team_ids(playoff_match: "Match | None") -> set[int]:
+    if playoff_match is None:
+        return set()
+
+    team_ids: set[int] = set()
+    for team in (playoff_match.home_team, playoff_match.away_team):
+        if team.id is not None:
+            team_ids.add(team.id)
+    return team_ids
+
+
+def build_group_team_ids_by_slug(matches: list["Match"]) -> dict[str, set[int]]:
+    group_team_ids: dict[str, set[int]] = {}
+
+    for match in matches:
+        if match.stage != WC_GROUP_STAGE or match.group is None:
+            continue
+        slug = group_enum_to_slug(match.group)
+        bucket = group_team_ids.setdefault(slug, set())
+        for team in (match.home_team, match.away_team):
+            if team.id is not None:
+                bucket.add(team.id)
+
+    return group_team_ids
+
+
+def is_legacy_group_playoff_match(
+    match: "Match",
+    group_team_ids_by_slug: dict[str, set[int]],
+) -> bool:
+    if match.stage != "LAST_16":
+        return False
+
+    home_id = match.home_team.id
+    away_id = match.away_team.id
+    if home_id is None or away_id is None:
+        return False
+
+    for team_ids in group_team_ids_by_slug.values():
+        if home_id in team_ids and away_id in team_ids:
+            return True
+    return False
+
+
+def filter_group_playoffs_from_knockout_matches(
+    edition: str,
+    matches: list["Match"],
+    all_matches: list["Match"],
+) -> list["Match"]:
+    if not edition_in_group_playoff_era(edition):
+        return matches
+
+    group_team_ids_by_slug = build_group_team_ids_by_slug(all_matches)
+    return [
+        match
+        for match in matches
+        if not is_legacy_group_playoff_match(match, group_team_ids_by_slug)
+    ]
+
+
+def knockout_qualifier_team_ids_from_group(
+    table: list["TableItem"],
+    playoff_match: "Match | None",
+    *,
+    qualification_spots: int = 2,
+) -> set[int]:
+    if len(table) == 0:
+        return set()
+
+    qualifier_ids: set[int] = set()
+    leader_id = table[0].team.id
+    if leader_id is not None:
+        qualifier_ids.add(leader_id)
+
+    if qualification_spots < 2:
+        return qualifier_ids
+
+    if playoff_match is not None:
+        winner_id = _playoff_winner_team_id(playoff_match)
+        if winner_id is not None:
+            qualifier_ids.add(winner_id)
+        return qualifier_ids
+
+    if len(table) >= 2 and table[1].team.id is not None:
+        qualifier_ids.add(table[1].team.id)
+    return qualifier_ids
+
+
+def list_group_playoff_matches_for_edition(
+    edition: str,
+    matches: list["Match"],
+) -> list[tuple[str, "Match"]]:
+    group_order = group_order_for_edition(edition)
+    playoffs_by_slug: dict[str, "Match"] = {}
+    group_team_ids_by_slug = build_group_team_ids_by_slug(matches)
+
+    for match in matches:
+        if match.stage == WC_GROUP_PLAYOFF and match.group is not None:
+            playoffs_by_slug[group_enum_to_slug(match.group)] = match
+
+    for match in matches:
+        if not is_legacy_group_playoff_match(match, group_team_ids_by_slug):
+            continue
+        for slug, team_ids in group_team_ids_by_slug.items():
+            home_id = match.home_team.id
+            away_id = match.away_team.id
+            if home_id in team_ids and away_id in team_ids:
+                playoffs_by_slug.setdefault(slug, match)
+                break
+
+    return [
+        (slug, playoffs_by_slug[slug])
+        for slug in group_order
+        if slug in playoffs_by_slug
+    ]
+
+
+def group_playoff_round_label(group_slug: str) -> str:
+    return f"{group_slug_to_label(group_slug)} play-off"
+
+
 def format_goal_average(goals_for: int, goals_against: int) -> str:
     if goals_against == 0:
         if goals_for == 0:
@@ -458,6 +584,14 @@ def final_group_stage_slugs_for_edition(edition: str) -> tuple[str, ...]:
 def is_final_group_stage_group(edition: str, group_slug: str) -> bool:
     slug = normalise_group_slug(group_slug)
     return slug in final_group_stage_slugs_for_edition(edition)
+
+
+def is_last_group_stage_group(edition: str, group_slug: str) -> bool:
+    slug = normalise_group_slug(group_slug)
+    stages = group_stages_for_edition(edition)
+    if len(stages) == 0:
+        return False
+    return slug in stages[-1]
 
 
 def group_stage_labels_for_edition(edition: str) -> tuple[str, ...]:

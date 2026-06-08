@@ -16,7 +16,17 @@ from .world_cup_utils import (
     WC_GROUP_STAGE,
     edition_has_group_stage,
     edition_has_knockout_stage,
+    edition_in_group_playoff_era,
+    filter_group_playoffs_from_knockout_matches,
+    find_group_playoff_match,
+    group_playoff_round_label,
     is_final_group_stage_group,
+    is_last_group_stage_group,
+    is_legacy_group_playoff_match,
+    build_group_team_ids_by_slug,
+    knockout_qualifier_team_ids_from_group,
+    list_group_playoff_matches_for_edition,
+    playoff_participant_team_ids,
     sort_group_table_rows,
     group_order_for_edition,
     group_stages_for_edition,
@@ -496,8 +506,11 @@ def qualified_team_ids_for_next_round(
     if not edition_has_knockout_stage(edition):
         return set()
 
+    group_team_ids_by_slug = build_group_team_ids_by_slug(all_matches)
     for match in all_matches:
         if match.stage not in knockout_stages:
+            continue
+        if is_legacy_group_playoff_match(match, group_team_ids_by_slug):
             continue
         for team in (match.home_team, match.away_team):
             if team.id is not None:
@@ -509,11 +522,19 @@ def qualified_team_ids_for_next_round(
 def _apply_historic_qualification_labels(
     table: list[TableItem],
     qualified_team_ids: set[int],
+    *,
+    playoff_participant_ids: set[int] | None = None,
 ) -> list[TableItem]:
     _clear_position_labels(table)
+    playoff_ids = playoff_participant_ids or set()
+
     for table_item in table:
         team_id = table_item.team.id
-        if team_id is not None and team_id in qualified_team_ids:
+        if team_id is None:
+            continue
+        if team_id in playoff_ids:
+            table_item.position_label = "P"
+        elif team_id in qualified_team_ids:
             table_item.position_label = "Q"
     return table
 
@@ -558,7 +579,9 @@ async def prepare_group_table_for_display(
         return prepared
 
     edition_matches = all_edition_matches
-    if edition_matches is None and edition == "1958":
+    if edition_matches is None and (
+        edition == "1958" or edition_in_group_playoff_era(edition)
+    ):
         edition_matches = await retrieve_all_edition_matches(edition)
 
     prepared = sort_group_table_rows(
@@ -574,12 +597,34 @@ async def prepare_group_table_for_display(
     if edition_matches is None:
         edition_matches = await retrieve_all_edition_matches(edition)
 
-    qualified_team_ids = qualified_team_ids_for_next_round(
-        edition,
-        group_slug,
+    playoff_match = find_group_playoff_match(
         edition_matches,
+        group_slug,
+        table=prepared,
     )
-    prepared = _apply_historic_qualification_labels(prepared, qualified_team_ids)
+    playoff_participant_ids = playoff_participant_team_ids(playoff_match)
+
+    if (
+        edition_in_group_playoff_era(edition)
+        and edition_has_knockout_stage(edition)
+        and is_last_group_stage_group(edition, group_slug)
+    ):
+        qualified_team_ids = knockout_qualifier_team_ids_from_group(
+            prepared,
+            playoff_match,
+        )
+    else:
+        qualified_team_ids = qualified_team_ids_for_next_round(
+            edition,
+            group_slug,
+            edition_matches,
+        )
+
+    prepared = _apply_historic_qualification_labels(
+        prepared,
+        qualified_team_ids,
+        playoff_participant_ids=playoff_participant_ids,
+    )
 
     if is_final_group_stage_group(edition, group_slug):
         _apply_final_group_champion_label(prepared, matches)
@@ -655,7 +700,57 @@ async def retrieve_knockout_matches(edition: str, stage: str) -> list[Match]:
 
     cursor = collection.find({"stage": stage}).sort("utc_date", ASCENDING)
     matches = [Match.model_validate(item) async for item in cursor]
+    if stage == "LAST_16":
+        all_matches = await retrieve_all_edition_matches(edition)
+        matches = filter_group_playoffs_from_knockout_matches(
+            edition,
+            matches,
+            all_matches,
+        )
     return filter_superseded_knockout_replays(matches)
+
+
+async def retrieve_group_playoff_matches(edition: str) -> list[Match]:
+    all_matches = await retrieve_all_edition_matches(edition)
+    return [
+        match
+        for _, match in list_group_playoff_matches_for_edition(edition, all_matches)
+    ]
+
+
+async def edition_has_group_playoff_matches(edition: str) -> bool:
+    return len(await retrieve_group_playoff_matches(edition)) > 0
+
+
+class WorldCupGroupPlayoffSection(BaseModel):
+    slug: str
+    label: str
+    group_slug: str
+    group_label: str
+    matches: list[Match] = Field(default_factory=list)
+
+
+async def build_overview_group_playoff_sections(
+    edition: str,
+) -> list[WorldCupGroupPlayoffSection]:
+    all_matches = await retrieve_all_edition_matches(edition)
+    sections: list[WorldCupGroupPlayoffSection] = []
+
+    for group_slug, match in list_group_playoff_matches_for_edition(
+        edition,
+        all_matches,
+    ):
+        sections.append(
+            WorldCupGroupPlayoffSection(
+                slug=group_slug,
+                label=group_playoff_round_label(group_slug),
+                group_slug=group_slug,
+                group_label=group_slug_to_label(group_slug),
+                matches=[match],
+            )
+        )
+
+    return sections
 
 
 async def list_available_knockout_rounds(edition: str) -> list[WorldCupKnockoutRound]:

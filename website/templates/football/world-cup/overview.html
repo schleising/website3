@@ -101,6 +101,41 @@
   {% endif %}
   {% endfor %}
 
+  {% if group_playoff_sections|default([])|length > 0 %}
+  <div class="world-cup-stage-divider" id="wc-playoffs" aria-hidden="true">
+    <span>Group play-offs</span>
+  </div>
+
+  {% for playoff_section in group_playoff_sections %}
+  <section
+    class="world-cup-overview-playoff-block site-card"
+    id="wc-playoff-{{ playoff_section.slug }}"
+    aria-labelledby="wc-playoff-heading-{{ playoff_section.slug }}"
+  >
+    <div class="world-cup-overview-block-header">
+      <h4 id="wc-playoff-heading-{{ playoff_section.slug }}">
+        <a href="{{ football_root }}world-cup/playoffs/?edition={{ selected_edition }}#wc-playoff-{{ playoff_section.slug }}">{{ playoff_section.label }}</a>
+      </h4>
+      <span class="world-cup-round-badge world-cup-round-badge--playoff">Play-off</span>
+    </div>
+    {% for day_group in playoff_section.date_groups %}
+    {% if day_group.matches|length > 0 %}
+    <section class="football-day-group world-cup-overview-day-group" aria-label="{{ playoff_section.label }} {{ day_group.label }} fixtures">
+      <div class="football-day-heading">
+        <h5 class="football-day-title">{{ day_group.label }}</h5>
+      </div>
+      <div class="football-grid">
+        {% for match in day_group.matches %}
+        {{ world_cup_match_card(match, football_root=football_root, edition=selected_edition, highlight_winner=true) }}
+        {% endfor %}
+      </div>
+    </section>
+    {% endif %}
+    {% endfor %}
+  </section>
+  {% endfor %}
+  {% endif %}
+
   {% for stage_section in group_stage_sections|default([]) %}
   <div class="world-cup-stage-divider" id="{{ stage_section.anchor }}" aria-hidden="true">
     <span>{{ stage_section.label }}</span>

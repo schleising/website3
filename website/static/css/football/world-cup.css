@@ -377,6 +377,54 @@
     flex: 0 0 auto;
 }
 
+.world-cup-round-badge {
+    flex: 0 0 auto;
+    padding: 0.12rem 0.45rem;
+    border-radius: 999px;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.world-cup-round-badge--playoff {
+    color: var(--text-subtle, #5f6b7a);
+    background: var(--surface-muted, #eef3f8);
+    border: 0.0625rem solid var(--line, #d9e4f1);
+}
+
+.world-cup-overview-playoff-block {
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+    padding: 0.65rem;
+}
+
+.world-cup-playoffs-page {
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+}
+
+.world-cup-playoff-group-block {
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+    padding: 0.65rem;
+}
+
+.world-cup-playoff-group-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.5rem;
+}
+
+.world-cup-playoff-group-header h4 {
+    margin: 0;
+    font-size: 1rem;
+}
+
 .world-cup-stage-divider {
     display: flex;
     align-items: center;

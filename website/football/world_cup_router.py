@@ -14,8 +14,10 @@ from .models import (
 from .subscription_scope import get_wc_subscribable_team_ids, merge_subscription_team_ids
 from .world_cup_db import (
     build_knockout_bracket_diagram,
+    build_overview_group_playoff_sections,
     build_overview_group_stage_sections,
     build_overview_knockout_sections,
+    edition_has_group_playoff_matches,
     get_available_wc_editions,
     infer_current_wc_edition,
     list_available_knockout_rounds,
@@ -102,6 +104,7 @@ async def _build_world_cup_context(
     is_current_edition = selected_edition == current_edition
     has_group_stage = edition_has_group_stage(selected_edition)
     has_knockout_stage = edition_has_knockout_stage(selected_edition)
+    has_group_playoffs = await edition_has_group_playoff_matches(selected_edition)
     edition_query = world_cup_edition_query(selected_edition)
 
     return {
@@ -110,6 +113,7 @@ async def _build_world_cup_context(
         "has_group_stage": has_group_stage,
         "has_knockout_stage": has_knockout_stage,
         "show_groups_nav": has_group_stage,
+        "show_playoffs_nav": has_group_playoffs,
         "show_knockout_nav": has_knockout_stage,
         "enable_live_updates": is_current_edition,
         "enable_live_standings": False,
@@ -135,6 +139,7 @@ async def _build_world_cup_context(
         ),
         "world_cup_overview_url": f"{world_cup_root}{edition_query}",
         "world_cup_groups_url": f"{world_cup_root}groups/{edition_query}",
+        "world_cup_playoffs_url": f"{world_cup_root}playoffs/{edition_query}",
         "world_cup_knockout_url": f"{world_cup_root}knockout/{edition_query}",
         "world_cup_matches_url": f"{world_cup_root}matches/{edition_query}",
         "world_cup_subscriptions_url": f"{world_cup_root}subscriptions/{edition_query}",
@@ -214,6 +219,8 @@ def _build_date_groups(matches: list) -> list[dict]:
 def _build_overview_jump_targets(
     knockout_sections: list,
     group_stage_sections: list,
+    *,
+    has_group_playoffs: bool = False,
 ) -> list[dict]:
     jump_targets: list[dict] = []
 
@@ -224,6 +231,14 @@ def _build_overview_jump_targets(
             {
                 "label": label,
                 "anchor": f"wc-round-{slug}",
+            }
+        )
+
+    if has_group_playoffs:
+        jump_targets.append(
+            {
+                "label": "Group play-offs",
+                "anchor": "wc-playoffs",
             }
         )
 
@@ -284,6 +299,9 @@ async def get_world_cup_overview(
 
     knockout_rounds = await build_overview_knockout_sections(selected_edition)
     group_stage_sections = await build_overview_group_stage_sections(selected_edition)
+    group_playoff_sections = await build_overview_group_playoff_sections(
+        selected_edition,
+    )
 
     overview_knockout_sections: list[dict] = []
     for round_section in knockout_rounds:
@@ -341,6 +359,19 @@ async def get_world_cup_overview(
             }
         )
 
+    overview_group_playoff_sections: list[dict] = []
+    for playoff_section in group_playoff_sections:
+        matches = update_match_timezone(playoff_section.matches)
+        overview_group_playoff_sections.append(
+            {
+                "slug": playoff_section.slug,
+                "label": playoff_section.label,
+                "group_slug": playoff_section.group_slug,
+                "group_label": playoff_section.group_label,
+                "date_groups": _build_date_groups(matches),
+            }
+        )
+
     context["edition_switch_path"] = (
         f"{context['football_root_path']}world-cup/{context['edition_query']}"
     )
@@ -355,10 +386,12 @@ async def get_world_cup_overview(
             **context,
             "title": "World Cup Overview",
             "overview_knockout_sections": overview_knockout_sections,
+            "group_playoff_sections": overview_group_playoff_sections,
             "group_stage_sections": overview_group_stage_sections,
             "jump_targets": _build_overview_jump_targets(
                 overview_knockout_sections,
                 overview_group_stage_sections,
+                has_group_playoffs=len(overview_group_playoff_sections) > 0,
             ),
         },
     )
@@ -389,6 +422,48 @@ async def get_world_cup_groups_index(
             "request": request,
             "title": "World Cup Groups",
             "group_stage_sections": group_stage_sections,
+            **context,
+        },
+    )
+
+
+@world_cup_router.get("/playoffs", response_class=HTMLResponse)
+@world_cup_router.get("/playoffs/", response_class=HTMLResponse)
+async def get_world_cup_playoffs(
+    request: Request,
+    edition: str | None = Query(default=None, pattern=r"^\d{4}$"),
+):
+    logging.debug("/football/world-cup/playoffs/: %s", request)
+    context = await _build_world_cup_context(request, edition)
+    if not context["show_playoffs_nav"]:
+        return _redirect_to_world_cup_overview(context)
+
+    selected_edition = context["selected_edition"]
+    playoff_sections = await build_overview_group_playoff_sections(selected_edition)
+    playoff_groups: list[dict] = []
+
+    for playoff_section in playoff_sections:
+        matches = update_match_timezone(playoff_section.matches)
+        playoff_groups.append(
+            {
+                "slug": playoff_section.slug,
+                "label": playoff_section.label,
+                "group_label": playoff_section.group_label,
+                "date_groups": _build_date_groups(matches),
+            }
+        )
+
+    context["edition_switch_path"] = (
+        f"{context['football_root_path']}world-cup/playoffs/{context['edition_query']}"
+    )
+
+    return TEMPLATES.TemplateResponse(
+        request,
+        "football/world-cup/playoffs.html",
+        {
+            "request": request,
+            "title": "World Cup Group Play-offs",
+            "playoff_groups": playoff_groups,
             **context,
         },
     )

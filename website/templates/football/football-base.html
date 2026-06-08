@@ -74,6 +74,9 @@
         {% if show_groups_nav|default(true) %}
         <a href="{{ world_cup_groups_url|default(football_root ~ 'world-cup/groups/') }}" class="sub-level-nav" data-history-mode="football-shell">Groups</a>
         {% endif %}
+        {% if show_playoffs_nav|default(false) %}
+        <a href="{{ world_cup_playoffs_url|default(football_root ~ 'world-cup/playoffs/') }}" class="sub-level-nav" data-history-mode="football-shell">Play-offs</a>
+        {% endif %}
         {% if show_knockout_nav|default(true) %}
         <a href="{{ world_cup_knockout_url|default(football_root ~ 'world-cup/knockout/') }}" class="sub-level-nav" data-history-mode="football-shell">Knockout</a>
         {% endif %}
