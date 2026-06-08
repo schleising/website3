@@ -532,6 +532,183 @@ def _knockout_stage_has_fixture_order(stage: str, matches: list["Match"]) -> boo
     )
 
 
+def _fixture_number_from_winner_match_label(label: str) -> int | None:
+    winner_match = _FEEDER_WINNER_MATCH_RE.match(label.strip())
+    if winner_match is None:
+        return None
+    return int(winner_match.group(1))
+
+
+def chronological_knockout_fixture_map(
+    stage: str,
+    matches: list["Match"],
+) -> dict[int, "Match"]:
+    """Assign FIFA fixture numbers by sorting matches within the stage by kick-off time."""
+    bracket_order = WC_2026_KNOCKOUT_BRACKET_ORDER.get(stage, ())
+    if len(bracket_order) == 0:
+        return {}
+
+    chrono_matches = sorted(matches, key=lambda match: match.utc_date)
+    mapping: dict[int, Match] = {}
+    for index, match in enumerate(chrono_matches):
+        if index >= len(bracket_order):
+            break
+        mapping[bracket_order[index]] = match
+    return mapping
+
+
+def chronological_knockout_fixture_number(
+    stage: str,
+    match: "Match",
+    matches: list["Match"],
+) -> int | None:
+    for fixture_number, mapped_match in chronological_knockout_fixture_map(
+        stage,
+        matches,
+    ).items():
+        if mapped_match.id == match.id:
+            return fixture_number
+    return None
+
+
+def bracket_fixture_number_for_match(
+    stage: str,
+    match: "Match",
+    matches: list["Match"],
+    *,
+    bracket_index: int | None = None,
+) -> int | None:
+    fixture_number = identify_knockout_fixture_number(stage, match)
+    if fixture_number is not None:
+        return fixture_number
+
+    fixture_number = chronological_knockout_fixture_number(stage, match, matches)
+    if fixture_number is not None:
+        return fixture_number
+
+    if bracket_index is not None:
+        bracket_order = WC_2026_KNOCKOUT_BRACKET_ORDER.get(stage, ())
+        if bracket_index < len(bracket_order):
+            return bracket_order[bracket_index]
+    return None
+
+
+def order_stage_by_chronological_fixtures(
+    stage: str,
+    matches: list["Match"],
+) -> list["Match"]:
+    fixture_map = chronological_knockout_fixture_map(stage, matches)
+    bracket_order = WC_2026_KNOCKOUT_BRACKET_ORDER.get(stage, ())
+    if len(bracket_order) == 0:
+        return sorted(matches, key=lambda match: match.utc_date)
+
+    ordered = [
+        fixture_map[fixture_number]
+        for fixture_number in bracket_order
+        if fixture_number in fixture_map
+    ]
+    if len(ordered) == len(matches):
+        return ordered
+    return sorted(matches, key=lambda match: match.utc_date)
+
+
+def order_knockout_round_by_fixture_feeders(
+    prev_matches: list["Match"],
+    next_ordered: list["Match"],
+    *,
+    prev_stage: str,
+    next_stage: str,
+) -> list["Match"] | None:
+    if len(prev_matches) != 2 * len(next_ordered):
+        return None
+
+    prev_fixture_map = chronological_knockout_fixture_map(prev_stage, prev_matches)
+    next_bracket_order = WC_2026_KNOCKOUT_BRACKET_ORDER.get(next_stage, ())
+    next_fixtures = WC_2026_KNOCKOUT_FIXTURES.get(next_stage, {})
+    if len(prev_fixture_map) == 0 or len(next_bracket_order) == 0:
+        return None
+
+    result: list["Match | None"] = [None] * len(prev_matches)
+    used_ids: set[int] = set()
+
+    for next_idx, _next_match in enumerate(next_ordered):
+        next_fixture = (
+            next_bracket_order[next_idx]
+            if next_idx < len(next_bracket_order)
+            else None
+        )
+        if next_fixture is None:
+            return None
+
+        feeder_labels = next_fixtures.get(next_fixture)
+        if feeder_labels is None:
+            return None
+
+        for slot_offset, feeder_label in enumerate(feeder_labels):
+            feeder_fixture = _fixture_number_from_winner_match_label(feeder_label)
+            if feeder_fixture is None:
+                return None
+            feeder_match = prev_fixture_map.get(feeder_fixture)
+            if feeder_match is None or feeder_match.id in used_ids:
+                return None
+            result[2 * next_idx + slot_offset] = feeder_match
+            used_ids.add(feeder_match.id)
+
+    ordered: list["Match"] = []
+    for match in result:
+        if match is None:
+            return None
+        ordered.append(match)
+    return ordered
+
+
+def _order_knockout_stages_by_results(
+    stage_matches: list[tuple[tuple[str, str, str], list["Match"]]],
+) -> list[tuple[tuple[str, str, str], list["Match"]]] | None:
+    ordered_by_stage: dict[str, list["Match"]] = {}
+    last_meta, last_matches = stage_matches[-1]
+    ordered_by_stage[last_meta[0]] = sorted(last_matches, key=lambda match: match.utc_date)
+
+    for index in range(len(stage_matches) - 2, -1, -1):
+        meta, prev_matches = stage_matches[index]
+        stage = meta[0]
+        next_stage = stage_matches[index + 1][0][0]
+        reordered = order_knockout_round_by_next_round(
+            prev_matches,
+            ordered_by_stage[next_stage],
+            prev_stage=stage,
+        )
+        if reordered is None:
+            return None
+        ordered_by_stage[stage] = reordered
+
+    return [(meta, ordered_by_stage[meta[0]]) for meta, _ in stage_matches]
+
+
+def _order_knockout_stages_by_fixture_feeders(
+    stage_matches: list[tuple[tuple[str, str, str], list["Match"]]],
+) -> list[tuple[tuple[str, str, str], list["Match"]]]:
+    ordered_by_stage: dict[str, list["Match"]] = {}
+    last_meta, last_matches = stage_matches[-1]
+    ordered_by_stage[last_meta[0]] = sorted(last_matches, key=lambda match: match.utc_date)
+
+    for index in range(len(stage_matches) - 2, -1, -1):
+        meta, prev_matches = stage_matches[index]
+        stage = meta[0]
+        next_stage = stage_matches[index + 1][0][0]
+        reordered = order_knockout_round_by_fixture_feeders(
+            prev_matches,
+            ordered_by_stage[next_stage],
+            prev_stage=stage,
+            next_stage=next_stage,
+        )
+        if reordered is None:
+            reordered = order_stage_by_chronological_fixtures(stage, prev_matches)
+        ordered_by_stage[stage] = reordered
+
+    return [(meta, ordered_by_stage[meta[0]]) for meta, _ in stage_matches]
+
+
 def _find_bracket_feeder_match(
     prev_matches: list["Match"],
     *,
@@ -627,31 +804,11 @@ def order_knockout_stages_for_bracket(
             for meta, matches in stage_matches
         ]
 
-    ordered_by_stage: dict[str, list["Match"]] = {}
-    last_meta, last_matches = stage_matches[-1]
-    ordered_by_stage[last_meta[0]] = sorted(last_matches, key=lambda match: match.utc_date)
+    result_ordered = _order_knockout_stages_by_results(stage_matches)
+    if result_ordered is not None:
+        return result_ordered
 
-    for index in range(len(stage_matches) - 2, -1, -1):
-        meta, prev_matches = stage_matches[index]
-        stage = meta[0]
-        next_stage = stage_matches[index + 1][0][0]
-        next_ordered = ordered_by_stage[next_stage]
-
-        reordered = order_knockout_round_by_next_round(
-            prev_matches,
-            next_ordered,
-            prev_stage=stage,
-        )
-        if reordered is not None:
-            ordered_by_stage[stage] = reordered
-            continue
-
-        if _knockout_stage_has_fixture_order(stage, prev_matches):
-            ordered_by_stage[stage] = order_knockout_matches_for_bracket(stage, prev_matches)
-        else:
-            ordered_by_stage[stage] = sorted(prev_matches, key=lambda match: match.utc_date)
-
-    return [(meta, ordered_by_stage[meta[0]]) for meta, _ in stage_matches]
+    return _order_knockout_stages_by_fixture_feeders(stage_matches)
 
 
 def identify_knockout_fixture_number(stage: str, match: "Match") -> int | None:

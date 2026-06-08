@@ -18,11 +18,11 @@ from .world_cup_utils import (
     group_order_for_edition,
     WC_KNOCKOUT_OVERVIEW_ORDER,
     WC_KNOCKOUT_ROUNDS,
-    WC_2026_KNOCKOUT_BRACKET_ORDER,
     bracket_team_label,
     group_enum_to_slug,
     group_slug_to_enum,
     group_slug_to_label,
+    bracket_fixture_number_for_match,
     identify_knockout_fixture_number,
     knockout_winner_side,
     normalise_group_slug,
@@ -745,12 +745,14 @@ async def build_knockout_bracket_diagram(
     for round_index, ((stage, round_slug, label), matches) in enumerate(stage_matches):
         ordered_matches = matches
         slots: list[BracketSlot] = []
-        bracket_order = WC_2026_KNOCKOUT_BRACKET_ORDER.get(stage, ())
         for match_index, match in enumerate(ordered_matches):
             row_start, row_span = _bracket_grid_position(match_index, round_index)
-            fixture_number = identify_knockout_fixture_number(stage, match)
-            if fixture_number is None and match_index < len(bracket_order):
-                fixture_number = bracket_order[match_index]
+            fixture_number = bracket_fixture_number_for_match(
+                stage,
+                match,
+                ordered_matches,
+                bracket_index=match_index,
+            )
             slots.append(
                 _bracket_slot_from_match(
                     match,
