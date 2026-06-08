@@ -25,11 +25,13 @@ from .models import (
     Team,
 )
 from .world_cup_utils import (
+    WC_GROUP_PLAYOFF,
     WC_GROUP_STAGE,
     compute_group_table_points,
     edition_has_group_stage,
     group_enum_to_slug,
     group_order_for_edition,
+    group_playoff_slug_from_round,
     group_slug_to_enum,
     group_slug_to_label,
     normalize_group_stage_matchdays,
@@ -211,7 +213,10 @@ def _map_openfootball_round(
         return WC_GROUP_STAGE, None, None
 
     if _GROUP_PLAYOFF_RE.match(base_round):
-        return "LAST_16", None, None
+        group_slug = group_playoff_slug_from_round(base_round)
+        if group_slug is None:
+            raise ValueError(f"Unsupported group playoff round: {round_name}")
+        return WC_GROUP_PLAYOFF, None, group_slug_to_enum(group_slug)
 
     canonical_round = _ROUND_ALIASES.get(base_round, base_round)
 
@@ -314,9 +319,13 @@ def openfootball_matches_to_models(edition: str) -> list[Match]:
         stage, matchday, _ = _map_openfootball_round(round_name, raw_match=raw_match)
 
         group_enum: str | None = None
-        if stage == WC_GROUP_STAGE:
+        if stage in {WC_GROUP_STAGE, WC_GROUP_PLAYOFF}:
             group_enum = _group_enum_for_raw_match(raw_match, round_name)
-            if group_enum is None:
+            if stage == WC_GROUP_PLAYOFF and group_enum is None:
+                group_slug = group_playoff_slug_from_round(round_name)
+                if group_slug is not None:
+                    group_enum = group_slug_to_enum(group_slug)
+            if group_enum is None and stage == WC_GROUP_STAGE:
                 raise ValueError(f"Group-stage match missing group: {raw_match}")
 
         home_name = str(raw_match.get("team1", "")).strip()
@@ -431,6 +440,8 @@ def compute_group_standings(matches: list[Match], edition: str) -> list[WorldCup
                 for index, row in enumerate(group_stats.values(), start=1)
             ],
             edition,
+            group_slug=slug,
+            edition_matches=matches,
         )
         documents.append(
             WorldCupGroupStandingsDocument(

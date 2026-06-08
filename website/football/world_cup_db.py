@@ -557,12 +557,20 @@ async def prepare_group_table_for_display(
         _clear_position_labels(prepared)
         return prepared
 
-    prepared = sort_group_table_rows(prepared, edition)
+    edition_matches = all_edition_matches
+    if edition_matches is None and edition == "1958":
+        edition_matches = await retrieve_all_edition_matches(edition)
+
+    prepared = sort_group_table_rows(
+        prepared,
+        edition,
+        group_slug=group_slug,
+        edition_matches=edition_matches,
+    )
 
     if edition == WC_CURRENT_EDITION:
         return _apply_guaranteed_qualification_labels(prepared)
 
-    edition_matches = all_edition_matches
     if edition_matches is None:
         edition_matches = await retrieve_all_edition_matches(edition)
 

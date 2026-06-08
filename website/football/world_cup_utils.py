@@ -15,6 +15,7 @@ WC_CREST_STATIC_DIR = (
 )
 WC_FLAG_CACHE_VERSION_PATH = Path(__file__).with_name("wc_flag_cache_version.json")
 WC_GROUP_STAGE = "GROUP_STAGE"
+WC_GROUP_PLAYOFF = "GROUP_PLAYOFF"
 WC_GROUP_ORDER = tuple(chr(code) for code in range(ord("a"), ord("l") + 1))
 WC_GROUP_ORDER_4_NUMERIC = ("1", "2", "3", "4")
 WC_GROUP_ORDER_6_LETTER = tuple(chr(code) for code in range(ord("a"), ord("f") + 1))
@@ -107,6 +108,59 @@ def edition_uses_goal_average(edition: str) -> bool:
     return 1958 <= year <= 1966
 
 
+_GROUP_PLAYOFF_ROUND_RE = re.compile(r"^Group\s+(\d+)\s+Play-off$", re.IGNORECASE)
+
+
+def group_playoff_slug_from_round(round_name: str) -> str | None:
+    base_round = round_name.strip().split(",")[0].strip()
+    match = _GROUP_PLAYOFF_ROUND_RE.match(base_round)
+    if match is None:
+        return None
+    return normalise_group_slug(match.group(1))
+
+
+def _find_legacy_group_playoff_match(
+    matches: list["Match"],
+    table: list["TableItem"],
+) -> "Match | None":
+    """Older imports stored group playoffs as LAST_16 without a group field."""
+    group_team_ids = {
+        row.team.id for row in table if row.team.id is not None
+    }
+    if len(group_team_ids) == 0:
+        return None
+
+    for match in matches:
+        if match.stage != "LAST_16":
+            continue
+        home_id = match.home_team.id
+        away_id = match.away_team.id
+        if home_id in group_team_ids and away_id in group_team_ids:
+            return match
+    return None
+
+
+def find_group_playoff_match(
+    matches: list["Match"],
+    group_slug: str,
+    *,
+    table: list["TableItem"] | None = None,
+) -> "Match | None":
+    slug = normalise_group_slug(group_slug)
+    group_enum = group_slug_to_enum(slug)
+    playoffs = [
+        match
+        for match in matches
+        if match.stage == WC_GROUP_PLAYOFF and match.group == group_enum
+    ]
+    if len(playoffs) > 0:
+        return playoffs[0]
+
+    if table is not None:
+        return _find_legacy_group_playoff_match(matches, table)
+    return None
+
+
 def format_goal_average(goals_for: int, goals_against: int) -> str:
     if goals_against == 0:
         if goals_for == 0:
@@ -120,6 +174,109 @@ def _goal_average_sort_components(goals_for: int, goals_against: int) -> tuple[i
     if goals_against == 0:
         return (0, 0.0, -goals_for)
     return (1, -(goals_for / goals_against), -goals_for)
+
+
+def _sort_rows_by_goal_average(rows: list["TableItem"]) -> list["TableItem"]:
+    return sorted(
+        rows,
+        key=lambda row: _goal_average_sort_components(row.goals_for, row.goals_against)
+        + (-row.goals_for, row.team.display_name.casefold()),
+    )
+
+
+def _playoff_total_goals(match: "Match") -> tuple[int, int] | None:
+    home_ft = match.score.full_time.home
+    away_ft = match.score.full_time.away
+    if home_ft is None or away_ft is None:
+        return None
+
+    home_total = home_ft
+    away_total = away_ft
+    extra_time = match.score.extra_time
+    if extra_time is not None and extra_time.home is not None and extra_time.away is not None:
+        home_total += extra_time.home
+        away_total += extra_time.away
+    return home_total, away_total
+
+
+def _playoff_winner_team_id(match: "Match") -> int | None:
+    totals = _playoff_total_goals(match)
+    if totals is None:
+        return None
+
+    home_total, away_total = totals
+    if home_total > away_total:
+        return match.home_team.id
+    if away_total > home_total:
+        return match.away_team.id
+    return None
+
+
+def _order_1958_playoff_tie(
+    rows: list["TableItem"],
+    playoff_match: "Match | None",
+) -> list["TableItem"]:
+    if playoff_match is None or len(rows) != 2:
+        return _sort_rows_by_goal_average(rows)
+
+    team_ids = {row.team.id for row in rows if row.team.id is not None}
+    home_id = playoff_match.home_team.id
+    away_id = playoff_match.away_team.id
+    if home_id not in team_ids or away_id not in team_ids:
+        return _sort_rows_by_goal_average(rows)
+
+    winner_id = _playoff_winner_team_id(playoff_match)
+    if winner_id is None:
+        return _sort_rows_by_goal_average(rows)
+
+    winners = [row for row in rows if row.team.id == winner_id]
+    losers = [row for row in rows if row.team.id != winner_id]
+    return winners + losers
+
+
+def _resolve_1958_points_tier(
+    rows: list["TableItem"],
+    *,
+    start_position: int,
+    teams_above: int,
+    playoff_match: "Match | None",
+) -> list["TableItem"]:
+    if len(rows) <= 1:
+        return rows
+
+    if len(rows) == 2 and teams_above == 1 and start_position == 2:
+        return _order_1958_playoff_tie(rows, playoff_match)
+
+    return _sort_rows_by_goal_average(rows)
+
+
+def _sort_group_table_rows_1958(
+    table: list["TableItem"],
+    playoff_match: "Match | None",
+) -> list["TableItem"]:
+    tiers_by_points: dict[int, list["TableItem"]] = {}
+    for row in table:
+        points = compute_group_table_points(row.won, row.draw, "1958")
+        tiers_by_points.setdefault(points, []).append(row)
+
+    ordered_rows: list["TableItem"] = []
+    position = 1
+    teams_above = 0
+
+    for points in sorted(tiers_by_points.keys(), reverse=True):
+        tier_rows = tiers_by_points[points]
+        ordered_rows.extend(
+            _resolve_1958_points_tier(
+                tier_rows,
+                start_position=position,
+                teams_above=teams_above,
+                playoff_match=playoff_match,
+            )
+        )
+        teams_above += len(tier_rows)
+        position += len(tier_rows)
+
+    return ordered_rows
 
 
 def group_table_row_sort_key(
@@ -144,19 +301,37 @@ def group_table_row_sort_key(
     return base + (-goal_difference, -goals_for, team_display_name.casefold())
 
 
-def sort_group_table_rows(table: list["TableItem"], edition: str) -> list["TableItem"]:
-    ordered_rows = sorted(
-        table,
-        key=lambda row: group_table_row_sort_key(
-            won=row.won,
-            draw=row.draw,
-            goals_for=row.goals_for,
-            goals_against=row.goals_against,
-            goal_difference=row.goal_difference,
-            team_display_name=row.team.display_name,
-            edition=edition,
-        ),
-    )
+def sort_group_table_rows(
+    table: list["TableItem"],
+    edition: str,
+    *,
+    group_slug: str | None = None,
+    edition_matches: list["Match"] | None = None,
+) -> list["TableItem"]:
+    if edition == "1958":
+        playoff_match = (
+            find_group_playoff_match(
+                edition_matches,
+                group_slug,
+                table=table,
+            )
+            if edition_matches is not None and group_slug is not None
+            else None
+        )
+        ordered_rows = _sort_group_table_rows_1958(table, playoff_match)
+    else:
+        ordered_rows = sorted(
+            table,
+            key=lambda row: group_table_row_sort_key(
+                won=row.won,
+                draw=row.draw,
+                goals_for=row.goals_for,
+                goals_against=row.goals_against,
+                goal_difference=row.goal_difference,
+                team_display_name=row.team.display_name,
+                edition=edition,
+            ),
+        )
 
     return [
         row.model_copy(
@@ -481,7 +656,11 @@ def _knockout_fixture_key(match: "Match") -> tuple[str, str]:
 
 def filter_superseded_knockout_replays(matches: list["Match"]) -> list["Match"]:
     """Drop the original fixture when the same knockout tie was replayed."""
-    knockout_matches = [match for match in matches if match.stage != WC_GROUP_STAGE]
+    knockout_matches = [
+        match
+        for match in matches
+        if match.stage not in {WC_GROUP_STAGE, WC_GROUP_PLAYOFF}
+    ]
     if len(knockout_matches) <= 1:
         return matches
 
@@ -500,7 +679,8 @@ def filter_superseded_knockout_replays(matches: list["Match"]) -> list["Match"]:
     return [
         match
         for match in matches
-        if match.stage == WC_GROUP_STAGE or match.id in kept_knockout_ids
+        if match.stage in {WC_GROUP_STAGE, WC_GROUP_PLAYOFF}
+        or match.id in kept_knockout_ids
     ]
 
 
