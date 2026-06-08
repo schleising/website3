@@ -16,6 +16,7 @@ from .world_cup_utils import (
     WC_GROUP_STAGE,
     edition_has_group_stage,
     edition_has_knockout_stage,
+    is_final_group_stage_group,
     group_order_for_edition,
     group_stages_for_edition,
     group_index_stages_for_edition,
@@ -516,6 +517,32 @@ def _apply_historic_qualification_labels(
     return table
 
 
+_TERMINAL_MATCH_STATUSES = {
+    MatchStatus.finished,
+    MatchStatus.cancelled,
+    MatchStatus.awarded,
+}
+
+
+def _group_matches_are_complete(matches: list[Match]) -> bool:
+    if len(matches) == 0:
+        return False
+    return all(match.status in _TERMINAL_MATCH_STATUSES for match in matches)
+
+
+def _apply_final_group_champion_label(
+    table: list[TableItem],
+    matches: list[Match],
+) -> list[TableItem]:
+    if not _group_matches_are_complete(matches) or len(table) == 0:
+        return table
+
+    leader = table[0]
+    if leader.position == 1:
+        leader.position_label = "C"
+    return table
+
+
 async def prepare_group_table_for_display(
     edition: str,
     group_slug: str,
@@ -541,7 +568,12 @@ async def prepare_group_table_for_display(
         group_slug,
         edition_matches,
     )
-    return _apply_historic_qualification_labels(prepared, qualified_team_ids)
+    prepared = _apply_historic_qualification_labels(prepared, qualified_team_ids)
+
+    if is_final_group_stage_group(edition, group_slug):
+        _apply_final_group_champion_label(prepared, matches)
+
+    return prepared
 
 
 def apply_live_qualification_labels(

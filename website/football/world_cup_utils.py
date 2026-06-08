@@ -195,6 +195,20 @@ def group_stages_for_edition(edition: str) -> tuple[tuple[str, ...], ...]:
     return (group_order_for_edition(edition),)
 
 
+def final_group_stage_slugs_for_edition(edition: str) -> tuple[str, ...]:
+    if edition_has_knockout_stage(edition):
+        return ()
+    stages = group_stages_for_edition(edition)
+    if len(stages) == 0:
+        return ()
+    return stages[-1]
+
+
+def is_final_group_stage_group(edition: str, group_slug: str) -> bool:
+    slug = normalise_group_slug(group_slug)
+    return slug in final_group_stage_slugs_for_edition(edition)
+
+
 def group_stage_labels_for_edition(edition: str) -> tuple[str, ...]:
     entry = WC_EDITION_REGISTRY.get(edition)
     if entry is not None:
