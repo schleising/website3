@@ -16,6 +16,7 @@ from .world_cup_utils import (
     WC_GROUP_STAGE,
     edition_has_group_stage,
     group_order_for_edition,
+    group_index_stages_for_edition,
     group_stage_overview_anchor,
     overview_group_stages_for_edition,
     WC_KNOCKOUT_OVERVIEW_ORDER,
@@ -61,6 +62,11 @@ class WorldCupGroupSummary(BaseModel):
     label: str
     table: list[TableItem] = Field(default_factory=list)
     next_match: Match | None = None
+
+
+class WorldCupGroupStageSummarySection(BaseModel):
+    label: str
+    summaries: list[WorldCupGroupSummary] = Field(default_factory=list)
 
 
 class WorldCupKnockoutRound(BaseModel):
@@ -553,6 +559,19 @@ async def build_overview_group_stage_sections(
     return sections
 
 
+async def _build_group_summary(
+    edition: str,
+    group: WorldCupGroupStandings,
+) -> WorldCupGroupSummary:
+    matches = await retrieve_group_matches(edition, group.group_slug)
+    return WorldCupGroupSummary(
+        slug=group.group_slug,
+        label=group.group_label,
+        table=normalise_group_table(group.table, matches),
+        next_match=_select_next_match(matches),
+    )
+
+
 async def list_group_summaries(edition: str) -> list[WorldCupGroupSummary]:
     if not edition_has_group_stage(edition):
         return []
@@ -561,18 +580,39 @@ async def list_group_summaries(edition: str) -> list[WorldCupGroupSummary]:
     summaries: list[WorldCupGroupSummary] = []
 
     for group in standings:
-        matches = await retrieve_group_matches(edition, group.group_slug)
-        next_match = _select_next_match(matches)
-        summaries.append(
-            WorldCupGroupSummary(
-                slug=group.group_slug,
-                label=group.group_label,
-                table=normalise_group_table(group.table, matches),
-                next_match=next_match,
+        summaries.append(await _build_group_summary(edition, group))
+
+    return summaries
+
+
+async def list_group_stage_summary_sections(
+    edition: str,
+) -> list[WorldCupGroupStageSummarySection]:
+    if not edition_has_group_stage(edition):
+        return []
+
+    standings = await retrieve_all_group_standings(edition)
+    summaries_by_slug = {
+        group.group_slug: await _build_group_summary(edition, group)
+        for group in standings
+    }
+    sections: list[WorldCupGroupStageSummarySection] = []
+
+    for stage_label, stage_slugs in group_index_stages_for_edition(edition):
+        stage_summaries = [
+            summaries_by_slug[slug] for slug in stage_slugs if slug in summaries_by_slug
+        ]
+        if len(stage_summaries) == 0:
+            continue
+
+        sections.append(
+            WorldCupGroupStageSummarySection(
+                label=stage_label,
+                summaries=stage_summaries,
             )
         )
 
-    return summaries
+    return sections
 
 
 def _as_utc_datetime(value: datetime) -> datetime:

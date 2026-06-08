@@ -212,19 +212,37 @@ def overview_group_order_for_edition(edition: str) -> tuple[str, ...]:
     return tuple(slug for stage in reversed(stages) for slug in stage)
 
 
-def overview_group_stages_for_edition(
-    edition: str,
-) -> tuple[tuple[str, tuple[str, ...]], ...]:
-    """Return labelled group stages in overview order (later phases first)."""
+def _labelled_group_stages_for_edition(edition: str) -> tuple[tuple[str, tuple[str, ...]], ...]:
     stages = group_stages_for_edition(edition)
     labels = group_stage_labels_for_edition(edition)
     if len(labels) != len(stages):
         labels = tuple(f"Group stage {index + 1}" for index in range(len(stages)))
-    if len(stages) <= 1:
-        return ((labels[0], stages[0]),)
-    return tuple(
-        (label, slugs) for label, slugs in zip(labels, stages, strict=True)
-    )[::-1]
+    return tuple(zip(labels, stages, strict=True))
+
+
+def group_index_stages_for_edition(
+    edition: str,
+) -> tuple[tuple[str, tuple[str, ...]], ...]:
+    """Return labelled group stages in tournament order for the groups index."""
+    return _labelled_group_stages_for_edition(edition)
+
+
+def overview_group_stages_for_edition(
+    edition: str,
+) -> tuple[tuple[str, tuple[str, ...]], ...]:
+    """Return labelled group stages in overview order (later phases first)."""
+    labelled_stages = _labelled_group_stages_for_edition(edition)
+    if len(labelled_stages) <= 1:
+        return labelled_stages
+    return labelled_stages[::-1]
+
+
+def group_stage_for_slug(edition: str, group_slug: str) -> tuple[str, ...] | None:
+    slug = normalise_group_slug(group_slug)
+    for stage_slugs in group_stages_for_edition(edition):
+        if slug in stage_slugs:
+            return stage_slugs
+    return None
 
 
 def group_stage_overview_anchor(label: str) -> str:
@@ -276,7 +294,17 @@ def adjacent_group_slugs(
     edition: str | None = None,
 ) -> tuple[str, str]:
     slug = normalise_group_slug(group_slug)
-    group_order = group_order_for_edition(edition or WC_CURRENT_EDITION)
+    edition_key = edition or WC_CURRENT_EDITION
+    stage_slugs = group_stage_for_slug(edition_key, slug)
+    if stage_slugs is not None:
+        index = stage_slugs.index(slug)
+        stage_count = len(stage_slugs)
+        return (
+            stage_slugs[(index - 1) % stage_count],
+            stage_slugs[(index + 1) % stage_count],
+        )
+
+    group_order = group_order_for_edition(edition_key)
     index = group_order.index(slug)
     group_count = len(group_order)
     return (

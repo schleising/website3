@@ -53,32 +53,42 @@
 </section>
 {% endif %}
 
-{% if group_summaries|length > 0 %}
-<div class="world-cup-groups-grid">
-  {% for group in group_summaries %}
-  <a
-    class="world-cup-group-card-link"
-    href="{{ football_root }}world-cup/groups/{{ group.slug }}/?edition={{ selected_edition }}"
-    aria-label="Open {{ group.label }}"
-  >
-    <section class="world-cup-group-card site-card">
-      <div class="world-cup-group-card-header">
-        <h4>{{ group.label }}</h4>
-        {% if group.next_match %}
-        <p class="world-cup-group-next">
-          Next: {{ group.next_match.home_team.display_name }} vs {{ group.next_match.away_team.display_name }}
-        </p>
-        {% elif group.table|length > 0 and group.table[0].played_games > 0 %}
-        <p class="world-cup-group-next">Group complete</p>
-        {% else %}
-        <p class="world-cup-group-next">Fixtures scheduled</p>
+{% if group_stage_sections|default([])|length > 0 %}
+<div class="world-cup-groups-page-layout">
+  {% for stage_section in group_stage_sections %}
+  {% if group_stage_sections|length > 1 %}
+  <div class="world-cup-stage-divider" aria-hidden="true">
+    <span>{{ stage_section.label }}</span>
+  </div>
+  {% endif %}
+
+  <div class="world-cup-groups-grid">
+    {% for group in stage_section.summaries %}
+    <a
+      class="world-cup-group-card-link"
+      href="{{ football_root }}world-cup/groups/{{ group.slug }}/?edition={{ selected_edition }}"
+      aria-label="Open {{ group.label }}"
+    >
+      <section class="world-cup-group-card site-card">
+        <div class="world-cup-group-card-header">
+          <h4>{{ group.label }}</h4>
+          {% if group.next_match %}
+          <p class="world-cup-group-next">
+            Next: {{ group.next_match.home_team.display_name }} vs {{ group.next_match.away_team.display_name }}
+          </p>
+          {% elif group.table|length > 0 and group.table[0].played_games > 0 %}
+          <p class="world-cup-group-next">Group complete</p>
+          {% else %}
+          <p class="world-cup-group-next">Fixtures scheduled</p>
+          {% endif %}
+        </div>
+        {% if group.table|length > 0 %}
+        {{ world_cup_group_team_list(group.table) }}
         {% endif %}
-      </div>
-      {% if group.table|length > 0 %}
-      {{ world_cup_group_team_list(group.table) }}
-      {% endif %}
-    </section>
-  </a>
+      </section>
+    </a>
+    {% endfor %}
+  </div>
   {% endfor %}
 </div>
 {% else %}

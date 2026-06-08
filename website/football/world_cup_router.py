@@ -19,7 +19,7 @@ from .world_cup_db import (
     get_available_wc_editions,
     infer_current_wc_edition,
     list_available_knockout_rounds,
-    list_group_summaries,
+    list_group_stage_summary_sections,
     normalise_group_table,
     retrieve_all_edition_matches,
     retrieve_all_group_standings,
@@ -371,7 +371,7 @@ async def get_world_cup_groups_index(
     if not context["has_group_stage"]:
         return _redirect_to_world_cup_overview(context)
 
-    group_summaries = await list_group_summaries(selected_edition)
+    group_stage_sections = await list_group_stage_summary_sections(selected_edition)
 
     context["edition_switch_path"] = (
         f"{context['football_root_path']}world-cup/groups/{context['edition_query']}"
@@ -383,7 +383,7 @@ async def get_world_cup_groups_index(
         {
             "request": request,
             "title": "World Cup Groups",
-            "group_summaries": group_summaries,
+            "group_stage_sections": group_stage_sections,
             **context,
         },
     )
