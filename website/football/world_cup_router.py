@@ -1,7 +1,7 @@
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 from ..account.csrf import validate_csrf
@@ -64,6 +64,13 @@ def _football_context_helpers():
     from .router import _build_football_mode_context
 
     return _build_football_mode_context
+
+
+def _redirect_to_world_cup_overview(context: dict) -> RedirectResponse:
+    overview_url = (
+        f"{context['football_root_path']}world-cup/{context['edition_query']}"
+    )
+    return RedirectResponse(url=overview_url, status_code=302)
 
 
 async def _build_world_cup_context(
@@ -331,7 +338,8 @@ async def get_world_cup_groups_index(
     context = await _build_world_cup_context(request, edition)
     selected_edition = context["selected_edition"]
     if not context["has_group_stage"]:
-        raise HTTPException(status_code=404, detail="This edition has no group stage")
+        return _redirect_to_world_cup_overview(context)
+
     group_summaries = await list_group_summaries(selected_edition)
 
     context["edition_switch_path"] = (
@@ -361,7 +369,8 @@ async def get_world_cup_group(
     context = await _build_world_cup_context(request, edition)
     selected_edition = context["selected_edition"]
     if not context["has_group_stage"]:
-        raise HTTPException(status_code=404, detail="This edition has no group stage")
+        return _redirect_to_world_cup_overview(context)
+
     slug = _validate_group_slug(group_slug, selected_edition)
 
     standings = await retrieve_group_standings(selected_edition, slug)
