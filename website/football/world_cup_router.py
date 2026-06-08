@@ -278,17 +278,17 @@ def _build_overview_jump_targets(
     return jump_targets
 
 
-def _validate_group_slug(group_slug: str, edition: str) -> str:
+def _group_slug_for_edition(group_slug: str, edition: str) -> str | None:
     slug = normalise_group_slug(group_slug)
     if slug not in group_order_for_edition(edition):
-        raise HTTPException(status_code=404, detail="Group not found")
+        return None
     return slug
 
 
-def _validate_round_slug(round_slug: str) -> str:
+def _round_slug_if_valid(round_slug: str) -> str | None:
     slug = normalise_round_slug(round_slug)
     if not is_valid_round_slug(slug):
-        raise HTTPException(status_code=404, detail="Knockout round not found")
+        return None
     return slug
 
 
@@ -487,13 +487,15 @@ async def get_world_cup_group(
     if not context["has_group_stage"]:
         return _redirect_to_world_cup_overview(context)
 
-    slug = _validate_group_slug(group_slug, selected_edition)
+    slug = _group_slug_for_edition(group_slug, selected_edition)
+    if slug is None:
+        return _redirect_to_world_cup_overview(context)
 
     standings = await retrieve_group_standings(selected_edition, slug)
     if standings is None:
         all_groups = await retrieve_all_group_standings(selected_edition)
         if not any(group.group_slug == slug for group in all_groups):
-            raise HTTPException(status_code=404, detail="Group not found")
+            return _redirect_to_world_cup_overview(context)
         standings = next(group for group in all_groups if group.group_slug == slug)
 
     matches = await retrieve_group_matches(selected_edition, slug)
@@ -556,7 +558,7 @@ async def get_world_cup_team_fixtures(
 
     team_name, matches = await retrieve_team_matches(selected_edition, team_id)
     if len(matches) == 0:
-        raise HTTPException(status_code=404, detail="Team not found")
+        return _redirect_to_world_cup_overview(context)
 
     matches = update_match_timezone(matches)
     date_groups = _build_date_groups(matches)
@@ -760,9 +762,12 @@ async def get_world_cup_knockout_round(
     edition: str | None = Query(default=None, pattern=r"^\d{4}$"),
 ):
     logging.debug("/football/world-cup/knockout/%s: %s", round_slug, request)
-    slug = _validate_round_slug(round_slug)
     context = await _build_world_cup_context(request, edition)
     if not context["has_knockout_stage"]:
+        return _redirect_to_world_cup_overview(context)
+
+    slug = _round_slug_if_valid(round_slug)
+    if slug is None:
         return _redirect_to_world_cup_overview(context)
 
     selected_edition = context["selected_edition"]
@@ -772,7 +777,7 @@ async def get_world_cup_knockout_round(
         await retrieve_knockout_matches(selected_edition, stage)
     )
     if len(matches) == 0:
-        raise HTTPException(status_code=404, detail="Knockout round not found")
+        return _redirect_to_world_cup_overview(context)
 
     matches = update_match_timezone(matches)
     date_groups = _build_date_groups(matches)
