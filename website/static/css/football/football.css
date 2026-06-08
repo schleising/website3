@@ -1227,6 +1227,19 @@ a.team-name:focus-visible::after {
     box-sizing: border-box;
 }
 
+.right-sidebar .football-competitions-heading {
+    text-align: right;
+}
+
+.right-sidebar .football-competition-summary {
+    justify-content: flex-end;
+    text-align: right;
+}
+
+.right-sidebar .football-competition-links {
+    padding: 0 0.55rem 0.2rem 0.2rem;
+}
+
 .right-sidebar .football-competitions-nav {
     width: max-content;
     min-width: 100%;
