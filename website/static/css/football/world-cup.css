@@ -692,7 +692,6 @@
     font-size: 0.82rem;
     font-weight: 700;
     color: var(--brand-strong);
-    text-decoration: none;
     text-align: center;
 }
 
@@ -702,11 +701,6 @@
 
 .world-cup-bracket-round-label--1 {
     background: #f4f8fd;
-}
-
-.world-cup-bracket-round-label:hover,
-.world-cup-bracket-round-label:focus-visible {
-    text-decoration: underline;
 }
 
 .world-cup-bracket-slot-wrap,
@@ -814,51 +808,6 @@
     text-align: center;
 }
 
-.world-cup-knockout-round-list-heading {
-    margin: 0 0 0.45rem;
-    font-size: 0.92rem;
-    color: var(--text-subtle, #5f6b7a);
-}
-
-.world-cup-knockout-round-list {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
-    gap: 0.75rem;
-}
-
-.world-cup-knockout-round-card-link {
-    display: block;
-    color: inherit;
-    text-decoration: none;
-}
-
-.world-cup-knockout-round-card {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-    height: 100%;
-    padding: 0.65rem;
-    transition: transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease;
-}
-
-.world-cup-knockout-round-card-link:hover .world-cup-knockout-round-card,
-.world-cup-knockout-round-card-link:focus-visible .world-cup-knockout-round-card {
-    transform: translateY(-0.125rem);
-    box-shadow: 0 0.625rem 1.5rem rgba(26, 46, 75, 0.18);
-    border-color: var(--brand);
-}
-
-.world-cup-knockout-round-card h4 {
-    margin: 0;
-    font-size: 1rem;
-}
-
-.world-cup-knockout-round-meta {
-    margin: 0;
-    color: var(--text-subtle, #5f6b7a);
-    font-size: 0.82rem;
-}
-
 .world-cup-knockout-round-layout,
 .world-cup-team-fixtures-layout {
     display: flex;
@@ -948,10 +897,6 @@
     }
 
     .world-cup-overview-groups-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .world-cup-knockout-round-list {
         grid-template-columns: 1fr;
     }
 }

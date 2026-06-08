@@ -54,22 +54,4 @@
 {% endif %}
 
 {{ world_cup_knockout_bracket(knockout_bracket, football_root=football_root, edition=selected_edition) }}
-
-{% if knockout_rounds|length > 0 %}
-<h4 class="world-cup-knockout-round-list-heading">Rounds</h4>
-<div class="world-cup-knockout-round-list">
-  {% for round in knockout_rounds %}
-  <a
-    class="world-cup-knockout-round-card-link"
-    href="{{ football_root }}world-cup/knockout/{{ round.slug }}/?edition={{ selected_edition }}"
-    aria-label="Open {{ round.label }}"
-  >
-    <section class="world-cup-knockout-round-card site-card">
-      <h4>{{ round.label }}</h4>
-      <p class="world-cup-knockout-round-meta">{{ round.matches|length }} fixture{% if round.matches|length != 1 %}s{% endif %}</p>
-    </section>
-  </a>
-  {% endfor %}
-</div>
-{% endif %}
 {% endblock %}

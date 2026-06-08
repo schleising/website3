@@ -20,7 +20,6 @@ from .world_cup_db import (
     edition_has_group_playoff_matches,
     get_available_wc_editions,
     infer_current_wc_edition,
-    list_available_knockout_rounds,
     list_group_stage_summary_sections,
     prepare_group_table_for_display,
     apply_live_qualification_labels,
@@ -597,7 +596,6 @@ async def get_world_cup_knockout_index(
         return _redirect_to_world_cup_overview(context)
 
     selected_edition = context["selected_edition"]
-    knockout_rounds = await list_available_knockout_rounds(selected_edition)
     knockout_bracket = await build_knockout_bracket_diagram(
         selected_edition,
         football_root=str(context["football_root_path"]),
@@ -613,7 +611,6 @@ async def get_world_cup_knockout_index(
         {
             "request": request,
             "title": "World Cup Knockout",
-            "knockout_rounds": knockout_rounds,
             "knockout_bracket": knockout_bracket,
             **context,
         },

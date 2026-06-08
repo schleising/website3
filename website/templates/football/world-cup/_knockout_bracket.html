@@ -8,11 +8,10 @@
     <div class="world-cup-bracket-header-scroll">
       <div class="world-cup-bracket-header-matrix" style="{{ bracket_vars }}">
         {% for round in bracket.rounds %}
-        <a
+        <span
           class="world-cup-bracket-round-label world-cup-bracket-round-label--{{ loop.index0 % 2 }}"
           style="grid-column: {{ loop.index0 * 4 + 1 }};"
-          href="{{ round.round_url }}"
-        >{{ round.label }}</a>
+        >{{ round.label }}</span>
         {% endfor %}
       </div>
     </div>
