@@ -407,6 +407,15 @@ h3.header-text.football-header-text--season {
     margin-left: 0;
 }
 
+.football-header-text--season .football-season-marker:not(.football-season-marker-button) {
+    display: inline-flex;
+    align-items: center;
+    min-height: 2.15rem;
+    padding: 0.25rem 0.65rem;
+    font-size: 0.95rem;
+    line-height: 1.2;
+}
+
 .football-season-marker-button {
     border: 0.0625rem solid rgba(158, 184, 215, 0.9);
     min-height: 2.15rem;
@@ -1117,8 +1126,15 @@ a.team-name:focus-visible::after {
         padding: 0.9rem;
     }
 
-    .football-season-marker {
+    .football-season-marker:not(.football-season-marker-button) {
         font-size: 0.68rem;
+    }
+
+    .football-header-text--season .football-season-marker:not(.football-season-marker-button) {
+        min-height: 2.15rem;
+        padding: 0.25rem 0.65rem;
+        font-size: 0.95rem;
+        line-height: 1.2;
     }
 }
 
