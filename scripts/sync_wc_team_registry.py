@@ -13,6 +13,7 @@ from pymongo import MongoClient
 ROOT = Path(__file__).resolve().parents[1]
 TEAM_REGISTRY_PATH = ROOT / "website" / "football" / "wc_team_registry.json"
 FLAG_REGISTRY_PATH = ROOT / "website" / "football" / "wc_flag_registry.json"
+FLAG_CACHE_VERSION_PATH = ROOT / "website" / "football" / "wc_flag_cache_version.json"
 CREST_DIR = ROOT / "website" / "static" / "images" / "football" / "crests" / "wc"
 DEFAULT_HOST = "macmini2"
 DEFAULT_DB = "web_database"
@@ -83,6 +84,20 @@ def _save_json(path: Path, payload: dict) -> None:
     with path.open("w", encoding="utf-8") as handle:
         json.dump(payload, handle, indent=2, ensure_ascii=False)
         handle.write("\n")
+
+
+def _bump_flag_cache_version() -> int:
+    current = 1
+    if FLAG_CACHE_VERSION_PATH.is_file():
+        try:
+            current = int(_load_json(FLAG_CACHE_VERSION_PATH).get("version", 1))
+        except (TypeError, ValueError):
+            current = 1
+    version = current + 1
+    with FLAG_CACHE_VERSION_PATH.open("w", encoding="utf-8") as handle:
+        json.dump({"version": version}, handle, indent=2)
+        handle.write("\n")
+    return version
 
 
 def _live_teams(host: str, database_name: str) -> dict[str, dict[str, object]]:
@@ -221,6 +236,9 @@ def main() -> int:
 
     _save_json(TEAM_REGISTRY_PATH, new_team_registry)
     _save_json(FLAG_REGISTRY_PATH, new_flag_registry)
+    if changes:
+        version = _bump_flag_cache_version()
+        print(f"Bumped wc flag cache version to {version}")
 
     print(f"Wrote {TEAM_REGISTRY_PATH.name} ({len(new_team_registry)} teams)")
     print(f"Wrote {FLAG_REGISTRY_PATH.name} ({len(new_flag_registry)} flags)")

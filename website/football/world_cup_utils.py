@@ -1,7 +1,7 @@
 from __future__ import annotations
 
+import json
 import re
-from functools import lru_cache
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -13,6 +13,7 @@ WC_CREST_UNKNOWN_URL = "/images/football/crests/unknown_team.svg"
 WC_CREST_STATIC_DIR = (
     Path(__file__).resolve().parents[1] / "static" / "images" / "football" / "crests" / "wc"
 )
+WC_FLAG_CACHE_VERSION_PATH = Path(__file__).with_name("wc_flag_cache_version.json")
 WC_GROUP_STAGE = "GROUP_STAGE"
 WC_GROUP_ORDER = tuple(chr(code) for code in range(ord("a"), ord("l") + 1))
 WC_GROUP_ORDER_4_NUMERIC = ("1", "2", "3", "4")
@@ -924,10 +925,27 @@ def bracket_team_label(
     return "TBD"
 
 
-@lru_cache(maxsize=128)
+def wc_flag_cache_version() -> int:
+    try:
+        with WC_FLAG_CACHE_VERSION_PATH.open(encoding="utf-8") as handle:
+            payload = json.load(handle)
+        return int(payload["version"])
+    except (FileNotFoundError, json.JSONDecodeError, KeyError, TypeError, ValueError):
+        return 1
+
+
+def bump_wc_flag_cache_version() -> int:
+    version = wc_flag_cache_version() + 1
+    with WC_FLAG_CACHE_VERSION_PATH.open("w", encoding="utf-8") as handle:
+        json.dump({"version": version}, handle, indent=2)
+        handle.write("\n")
+    return version
+
+
 def resolve_world_cup_crest_url(team_id: int) -> str:
+    cache_suffix = f"?v={wc_flag_cache_version()}"
     if (WC_CREST_STATIC_DIR / f"{team_id}.png").is_file():
-        return f"/images/football/crests/wc/{team_id}.png"
+        return f"/images/football/crests/wc/{team_id}.png{cache_suffix}"
     if (WC_CREST_STATIC_DIR / f"{team_id}.svg").is_file():
-        return f"/images/football/crests/wc/{team_id}.svg"
+        return f"/images/football/crests/wc/{team_id}.svg{cache_suffix}"
     return WC_CREST_UNKNOWN_URL

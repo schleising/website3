@@ -513,7 +513,7 @@ class Standing:
 
 National teams use `Team.id` in match data. **Visual badges are country flags, not football association crests** — distinct from PL club crests.
 
-Flags are **never** taken from football-data.org crest URLs. They are downloaded once from [Wikimedia Commons](https://commons.wikimedia.org/), cached locally as SVG under `/images/football/crests/wc/`, and resolved at render time by `resolve_world_cup_crest_url(team_id)` → `/images/football/crests/wc/{team_id}.svg`.
+Flags are **never** taken from football-data.org crest URLs. They are downloaded once from [Wikimedia Commons](https://commons.wikimedia.org/), cached locally as SVG under `/images/football/crests/wc/`, and resolved at render time by `resolve_world_cup_crest_url(team_id)` → `/images/football/crests/wc/{team_id}.svg?v={version}`. The `version` comes from `wc_flag_cache_version.json` and is bumped automatically when flags are re-downloaded or team ids change, so browsers do not keep stale SVGs keyed by the same `team_id` filename.
 
 **Placeholder:** unseeded or unknown teams use `/images/football/crests/unknown_team.svg` via `Team.world_cup_local_crest`.
 

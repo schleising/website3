@@ -16,6 +16,7 @@ from urllib.request import Request, urlopen
 ROOT = Path(__file__).resolve().parents[1]
 FLAG_REGISTRY_PATH = ROOT / "website" / "football" / "wc_flag_registry.json"
 TEAM_REGISTRY_PATH = ROOT / "website" / "football" / "wc_team_registry.json"
+FLAG_CACHE_VERSION_PATH = ROOT / "website" / "football" / "wc_flag_cache_version.json"
 CREST_DIR = ROOT / "website" / "static" / "images" / "football" / "crests" / "wc"
 COMMONS_FILE_PATH = "https://commons.wikimedia.org/wiki/Special:FilePath/{filename}"
 USER_AGENT = "website3-wc-flag-fetch/1.0 (personal football stats site)"
@@ -26,6 +27,20 @@ MAX_RETRIES = 4
 def _load_json(path: Path) -> dict:
     with path.open(encoding="utf-8") as handle:
         return json.load(handle)
+
+
+def _bump_flag_cache_version() -> int:
+    current = 1
+    if FLAG_CACHE_VERSION_PATH.is_file():
+        try:
+            current = int(_load_json(FLAG_CACHE_VERSION_PATH).get("version", 1))
+        except (TypeError, ValueError):
+            current = 1
+    version = current + 1
+    with FLAG_CACHE_VERSION_PATH.open("w", encoding="utf-8") as handle:
+        json.dump({"version": version}, handle, indent=2)
+        handle.write("\n")
+    return version
 
 
 def _commons_url(filename: str) -> str:
@@ -208,6 +223,9 @@ def main() -> int:
             time.sleep(REQUEST_DELAY_SECONDS)
 
     print(f"Done: downloaded={downloaded}, skipped={skipped}, failed={len(failures)}")
+    if downloaded > 0:
+        version = _bump_flag_cache_version()
+        print(f"Bumped wc flag cache version to {version}")
     if len(failures) > 0:
         print("Failures:")
         for failure in failures:
