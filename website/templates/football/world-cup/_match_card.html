@@ -1,8 +1,9 @@
 {% from "football/world-cup/_team_link.html" import world_cup_team_badge, world_cup_team_display %}
 {% macro world_cup_match_card(match, football_root='/football/', edition='', highlight_winner=false, home_label=none, away_label=none, home_crest=none, away_crest=none) %}
 {% set winner_side = match|knockout_winner_side if highlight_winner else none %}
+{% set loser_side = 'away' if winner_side == 'home' else ('home' if winner_side == 'away' else none) %}
 {% set display_score = match|world_cup_display_score %}
-<div class="score-widget site-card world-cup-score-widget{% if match.stage == 'FINAL' %} world-cup-score-widget--final{% endif %}" id="{{ match.id }}" data-match-time="{{ match.local_date.isoformat() if match.local_date else match.utc_date.isoformat() }}">
+<div class="score-widget site-card world-cup-score-widget{% if match.stage == 'FINAL' %} world-cup-score-widget--final{% endif %}{% if highlight_winner and winner_side %} world-cup-score-widget--result{% endif %}" id="{{ match.id }}" data-match-time="{{ match.local_date.isoformat() if match.local_date else match.utc_date.isoformat() }}">
   <div class="date-and-time">
     <div class="match-start">{{ match.local_date.strftime('%a %d %b %H:%M %Z') if match.local_date else match.utc_date.strftime('%a %d %b %H:%M %Z') }}</div>
     <div class="match-meta-actions">
@@ -13,7 +14,7 @@
       </div>
     </div>
   </div>
-  <div class="team{% if winner_side == 'home' %} world-cup-team-winner{% endif %}">
+  <div class="team{% if winner_side == 'home' %} world-cup-team-winner{% elif highlight_winner and loser_side == 'home' %} world-cup-team-loser{% endif %}">
     <div class="team-and-badge">
       {{ world_cup_team_badge(match.home_team, home_label, home_crest) }}
       {{ world_cup_team_display(match.home_team, football_root, edition, home_label) }}
@@ -22,7 +23,7 @@
       {% if display_score[0] is none %}-{% else %}{{ display_score[0] }}{% endif %}
     </div>
   </div>
-  <div class="team{% if winner_side == 'away' %} world-cup-team-winner{% endif %}">
+  <div class="team{% if winner_side == 'away' %} world-cup-team-winner{% elif highlight_winner and loser_side == 'away' %} world-cup-team-loser{% endif %}">
     <div class="team-and-badge">
       {{ world_cup_team_badge(match.away_team, away_label, away_crest) }}
       {{ world_cup_team_display(match.away_team, football_root, edition, away_label) }}

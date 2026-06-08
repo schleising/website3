@@ -575,6 +575,7 @@
     position: relative;
     padding: 0 var(--world-cup-bracket-cell-pad, 0.25rem) var(--world-cup-bracket-card-gap, 0.35rem);
     box-sizing: border-box;
+    overflow: visible;
 }
 
 .world-cup-bracket-slot-wrap .score-widget {
@@ -669,8 +670,57 @@
     gap: 0.75rem;
 }
 
-.world-cup-team-winner .team-name {
+.world-cup-score-widget--result .team {
+    border-radius: 0.3rem;
+    padding: 0.18rem 0.4rem 0.18rem 0.5rem;
+}
+
+.world-cup-score-widget--result .world-cup-team-winner {
+    background: linear-gradient(
+        90deg,
+        color-mix(in srgb, var(--brand), transparent 88%) 0%,
+        color-mix(in srgb, var(--brand-soft), #ffffff 80%) 100%
+    );
+    box-shadow: inset 0.1875rem 0 0 var(--brand);
+}
+
+.world-cup-score-widget--result .world-cup-team-winner .team-name,
+.world-cup-score-widget--result .world-cup-team-winner a.team-name {
     color: var(--brand-strong);
+    font-weight: 700;
+}
+
+.world-cup-score-widget--result .world-cup-team-winner .team-badge {
+    filter: drop-shadow(0 0.0625rem 0.125rem rgba(26, 46, 75, 0.2));
+}
+
+.world-cup-score-widget--result .world-cup-team-winner .home-team-score,
+.world-cup-score-widget--result .world-cup-team-winner .away-team-score {
+    min-width: 1.15rem;
+    font-size: 0.95rem;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    color: var(--brand-strong);
+    text-align: right;
+}
+
+.world-cup-score-widget--result .world-cup-team-loser .team-name,
+.world-cup-score-widget--result .world-cup-team-loser a.team-name {
+    color: var(--text-soft, #5f6b7a);
+    font-weight: 500;
+}
+
+.world-cup-score-widget--result .world-cup-team-loser .home-team-score,
+.world-cup-score-widget--result .world-cup-team-loser .away-team-score {
+    color: var(--text-soft, #5f6b7a);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+    opacity: 0.85;
+}
+
+.world-cup-score-widget--result .world-cup-team-loser .team-badge {
+    opacity: 0.72;
 }
 
 .world-cup-score-widget--final {
