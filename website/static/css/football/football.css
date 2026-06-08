@@ -1116,14 +1116,30 @@ a.team-name:focus-visible::after {
 .football-competitions-nav {
     display: flex;
     flex-direction: column;
-    gap: 0.2rem;
+    gap: 0.08rem;
     width: 100%;
     min-width: 0;
     padding: 0.12rem;
 }
 
-.football-competitions-summary {
-    display: block;
+.football-competitions-heading {
+    margin: 0.12rem;
+    padding: 0.62rem 0.82rem 0.2rem;
+    color: var(--text-soft);
+    line-height: 1.3;
+    font-weight: 700;
+}
+
+.football-competition-details {
+    width: 100%;
+    min-width: 0;
+}
+
+.football-competition-summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
     width: 100%;
     box-sizing: border-box;
     color: var(--text-soft);
@@ -1136,33 +1152,37 @@ a.team-name:focus-visible::after {
     list-style: none;
 }
 
-.football-competitions-summary::-webkit-details-marker,
-.football-competitions-summary::marker {
+.football-competition-summary::-webkit-details-marker,
+.football-competition-summary::marker {
     display: none;
     content: "";
 }
 
-.football-competitions-summary:hover {
+.football-competition-summary::after {
+    content: "▾";
+    flex: 0 0 auto;
+    font-size: 0.75rem;
+    line-height: 1;
+    color: var(--text-soft);
+    transition: transform 0.2s ease;
+}
+
+.football-competition-details[open] .football-competition-summary::after {
+    transform: rotate(180deg);
+}
+
+.football-competition-summary:hover {
     color: var(--brand-strong);
     background-color: var(--surface-strong);
 }
 
-.football-competition-block {
+.football-competition-links {
     display: flex;
     flex-direction: column;
     gap: 0.04rem;
     width: 100%;
     min-width: 0;
     padding: 0 0.2rem 0.2rem 0.55rem;
-}
-
-.football-competition-label {
-    margin: 0.28rem 0.12rem 0.08rem;
-    font-size: 0.72rem;
-    font-weight: 700;
-    letter-spacing: 0.03em;
-    text-transform: uppercase;
-    color: var(--text-soft);
 }
 
 .right-sidebar .football-competitions-nav .sub-level-nav {
