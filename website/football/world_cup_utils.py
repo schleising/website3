@@ -803,19 +803,29 @@ def filter_superseded_knockout_replays(matches: list["Match"]) -> list["Match"]:
         fixtures.setdefault(_knockout_fixture_key(match), []).append(match)
 
     kept_knockout_ids: set[int] = set()
+    replay_knockout_ids: set[int] = set()
     for fixture_matches in fixtures.values():
         if len(fixture_matches) == 1:
             kept_knockout_ids.add(fixture_matches[0].id)
             continue
         fixture_matches.sort(key=lambda item: item.utc_date)
         kept_knockout_ids.add(fixture_matches[-1].id)
+        replay_knockout_ids.add(fixture_matches[-1].id)
 
-    return [
-        match
-        for match in matches
-        if match.stage in {WC_GROUP_STAGE, WC_GROUP_PLAYOFF}
-        or match.id in kept_knockout_ids
-    ]
+    filtered_matches: list["Match"] = []
+    for match in matches:
+        if match.stage in {WC_GROUP_STAGE, WC_GROUP_PLAYOFF}:
+            filtered_matches.append(match)
+            continue
+        if match.id not in kept_knockout_ids:
+            continue
+        if match.id in replay_knockout_ids or match.knockout_replay:
+            filtered_matches.append(
+                match.model_copy(update={"knockout_replay": True}),
+            )
+        else:
+            filtered_matches.append(match)
+    return filtered_matches
 
 
 def _winner_side_from_scores(home: int, away: int) -> str | None:
@@ -884,7 +894,21 @@ def world_cup_score_annotation(match: "Match") -> str | None:
     score = match.score
     home_score = score.full_time.home
     away_score = score.full_time.away
-    if home_score is None or away_score is None or home_score != away_score:
+    if home_score is None or away_score is None:
+        return None
+
+    if match.knockout_replay and match.stage not in {WC_GROUP_STAGE, WC_GROUP_PLAYOFF}:
+        penalties = score.penalties
+        if (
+            home_score == away_score
+            and penalties is not None
+            and penalties.home is not None
+            and penalties.away is not None
+        ):
+            return f"({penalties.home}-{penalties.away} pens)"
+        return "(replay)"
+
+    if home_score != away_score:
         return None
 
     penalties = score.penalties

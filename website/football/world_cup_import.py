@@ -286,6 +286,7 @@ def _collapse_knockout_replays(raw_matches: list[dict[str, Any]]) -> list[dict[s
         if "replay" in round_name.casefold():
             normalized_match = dict(raw_match)
             normalized_match["round"] = round_name.split(",")[0].strip()
+            normalized_match["knockoutReplay"] = True
             collapsed.append(normalized_match)
             continue
 
@@ -334,6 +335,10 @@ def openfootball_matches_to_models(edition: str) -> list[Match]:
         has_result = (
             score.full_time.home is not None and score.full_time.away is not None
         )
+        knockout_replay = bool(raw_match.get("knockoutReplay")) and stage not in {
+            WC_GROUP_STAGE,
+            WC_GROUP_PLAYOFF,
+        }
 
         matches.append(
             Match(
@@ -349,6 +354,7 @@ def openfootball_matches_to_models(edition: str) -> list[Match]:
                 matchday=matchday if stage != WC_GROUP_STAGE else None,
                 stage=stage,
                 group=group_enum,
+                knockout_replay=knockout_replay,
                 last_updated=now,
                 home_team=_team_from_name(home_name, registry),
                 away_team=_team_from_name(away_name, registry),

@@ -360,6 +360,7 @@ class Match(BaseModel):
     matchday: int | None = None
     stage: str
     group: str | None = None
+    knockout_replay: bool = Field(default=False, alias="knockoutReplay")
     last_updated: datetime = Field(..., alias="lastUpdated")
     home_team: Team = Field(..., alias="homeTeam")
     away_team: Team = Field(..., alias="awayTeam")
