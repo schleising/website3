@@ -1,7 +1,7 @@
 # World Cup Section — Design Proposal
 
 Status: Implemented (2026 edition live — see §12). Historical editions planned (§15).
-Date: 2026-05-27 (updated 2026-05-27)
+Date: 2026-05-27 (updated 2026-05-27 — §7.3 flag/ID plan)
 Scope: World Cup area within the existing Football section
 
 **Launch scope:** edition **2026** live via football-data.org. **Next:** one-off import of past editions into Mongo (static, like older PL seasons) and edition-pill switching between them (§15).
@@ -511,21 +511,9 @@ class Standing:
 
 ### 7.3 Team badges (country flags)
 
-National teams use football-data.org team IDs in match data (`Team.type`: `MEN_NATIONAL`). **Visual badges are country flags, not football association crests** — distinct from PL club crests.
+National teams use `Team.id` in match data. **Visual badges are country flags, not football association crests** — distinct from PL club crests.
 
-**Flag strategy:** cache locally under `/images/football/crests/wc/` as **SVG** files (resolved by `resolve_world_cup_crest_url()`). Prefer **SVG** for sharp rendering at badge size in match cards and tables.
-
-**Source:** [Wikimedia Commons](https://commons.wikimedia.org/) flag images — not football-data.org crest URLs. Maintain a checked-in **country → flag file** registry (e.g. `wc_flag_registry.json`) mapping:
-
-- football-data.org `team.id` and/or canonical country name (e.g. `Argentina`, `West Germany`)
-- Wikimedia Commons file name or stable Commons URL for the correct historical flag where relevant
-- local filename under `/images/football/crests/wc/` (e.g. `{team_id}.svg` or `{country_slug}.svg`)
-
-Download flags once via an operator script (`scripts/fetch_wc_flags.py` or as part of the historical import). Re-run only when adding a new nation or correcting a mapping — not on every live match sync.
-
-**SVG preference:** use Commons `.svg` flag files where available (most national flags exist as vector assets). Fall back to PNG from Commons only when no suitable SVG exists.
-
-**Historical nations:** editions before 2026 may include teams that no longer exist under the same name (e.g. `West Germany`, `Soviet Union`, `FR Yugoslavia`). The registry must map these to the **flag that was correct for that tournament**, using historical flag files on Wikimedia Commons where applicable.
+Flags are **never** taken from football-data.org crest URLs. They are downloaded once from [Wikimedia Commons](https://commons.wikimedia.org/), cached locally as SVG under `/images/football/crests/wc/`, and resolved at render time by `resolve_world_cup_crest_url(team_id)` → `/images/football/crests/wc/{team_id}.svg`.
 
 **Placeholder:** unseeded or unknown teams use `/images/football/crests/unknown_team.svg` via `Team.world_cup_local_crest`.
 
@@ -534,6 +522,85 @@ Download flags once via an operator script (`scripts/fetch_wc_flags.py` or as pa
 **Attribution:** Wikimedia content may require attribution depending on licence per file. Add a note on the Football area or site credits page (e.g. “National flags from [Wikimedia Commons](https://commons.wikimedia.org/)”).
 
 Do not extend the club `ShortName` enum. Display via `Team.display_name` (falls back to `name` / `tla` / `TBD`).
+
+#### 7.3.1 Team ID strategy (two tiers)
+
+**Problem:** A single global `team.id` drives both Mongo match data and the flag filename. If historical imports use different IDs than the live 2026 worker (e.g. Argentina `764` in 1930 vs `762` in 2026), the same country shows the wrong flag across editions. Guessing football-data.org IDs from other competitions, edition years, or stale registries makes this worse.
+
+**Resolution — two tiers, one namespace:**
+
+| Tier | Who | `Team.id` source | Used where |
+| ---- | --- | ---------------- | ---------- |
+| **A — 2026 squad** | All 48 nations in the current WC competition | football-data.org `team.id` from live ingest (`GET /competitions/WC/teams`, stored in `wc_matches_2026`) | Live **2026** matches **and** every historical edition when that nation appears (e.g. Argentina always `762`) |
+| **B — project-assigned** | Every other nation name encountered in historical data | Stable synthetic integer allocated by this project | Historical imports only (e.g. `Italy`, `West Germany`, `Soviet Union`, `Czechoslovakia`) |
+
+This mirrors historic Premier League seasons: clubs in the live PL catalogue keep their football-data.org `team.id` and crest mapping, while teams outside that catalogue (relegated, renamed, or defunct) use **project-owned identifiers** and locally cached assets under `/images/football/crests/`. For World Cup, the same principle applies, but IDs stay numeric and flags always live under `crests/wc/{team_id}.svg`.
+
+**Rules:**
+
+1. **2026 squad is canonical for tier A.** Refresh from live Mongo or `GET /competitions/WC/teams` when verifying mappings. Do not infer tier-A IDs from Euro squads, area lookups, or other competitions.
+2. **Tier B IDs are synthetic and stable.** Allocate from a dedicated range (e.g. `9100`–`9199`). Once assigned to a country name in `wc_team_registry.json`, never reuse or renumber — the ID is baked into imported Mongo documents and flag filenames.
+3. **Defunct states are tier B even if a successor exists in tier A** (e.g. `West Germany` → synthetic `9144`; modern `Germany` → football-data.org `759`). Same name in openfootball always maps to the same registry entry.
+4. **Never use edition years or other metadata as IDs** (e.g. do not assign `1930` to Hungary — that ID belongs to Cape Verde Islands in the 2026 squad).
+5. **One country name → one ID → one flag file**, across all editions.
+
+#### 7.3.2 Registry files
+
+Two checked-in JSON files are the single source of truth:
+
+**`website/football/wc_team_registry.json`** — openfootball country name → team record (used at historical import time by `world_cup_import._team_from_name()`):
+
+```json
+{
+  "Argentina": {"id": 762, "tla": "ARG", "short_name": "Argentina"},
+  "West Germany": {"id": 9144, "tla": "FRG", "short_name": "West Germany"}
+}
+```
+
+**`website/football/wc_flag_registry.json`** — `team_id` (string key) → Wikimedia source (used by `scripts/fetch_wc_flags.py`):
+
+```json
+{
+  "762": {"country": "Argentina", "commons_file": "Flag_of_Argentina.svg"},
+  "9144": {"country": "West Germany", "commons_file": "Flag_of_West_Germany.svg"}
+}
+```
+
+Every `id` in `wc_team_registry.json` must have exactly one entry in `wc_flag_registry.json`. The local filename is always `{team_id}.svg` — no country-slug filenames.
+
+Historical nations that no longer exist under the same name (e.g. `Soviet Union`, `Yugoslavia`, `Dutch East Indies`) are tier B. The `commons_file` must be the **flag correct for that nation at the time of the tournament**, using historical flag files on Wikimedia Commons where applicable.
+
+#### 7.3.3 Flag gather plan (operator workflow)
+
+Execute in order when building or correcting the flag cache:
+
+| Step | Action | Output |
+| ---- | ------ | ------ |
+| 1 | **Snapshot tier-A IDs** — read the 48 teams from `wc_matches_2026` (or `GET /competitions/WC/teams`) | Authoritative `{name → id, tla}` for 2026 squad |
+| 2 | **Enumerate tier-B nations** — collect every distinct country name from openfootball across all editions to import; subtract tier-A names | List of nations needing synthetic IDs |
+| 3 | **Build `wc_team_registry.json`** — tier A: copy football-data.org IDs from step 1; tier B: assign next free synthetic ID per name (stable, documented) | Checked-in team registry |
+| 4 | **Build `wc_flag_registry.json`** — for each registry `id`, add `country` + `commons_file` (Wikimedia SVG filename) | Checked-in flag mapping |
+| 5 | **Download flags** — `python scripts/fetch_wc_flags.py` (re-run with `--force` after mapping fixes) | `website/static/images/football/crests/wc/{team_id}.svg` for every registry entry |
+| 6 | **Audit** — `python scripts/fetch_wc_flags.py --audit` | Confirms every registry ID has a local SVG; reports orphans and suspect content |
+| 7 | **Re-import historical editions** — `python scripts/import_wc_historical_edition.py all --drop` | Mongo `home_team.id` / `away_team.id` rewritten from the corrected registry |
+| 8 | **Spot-check** — browse 2026 and an early edition (e.g. 1930); confirm the same nation shows the same flag badge and ID across editions | Manual acceptance |
+
+**When to re-run:** only when adding a new nation, correcting a Commons mapping, or fixing a tier-A ID after a football-data.org change — not on every live match sync.
+
+**SVG preference:** use Commons `.svg` flag files where available. Fall back to PNG from Commons only when no suitable SVG exists.
+
+**Suggested tooling (to implement):**
+
+- `scripts/sync_wc_team_registry.py` — step 1–3: merge live 2026 IDs with synthetic tier-B assignments; fail if a tier-B name collides with a tier-A name.
+- Extend `scripts/fetch_wc_flags.py --audit` — verify `wc_team_registry` and `wc_flag_registry` are in sync.
+
+#### 7.3.4 Acceptance criteria (flags)
+
+- [ ] All 48 tier-A nations use the same football-data.org `team.id` in 2026 live data and in every historical edition where they appear.
+- [ ] Every tier-B nation in `wc_team_registry.json` has a unique synthetic ID and a matching `{id}.svg` on disk.
+- [ ] Argentina (and other tier-A examples) show the same flag in 1930 and 2026.
+- [ ] Defunct nations (e.g. `West Germany`, `Soviet Union`) show the correct historical flag, not the successor state.
+- [ ] No orphan SVG files under `crests/wc/`; no registry entry without a local file.
 
 ## 8. API & Ingestion
 
@@ -668,9 +735,9 @@ Response headers to monitor: `X-RequestsAvailable`, `X-RequestCounter-Reset`, `X
 | ------------------------ | ------------------------------------ | -------------------------------------------------------- | ------------------------------------------------------------ |
 | Full tournament sync     | Daily + on deploy                    | `/competitions/WC/matches?dateFrom={start}&dateTo={end}` | Current edition only; use season `startDate` / `endDate`     |
 | Group standings sync     | Daily; more often during group stage | `/competitions/WC/standings`                             | Current edition only; upsert all groups                       |
-| Teams sync               | Weekly / on deploy                   | `/competitions/WC/teams`                                 | Current edition only; team ids/names — no flag download from API |
+| Teams sync               | Weekly / on deploy                   | `/competitions/WC/teams`                                 | Current edition only; tier-A team ids/names — no flag download from API |
 | Live match poll          | Every 4s while any match is in play  | Re-fetch today's matches or `/matches/{id}`              | Current edition only                                         |
-| Flag cache               | On demand (operator script)          | Wikimedia Commons                                        | Download missing SVG flags per `wc_flag_registry` (§7.3)     |
+| Flag cache               | On demand (operator script)          | Wikimedia Commons                                        | Download SVG flags per `wc_flag_registry` keyed by `team_id` (§7.3.3) |
 | Standings refresh (live) | After live group matches             | `/competitions/WC/standings`                             | Current edition only, during group stage                     |
 
 
@@ -802,7 +869,7 @@ Query param on all HTML routes: `?edition={year}` (default = current edition via
 See §15. Summary:
 
 - [ ] `WC_EDITION_REGISTRY` including `has_group_stage` (§3.4)
-- [ ] `wc_flag_registry` + Wikimedia SVG flag fetch (§7.3); migrate current 2026 badges off API crests
+- [ ] Two-tier team/flag registries + Wikimedia SVG fetch per §7.3.3 (tier-A IDs from 2026 live data; tier-B synthetic IDs for all other nations)
 - [ ] One-off import script: external dataset → `wc_matches_{year}` / `wc_standings_{year}` (standings step skipped for 1934/1938)
 - [ ] Pilot editions: **2022**, **2018** (then earlier tournaments as datasets allow)
 - [ ] Edition pill lists all imported years; live ingest + WebSocket remain **current edition only**
@@ -819,7 +886,7 @@ See §15. Summary:
 | 5   | WC sidebar visibility   | Show World Cup nav when any `wc_matches_{edition}` collection exists                                               | §5.1                          |
 | 6   | Live updates transport  | Extend existing `/football/ws/` with `competition` param                                                           | §9                            |
 | 7   | Sidebar structure       | Collapsible **Competitions** heading grouping PL and WC                                                            | §5.1                          |
-| 8   | National team badges    | **Country flags** — SVG from Wikimedia Commons, local cache at `/images/football/crests/wc/`                       | §7.3, §8.6                    |
+| 8   | National team badges    | **Country flags** — SVG from Wikimedia Commons; tier-A IDs from 2026 football-data.org; tier-B synthetic IDs for other nations; local cache at `/images/football/crests/wc/{team_id}.svg` | §7.3, §8.6                    |
 | 9   | Group page mobile UX    | Sticky standings table; scrollable fixtures beneath                                                                | §4.3, §10.2                   |
 | 10  | Head-to-head            | **Out of scope** — single-tournament data only; no H2H page or match-card pill                                     | §2, §5.4                      |
 | 11  | WC match card           | Dedicated `world_cup_match_card` macro — PL `score-widget` format, shared team-link hover                          | §4.4, §10.4                   |
@@ -879,7 +946,7 @@ Single operator-run script (not a scheduled job):
 | Step | Action |
 | ---- | ------ |
 | 1 | Download edition JSON (pin a commit SHA for reproducibility) |
-| 2 | Map country names → `Team` records (football-data.org team ids where available; resolve flag SVG via `wc_flag_registry` — §7.3) |
+| 2 | Map country names → `Team` records via `wc_team_registry.json` (tier-A football-data.org IDs for 2026-squad nations; tier-B synthetic IDs for all others — §7.3.1) |
 | 3 | Assign stable `match.id` per edition (synthetic int; consistent across re-runs of the same import) |
 | 4 | Upsert all matches → `wc_matches_{year}` |
 | 5 | If `has_group_stage` (§3.4): compute group standings → `wc_standings_{year}`; else skip (1934, 1938) |
@@ -890,7 +957,7 @@ Single operator-run script (not a scheduled job):
 
 Idempotent upsert so the script can be re-run safely while developing; once deployed to production, treat the collection as read-only.
 
-**Flags:** Historical teams use the same Wikimedia-sourced flag cache as 2026. When the import encounters a new country name, add a Commons mapping and run the flag fetch script — including historical nations (e.g. `West Germany`).
+**Flags:** Historical teams use the same flag cache and ID namespace as 2026 (§7.3). When the import encounters a new country name: add a tier-B synthetic ID to `wc_team_registry.json`, add the Wikimedia mapping to `wc_flag_registry.json`, run `fetch_wc_flags.py`, then re-import affected editions. Tier-A nations must already use the 2026 football-data.org ID before any historical import is run.
 
 ### 15.5 Runtime behaviour after import
 
@@ -906,7 +973,7 @@ Idempotent upsert so the script can be re-run safely while developing; once depl
 ### 15.6 Implementation checklist
 
 1. `WC_EDITION_REGISTRY` with `has_group_stage` per year (`False` for 1934, 1938).
-2. `wc_flag_registry` — country name / team id → Wikimedia Commons SVG; flag fetch script.
+2. `wc_team_registry.json` + `wc_flag_registry.json` — two-tier ID strategy and Wikimedia SVG mapping (§7.3); flag fetch + audit scripts.
 3. openfootball → `Match` normaliser (stage, score, status=`FINISHED` for played games).
 4. Group standings computer — **skip** when `has_group_stage` is false.
 5. `edition_has_group_stage()` guards in router, sidebar, overview, and `list_groups_for_edition()`.
@@ -921,7 +988,7 @@ Idempotent upsert so the script can be re-run safely while developing; once depl
 - [ ] **2026** still live via football-data.org; switching to 2022 via the pill shows frozen data.
 - [ ] Edition pill behaviour matches the PL season pill (default = current, popup when multiple editions exist).
 - [ ] Historical collections are never updated by the live worker.
-- [ ] All teams show the correct country flag SVG (including historical nations in past editions).
+- [ ] All teams show the correct country flag SVG (including historical nations in past editions); tier-A IDs match 2026 live data across all editions (§7.3.4).
 - [ ] **1934** and **1938**: knockout-only overview, no Groups sidebar link, `/groups/` returns 404; knockout and all-matches work.
 
 ## 14. References
@@ -954,6 +1021,9 @@ Idempotent upsert so the script can be re-run safely while developing; once depl
 | Historical WC txt    | [https://github.com/openfootball/worldcup](https://github.com/openfootball/worldcup) (older editions via `fbtxt2json`)       |
 | Fjelstul WC DB       | [https://github.com/jfjelstul/worldcup](https://github.com/jfjelstul/worldcup) (`data-json/` — optional gap-fill)             |
 | National flags       | [https://commons.wikimedia.org/](https://commons.wikimedia.org/) — SVG country flags for WC badges (§7.3)                    |
+| WC team registry     | `website/football/wc_team_registry.json` — country name → `Team.id` (§7.3.2)                                               |
+| WC flag registry     | `website/football/wc_flag_registry.json` — `team_id` → Wikimedia Commons file (§7.3.2)                                       |
+| Flag fetch script    | `scripts/fetch_wc_flags.py` — download/audit `crests/wc/{team_id}.svg` (§7.3.3)                                            |
 
 
 ---
