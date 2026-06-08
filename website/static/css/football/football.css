@@ -1202,7 +1202,8 @@ a.team-name:focus-visible::after {
     transition: transform 0.2s ease;
 }
 
-.football-competition-details[open] .football-competition-summary::after {
+.football-competition-details.is-expanded .football-competition-summary::after,
+.football-competition-details[open]:not(.is-animating) .football-competition-summary::after {
     transform: rotate(180deg);
 }
 
@@ -1212,12 +1213,56 @@ a.team-name:focus-visible::after {
 }
 
 .football-competition-links {
+    display: block !important;
+    width: 100%;
+    min-width: 0;
+    height: 0;
+    padding: 0;
+    overflow: hidden;
+}
+
+.football-competition-details.is-expanded:not(.is-animating) .football-competition-links {
+    height: auto;
+    overflow: visible;
+}
+
+.football-competition-links-inner {
     display: flex;
     flex-direction: column;
     gap: 0.04rem;
-    width: 100%;
-    min-width: 0;
     padding: 0 0.2rem 0.2rem 0.55rem;
+    opacity: 0;
+    transform: translateY(-0.35rem);
+    transition:
+        opacity 0.2s ease,
+        transform 0.24s ease;
+}
+
+.football-competition-details.is-expanded .football-competition-links-inner {
+    opacity: 1;
+    transform: translateY(0);
+    transition:
+        opacity 0.22s ease 0.05s,
+        transform 0.24s ease;
+}
+
+.football-competition-details.is-animating:not(.is-expanded) .football-competition-links-inner {
+    opacity: 0;
+    transform: translateY(-0.35rem);
+    transition:
+        opacity 0.16s ease,
+        transform 0.2s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .football-competition-links-inner {
+        transition: none;
+    }
+
+    .football-competition-details[open] .football-competition-links {
+        height: auto;
+        overflow: visible;
+    }
 }
 
 .right-sidebar .football-competitions-nav .sub-level-nav {
@@ -1236,7 +1281,7 @@ a.team-name:focus-visible::after {
     text-align: right;
 }
 
-.right-sidebar .football-competition-links {
+.right-sidebar .football-competition-links-inner {
     padding: 0 0.55rem 0.2rem 0.2rem;
 }
 
