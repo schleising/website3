@@ -270,32 +270,19 @@ def _raw_fixture_key(raw_match: dict[str, Any]) -> frozenset[str]:
     )
 
 
-def _collapse_knockout_replays(raw_matches: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    replay_fixtures: set[frozenset[str]] = set()
-    for raw_match in raw_matches:
-        round_name = str(raw_match.get("round", "")).casefold()
-        if "replay" in round_name:
-            replay_fixtures.add(_raw_fixture_key(raw_match))
+def _normalize_knockout_replays(raw_matches: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Keep both drawn ties and replays; tag replay legs for display and knockout views."""
+    normalized: list[dict[str, Any]] = []
 
-    if len(replay_fixtures) == 0:
-        return raw_matches
-
-    collapsed: list[dict[str, Any]] = []
     for raw_match in raw_matches:
         round_name = str(raw_match.get("round", "")).strip()
+        match_copy = dict(raw_match)
         if "replay" in round_name.casefold():
-            normalized_match = dict(raw_match)
-            normalized_match["round"] = round_name.split(",")[0].strip()
-            normalized_match["knockoutReplay"] = True
-            collapsed.append(normalized_match)
-            continue
+            match_copy["round"] = round_name.split(",")[0].strip()
+            match_copy["knockoutReplay"] = True
+        normalized.append(match_copy)
 
-        if _raw_fixture_key(raw_match) in replay_fixtures:
-            continue
-
-        collapsed.append(raw_match)
-
-    return collapsed
+    return normalized
 
 
 def fetch_openfootball_matches(edition: str) -> list[dict[str, Any]]:
@@ -310,7 +297,7 @@ def fetch_openfootball_matches(edition: str) -> list[dict[str, Any]]:
 
 def openfootball_matches_to_models(edition: str) -> list[Match]:
     registry = _load_team_registry()
-    raw_matches = _collapse_knockout_replays(fetch_openfootball_matches(edition))
+    raw_matches = _normalize_knockout_replays(fetch_openfootball_matches(edition))
     season = _season_for_edition(edition)
     now = datetime.now(tz=UTC)
     matches: list[Match] = []

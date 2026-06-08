@@ -260,8 +260,7 @@ async def retrieve_all_edition_matches(edition: str) -> list[Match]:
         return []
 
     cursor = collection.find({}).sort("utc_date", ASCENDING)
-    matches = [Match.model_validate(item) async for item in cursor]
-    return filter_superseded_knockout_replays(matches)
+    return [Match.model_validate(item) async for item in cursor]
 
 
 async def retrieve_group_matches(edition: str, group_slug: str) -> list[Match]:
@@ -692,7 +691,12 @@ async def retrieve_team_matches(edition: str, team_id: int) -> tuple[str, list[M
     return (team_name, matches)
 
 
-async def retrieve_knockout_matches(edition: str, stage: str) -> list[Match]:
+async def retrieve_knockout_matches(
+    edition: str,
+    stage: str,
+    *,
+    supersede_replays: bool = True,
+) -> list[Match]:
     collection = _get_matches_collection(edition)
     if collection is None:
         logging.error("No WC match collection for edition %s", edition)
@@ -707,7 +711,9 @@ async def retrieve_knockout_matches(edition: str, stage: str) -> list[Match]:
             matches,
             all_matches,
         )
-    return filter_superseded_knockout_replays(matches)
+    if supersede_replays:
+        matches = filter_superseded_knockout_replays(matches)
+    return matches
 
 
 async def retrieve_group_playoff_matches(edition: str) -> list[Match]:
@@ -784,7 +790,7 @@ async def build_overview_knockout_sections(edition: str) -> list[WorldCupKnockou
 
     for stage, round_slug, label in WC_KNOCKOUT_OVERVIEW_ORDER:
         matches = filter_confirmed_knockout_matches(
-            await retrieve_knockout_matches(edition, stage)
+            await retrieve_knockout_matches(edition, stage, supersede_replays=False)
         )
         if len(matches) == 0:
             continue
