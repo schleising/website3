@@ -374,6 +374,7 @@
         }
 
         renderSidebarPanels({ preserveExpanded: true });
+        requestSidebarWidthSync();
     }
 
     window.addEventListener("feeds:sidebar-groups-updated", event => {
@@ -394,5 +395,14 @@
         window.requestAnimationFrame(applySidebarFeedLabelShortening);
     }, { passive: true });
 
+    function requestSidebarWidthSync() {
+        if (typeof window.syncSidebarWidths === "function") {
+            window.requestAnimationFrame(() => {
+                window.syncSidebarWidths();
+            });
+        }
+    }
+
     renderSidebarPanels({ preserveExpanded: true });
+    requestSidebarWidthSync();
 })();

@@ -197,7 +197,7 @@ h3.header-text {
     background: linear-gradient(180deg, #fbfdff 0%, #f0f6fd 100%);
     box-shadow: var(--shadow);
     width: max-content;
-    min-width: max-content;
+    min-width: 0;
     overflow-x: auto;
 }
 

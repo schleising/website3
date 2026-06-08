@@ -615,6 +615,8 @@ function closeMobileSidebarsOnDesktop() {
     }
 }
 
+window.syncSidebarWidths = syncSidebarWidths;
+
 function syncSidebarWidths() {
     const leftSidebar = document.getElementById("left-sidebar-menu");
     const rightSidebar = document.getElementById("right-sidebar-menu");
@@ -629,10 +631,10 @@ function syncSidebarWidths() {
     if (overlayMode) {
         // Clear previously applied widths so measurement can shrink when content changes.
         if (leftSidebar) {
-            leftSidebar.style.width = "";
+            clearSidebarFixedWidth(leftSidebar);
         }
         if (rightSidebar) {
-            rightSidebar.style.width = "";
+            clearSidebarFixedWidth(rightSidebar);
         }
     }
 
@@ -657,17 +659,17 @@ function syncSidebarWidths() {
     if (overlayMode) {
         const overlayMaxWidth = getOverlaySidebarMaxWidth();
         if (leftSidebar && leftWidth > 0) {
-            leftSidebar.style.width = Math.min(leftWidth, overlayMaxWidth) + "px";
+            applySidebarFixedWidth(leftSidebar, Math.min(leftWidth, overlayMaxWidth));
         }
         if (rightSidebar && rightAvailable && rightWidth > 0) {
-            rightSidebar.style.width = Math.min(rightWidth, overlayMaxWidth) + "px";
+            applySidebarFixedWidth(rightSidebar, Math.min(rightWidth, overlayMaxWidth));
         }
     } else if (sharedSidebarWidthPx > 0) {
         if (leftSidebar) {
-            leftSidebar.style.width = sharedSidebarWidthPx + "px";
+            applySidebarFixedWidth(leftSidebar, sharedSidebarWidthPx);
         }
         if (rightSidebar && rightAvailable) {
-            rightSidebar.style.width = sharedSidebarWidthPx + "px";
+            applySidebarFixedWidth(rightSidebar, sharedSidebarWidthPx);
         }
     }
 
@@ -691,6 +693,19 @@ function getOverlaySidebarMaxWidth() {
     return Math.max(160, Math.min(viewportLimit, Math.floor(contentRect.width)));
 }
 
+function applySidebarFixedWidth(sidebar, widthPx) {
+    const widthValue = `${Math.max(0, Math.ceil(widthPx))}px`;
+    sidebar.style.width = widthValue;
+    sidebar.style.minWidth = widthValue;
+    sidebar.style.maxWidth = widthValue;
+}
+
+function clearSidebarFixedWidth(sidebar) {
+    sidebar.style.width = "";
+    sidebar.style.minWidth = "";
+    sidebar.style.maxWidth = "";
+}
+
 function measureSidebarContentWidth(sidebar) {
     const content = sidebar.querySelector(".sub-level-nav-container");
     if (!content) {
@@ -703,11 +718,12 @@ function measureSidebarContentWidth(sidebar) {
         position: sidebar.style.position,
         left: sidebar.style.left,
         right: sidebar.style.right,
-        width: sidebar.style.width
+        width: sidebar.style.width,
+        minWidth: sidebar.style.minWidth,
+        maxWidth: sidebar.style.maxWidth,
     };
 
-    // Prevent stale inline widths from inflating measured scroll width.
-    sidebar.style.width = "";
+    clearSidebarFixedWidth(sidebar);
 
     const sidebarIsHidden = getComputedStyle(sidebar).display === "none";
     if (sidebarIsHidden) {
@@ -718,20 +734,10 @@ function measureSidebarContentWidth(sidebar) {
         sidebar.style.right = "auto";
     }
 
-    const links = content.querySelectorAll(".sub-level-nav");
-    let maxLinkWidth = 0;
-    for (const link of links) {
-        maxLinkWidth = Math.max(maxLinkWidth, measureIntrinsicLinkWidth(link));
-    }
-
-    const contentStyle = getComputedStyle(content);
-    const sidebarStyle = getComputedStyle(sidebar);
-    const contentPad = (parseFloat(contentStyle.paddingLeft) || 0) + (parseFloat(contentStyle.paddingRight) || 0);
-    const sidebarPad = (parseFloat(sidebarStyle.paddingLeft) || 0) + (parseFloat(sidebarStyle.paddingRight) || 0);
-    const sidebarBorder = (parseFloat(sidebarStyle.borderLeftWidth) || 0) + (parseFloat(sidebarStyle.borderRightWidth) || 0);
-    const intrinsicWidth = Math.ceil(maxLinkWidth + contentPad + sidebarPad + sidebarBorder);
-    const fallbackWidth = Math.ceil(content.scrollWidth);
-    const measuredWidth = Math.max(intrinsicWidth, fallbackWidth);
+    const measuredWidth = withSidebarFullyExpanded(content, () => {
+        void sidebar.offsetWidth;
+        return Math.ceil(sidebar.getBoundingClientRect().width);
+    });
 
     if (sidebarIsHidden) {
         sidebar.style.display = styleSnapshot.display;
@@ -742,35 +748,42 @@ function measureSidebarContentWidth(sidebar) {
     }
 
     sidebar.style.width = styleSnapshot.width;
+    sidebar.style.minWidth = styleSnapshot.minWidth;
+    sidebar.style.maxWidth = styleSnapshot.maxWidth;
 
     return measuredWidth;
 }
 
-function measureIntrinsicLinkWidth(link) {
-    const linkStyle = getComputedStyle(link);
-    const measureNode = document.createElement("span");
-    measureNode.textContent = link.textContent;
-    measureNode.style.position = "fixed";
-    measureNode.style.left = "-9999px";
-    measureNode.style.top = "-9999px";
-    measureNode.style.visibility = "hidden";
-    measureNode.style.whiteSpace = "nowrap";
-    measureNode.style.fontFamily = linkStyle.fontFamily;
-    measureNode.style.fontSize = linkStyle.fontSize;
-    measureNode.style.fontWeight = linkStyle.fontWeight;
-    measureNode.style.fontStyle = linkStyle.fontStyle;
-    measureNode.style.letterSpacing = linkStyle.letterSpacing;
-    measureNode.style.textTransform = linkStyle.textTransform;
-    document.body.appendChild(measureNode);
+function withSidebarFullyExpanded(content, measureFn) {
+    const detailsStates = [];
+    for (const details of content.querySelectorAll("details")) {
+        detailsStates.push([details, details.open]);
+        details.open = true;
+    }
 
-    const textWidth = Math.ceil(measureNode.getBoundingClientRect().width);
-    measureNode.remove();
+    const hiddenPanels = [];
+    for (const panel of content.querySelectorAll(".feed-sidebar-feed-panel")) {
+        if (!(panel instanceof HTMLElement)) {
+            continue;
+        }
 
-    const horizontalPadding = parseFloat(linkStyle.paddingLeft) + parseFloat(linkStyle.paddingRight);
-    const horizontalMargin = parseFloat(linkStyle.marginLeft) + parseFloat(linkStyle.marginRight);
-    const horizontalBorder = parseFloat(linkStyle.borderLeftWidth) + parseFloat(linkStyle.borderRightWidth);
+        hiddenPanels.push([panel, panel.hidden]);
+        panel.hidden = false;
+    }
 
-    return textWidth + horizontalPadding + horizontalMargin + horizontalBorder;
+    void content.offsetWidth;
+
+    try {
+        return measureFn();
+    } finally {
+        for (const [details, open] of detailsStates) {
+            details.open = open;
+        }
+
+        for (const [panel, hidden] of hiddenPanels) {
+            panel.hidden = hidden;
+        }
+    }
 }
 
 function updateSidebarCollapseMode(sidebarWidth, visibleSidebarCount) {
