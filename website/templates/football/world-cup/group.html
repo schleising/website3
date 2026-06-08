@@ -1,5 +1,6 @@
 {% extends "football/world-cup/world-cup-base.html" %}
 {% from "football/world-cup/_group_table.html" import world_cup_group_table %}
+{% from "football/world-cup/_standings_rules_help.html" import world_cup_standings_rules_help %}
 {% from "football/world-cup/_match_card.html" import world_cup_match_card %}
 
 {% block title %}<title>Football - {{ group_label }} - World Cup {{ selected_edition }}</title>{% endblock %}
@@ -69,15 +70,18 @@
       <span class="world-cup-group-nav-btn-chevron" aria-hidden="true">‹</span>
       <span class="world-cup-group-nav-btn-label">{{ prev_group.label }}</span>
     </a>
-    <a
-      class="world-cup-group-nav-btn world-cup-group-nav-btn--next"
-      href="{{ next_group.url }}"
-      aria-label="Next group: {{ next_group.label }}"
-      data-world-cup-group-nav="next"
-    >
-      <span class="world-cup-group-nav-btn-label">{{ next_group.label }}</span>
-      <span class="world-cup-group-nav-btn-chevron" aria-hidden="true">›</span>
-    </a>
+    <div class="world-cup-group-nav-toolbar-end">
+      {{ world_cup_standings_rules_help(selected_edition, help_id=selected_edition ~ '-' ~ group_slug) }}
+      <a
+        class="world-cup-group-nav-btn world-cup-group-nav-btn--next"
+        href="{{ next_group.url }}"
+        aria-label="Next group: {{ next_group.label }}"
+        data-world-cup-group-nav="next"
+      >
+        <span class="world-cup-group-nav-btn-label">{{ next_group.label }}</span>
+        <span class="world-cup-group-nav-btn-chevron" aria-hidden="true">›</span>
+      </a>
+    </div>
   </nav>
   <div class="world-cup-group-layout">
   <section class="world-cup-group-standings-panel" aria-label="{{ group_label }} standings">

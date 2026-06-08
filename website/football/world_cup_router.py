@@ -41,6 +41,7 @@ from .world_cup_utils import (
     edition_uses_goal_average,
     edition_label,
     format_goal_average,
+    standings_rules_visitor_lines,
     group_order_for_edition,
     filter_confirmed_knockout_matches,
     group_slug_to_label,
@@ -70,6 +71,7 @@ TEMPLATES.env.filters["edition_hides_goal_difference_column"] = (
     edition_hides_goal_difference_column
 )
 TEMPLATES.env.filters["format_goal_average"] = format_goal_average
+TEMPLATES.env.filters["standings_rules_visitor_lines"] = standings_rules_visitor_lines
 
 
 def _football_context_helpers():

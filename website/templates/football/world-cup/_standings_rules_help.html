@@ -1,0 +1,29 @@
+{% macro world_cup_standings_rules_help(edition, help_id='') %}
+{% set rules_lines = edition|standings_rules_visitor_lines %}
+{% if rules_lines|length > 0 %}
+{% set popup_id = 'wc-standings-rules-' ~ help_id %}
+<div class="world-cup-standings-rules-help" data-standings-rules-help>
+  <button
+    type="button"
+    class="world-cup-standings-rules-help-btn"
+    aria-expanded="false"
+    aria-controls="{{ popup_id }}"
+    aria-label="How teams are ranked in this table"
+  >
+    <span class="world-cup-standings-rules-help-icon" aria-hidden="true">i</span>
+  </button>
+  <div
+    id="{{ popup_id }}"
+    class="world-cup-standings-rules-help-popup"
+    role="region"
+    aria-labelledby="{{ popup_id }}-title"
+    aria-hidden="true"
+  >
+    <p id="{{ popup_id }}-title" class="world-cup-standings-rules-help-title">How teams are ranked</p>
+    {% for line in rules_lines %}
+    <p class="world-cup-standings-rules-help-line">{{ line }}</p>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+{% endmacro %}

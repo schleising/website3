@@ -310,7 +310,10 @@
     margin-right: auto;
 }
 
-.world-cup-group-nav-btn--next {
+.world-cup-group-nav-toolbar-end {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
     margin-left: auto;
 }
 
@@ -334,6 +337,86 @@
     margin: 0 0 0.45rem;
     font-size: 0.82rem;
     color: var(--text-subtle, #5f6b7a);
+}
+
+.world-cup-standings-rules-help {
+    position: relative;
+    display: inline-flex;
+    flex: 0 0 auto;
+}
+
+.world-cup-standings-rules-help-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.45rem;
+    height: 1.45rem;
+    padding: 0;
+    border: 0.0625rem solid var(--line, #c5d3e2);
+    border-radius: 50%;
+    background: var(--surface, #f4f8fc);
+    color: var(--text-subtle, #5f6b7a);
+    cursor: help;
+    font: inherit;
+    line-height: 1;
+}
+
+.world-cup-standings-rules-help-btn:hover,
+.world-cup-standings-rules-help-btn:focus-visible {
+    border-color: var(--accent, #2f6fed);
+    color: var(--accent, #2f6fed);
+    outline: none;
+    box-shadow: 0 0 0 0.12rem color-mix(in srgb, var(--accent, #2f6fed) 25%, transparent);
+}
+
+.world-cup-standings-rules-help-icon {
+    font-size: 0.82rem;
+    font-weight: 700;
+    font-style: italic;
+    font-family: Georgia, "Times New Roman", serif;
+}
+
+.world-cup-standings-rules-help-popup {
+    position: absolute;
+    z-index: 30;
+    top: calc(100% + 0.4rem);
+    right: 0;
+    width: min(18.5rem, calc(100vw - 2rem));
+    padding: 0.7rem 0.8rem;
+    border: 0.0625rem solid var(--line, #c5d3e2);
+    border-radius: 0.45rem;
+    background: var(--card-bg, #fff);
+    box-shadow: 0 0.35rem 1rem rgba(16, 32, 56, 0.14);
+    color: var(--text, #1a2433);
+    font-size: 0.82rem;
+    line-height: 1.45;
+    text-align: left;
+    visibility: hidden;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s ease, visibility 0.15s ease;
+}
+
+.world-cup-standings-rules-help:hover .world-cup-standings-rules-help-popup,
+.world-cup-standings-rules-help:focus-within .world-cup-standings-rules-help-popup,
+.world-cup-standings-rules-help.is-open .world-cup-standings-rules-help-popup {
+    visibility: visible;
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.world-cup-standings-rules-help-title {
+    margin: 0 0 0.35rem;
+    font-size: 0.84rem;
+    font-weight: 700;
+}
+
+.world-cup-standings-rules-help-line {
+    margin: 0 0 0.35rem;
+}
+
+.world-cup-standings-rules-help-line:last-child {
+    margin-bottom: 0;
 }
 
 .world-cup-empty-state {
@@ -403,7 +486,7 @@
 
 .world-cup-overview-block-header {
     display: flex;
-    align-items: baseline;
+    align-items: center;
     justify-content: space-between;
     gap: 0.5rem;
     min-width: 0;
@@ -423,9 +506,17 @@
     text-decoration: underline;
 }
 
-.world-cup-overview-block-header .world-cup-qualification-note {
-    margin: 0;
+.world-cup-overview-block-header-actions {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.45rem;
+    margin-left: auto;
     flex: 0 0 auto;
+}
+
+.world-cup-overview-block-header-actions .world-cup-qualification-note {
+    margin: 0;
 }
 
 .world-cup-round-badge {

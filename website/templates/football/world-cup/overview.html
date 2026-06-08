@@ -1,5 +1,6 @@
 {% extends "football/world-cup/world-cup-base.html" %}
 {% from "football/world-cup/_overview_standings.html" import world_cup_overview_standings %}
+{% from "football/world-cup/_standings_rules_help.html" import world_cup_standings_rules_help %}
 {% from "football/world-cup/_match_card.html" import world_cup_match_card %}
 
 {% block title %}<title>Football - World Cup {{ selected_edition }}</title>{% endblock %}
@@ -152,9 +153,12 @@
         <h4 id="wc-group-heading-{{ block.slug }}">
           <a href="{{ football_root }}world-cup/groups/{{ block.slug }}/?edition={{ selected_edition }}">{{ block.label }}</a>
         </h4>
-        {% if is_current_edition|default(false) %}
-        <p class="world-cup-qualification-note">Top three qualify</p>
-        {% endif %}
+        <div class="world-cup-overview-block-header-actions">
+          {% if is_current_edition|default(false) %}
+          <p class="world-cup-qualification-note">Top three qualify</p>
+          {% endif %}
+          {{ world_cup_standings_rules_help(selected_edition, help_id='overview-' ~ selected_edition ~ '-' ~ block.slug) }}
+        </div>
       </div>
       {% if block.table|length > 0 %}
       {{ world_cup_overview_standings(block.table, football_root, selected_edition, block.slug) }}

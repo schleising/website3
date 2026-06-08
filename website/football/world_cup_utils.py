@@ -114,6 +114,75 @@ def edition_hides_goal_difference_column(edition: str) -> bool:
     return 1930 <= year <= 1954
 
 
+def standings_rules_visitor_lines(edition: str) -> list[str]:
+    """Plain-language group-table ranking rules for site visitors."""
+    if not edition_has_group_stage(edition):
+        return []
+
+    year = int(edition)
+    points_rule = (
+        "Teams earn 3 points for a win and 1 for a draw."
+        if edition_points_per_win(edition) == 3
+        else "Teams earned 2 points for a win and 1 for a draw."
+    )
+
+    if edition == WC_CURRENT_EDITION:
+        return [
+            points_rule,
+            "Teams are ranked by points, then goal difference, then goals scored.",
+            "Q marks teams who have already secured a place in the knockout stage.",
+        ]
+
+    if not edition_has_knockout_stage(edition):
+        return [
+            points_rule,
+            "There was no knockout stage — the winner of the final group was crowned champion.",
+            "C marks the tournament winner.",
+        ]
+
+    if year >= 1994:
+        return [
+            points_rule,
+            "Teams are ranked by points, then goal difference, then goals scored.",
+            "Q marks teams who advanced to the knockout stage.",
+        ]
+
+    if year >= 1970:
+        return [
+            points_rule,
+            "Teams are ranked by points, then goal difference, then goals scored.",
+            "Q marks teams who advanced to the knockout stage.",
+        ]
+
+    if year == 1958:
+        return [
+            points_rule,
+            "Teams are ranked by points, then goal average (goals scored divided by goals conceded).",
+            "When two teams tied for the last qualifying place, a play-off decided who advanced — the play-off winner is listed above the loser, even if they had the worse goal average.",
+            "Q marks a direct qualifier. P marks a team that played in a group play-off.",
+        ]
+
+    if edition_uses_goal_average(edition):
+        return [
+            points_rule,
+            "Teams are ranked by points, then goal average (goals scored divided by goals conceded).",
+            "Q marks teams who advanced to the knockout stage.",
+        ]
+
+    if edition_hides_goal_difference_column(edition):
+        return [
+            points_rule,
+            "When two teams tied for the last qualifying place, a play-off decided who advanced — the play-off winner is listed above the loser.",
+            "Q marks a direct qualifier. P marks a team that played in a group play-off.",
+        ]
+
+    return [
+        points_rule,
+        "Teams are ranked by points, then goal difference, then goals scored.",
+        "Q marks teams who advanced to the knockout stage.",
+    ]
+
+
 _GROUP_PLAYOFF_ROUND_RE = re.compile(r"^Group\s+(\d+)\s+Play-off$", re.IGNORECASE)
 
 
