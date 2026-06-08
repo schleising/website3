@@ -900,3 +900,127 @@
         grid-template-columns: 1fr;
     }
 }
+
+.world-cup-summary-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.world-cup-summary-section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+    padding: 0.75rem;
+}
+
+.world-cup-summary-heading {
+    margin: 0;
+    font-size: 1rem;
+}
+
+.world-cup-summary-subheading {
+    margin: 0.35rem 0 0;
+    font-size: 0.9rem;
+    color: var(--text-subtle, #5f6b7a);
+}
+
+.world-cup-summary-facts {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
+    gap: 0.45rem 0.75rem;
+    margin: 0;
+}
+
+.world-cup-summary-fact {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+    min-width: 0;
+}
+
+.world-cup-summary-fact dt {
+    margin: 0;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    color: var(--text-subtle, #5f6b7a);
+}
+
+.world-cup-summary-fact dd {
+    margin: 0;
+    font-size: 0.88rem;
+}
+
+.world-cup-summary-intro {
+    margin: 0;
+    font-size: 0.9rem;
+    line-height: 1.55;
+}
+
+.world-cup-summary-list {
+    margin: 0;
+    padding-left: 1.15rem;
+    font-size: 0.88rem;
+    line-height: 1.5;
+}
+
+.world-cup-summary-list li + li {
+    margin-top: 0.3rem;
+}
+
+.world-cup-summary-round + .world-cup-summary-round {
+    margin-top: 0.45rem;
+    padding-top: 0.45rem;
+    border-top: 0.0625rem solid var(--line, #d9e4f1);
+}
+
+.world-cup-summary-round-title {
+    margin: 0 0 0.2rem;
+    font-size: 0.86rem;
+    font-weight: 700;
+}
+
+.world-cup-summary-round-text {
+    margin: 0;
+    font-size: 0.88rem;
+    line-height: 1.5;
+    color: var(--text, #1a2433);
+}
+
+.world-cup-summary-rules-block + .world-cup-summary-rules-block {
+    margin-top: 0.35rem;
+    padding-top: 0.35rem;
+    border-top: 0.0625rem solid var(--line, #d9e4f1);
+}
+
+.world-cup-summary-team-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(10.5rem, 1fr));
+    gap: 0.45rem 0.65rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.world-cup-summary-team {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    min-width: 0;
+    font-size: 0.88rem;
+}
+
+.world-cup-summary-team .team-badge {
+    width: 1.1rem;
+    height: 1.1rem;
+    flex: 0 0 auto;
+}
+
+.world-cup-summary-team .team-name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}

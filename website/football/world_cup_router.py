@@ -37,6 +37,9 @@ from .world_cup_utils import (
     edition_has_group_stage,
     edition_has_knockout_stage,
     edition_hides_goal_difference_column,
+    edition_is_historic,
+    edition_summary_rules_sections,
+    edition_summary_synopsis,
     edition_uses_goal_average,
     edition_label,
     format_goal_average,
@@ -120,6 +123,7 @@ async def _build_world_cup_context(
         "show_groups_nav": has_group_stage,
         "show_playoffs_nav": has_group_playoffs,
         "show_knockout_nav": has_knockout_stage,
+        "show_summary_nav": edition_is_historic(selected_edition),
         "enable_live_updates": is_current_edition,
         "enable_live_standings": False,
         "show_world_cup_nav": await world_cup_nav_available(),
@@ -147,6 +151,7 @@ async def _build_world_cup_context(
         "world_cup_playoffs_url": f"{world_cup_root}playoffs/{edition_query}",
         "world_cup_knockout_url": f"{world_cup_root}knockout/{edition_query}",
         "world_cup_matches_url": f"{world_cup_root}matches/{edition_query}",
+        "world_cup_summary_url": f"{world_cup_root}summary/{edition_query}",
         "world_cup_subscriptions_url": f"{world_cup_root}subscriptions/{edition_query}",
         **mode_context,
     }
@@ -614,6 +619,40 @@ async def get_world_cup_knockout_index(
             "request": request,
             "title": "World Cup Knockout",
             "knockout_bracket": knockout_bracket,
+            **context,
+        },
+    )
+
+
+@world_cup_router.get("/summary", response_class=HTMLResponse)
+@world_cup_router.get("/summary/", response_class=HTMLResponse)
+async def get_world_cup_summary(
+    request: Request,
+    edition: str | None = Query(default=None, pattern=r"^\d{4}$"),
+):
+    logging.debug("/football/world-cup/summary/: %s", request)
+    context = await _build_world_cup_context(request, edition)
+    if not context["show_summary_nav"]:
+        return _redirect_to_world_cup_overview(context)
+
+    selected_edition = context["selected_edition"]
+    teams = await retrieve_distinct_teams(selected_edition)
+    synopsis = edition_summary_synopsis(selected_edition)
+    rules_sections = edition_summary_rules_sections(selected_edition)
+
+    context["edition_switch_path"] = (
+        f"{context['football_root_path']}world-cup/summary/{context['edition_query']}"
+    )
+
+    return TEMPLATES.TemplateResponse(
+        request,
+        "football/world-cup/summary.html",
+        {
+            "request": request,
+            "title": f"World Cup {selected_edition} Summary",
+            "teams": teams,
+            "synopsis": synopsis,
+            "rules_sections": rules_sections,
             **context,
         },
     )

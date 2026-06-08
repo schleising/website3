@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import re
+from functools import lru_cache
 from pathlib import Path
 from typing import TYPE_CHECKING, Callable
 
@@ -181,6 +182,151 @@ def standings_rules_visitor_lines(edition: str) -> list[str]:
         "Teams are ranked by points, then goal difference, then goals scored.",
         "Q marks teams who advanced to the knockout stage.",
     ]
+
+
+_KNOCKOUT_REPLAY_SUMMARY: dict[str, str] = {
+    "1934": (
+        "Knockout ties that finished level were replayed. Italy drew 1–1 with Spain "
+        "in the quarter-finals and won the replay 1–0."
+    ),
+    "1938": (
+        "Three ties were replayed: Cuba beat Romania 2–1 after a 3–3 draw; Germany "
+        "beat Switzerland 4–2 after a 1–1 draw; Brazil beat Czechoslovakia 2–1 "
+        "after a 1–1 quarter-final draw."
+    ),
+}
+
+_GROUP_PLAYOFF_SUMMARY: dict[str, str] = {
+    "1954": (
+        "Group play-offs decided the last qualifying place in Groups 2 and 4 "
+        "(West Germany beat Turkey; Austria beat Switzerland)."
+    ),
+    "1958": (
+        "Group play-offs decided the last qualifying place in Groups 1, 3, and 4. "
+        "When two teams tied for second and third with the group winner already clear, "
+        "the play-off result decided who advanced — not goal average."
+    ),
+}
+
+
+def edition_is_historic(edition: str) -> bool:
+    return edition != WC_CURRENT_EDITION
+
+
+def edition_summary_rules_sections(edition: str) -> list[dict[str, list[str]]]:
+    """Visitor-facing rules grouped for the edition Summary page."""
+    sections: list[dict[str, list[str]]] = []
+    year = int(edition)
+    has_groups = edition_has_group_stage(edition)
+    has_knockout = edition_has_knockout_stage(edition)
+
+    format_lines: list[str] = []
+    if not has_groups and has_knockout:
+        format_lines.append(
+            "Straight knockout tournament — no group stage. "
+            "Every match eliminated the loser."
+        )
+    elif edition == "1950":
+        format_lines.append(
+            "Two group phases: four first-round groups, then a final round of "
+            "four teams with no separate knockout stage."
+        )
+        format_lines.append(
+            "The team topping the final group was crowned champion."
+        )
+    elif year in {1974, 1978}:
+        format_lines.append(
+            "Two group phases: four first-round groups, then two second-round "
+            "groups of four. Group winners met in the final."
+        )
+    elif edition == "1982":
+        format_lines.append(
+            "Two group phases: six first-round groups, then four second-round "
+            "groups of three. The four group winners reached the semi-finals."
+        )
+    elif has_groups and has_knockout:
+        group_count = len(group_order_for_edition(edition))
+        format_lines.append(
+            f"Group stage ({group_count} groups), then a knockout bracket."
+        )
+        if year >= 1998:
+            format_lines.append("Top two from each group advanced to the knockout stage.")
+        elif year >= 1986:
+            format_lines.append("Top two from each group advanced to the knockout stage.")
+        elif year >= 1958:
+            format_lines.append(
+                "The group winner and runner-up (or play-off winner) advanced."
+            )
+        else:
+            format_lines.append("The top two from each group advanced.")
+
+    if len(format_lines) > 0:
+        sections.append({"title": "Tournament format", "lines": format_lines})
+
+    if has_groups:
+        standing_lines = standings_rules_visitor_lines(edition)
+        if len(standing_lines) > 0:
+            sections.append({"title": "Group standings", "lines": standing_lines})
+
+    playoff_lines: list[str] = []
+    if edition_in_group_playoff_era(edition) and has_knockout:
+        playoff_lines.append(
+            "When teams finished level on points for the last qualifying place, "
+            "FIFA sometimes scheduled a single group play-off match."
+        )
+        if edition in _GROUP_PLAYOFF_SUMMARY:
+            playoff_lines.append(_GROUP_PLAYOFF_SUMMARY[edition])
+        elif year <= 1954:
+            playoff_lines.append(
+                "Play-off fixtures are not in the imported data for this edition, "
+                "but the rules applied where ties occurred."
+            )
+    if len(playoff_lines) > 0:
+        sections.append({"title": "Group play-offs", "lines": playoff_lines})
+
+    knockout_lines: list[str] = []
+    if has_knockout:
+        if edition in _KNOCKOUT_REPLAY_SUMMARY:
+            knockout_lines.append(_KNOCKOUT_REPLAY_SUMMARY[edition])
+        elif year >= 1970:
+            knockout_lines.append(
+                "Knockout ties level after 90 minutes went to extra time, "
+                "then a penalty shoot-out if still drawn."
+            )
+        elif year >= 1958:
+            knockout_lines.append(
+                "Knockout ties level after 90 minutes could go to extra time "
+                "to decide the winner."
+            )
+        else:
+            knockout_lines.append(
+                "Early tournaments used replays or extra time rather than "
+                "penalty shoot-outs to settle drawn knockout ties."
+            )
+    if len(knockout_lines) > 0:
+        sections.append({"title": "Knockout ties", "lines": knockout_lines})
+
+    return sections
+
+
+WC_EDITION_SUMMARIES_PATH = Path(__file__).with_name("wc_edition_summaries.json")
+
+
+@lru_cache(maxsize=1)
+def _load_wc_edition_summaries() -> dict[str, dict[str, object]]:
+    if not WC_EDITION_SUMMARIES_PATH.is_file():
+        return {}
+    payload = json.loads(WC_EDITION_SUMMARIES_PATH.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        return {}
+    return payload
+
+
+def edition_summary_synopsis(edition: str) -> dict[str, object] | None:
+    entry = _load_wc_edition_summaries().get(edition)
+    if not isinstance(entry, dict):
+        return None
+    return entry
 
 
 _GROUP_PLAYOFF_ROUND_RE = re.compile(r"^Group\s+(\d+)\s+Play-off$", re.IGNORECASE)

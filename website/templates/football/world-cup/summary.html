@@ -1,0 +1,157 @@
+{% extends "football/world-cup/world-cup-base.html" %}
+{% from "football/world-cup/_team_link.html" import world_cup_team_display %}
+
+{% block title %}<title>Football - {{ title }}</title>{% endblock %}
+
+{% block header %}
+<h3 class="header-text football-header-text football-header-text--season">
+  <span class="football-header-title">{{ selected_edition_label }} Summary</span>
+  {% if show_edition_selector|default(false) %}
+  <button
+    type="button"
+    id="world-cup-edition-open"
+    class="football-season-marker football-season-marker-button"
+    aria-controls="world-cup-edition-popup"
+    aria-expanded="false"
+    aria-label="Open edition selector"
+  >
+    {{ selected_edition }}
+  </button>
+  {% else %}
+  <span class="football-season-marker">{{ selected_edition }}</span>
+  {% endif %}
+</h3>
+{% endblock %}
+
+{% block football_content %}
+{% set football_root = football_root_path|default('/football/') %}
+
+{% if show_edition_selector|default(false) %}
+<div id="world-cup-edition-backdrop" class="football-season-backdrop hidden" aria-hidden="true"></div>
+<section
+  id="world-cup-edition-popup"
+  class="football-season-popup site-card hidden"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="world-cup-edition-popup-title"
+>
+  <div class="football-season-popup-header">
+    <h4 id="world-cup-edition-popup-title">Select Edition</h4>
+    <button type="button" id="world-cup-edition-close" class="football-season-close" aria-label="Close edition selector">x</button>
+  </div>
+  <form class="football-season-popup-form" method="get" action="{{ edition_switch_path }}">
+    <label class="football-season-label" for="world-cup-edition-select">Edition</label>
+    <select id="world-cup-edition-select" name="edition" class="football-season-select site-select">
+      {% for edition_option in available_editions %}
+      <option value="{{ edition_option.key }}" {% if edition_option.selected %}selected{% endif %}>{{ edition_option.label }}{% if edition_option.is_current %} (Current){% endif %}</option>
+      {% endfor %}
+    </select>
+    <div class="football-season-popup-actions">
+      <button type="submit" class="btn btn-primary football-season-go">Apply</button>
+    </div>
+  </form>
+</section>
+{% endif %}
+
+<div class="world-cup-summary-layout">
+  <section class="world-cup-summary-section site-card" aria-labelledby="wc-summary-teams-heading">
+    <h4 id="wc-summary-teams-heading" class="world-cup-summary-heading">Teams ({{ teams|length }})</h4>
+    {% if teams|length > 0 %}
+    <ul class="world-cup-summary-team-grid">
+      {% for team in teams %}
+      <li class="world-cup-summary-team">
+        <img
+          class="team-badge"
+          src="{{ team.world_cup_local_crest }}"
+          alt="{{ team.display_name }} crest"
+        >
+        {{ world_cup_team_display(team, football_root, selected_edition) }}
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="world-cup-empty-state">No teams are available for this edition yet.</p>
+    {% endif %}
+  </section>
+
+  {% if rules_sections|length > 0 %}
+  <section class="world-cup-summary-section site-card" aria-labelledby="wc-summary-rules-heading">
+    <h4 id="wc-summary-rules-heading" class="world-cup-summary-heading">Rules for this edition</h4>
+    {% for section in rules_sections %}
+    <article class="world-cup-summary-rules-block">
+      <h5 class="world-cup-summary-subheading">{{ section.title }}</h5>
+      <ul class="world-cup-summary-list">
+        {% for line in section.lines %}
+        <li>{{ line }}</li>
+        {% endfor %}
+      </ul>
+    </article>
+    {% endfor %}
+  </section>
+  {% endif %}
+
+  {% if synopsis %}
+  <section class="world-cup-summary-section site-card" aria-labelledby="wc-summary-synopsis-heading">
+    <h4 id="wc-summary-synopsis-heading" class="world-cup-summary-heading">Tournament synopsis</h4>
+    <dl class="world-cup-summary-facts">
+      {% if synopsis.host_country %}
+      <div class="world-cup-summary-fact">
+        <dt>Host</dt>
+        <dd>{{ synopsis.host_country }}</dd>
+      </div>
+      {% endif %}
+      {% if synopsis.dates %}
+      <div class="world-cup-summary-fact">
+        <dt>Dates</dt>
+        <dd>{{ synopsis.dates }}</dd>
+      </div>
+      {% endif %}
+      {% if synopsis.teams %}
+      <div class="world-cup-summary-fact">
+        <dt>Teams</dt>
+        <dd>{{ synopsis.teams }}</dd>
+      </div>
+      {% endif %}
+      {% if synopsis.winner %}
+      <div class="world-cup-summary-fact">
+        <dt>Winner</dt>
+        <dd>{{ synopsis.winner }}</dd>
+      </div>
+      {% endif %}
+      {% if synopsis.runner_up %}
+      <div class="world-cup-summary-fact">
+        <dt>Runner-up</dt>
+        <dd>{{ synopsis.runner_up }}</dd>
+      </div>
+      {% endif %}
+      {% if synopsis.top_scorer %}
+      <div class="world-cup-summary-fact">
+        <dt>Top scorer</dt>
+        <dd>{{ synopsis.top_scorer }}</dd>
+      </div>
+      {% endif %}
+    </dl>
+    {% if synopsis.intro %}
+    <p class="world-cup-summary-intro">{{ synopsis.intro }}</p>
+    {% endif %}
+    {% if synopsis.highlights|default([])|length > 0 %}
+    <h5 class="world-cup-summary-subheading">Highlights</h5>
+    <ul class="world-cup-summary-list">
+      {% for highlight in synopsis.highlights %}
+      <li>{{ highlight }}</li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+    {% if synopsis.rounds|default([])|length > 0 %}
+    <h5 class="world-cup-summary-subheading">Round by round</h5>
+    {% for round in synopsis.rounds %}
+    <article class="world-cup-summary-round">
+      <h6 class="world-cup-summary-round-title">{{ round.name }}</h6>
+      <p class="world-cup-summary-round-text">{{ round.text }}</p>
+    </article>
+    {% endfor %}
+    {% endif %}
+  </section>
+  {% endif %}
+</div>
+{% endblock %}

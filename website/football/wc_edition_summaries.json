@@ -1,0 +1,452 @@
+{
+  "1930": {
+    "host_country": "Uruguay",
+    "dates": "13–30 July 1930",
+    "teams": 13,
+    "winner": "Uruguay",
+    "runner_up": "Argentina",
+    "top_scorer": "Guillermo Stábile (Argentina) — 8 goals",
+    "intro": "The inaugural World Cup was hosted by Uruguay to celebrate the centenary of independence and their 1928 Olympic gold. Thirteen nations took part in Montevideo; several European teams made the long sea voyage only at the last minute.",
+    "highlights": [
+      "Uruguay beat Argentina 4–2 in the final in front of roughly 68,000 fans at the Estadio Centenario.",
+      "The United States reached the semi-finals, still the best finish by any team from outside Europe or South America.",
+      "Yugoslavia became the first European side to reach the last four."
+    ],
+    "rounds": [
+      {"name": "Group stage", "text": "Four groups of three or four played a round-robin. Uruguay, Argentina, the United States and Yugoslavia won their groups to reach the semi-finals."},
+      {"name": "Semi-finals", "text": "Uruguay defeated Yugoslavia 6–1. Argentina beat the United States 6–1, with Guillermo Stábile scoring three."},
+      {"name": "Final", "text": "Uruguay came from behind to beat Argentina 4–2 and become the first world champions."}
+    ]
+  },
+  "1934": {
+    "host_country": "Italy",
+    "dates": "27 May – 10 June 1934",
+    "teams": 16,
+    "winner": "Italy",
+    "runner_up": "Czechoslovakia",
+    "top_scorer": "Oldřich Nejedlý (Czechoslovakia) — 5 goals",
+    "intro": "The second World Cup was a straight knockout tournament in Italy under Mussolini's regime. Reigning champions Uruguay declined to defend their title, protesting that many European nations had snubbed the 1930 event.",
+    "highlights": [
+      "Italy won their first title, beating Czechoslovakia 2–1 after extra time in Rome.",
+      "Hosts Italy needed a replay to eliminate Spain in the quarter-finals.",
+      "Egypt were the first African nation to appear at a World Cup."
+    ],
+    "rounds": [
+      {"name": "Round of 16", "text": "Sixteen teams met in single-elimination ties. Several matches went to extra time, including Italy's 1–1 draw with Spain."},
+      {"name": "Quarter-finals", "text": "Italy drew 1–1 with Spain and won the replay 1–0. Czechoslovakia, Germany and Austria also advanced."},
+      {"name": "Semi-finals", "text": "Italy beat Austria 1–0. Czechoslovakia defeated Germany 3–1 in a high-scoring contest."},
+      {"name": "Final", "text": "Angelo Schiavio scored the winner in extra time as Italy beat Czechoslovakia 2–1."}
+    ]
+  },
+  "1938": {
+    "host_country": "France",
+    "dates": "4–19 June 1938",
+    "teams": 15,
+    "winner": "Italy",
+    "runner_up": "Hungary",
+    "top_scorer": "Leônidas (Brazil) — 7 goals",
+    "intro": "France hosted an expanded knockout World Cup on the eve of the Second World War. Italy retained the trophy, becoming the first team to win back-to-back titles.",
+    "highlights": [
+      "Italy beat Hungary 4–2 in the final in Paris to defend their crown.",
+      "Brazil's Leônidas, the Black Diamond, was the tournament's leading scorer.",
+      "Austria withdrew after qualification when the country was annexed by Germany."
+    ],
+    "rounds": [
+      {"name": "Round of 16", "text": "Fifteen teams played knockout ties. Cuba beat Romania 2–1 in a replay after a 3–3 draw; Germany beat Switzerland 4–2 in a replay after 1–1."},
+      {"name": "Quarter-finals", "text": "Italy eliminated France 3–1. Brazil needed a replay to beat Czechoslovakia 2–1 after a 1–1 draw. Hungary and Sweden also advanced."},
+      {"name": "Semi-finals", "text": "Italy beat Brazil 2–1. Hungary thrashed Sweden 5–1, with Gyula Zsengellér scoring twice."},
+      {"name": "Final", "text": "Silvio Piola scored twice as Italy beat Hungary 4–2 at the Stade Olympique de Colombes."}
+    ]
+  },
+  "1950": {
+    "host_country": "Brazil",
+    "dates": "24 June – 16 July 1950",
+    "teams": 13,
+    "winner": "Uruguay",
+    "runner_up": "Brazil",
+    "top_scorer": "Ademir (Brazil) — 9 goals",
+    "intro": "Brazil hosted a unique 13-team World Cup with no knockout stage. The tournament was meant for 16 nations, but Scotland, Turkey, and India all withdrew after qualifying, and late invitee France also pulled out once the draw was made — leaving uneven first-round groups of four, four, three, and two. The four group winners then met in a final round-robin; the leader would be crowned champion.",
+    "highlights": [
+      "Scotland refused their place despite finishing runners-up in the British Home Championship — the SFA had insisted they would only travel as champions, so England went instead.",
+      "Turkey withdrew citing the cost of the long journey to South America, even after qualifying without playing their final European tie.",
+      "India, the sole Asian qualifier by default, pulled out days before the tournament citing travel costs, lack of preparation time, and prioritising the Olympic Games. The popular story that they refused because FIFA banned barefoot play is a myth.",
+      "Uruguay's 2–1 win over Brazil in the Maracanã is known as the Maracanazo — one of football's greatest shocks.",
+      "England lost 1–0 to the United States in Belo Horizonte, one of the biggest upsets in tournament history."
+    ],
+    "rounds": [
+      {"name": "First round", "text": "Thirteen teams in four uneven groups (4, 4, 3, and 2). Scotland, Turkey, and India had withdrawn after qualifying; France, invited to fill a gap, withdrew too once grouped with distant venues. Group winners advanced — Uruguay advanced alone from Group 4."},
+      {"name": "Final round", "text": "Brazil, Uruguay, Sweden and Spain played each other once. Brazil beat Sweden 7–1 and Spain 6–1 to top the table going into the final match."},
+      {"name": "Decisive match", "text": "Uruguay came from behind to beat Brazil 2–1, with Alcides Ghiggia scoring the winner, and lifted their second World Cup."}
+    ]
+  },
+  "1954": {
+    "host_country": "Switzerland",
+    "dates": "16 June – 4 July 1954",
+    "teams": 16,
+    "winner": "West Germany",
+    "runner_up": "Hungary",
+    "top_scorer": "Sándor Kocsis (Hungary) — 11 goals",
+    "intro": "The Miracle of Bern saw West Germany upset the mighty Hungary side in the final. Switzerland hosted a high-scoring tournament remembered for Hungary's revolutionary football.",
+    "highlights": [
+      "Hungary beat West Germany 8–3 in the group stage, then lost the final 3–2.",
+      "Hungary's Ferenc Puskás played in the final despite not being fully fit.",
+      "Austria's 7–5 win over Switzerland in the quarter-finals remains one of the highest-scoring knockout games."
+    ],
+    "rounds": [
+      {"name": "Group stage", "text": "Four groups of four. Play-offs decided qualification in Groups 2 and 4 when teams finished level on points."},
+      {"name": "Quarter-finals", "text": "West Germany beat Yugoslavia 2–0. Hungary thrashed Brazil 4–2 in the Battle of Berne. Austria beat Switzerland 7–5."},
+      {"name": "Semi-finals", "text": "West Germany stunned Austria 6–1. Hungary beat Uruguay 4–2 after extra time in a classic."},
+      {"name": "Final", "text": "West Germany recovered from 2–0 down to beat Hungary 3–2, with Helmut Rahn scoring the winner."}
+    ]
+  },
+  "1958": {
+    "host_country": "Sweden",
+    "dates": "8–29 June 1958",
+    "teams": 16,
+    "winner": "Brazil",
+    "runner_up": "Sweden",
+    "top_scorer": "Just Fontaine (France) — 13 goals",
+    "intro": "Sweden hosted the first World Cup broadcast internationally on television. A 17-year-old Pelé announced himself to the world as Brazil won their first title.",
+    "highlights": [
+      "Just Fontaine's 13 goals remain a single-tournament record.",
+      "Pelé scored twice in the final and became the youngest World Cup winner.",
+      "Wales reached the quarter-finals in their only finals appearance to date."
+    ],
+    "rounds": [
+      {"name": "Group stage", "text": "Four groups of four. Play-offs in three groups decided the second qualifying place when teams tied on points."},
+      {"name": "Quarter-finals", "text": "Brazil beat Wales 1–0 with a young Pelé scoring. France eliminated Paraguay; West Germany and Sweden also advanced."},
+      {"name": "Semi-finals", "text": "Brazil beat France 5–2, with Pelé scoring a hat-trick. Sweden defeated West Germany 3–1."},
+      {"name": "Final", "text": "Brazil beat hosts Sweden 5–2 in Stockholm. Pelé scored twice and Vavá also netted twice."}
+    ]
+  },
+  "1962": {
+    "host_country": "Chile",
+    "dates": "30 May – 17 June 1962",
+    "teams": 16,
+    "winner": "Brazil",
+    "runner_up": "Czechoslovakia",
+    "top_scorer": "Six players — 4 goals each",
+    "intro": "Chile staged the World Cup months after a devastating earthquake. Brazil retained the trophy despite Pelé being injured early in the tournament.",
+    "highlights": [
+      "The Battle of Santiago between Chile and Italy is remembered as one of the most ill-tempered matches ever.",
+      "Garrincha was Brazil's star, named player of the tournament.",
+      "Czechoslovakia reached their second final but lost again."
+    ],
+    "rounds": [
+      {"name": "Group stage", "text": "Four groups of four. Top two advanced. Brazil lost Pelé to injury but still qualified."},
+      {"name": "Quarter-finals", "text": "Brazil beat England 3–1. Chile defeated the Soviet Union; Yugoslavia and Czechoslovakia also progressed."},
+      {"name": "Semi-finals", "text": "Brazil edged Chile 4–2. Czechoslovakia beat Yugoslavia 3–1."},
+      {"name": "Final", "text": "Brazil beat Czechoslovakia 3–1 in Santiago to win back-to-back titles."}
+    ]
+  },
+  "1966": {
+    "host_country": "England",
+    "dates": "11–30 July 1966",
+    "teams": 16,
+    "winner": "England",
+    "runner_up": "West Germany",
+    "top_scorer": "Eusébio (Portugal) — 9 goals",
+    "intro": "England hosted and won their only World Cup, with Geoff Hurst's hat-trick in the final at Wembley. North Korea and Portugal made memorable debuts.",
+    "highlights": [
+      "Geoff Hurst remains the only player to score a hat-trick in a World Cup final.",
+      "North Korea beat Italy 1–0 in one of the greatest group-stage shocks.",
+      "Eusébio's nine goals propelled Portugal to third place on their first appearance."
+    ],
+    "rounds": [
+      {"name": "Group stage", "text": "Four groups of four. North Korea stunned Italy; Portugal and England topped their groups."},
+      {"name": "Quarter-finals", "text": "England beat Argentina 1–0 in a heated match. Portugal eliminated North Korea 5–3 after Eusébio scored four."},
+      {"name": "Semi-finals", "text": "England defeated Portugal 2–1. West Germany beat the Soviet Union 2–1."},
+      {"name": "Final", "text": "England beat West Germany 4–2 after extra time. Hurst's third goal — whether it crossed the line — is debated to this day."}
+    ]
+  },
+  "1970": {
+    "host_country": "Mexico",
+    "dates": "31 May – 17 June 1970",
+    "teams": 16,
+    "winner": "Brazil",
+    "runner_up": "Italy",
+    "top_scorer": "Gerd Müller (West Germany) — 10 goals",
+    "intro": "Mexico hosted the first World Cup in North America. Brazil's golden team, led by Pelé, Carlos Alberto and Jairzinho, won the Jules Rimet Trophy outright with a third title.",
+    "highlights": [
+      "Brazil's 4–1 final win over Italy is widely regarded as the greatest team performance in a final.",
+      "Jairzinho scored in every match — the only player to do so in a single tournament.",
+      "England's Gordon Banks made his famous save from Pelé's header against Brazil."
+    ],
+    "rounds": [
+      {"name": "Group stage", "text": "Four groups of four. Brazil, Italy, West Germany and Uruguay topped their groups."},
+      {"name": "Quarter-finals", "text": "Brazil beat Peru 4–2. Italy stunned Mexico 4–1. West Germany came from 2–0 down to beat England 3–2 in extra time."},
+      {"name": "Semi-finals", "text": "Brazil beat Uruguay 3–1. Italy defeated West Germany 4–3 in the Game of the Century after extra time."},
+      {"name": "Final", "text": "Pelé, Gérson, Jairzinho and Carlos Alberto scored as Brazil beat Italy 4–1 in Mexico City."}
+    ]
+  },
+  "1974": {
+    "host_country": "West Germany",
+    "dates": "13 June – 7 July 1974",
+    "teams": 16,
+    "winner": "West Germany",
+    "runner_up": "Netherlands",
+    "top_scorer": "Grzegorz Lato (Poland) — 7 goals",
+    "intro": "West Germany hosted a World Cup with two group stages and no knockouts until the semi-finals. The hosts beat the brilliant Netherlands side in the final in Munich.",
+    "highlights": [
+      "Total Football and Johan Cruyff captivated the world, but West Germany won at home.",
+      "East Germany beat West Germany 1–0 in the group stage — their only competitive meeting.",
+      "Poland finished third in their first World Cup."
+    ],
+    "rounds": [
+      {"name": "First group stage", "text": "Four groups of four. Winners and runners-up advanced to two second-round groups."},
+      {"name": "Second group stage", "text": "West Germany topped a group including Poland and Sweden. The Netherlands beat Brazil 2–0 to reach the final."},
+      {"name": "Third-place play-off", "text": "Poland beat Brazil 1–0."},
+      {"name": "Final", "text": "Paul Breitner and Gerd Müller scored as West Germany came from behind to beat the Netherlands 2–1."}
+    ]
+  },
+  "1978": {
+    "host_country": "Argentina",
+    "dates": "1–25 June 1978",
+    "teams": 16,
+    "winner": "Argentina",
+    "runner_up": "Netherlands",
+    "top_scorer": "Mario Kempes (Argentina) — 6 goals",
+    "intro": "Argentina won their first World Cup on home soil in a tournament played under a military dictatorship. Mario Kempes was the star as the hosts beat the Netherlands in the final.",
+    "highlights": [
+      "Kempes scored twice in the final as Argentina won 3–1 after extra time.",
+      "Scotland took a point from both Argentina and the Netherlands but failed to advance.",
+      "Peru were eliminated after a controversial 6–0 loss to Argentina in the second group stage."
+    ],
+    "rounds": [
+      {"name": "First group stage", "text": "Four groups of four. The Netherlands and Argentina both navigated the opening phase."},
+      {"name": "Second group stage", "text": "Argentina beat Brazil 2–0 to top their group. The Netherlands edged Italy to reach the final."},
+      {"name": "Third-place play-off", "text": "Brazil beat Italy 2–1."},
+      {"name": "Final", "text": "Argentina drew 1–1 with the Netherlands after 90 minutes. Kempes and Daniel Bertoni scored in extra time."}
+    ]
+  },
+  "1982": {
+    "host_country": "Spain",
+    "dates": "13 June – 11 July 1982",
+    "teams": 24,
+    "winner": "Italy",
+    "runner_up": "West Germany",
+    "top_scorer": "Paolo Rossi (Italy) — 6 goals",
+    "intro": "Spain hosted the first 24-team World Cup with two group stages. Italy won their third title after Paolo Rossi's golden run in the knockout rounds.",
+    "highlights": [
+      "Northern Ireland beat hosts Spain 1–0 in the group stage.",
+      "Italy lost all three second-group games yet still reached the semi-finals on goal difference.",
+      "Rossi scored a hat-trick against Brazil in one of the tournament's greatest matches."
+    ],
+    "rounds": [
+      {"name": "First group stage", "text": "Six groups of four. The top two from each group advanced."},
+      {"name": "Second group stage", "text": "Four groups of three produced Italy, Poland, West Germany and France as semi-finalists."},
+      {"name": "Semi-finals", "text": "Italy beat Poland 2–0. West Germany defeated France 3–3 (5–4 on penalties) in the Seville semi-final."},
+      {"name": "Final", "text": "Italy beat West Germany 3–1 in Madrid. Rossi, Marco Tardelli and Alessandro Altobelli scored."}
+    ]
+  },
+  "1986": {
+    "host_country": "Mexico",
+    "dates": "31 May – 29 June 1986",
+    "teams": 24,
+    "winner": "Argentina",
+    "runner_up": "West Germany",
+    "top_scorer": "Gary Lineker (England) — 6 goals",
+    "intro": "Mexico became the first nation to host the World Cup twice. Diego Maradona dominated — the Hand of God and the Goal of the Century against England — as Argentina won their second title.",
+    "highlights": [
+      "Maradona's quarter-final performance against England is among the most famous in football history.",
+      "Gary Lineker won the Golden Boot for England, who lost to Argentina in the quarter-finals.",
+      "Canada, Denmark and Iraq made their World Cup debuts."
+    ],
+    "rounds": [
+      {"name": "Group stage", "text": "Six groups of four. Argentina topped their group despite losing to Belgium."},
+      {"name": "Round of 16", "text": "Argentina beat Uruguay 1–0. France eliminated defending champions Italy 2–0."},
+      {"name": "Quarter-finals", "text": "Maradona inspired Argentina past England 2–1. West Germany beat Mexico; Belgium stunned Spain."},
+      {"name": "Semi-finals", "text": "Argentina beat Belgium 2–0. West Germany edged France 2–0."},
+      {"name": "Final", "text": "Jorge Burruchaga scored the winner as Argentina beat West Germany 3–2 in Mexico City."}
+    ]
+  },
+  "1990": {
+    "host_country": "Italy",
+    "dates": "8 June – 8 July 1990",
+    "teams": 24,
+    "winner": "West Germany",
+    "runner_up": "Argentina",
+    "top_scorer": "Salvatore Schillaci (Italy) — 6 goals",
+    "intro": "Italy hosted a defensive, low-scoring World Cup remembered for tears and tight matches. West Germany won their third title, beating Argentina in a repeat of the 1986 final.",
+    "highlights": [
+      "Cameroon became the first African team to reach the quarter-finals, led by Roger Milla.",
+      "Schillaci's six goals won him the Golden Boot on home soil.",
+      "The final was the first World Cup decider decided by a penalty — Andreas Brehme for West Germany."
+    ],
+    "rounds": [
+      {"name": "Group stage", "text": "Six groups of four. Cameroon stunned Argentina 1–0 in the opening match."},
+      {"name": "Round of 16", "text": "West Germany needed penalties to beat the Netherlands. England beat Belgium and Cameroon."},
+      {"name": "Quarter-finals", "text": "Italy beat Ireland 1–0. Argentina eliminated Yugoslavia on penalties after a 0–0 draw."},
+      {"name": "Semi-finals", "text": "West Germany beat England 4–3 on penalties after a 1–1 draw. Argentina beat Italy 3–4 on penalties in Naples."},
+      {"name": "Final", "text": "Brehme's 85th-minute penalty gave West Germany a 1–0 win over Argentina in Rome."}
+    ]
+  },
+  "1994": {
+    "host_country": "United States",
+    "dates": "17 June – 17 July 1994",
+    "teams": 24,
+    "winner": "Brazil",
+    "runner_up": "Italy",
+    "top_scorer": "Hristo Stoichkov (Bulgaria) & Oleg Salenko (Russia) — 6 goals",
+    "intro": "The United States hosted a World Cup that drew record crowds and introduced three points for a win. Brazil won their fourth title, beating Italy on penalties in a goalless final.",
+    "highlights": [
+      "Diego Maradona was sent home after failing a drug test during the group stage.",
+      "Bulgaria reached the semi-finals, beating defending champions Germany 2–1.",
+      "Roberto Baggio missed the decisive penalty as Brazil won the shoot-out 3–2."
+    ],
+    "rounds": [
+      {"name": "Group stage", "text": "Six groups of four. Ireland beat Italy 1–0 in New Jersey in a famous upset."},
+      {"name": "Round of 16", "text": "Brazil beat the United States 1–0. Bulgaria stunned Germany 2–1."},
+      {"name": "Quarter-finals", "text": "Brazil beat the Netherlands 3–2. Italy eliminated Spain 2–1."},
+      {"name": "Semi-finals", "text": "Brazil beat Sweden 1–0. Italy defeated Bulgaria 2–1."},
+      {"name": "Final", "text": "No goals after extra time at the Rose Bowl. Brazil won 3–2 on penalties."}
+    ]
+  },
+  "1998": {
+    "host_country": "France",
+    "dates": "10 June – 12 July 1998",
+    "teams": 32,
+    "winner": "France",
+    "runner_up": "Brazil",
+    "top_scorer": "Davor Šuker (Croatia) — 6 goals",
+    "intro": "France hosted and won their first World Cup on home soil. Zinedine Zidane scored twice in the final as the hosts beat Brazil 3–0 at the Stade de France.",
+    "highlights": [
+      "Croatia reached the semi-finals on their debut, with Davor Šuker winning the Golden Boot.",
+      "Ronaldo was unwell before the final; Brazil fielded a below-strength side.",
+      "David Beckham was sent off against Argentina in the last 16."
+    ],
+    "rounds": [
+      {"name": "Group stage", "text": "Eight groups of four. Nigeria, Croatia and Chile were among the surprise qualifiers."},
+      {"name": "Round of 16", "text": "France beat Paraguay 1–0 in golden goal extra time. Argentina eliminated England on penalties."},
+      {"name": "Quarter-finals", "text": "France beat Italy 4–3 on penalties. Croatia stunned Germany 3–0."},
+      {"name": "Semi-finals", "text": "France beat Croatia 2–1. Brazil defeated the Netherlands 4–2 on penalties."},
+      {"name": "Final", "text": "Zidane headed twice from corners and Emmanuel Petit added a third as France beat Brazil 3–0."}
+    ]
+  },
+  "2002": {
+    "host_country": "South Korea & Japan",
+    "dates": "31 May – 30 June 2002",
+    "teams": 32,
+    "winner": "Brazil",
+    "runner_up": "Germany",
+    "top_scorer": "Ronaldo (Brazil) — 8 goals",
+    "intro": "The first World Cup held in Asia — co-hosted by South Korea and Japan. Brazil won a fifth title with Ronaldo scoring twice in the final against Germany.",
+    "highlights": [
+      "South Korea reached the semi-finals under Guus Hiddink — the best finish by an Asian nation.",
+      "Senegal beat defending champions France 1–0 in the opening match.",
+      "Ronaldo returned from injury to win the Golden Boot and redeem his 1998 final disappointment."
+    ],
+    "rounds": [
+      {"name": "Group stage", "text": "Eight groups of four. France were eliminated without scoring a goal."},
+      {"name": "Round of 16", "text": "South Korea beat Italy on golden goal and Spain on penalties. Brazil beat Belgium 2–0."},
+      {"name": "Quarter-finals", "text": "South Korea beat Spain on penalties. Germany defeated the United States 1–0."},
+      {"name": "Semi-finals", "text": "Brazil beat Turkey 1–0. Germany edged South Korea 1–0."},
+      {"name": "Final", "text": "Ronaldo scored twice as Brazil beat Germany 2–0 in Yokohama."}
+    ]
+  },
+  "2006": {
+    "host_country": "Germany",
+    "dates": "9 June – 9 July 2006",
+    "teams": 32,
+    "winner": "Italy",
+    "runner_up": "France",
+    "top_scorer": "Miroslav Klose (Germany) — 5 goals",
+    "intro": "Germany hosted a festival of football that ended with Italy's fourth title. Zinedine Zidane's headbutt on Marco Materazzi in the final became an iconic — and infamous — moment.",
+    "highlights": [
+      "Italy beat France 5–3 on penalties after Zidane was sent off in his last match.",
+      "Germany's Philipp Lahm scored the opening goal of the tournament in Munich.",
+      "Ghana and Ukraine made memorable World Cup debuts."
+    ],
+    "rounds": [
+      {"name": "Group stage", "text": "Eight groups of four. Angola, Ghana, Ivory Coast and Togo represented Africa."},
+      {"name": "Round of 16", "text": "Germany beat Sweden 2–0. Italy eliminated Australia 1–0 in stoppage time."},
+      {"name": "Quarter-finals", "text": "Germany beat Argentina 4–2 on penalties. Italy defeated Ukraine 3–0."},
+      {"name": "Semi-finals", "text": "Italy beat Germany 2–0 in extra time in Dortmund. France edged Portugal 1–0."},
+      {"name": "Final", "text": "Materazzi equalised Zidane's penalty before the headbutt. Italy won the shoot-out 5–3 in Berlin."}
+    ]
+  },
+  "2010": {
+    "host_country": "South Africa",
+    "dates": "11 June – 11 July 2010",
+    "teams": 32,
+    "winner": "Spain",
+    "runner_up": "Netherlands",
+    "top_scorer": "Diego Forlán (Uruguay), Thomas Müller (Germany), Wesley Sneijder (Netherlands) & David Villa (Spain) — 5 goals",
+    "intro": "South Africa hosted the first World Cup on the African continent. Spain won their first title with a tiki-taka style, Andrés Iniesta scoring the winner in the final.",
+    "highlights": [
+      "The vuvuzela became the soundtrack of the tournament.",
+      "Spain lost their opening match 1–0 to Switzerland but still won the trophy.",
+      "Ghana were denied a semi-final place when Luis Suárez handled on the line against Uruguay."
+    ],
+    "rounds": [
+      {"name": "Group stage", "text": "Eight groups of four. New Zealand were the only unbeaten team but did not advance."},
+      {"name": "Round of 16", "text": "Germany thrashed England 4–1. Ghana beat the United States in extra time."},
+      {"name": "Quarter-finals", "text": "Uruguay beat Ghana on penalties after Suárez's handball. Spain edged Paraguay 1–0."},
+      {"name": "Semi-finals", "text": "Spain beat Germany 1–0. The Netherlands defeated Uruguay 3–2."},
+      {"name": "Final", "text": "Iniesta scored in the 116th minute as Spain beat the Netherlands 1–0 in Johannesburg."}
+    ]
+  },
+  "2014": {
+    "host_country": "Brazil",
+    "dates": "12 June – 13 July 2014",
+    "teams": 32,
+    "winner": "Germany",
+    "runner_up": "Argentina",
+    "top_scorer": "James Rodríguez (Colombia) — 6 goals",
+    "intro": "Brazil hosted the World Cup for the second time. Germany won their fourth title, inflicting a historic 7–1 semi-final defeat on the hosts before beating Argentina in the final.",
+    "highlights": [
+      "Germany beat Brazil 7–1 in the semi-final at the Mineirão — Brazil's heaviest competitive home defeat.",
+      "James Rodríguez won the Golden Boot with spectacular goals for Colombia.",
+      "Mario Götze scored the extra-time winner in the Maracanã final."
+    ],
+    "rounds": [
+      {"name": "Group stage", "text": "Eight groups of four. Costa Rica topped a group including England, Italy and Uruguay."},
+      {"name": "Round of 16", "text": "France beat Nigeria. The Netherlands eliminated Mexico in stoppage time."},
+      {"name": "Quarter-finals", "text": "Germany beat France 1–0. Brazil edged Colombia 2–1."},
+      {"name": "Semi-finals", "text": "Germany demolished Brazil 7–1. Argentina beat the Netherlands 4–2 on penalties."},
+      {"name": "Final", "text": "Götze volleyed in extra time as Germany beat Argentina 1–0."}
+    ]
+  },
+  "2018": {
+    "host_country": "Russia",
+    "dates": "14 June – 15 July 2018",
+    "teams": 32,
+    "winner": "France",
+    "runner_up": "Croatia",
+    "top_scorer": "Harry Kane (England) — 6 goals",
+    "intro": "Russia hosted a World Cup of surprises. France won their second title with a young squad led by Kylian Mbappé, while Croatia reached their first final.",
+    "highlights": [
+      "Mbappé became the second teenager to score in a World Cup final, after Pelé.",
+      "Croatia won three straight knockout ties in extra time or penalties to reach the final.",
+      "VAR was used for the first time at a World Cup."
+    ],
+    "rounds": [
+      {"name": "Group stage", "text": "Eight groups of four. Germany were eliminated in the group stage for the first time since 1938."},
+      {"name": "Round of 16", "text": "France beat Argentina 4–3 in a thriller. Croatia eliminated Spain on penalties."},
+      {"name": "Quarter-finals", "text": "France beat Uruguay 2–0. Croatia edged Russia on penalties."},
+      {"name": "Semi-finals", "text": "France beat Belgium 1–0. Croatia defeated England 2–1 after extra time."},
+      {"name": "Final", "text": "Mario Mandžukić's own goal, Antoine Griezmann's penalty and goals from Paul Pogba and Mbappé gave France a 4–2 win."}
+    ]
+  },
+  "2022": {
+    "host_country": "Qatar",
+    "dates": "20 November – 18 December 2022",
+    "teams": 32,
+    "winner": "Argentina",
+    "runner_up": "France",
+    "top_scorer": "Kylian Mbappé (France) — 8 goals",
+    "intro": "Qatar hosted the first winter World Cup and the first in the Middle East. Argentina won their third title in a dramatic final, with Lionel Messi finally lifting the trophy.",
+    "highlights": [
+      "Messi scored twice in the final; Mbappé became only the second player to score a hat-trick in a final.",
+      "Saudi Arabia beat Argentina 2–1 in one of the greatest group-stage upsets.",
+      "Morocco became the first African and Arab nation to reach the semi-finals."
+    ],
+    "rounds": [
+      {"name": "Group stage", "text": "Eight groups of four. Japan beat Germany and Spain to top their group. Morocco won Group F."},
+      {"name": "Round of 16", "text": "Argentina beat Australia 2–1. Morocco eliminated Spain on penalties."},
+      {"name": "Quarter-finals", "text": "Argentina beat the Netherlands 4–3 on penalties. Morocco stunned Portugal 1–0."},
+      {"name": "Semi-finals", "text": "Argentina beat Croatia 3–0. France defeated Morocco 2–0."},
+      {"name": "Final", "text": "Mbappé's hat-trick forced penalties after Messi had scored twice. Argentina won 4–2 on penalties in Lusail."}
+    ]
+  }
+}
