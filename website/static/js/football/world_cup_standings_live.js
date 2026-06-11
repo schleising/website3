@@ -81,6 +81,124 @@ function updatePositionDelta(row, tableItem) {
     }
 }
 
+function updateOverviewLiveIndicator(row, tableItem) {
+    const indicatorCell = row.querySelector(".world-cup-overview-standings-live-indicator");
+    if (!indicatorCell) {
+        return;
+    }
+
+    const shouldShowIndicator = isTableItemInPlay(tableItem);
+    let indicatorDot = indicatorCell.querySelector(".live-indicator-dot");
+
+    if (shouldShowIndicator) {
+        if (!indicatorDot) {
+            indicatorDot = document.createElement("span");
+            indicatorDot.className = "live-indicator-dot";
+            indicatorDot.setAttribute("aria-hidden", "true");
+            indicatorCell.appendChild(indicatorDot);
+        }
+        return;
+    }
+
+    if (indicatorDot) {
+        indicatorDot.remove();
+    }
+}
+
+function updateOverviewScoreChip(row, tableItem) {
+    const deltaCell = row.querySelector(".world-cup-overview-standings-score-delta");
+    if (!deltaCell) {
+        return;
+    }
+
+    let chipElement = deltaCell.querySelector(".table-position-delta");
+
+    if (tableItem.has_started) {
+        if (!chipElement) {
+            chipElement = document.createElement("span");
+            chipElement.className = "table-position-delta";
+            deltaCell.appendChild(chipElement);
+        }
+
+        chipElement.className = `table-position-delta ${tableItem.css_class || ""}`.trim();
+        const compactScore = String(tableItem.score_string || "").replaceAll(" ", "");
+        updateTextIfChanged(chipElement, compactScore);
+        return;
+    }
+
+    if (chipElement) {
+        chipElement.remove();
+    }
+}
+
+function updateOverviewStandingsRow(row, tableItem) {
+    row.dataset.position = String(tableItem.position);
+    row.dataset.played = String(tableItem.played_games);
+    row.dataset.points = String(tableItem.points);
+
+    updateTextIfChanged(
+        row.querySelector(".world-cup-overview-standings-position"),
+        worldCupPositionDisplayValue(tableItem)
+    );
+    updateOverviewLiveIndicator(row, tableItem);
+    updateOverviewScoreChip(row, tableItem);
+    updateTextIfChanged(row.querySelector(".world-cup-overview-standings-played"), tableItem.played_games);
+    updateTextIfChanged(row.querySelector(".world-cup-overview-standings-won"), tableItem.won);
+    updateTextIfChanged(row.querySelector(".world-cup-overview-standings-draw"), tableItem.draw);
+    updateTextIfChanged(row.querySelector(".world-cup-overview-standings-lost"), tableItem.lost);
+    updateTextIfChanged(row.querySelector(".world-cup-overview-standings-goal-difference"), tableItem.goal_difference);
+    updateTextIfChanged(row.querySelector(".world-cup-overview-standings-points"), tableItem.points);
+}
+
+function reorderRowsByPosition(container, rowSelector) {
+    const rows = Array.from(container.querySelectorAll(rowSelector));
+    if (rows.length < 2) {
+        return;
+    }
+
+    const sortedRows = rows.slice().sort((left, right) => {
+        const leftPosition = Number(left.dataset.position || 0);
+        const rightPosition = Number(right.dataset.position || 0);
+        return leftPosition - rightPosition;
+    });
+
+    const hasOrderMismatch = sortedRows.some((row, index) => rows[index] !== row);
+    if (!hasOrderMismatch) {
+        return;
+    }
+
+    const fragment = document.createDocumentFragment();
+    sortedRows.forEach((row) => fragment.appendChild(row));
+    container.appendChild(fragment);
+}
+
+function patchOverviewStandings(group) {
+    const container = document.getElementById(`wc-standings-${group.group_slug}`);
+    if (!container || !Array.isArray(group.table)) {
+        return;
+    }
+
+    const hasLiveValue = group.table.some((tableItem) => isTableItemInPlay(tableItem)) ? "true" : "false";
+    if (container.dataset.hasLive !== hasLiveValue) {
+        container.dataset.hasLive = hasLiveValue;
+    }
+
+    const hasDeltaValue = group.table.some((tableItem) => Boolean(tableItem?.has_started)) ? "true" : "false";
+    if (container.dataset.hasDelta !== hasDeltaValue) {
+        container.dataset.hasDelta = hasDeltaValue;
+    }
+
+    group.table.forEach((tableItem) => {
+        const row = container.querySelector(`[data-team-id="${tableItem.team.id}"]`);
+        if (!row) {
+            return;
+        }
+        updateOverviewStandingsRow(row, tableItem);
+    });
+
+    reorderRowsByPosition(container, ".world-cup-overview-standings-row");
+}
+
 function updateGroupTableRow(row, tableItem) {
     row.dataset.position = String(tableItem.position);
     row.dataset.played = String(tableItem.played_games);
@@ -167,6 +285,7 @@ function renderWorldCupStandings(payload) {
     }
 
     payload.groups.forEach((group) => {
+        patchOverviewStandings(group);
         patchGroupTable(group);
     });
 }
@@ -236,7 +355,7 @@ document.addEventListener("readystatechange", (event) => {
     }
 
     const hasStandings = document.querySelector(
-        ".world-cup-table-container--live[data-group-slug]"
+        ".world-cup-overview-standings[data-group-slug], .world-cup-table-container--live[data-group-slug]"
     );
     if (!hasStandings) {
         return;

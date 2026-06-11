@@ -1,5 +1,61 @@
 {% from "football/world-cup/_team_link.html" import world_cup_team_name %}
-{% macro world_cup_overview_standings(table_rows, football_root, edition, group_slug='') %}
+{% macro world_cup_overview_standings(table_rows, football_root, edition, group_slug='', live_table=false) %}
+{% if live_table %}
+{% set ns = namespace(has_live=false, has_delta=false) %}
+{% for table_item in table_rows %}
+  {% if table_item.has_started %}{% set ns.has_delta = true %}{% endif %}
+  {% if table_item.css_class and 'in-play' in table_item.css_class %}{% set ns.has_live = true %}{% endif %}
+{% endfor %}
+<div class="world-cup-overview-standings world-cup-overview-standings--live{% if edition|edition_hides_goal_difference_column %} world-cup-overview-standings--no-gd{% endif %}" id="wc-standings-{{ group_slug }}" role="table" aria-label="Group standings" data-group-slug="{{ group_slug }}" data-has-live="{{ 'true' if ns.has_live else 'false' }}" data-has-delta="{{ 'true' if ns.has_delta else 'false' }}">
+  <div class="world-cup-overview-standings-header" role="row">
+    <span class="world-cup-overview-standings-pos" role="columnheader">Pos</span>
+    <span class="world-cup-overview-standings-live-indicator" role="columnheader" aria-hidden="true"></span>
+    <span class="world-cup-overview-standings-score-delta" role="columnheader" aria-hidden="true"></span>
+    <span class="world-cup-overview-standings-team" role="columnheader">Team</span>
+    <span class="world-cup-overview-standings-stat" role="columnheader">Pld</span>
+    <span class="world-cup-overview-standings-stat world-cup-overview-standings-stat--desktop" role="columnheader">W</span>
+    <span class="world-cup-overview-standings-stat world-cup-overview-standings-stat--desktop" role="columnheader">D</span>
+    <span class="world-cup-overview-standings-stat world-cup-overview-standings-stat--desktop" role="columnheader">L</span>
+    {% if not edition|edition_hides_goal_difference_column %}
+    <span class="world-cup-overview-standings-stat" role="columnheader">{% if edition|edition_uses_goal_average %}GA{% else %}GD{% endif %}</span>
+    {% endif %}
+    <span class="world-cup-overview-standings-stat" role="columnheader">Pts</span>
+  </div>
+  {% for table_item in table_rows %}
+  <div class="world-cup-overview-standings-row" role="row" data-team-id="{{ table_item.team.id }}" data-position="{{ table_item.position }}" data-played="{{ table_item.played_games }}" data-points="{{ table_item.points }}">
+    <span class="world-cup-overview-standings-pos" role="cell">
+      <span class="world-cup-overview-standings-position">{{ table_item.position_label or table_item.position }}</span>
+    </span>
+    <span class="world-cup-overview-standings-live-indicator" role="cell">
+      {% if table_item.css_class and 'in-play' in table_item.css_class %}
+      <span class="live-indicator-dot" aria-hidden="true"></span>
+      {% endif %}
+    </span>
+    <span class="world-cup-overview-standings-score-delta" role="cell">
+      {% if table_item.has_started %}
+      <span class="table-position-delta {{ table_item.css_class }}">{{ table_item.score_string|replace(' ', '') }}</span>
+      {% endif %}
+    </span>
+    <span class="world-cup-overview-standings-team" role="cell">
+      <img
+        class="team-badge"
+        src="{{ table_item.team.world_cup_local_crest }}"
+        alt="{{ table_item.team.display_name }} crest"
+      >
+      {{ world_cup_team_name(table_item.team, football_root, edition) }}
+    </span>
+    <span class="world-cup-overview-standings-stat world-cup-overview-standings-played" role="cell">{{ table_item.played_games }}</span>
+    <span class="world-cup-overview-standings-stat world-cup-overview-standings-stat--desktop world-cup-overview-standings-won" role="cell">{{ table_item.won }}</span>
+    <span class="world-cup-overview-standings-stat world-cup-overview-standings-stat--desktop world-cup-overview-standings-draw" role="cell">{{ table_item.draw }}</span>
+    <span class="world-cup-overview-standings-stat world-cup-overview-standings-stat--desktop world-cup-overview-standings-lost" role="cell">{{ table_item.lost }}</span>
+    {% if not edition|edition_hides_goal_difference_column %}
+    <span class="world-cup-overview-standings-stat world-cup-overview-standings-goal-difference" role="cell">{% if edition|edition_uses_goal_average %}{{ table_item.goals_for|format_goal_average(table_item.goals_against) }}{% else %}{{ table_item.goal_difference }}{% endif %}</span>
+    {% endif %}
+    <span class="world-cup-overview-standings-stat world-cup-overview-standings-points" role="cell">{{ table_item.points }}</span>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
 <div class="world-cup-overview-standings{% if edition|edition_hides_goal_difference_column %} world-cup-overview-standings--no-gd{% endif %}" id="wc-standings-{{ group_slug }}" role="table" aria-label="Group standings" data-group-slug="{{ group_slug }}">
   <div class="world-cup-overview-standings-header" role="row">
     <span class="world-cup-overview-standings-pos" role="columnheader">Pos</span>
@@ -35,4 +91,5 @@
   </div>
   {% endfor %}
 </div>
+{% endif %}
 {% endmacro %}
