@@ -1,6 +1,71 @@
 {% from "football/world-cup/_team_link.html" import world_cup_team_name %}
-{% macro world_cup_group_table(table_rows, title, football_root, edition, compact=false, overview=false, group_slug='') %}
-<div class="table-container world-cup-table-container{% if compact %} world-cup-table-container--compact{% endif %}{% if overview %} world-cup-table-container--overview{% endif %}{% if edition|edition_hides_goal_difference_column %} world-cup-table-container--no-gd{% endif %}" data-team-count="{{ table_rows|length }}" data-group-slug="{{ group_slug }}" style="--table-row-count: {{ table_rows|length }};">
+{% macro world_cup_group_table(table_rows, title, football_root, edition, compact=false, overview=false, group_slug='', live_table=false) %}
+{% if live_table %}
+{% set ns = namespace(has_live=false, has_delta=false) %}
+{% for table_item in table_rows %}
+  {% if table_item.has_started %}{% set ns.has_delta = true %}{% endif %}
+  {% if table_item.css_class and 'in-play' in table_item.css_class %}{% set ns.has_live = true %}{% endif %}
+{% endfor %}
+<div class="table-container world-cup-table-container world-cup-table-container--live{% if compact %} world-cup-table-container--compact{% endif %}{% if overview %} world-cup-table-container--overview{% endif %}" data-team-count="{{ table_rows|length }}" data-group-slug="{{ group_slug }}" data-has-live="{{ 'true' if ns.has_live else 'false' }}" data-has-delta="{{ 'true' if ns.has_delta else 'false' }}" data-has-movement="false" style="--table-row-count: {{ table_rows|length }};">
+  <section class="table-grid world-cup-table-grid" role="table" aria-label="{{ title }}">
+    <header class="table-grid-header sticky-header" role="rowgroup">
+      <div class="header-row" role="row">
+        <div class="header-data data table-cell table-col-pos" role="columnheader">Pos</div>
+        <div class="header-data data table-cell" role="columnheader">Team</div>
+        <div class="header-data data table-cell centre-align" role="columnheader">Pld</div>
+        <div class="header-data data table-cell centre-align medium-table" role="columnheader">W</div>
+        <div class="header-data data table-cell centre-align medium-table" role="columnheader">D</div>
+        <div class="header-data data table-cell centre-align medium-table" role="columnheader">L</div>
+        <div class="header-data data table-cell centre-align large-table" role="columnheader">F</div>
+        <div class="header-data data table-cell centre-align large-table" role="columnheader">A</div>
+        <div class="header-data data table-cell centre-align" role="columnheader">GD</div>
+        <div class="header-data data table-cell centre-align" role="columnheader">Pts</div>
+      </div>
+    </header>
+    <div class="table-grid-body" role="rowgroup">
+      {% for table_item in table_rows %}
+      <article class="data-row" role="row" data-team-id="{{ table_item.team.id }}" data-position="{{ table_item.position }}" data-played="{{ table_item.played_games }}" data-points="{{ table_item.points }}">
+        <div class="row-data data table-cell position" role="cell">
+          <div class="table-position-value">{{ table_item.position_label or table_item.position }}</div>
+        </div>
+        <div class="row-data data table-cell live-indicator-cell" role="cell">
+          {% if table_item.css_class and 'in-play' in table_item.css_class %}
+          <span class="live-indicator-dot" aria-hidden="true"></span>
+          {% endif %}
+        </div>
+        <div class="row-data data table-cell position-change-cell" role="cell"></div>
+        <div class="row-data data table-cell position-delta-cell" role="cell">
+          {% if table_item.has_started %}
+          <div class="table-position-delta {{ table_item.css_class }}">
+            {{ table_item.score_string|replace(' ', '') }}
+          </div>
+          {% endif %}
+        </div>
+        <div class="row-data data table-cell world-cup-team-cell" role="cell">
+          <div class="team-and-badge">
+            <img
+              class="team-badge"
+              src="{{ table_item.team.world_cup_local_crest }}"
+              alt="{{ table_item.team.display_name }} crest"
+            >
+            {{ world_cup_team_name(table_item.team, football_root, edition) }}
+          </div>
+        </div>
+        <div class="row-data data table-cell centre-align table-played" role="cell">{{ table_item.played_games }}</div>
+        <div class="row-data data table-cell medium-table centre-align table-won" role="cell">{{ table_item.won }}</div>
+        <div class="row-data data table-cell medium-table centre-align table-draw" role="cell">{{ table_item.draw }}</div>
+        <div class="row-data data table-cell medium-table centre-align table-lost" role="cell">{{ table_item.lost }}</div>
+        <div class="row-data data table-cell large-table centre-align table-goals-for" role="cell">{{ table_item.goals_for }}</div>
+        <div class="row-data data table-cell large-table centre-align table-goals-against" role="cell">{{ table_item.goals_against }}</div>
+        <div class="row-data data table-cell centre-align table-goal-difference" role="cell">{{ table_item.goal_difference }}</div>
+        <div class="row-data data table-cell centre-align table-points" role="cell">{{ table_item.points }}</div>
+      </article>
+      {% endfor %}
+    </div>
+  </section>
+</div>
+{% else %}
+<div class="table-container world-cup-table-container world-cup-table-container--static{% if compact %} world-cup-table-container--compact{% endif %}{% if overview %} world-cup-table-container--overview{% endif %}{% if edition|edition_hides_goal_difference_column %} world-cup-table-container--no-gd{% endif %}" data-team-count="{{ table_rows|length }}" data-group-slug="{{ group_slug }}" style="--table-row-count: {{ table_rows|length }};">
   <section class="table-grid world-cup-table-grid" role="table" aria-label="{{ title }}">
     <header class="table-grid-header sticky-header" role="rowgroup">
       <div class="header-row" role="row">
@@ -49,4 +114,5 @@
     </div>
   </section>
 </div>
+{% endif %}
 {% endmacro %}

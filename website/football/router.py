@@ -84,7 +84,6 @@ from .models import (
     SubscriptionOperationResponse,
 )
 from .world_cup_db import (
-    apply_live_qualification_labels,
     retrieve_live_score_matches,
     retrieve_live_group_standings,
 )
@@ -99,6 +98,48 @@ WEBSITE_ROOT = FilePath("/app")
 FOOTBALL_MANIFEST_PATH = WEBSITE_ROOT / "static" / "manifests" / "football" / "football.webmanifest"
 FOOTBALL_SERVICE_WORKER_PATH = WEBSITE_ROOT / "static" / "football" / "sw.js"
 FOOTBALL_WEB_APP_HOST = "football.schleising.net"
+
+WC_VERSIONED_ASSETS: frozenset[str] = frozenset(
+    {
+        "css/table.css",
+        "css/football/world-cup.css",
+        "js/football/world_cup_live.js",
+        "js/football/world_cup_all_matches_view.js",
+        "js/football/world_cup_standings_live.js",
+        "js/football/world_cup_bracket.js",
+        "js/football/world_cup_standings_rules.js",
+        "js/football/world_cup_edition_picker.js",
+        "js/football/world_cup_group_nav.js",
+    }
+)
+
+WC_ASSET_CACHE_HEADERS = {
+    "Cache-Control": "no-cache, must-revalidate",
+    "Pragma": "no-cache",
+}
+
+
+def wc_versioned_asset_response(asset_path: str) -> FileResponse:
+    normalized = asset_path.replace("\\", "/").lstrip("/")
+    if normalized not in WC_VERSIONED_ASSETS:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+
+    file_path = WEBSITE_ROOT / "static" / normalized
+    if not file_path.is_file():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+
+    if normalized.endswith(".css"):
+        media_type = "text/css"
+    elif normalized.endswith(".js"):
+        media_type = "application/javascript"
+    else:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+
+    return FileResponse(
+        path=file_path,
+        media_type=media_type,
+        headers=WC_ASSET_CACHE_HEADERS,
+    )
 FOOTBALL_STATS_DEFAULT_SEASON_SPAN = 8
 FOOTBALL_HISTORY_API_KEY_PATHS = (
     WEBSITE_ROOT / "secrets" / "football-api-key.txt",
@@ -1356,6 +1397,11 @@ async def get_table(
     )
 
 
+@football_router.get("/wc-assets/{asset_path:path}")
+async def get_football_wc_versioned_asset(asset_path: str) -> FileResponse:
+    return wc_versioned_asset_response(asset_path)
+
+
 @football_router.get("/manifest.webmanifest")
 async def get_football_manifest(request: Request):
     if not _is_football_web_app_request(request):
@@ -1506,14 +1552,28 @@ async def websocket_endpoint(websocket: WebSocket):
 
                 await websocket.send_text(match_list.model_dump_json())
 
-            elif msg.get("messageType") == "get_world_cup_standings":
+    except WebSocketDisconnect:
+        logging.info("Football Socket Closed")
+
+
+@football_router.websocket("/ws/world-cup-table/")
+async def websocket_world_cup_table_endpoint(websocket: WebSocket):
+    await websocket.accept()
+
+    logging.info("World Cup Table Websocket Opened")
+
+    try:
+        while True:
+            recv = await websocket.receive_text()
+            msg = json.loads(recv)
+
+            if msg.get("messageType") == "get_world_cup_standings":
                 edition = (
                     msg.get("edition")
                     or websocket.query_params.get("edition")
                     or WC_CURRENT_EDITION
                 )
                 standings_groups = await retrieve_live_group_standings(edition)
-                apply_live_qualification_labels(edition, standings_groups)
                 payload = WorldCupStandingsList(
                     edition=edition,
                     groups=[
@@ -1527,7 +1587,7 @@ async def websocket_endpoint(websocket: WebSocket):
                 await websocket.send_text(payload.model_dump_json())
 
     except WebSocketDisconnect:
-        logging.info("Football Socket Closed")
+        logging.info("World Cup Table Socket Closed")
 
 
 @football_router.websocket("/ws/table/")

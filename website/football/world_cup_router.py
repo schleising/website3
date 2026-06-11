@@ -134,7 +134,7 @@ async def _build_world_cup_context(
         "show_knockout_nav": has_knockout_stage,
         "show_summary_nav": edition_is_historic(selected_edition),
         "enable_live_updates": is_current_edition,
-        "enable_live_standings": False,
+        "enable_live_standings": is_current_edition and has_group_stage,
         "show_world_cup_nav": await world_cup_nav_available(),
         "show_edition_selector": show_edition_selector and len(available_editions) > 1,
         "available_editions": [
@@ -398,8 +398,6 @@ async def get_world_cup_overview(
         f"{context['football_root_path']}world-cup/{context['edition_query']}",
     )
 
-    context["enable_live_standings"] = context["is_current_edition"]
-
     return TEMPLATES.TemplateResponse(
         request,
         "football/world-cup/overview.html",
@@ -545,8 +543,6 @@ async def get_world_cup_group(
                 f"{football_root_path}world-cup/groups/{group_slug_value}/{edition_query}"
             ),
         }
-
-    context["enable_live_standings"] = context["is_current_edition"]
 
     return TEMPLATES.TemplateResponse(
         request,

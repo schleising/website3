@@ -6,23 +6,23 @@
 <script defer src="/js/football/pwa.js?v1.0.2"></script>
 {% endif %}
 {% if enable_live_updates|default(false) %}
-<script defer src="/js/football/world_cup_live.js?v1.0.2"></script>
+<script defer src="/js/football/world_cup_live.js?v1.0.4"></script>
 {% endif %}
 {% if all_matches_view|default(false) or (jump_targets is defined and jump_targets|length > 0) %}
-<script defer src="/js/football/world_cup_all_matches_view.js?v1.0.1"></script>
+<script defer src="/js/football/world_cup_all_matches_view.js?v1.0.3"></script>
 {% endif %}
 {% if enable_live_standings|default(false) %}
-<script defer src="/js/football/world_cup_standings_live.js?v1.0.1"></script>
+<script defer src="/js/football/world_cup_standings_live.js?v1.1.2"></script>
 {% endif %}
 {% endblock %}
 
 {% block football_head %}
-<link rel="stylesheet" href="/css/table.css?v1.8.9">
-<link rel="stylesheet" href="/css/football/world-cup.css?v1.5.17">
-<script defer src="/js/football/world_cup_bracket.js?v1.0.0"></script>
-<script defer src="/js/football/world_cup_standings_rules.js?v1.0.0"></script>
+<link rel="stylesheet" href="/css/table.css?v1.9.2">
+<link rel="stylesheet" href="/css/football/world-cup.css?v1.5.52">
+<script defer src="/js/football/world_cup_bracket.js?v1.0.2"></script>
+<script defer src="/js/football/world_cup_standings_rules.js?v1.0.2"></script>
 {% if show_edition_selector|default(false) %}
-<script defer src="/js/football/world_cup_edition_picker.js?v1.0.0"></script>
+<script defer src="/js/football/world_cup_edition_picker.js?v1.0.2"></script>
 {% endif %}
 {% block world_cup_head %}{% endblock %}
 {% endblock %}

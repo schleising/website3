@@ -515,7 +515,7 @@ class LiveTableList(BaseModel):
 
 class WorldCupStandingsGroupPayload(BaseModel):
     group_slug: str
-    table: list[TableItem]
+    table: list[LiveTableItem]
 
 
 class WorldCupStandingsList(BaseModel):

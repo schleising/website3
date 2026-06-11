@@ -12,6 +12,9 @@ pl_matches = mongodb.get_collection('pl_matches_2025_2026')
 # Set the collection in use
 pl_table = mongodb.get_collection('live_pl_table')
 
+# World Cup live standings for the current edition (mirrors live_pl_table)
+live_wc_standings = mongodb.get_collection('live_wc_standings_2026')
+
 # Set the collection for push subscriptions
 football_push = mongodb.get_collection('football_push_subscriptions')
 

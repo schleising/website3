@@ -7,7 +7,7 @@ from starlette.types import ASGIApp, Receive, Scope, Send
 
 from fastapi import FastAPI, Request, Depends
 from fastapi.exception_handlers import http_exception_handler as fastapi_http_exception_handler
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.exceptions import RequestValidationError
 from fastapi.templating import Jinja2Templates
 from starlette.exceptions import HTTPException as StarletteHTTPException
@@ -25,7 +25,7 @@ from .markdown.router import markdown_router
 
 from .blog.router import blog_router
 
-from .football.router import football_router
+from .football.router import football_router, wc_versioned_asset_response
 from .football.football_db import ensure_push_subscription_indexes, initialise_teams_cache
 
 from .feeds.router import feeds_router
@@ -246,6 +246,23 @@ async def csrf_cookie_middleware(request: Request, call_next):
 
 
 @app.middleware("http")
+async def football_html_cache_control_middleware(request: Request, call_next):
+    response = await call_next(request)
+
+    if not request.url.path.startswith("/football"):
+        return response
+
+    content_type = response.headers.get("content-type", "")
+    if "text/html" not in content_type:
+        return response
+
+    response.headers["Cache-Control"] = "no-cache, must-revalidate"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    return response
+
+
+@app.middleware("http")
 async def passkey_migration_middleware(request: Request, call_next):
     path = request.url.path
     if _is_passkey_migration_exempt_path(path):
@@ -283,6 +300,11 @@ app.include_router(blog_router)
 
 # Include the blog router
 app.include_router(football_router)
+
+
+@app.get("/wc-assets/{asset_path:path}")
+async def get_webapp_wc_versioned_asset(asset_path: str) -> FileResponse:
+    return wc_versioned_asset_response(asset_path)
 
 # Include the feeds router
 app.include_router(feeds_router)

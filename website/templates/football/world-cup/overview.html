@@ -1,5 +1,6 @@
 {% extends "football/world-cup/world-cup-base.html" %}
 {% from "football/world-cup/_overview_standings.html" import world_cup_overview_standings %}
+{% from "football/world-cup/_group_table.html" import world_cup_group_table %}
 {% from "football/world-cup/_standings_rules_help.html" import world_cup_standings_rules_help %}
 {% from "football/world-cup/_match_card.html" import world_cup_match_card %}
 
@@ -136,7 +137,11 @@
         </div>
       </div>
       {% if block.table|length > 0 %}
+      {% if enable_live_standings|default(false) %}
+      {{ world_cup_group_table(block.table, block.label, football_root, selected_edition, compact=true, overview=true, group_slug=block.slug, live_table=true) }}
+      {% else %}
       {{ world_cup_overview_standings(block.table, football_root, selected_edition, block.slug) }}
+      {% endif %}
       {% endif %}
       {% for day_group in block.matchday_groups %}
       <section class="football-day-group world-cup-overview-day-group" aria-label="{{ block.label }} {{ day_group.label }} fixtures">

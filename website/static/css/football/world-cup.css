@@ -100,8 +100,8 @@
         minmax(2.8rem, 0.78fr);
 }
 
-.world-cup-table-container .table-col-pos,
-.world-cup-table-container .data-row > .position {
+.world-cup-table-container--static .table-col-pos,
+.world-cup-table-container--static .data-row > .position {
     grid-column: auto;
 }
 
@@ -219,7 +219,7 @@
 }
 
 @media screen and (max-width: 75rem) {
-    .world-cup-table-container:not(.world-cup-table-container--overview) {
+    .world-cup-table-container--static:not(.world-cup-table-container--overview) {
         --table-grid-columns:
             minmax(1.45rem, 0.46fr)
             minmax(9.3rem, 2.38fr)
@@ -231,7 +231,7 @@
             minmax(2.7rem, 0.76fr);
     }
 
-    .world-cup-table-container--no-gd:not(.world-cup-table-container--overview) {
+    .world-cup-table-container--static.world-cup-table-container--no-gd:not(.world-cup-table-container--overview) {
         --table-grid-columns:
             minmax(1.45rem, 0.46fr)
             minmax(9.3rem, 2.38fr)
@@ -244,7 +244,7 @@
 }
 
 @media screen and (max-width: 63rem) {
-    .world-cup-table-container:not(.world-cup-table-container--overview) {
+    .world-cup-table-container--static:not(.world-cup-table-container--overview) {
         --table-grid-columns:
             minmax(1.42rem, 0.52fr)
             minmax(8.28rem, 2.74fr)
@@ -253,7 +253,7 @@
             minmax(2.36rem, 0.86rem);
     }
 
-    .world-cup-table-container--no-gd:not(.world-cup-table-container--overview) {
+    .world-cup-table-container--static.world-cup-table-container--no-gd:not(.world-cup-table-container--overview) {
         --table-grid-columns:
             minmax(1.42rem, 0.52fr)
             minmax(8.28rem, 2.74fr)

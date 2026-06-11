@@ -9,8 +9,8 @@ from pydantic import BaseModel, Field
 from pymongo import ASCENDING
 
 from ..database.database import get_data_by_date
-from . import mongodb
-from .models import Match, MatchStatus, Table, TableItem, Team
+from . import live_wc_standings, mongodb
+from .models import LiveTableItem, Match, MatchStatus, Table, TableItem, Team
 from .world_cup_utils import (
     WC_CURRENT_EDITION,
     WC_GROUP_STAGE,
@@ -70,7 +70,7 @@ class WorldCupGroupStandings(BaseModel):
     group_slug: str
     group_label: str
     group_enum: str
-    table: list[TableItem]
+    table: list[LiveTableItem]
 
 
 class WorldCupGroupSummary(BaseModel):
@@ -278,19 +278,24 @@ async def retrieve_group_matches(edition: str, group_slug: str) -> list[Match]:
     return [Match.model_validate(item) async for item in cursor]
 
 
+async def get_wc_live_group_standings_db(edition: str) -> list[WorldCupGroupStandings]:
+    """Read live group standings from MongoDB (mirrors get_table_db for PL)."""
+    if edition == WC_CURRENT_EDITION and live_wc_standings is not None:
+        collection = live_wc_standings
+    else:
+        collection = _get_live_standings_collection(edition)
+
+    standings = await _retrieve_group_standings_from_collection(collection, edition)
+    if edition == WC_CURRENT_EDITION:
+        apply_live_qualification_labels(edition, standings)
+
+    return standings
+
+
 async def retrieve_group_standings(
-    edition: str, group_slug: str, *, prefer_live: bool = True
+    edition: str, group_slug: str
 ) -> WorldCupGroupStandings | None:
     slug = normalise_group_slug(group_slug)
-
-    if prefer_live:
-        live_collection = _get_live_standings_collection(edition)
-        if live_collection is not None:
-            document = await live_collection.find_one(
-                {"group_slug": slug, "edition": edition}
-            )
-            if document is not None:
-                return WorldCupGroupStandings.model_validate(document)
 
     collection = _get_standings_collection(edition)
     if collection is None:
@@ -304,19 +309,9 @@ async def retrieve_group_standings(
     return WorldCupGroupStandings.model_validate(document)
 
 
-async def retrieve_all_group_standings(
-    edition: str, *, prefer_live: bool = True
-) -> list[WorldCupGroupStandings]:
+async def retrieve_all_group_standings(edition: str) -> list[WorldCupGroupStandings]:
     if not edition_has_group_stage(edition):
         return []
-
-    if prefer_live:
-        live_standings = await _retrieve_group_standings_from_collection(
-            _get_live_standings_collection(edition),
-            edition,
-        )
-        if len(live_standings) > 0:
-            return live_standings
 
     standings = await _retrieve_group_standings_from_collection(
         _get_standings_collection(edition),
@@ -330,14 +325,7 @@ async def retrieve_all_group_standings(
 
 
 async def retrieve_live_group_standings(edition: str) -> list[WorldCupGroupStandings]:
-    live_standings = await _retrieve_group_standings_from_collection(
-        _get_live_standings_collection(edition),
-        edition,
-    )
-    if len(live_standings) > 0:
-        return live_standings
-
-    return await retrieve_all_group_standings(edition, prefer_live=False)
+    return await get_wc_live_group_standings_db(edition)
 
 
 async def _compute_group_standings_from_matches(edition: str) -> list[WorldCupGroupStandings]:

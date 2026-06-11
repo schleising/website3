@@ -6,7 +6,7 @@
 {% block title %}<title>Football - {{ group_label }} - World Cup {{ selected_edition }}</title>{% endblock %}
 
 {% block world_cup_head %}
-<script defer src="/js/football/world_cup_group_nav.js?v1.0.0"></script>
+<script defer src="/js/football/world_cup_group_nav.js?v1.0.2"></script>
 {% endblock %}
 
 {% block header %}
@@ -64,7 +64,7 @@
     <p class="world-cup-qualification-note">Top three teams qualify for the knockout stage.</p>
     {% endif %}
     {% if standings.table|length > 0 %}
-    {{ world_cup_group_table(standings.table, group_label, football_root, selected_edition, group_slug=group_slug) }}
+    {{ world_cup_group_table(standings.table, group_label, football_root, selected_edition, group_slug=group_slug, live_table=enable_live_standings|default(false)) }}
     {% else %}
     <p class="world-cup-empty-state">No teams assigned to this group yet.</p>
     {% endif %}
