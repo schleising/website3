@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Callable
 
 if TYPE_CHECKING:
-    from .models import Match, TableItem, Team
+    from .models import Match, Score, TableItem, Team
 
 WC_CURRENT_EDITION = "2026"
 WC_CREST_UNKNOWN_URL = "/images/football/crests/unknown_team.svg"
@@ -1156,32 +1156,48 @@ def knockout_winner_side(match: "Match") -> str | None:
     return None
 
 
-def world_cup_display_score(match: "Match") -> tuple[int | None, int | None]:
-    """Return the scoreline to show in match cards."""
-    home_ft = match.score.full_time.home
-    away_ft = match.score.full_time.away
-    if home_ft is None or away_ft is None:
-        return home_ft, away_ft
+def _world_cup_match_went_to_extra_time(score: "Score") -> bool:
+    if score.duration in {"EXTRA_TIME", "PENALTY_SHOOTOUT"}:
+        return True
 
-    penalties = match.score.penalties
+    penalties = score.penalties
     if (
         penalties is not None
         and penalties.home is not None
         and penalties.away is not None
-        and home_ft == away_ft
     ):
-        return home_ft, away_ft
+        return True
 
-    extra_time = match.score.extra_time
-    if (
+    extra_time = score.extra_time
+    return (
         extra_time is not None
         and extra_time.home is not None
         and extra_time.away is not None
-        and home_ft == away_ft
-    ):
-        return extra_time.home, extra_time.away
+    )
+
+
+def world_cup_score_display_scoreline(score: "Score") -> tuple[int | None, int | None]:
+    """Return the scoreline to show in match cards (after ET; never penalties)."""
+    home_ft = score.full_time.home
+    away_ft = score.full_time.away
+    if home_ft is None or away_ft is None:
+        return home_ft, away_ft
+
+    if _world_cup_match_went_to_extra_time(score):
+        extra_time = score.extra_time
+        if (
+            extra_time is not None
+            and extra_time.home is not None
+            and extra_time.away is not None
+        ):
+            return extra_time.home, extra_time.away
 
     return home_ft, away_ft
+
+
+def world_cup_display_score(match: "Match") -> tuple[int | None, int | None]:
+    """Return the scoreline to show in match cards."""
+    return world_cup_score_display_scoreline(match.score)
 
 
 def world_cup_score_annotation(match: "Match") -> str | None:

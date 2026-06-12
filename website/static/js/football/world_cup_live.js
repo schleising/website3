@@ -132,8 +132,46 @@ function updateWorldCupScoreWidget(match) {
     }
 
     statusElement.textContent = formatWorldCupMatchStatus(match);
-    homeElement.textContent = match.score?.full_time?.home ?? "-";
-    awayElement.textContent = match.score?.full_time?.away ?? "-";
+    const [homeScore, awayScore] = worldCupDisplayScore(match);
+    homeElement.textContent = homeScore ?? "-";
+    awayElement.textContent = awayScore ?? "-";
+}
+
+function worldCupMatchWentToExtraTime(score) {
+    if (!score) {
+        return false;
+    }
+
+    if (score.duration === "EXTRA_TIME" || score.duration === "PENALTY_SHOOTOUT") {
+        return true;
+    }
+
+    const penalties = score.penalties;
+    if (penalties?.home != null && penalties?.away != null) {
+        return true;
+    }
+
+    const extraTime = score.extra_time;
+    return extraTime?.home != null && extraTime?.away != null;
+}
+
+function worldCupDisplayScore(match) {
+    const score = match?.score;
+    const homeFt = score?.full_time?.home;
+    const awayFt = score?.full_time?.away;
+
+    if (homeFt == null || awayFt == null) {
+        return [homeFt ?? null, awayFt ?? null];
+    }
+
+    if (worldCupMatchWentToExtraTime(score)) {
+        const extraTime = score.extra_time;
+        if (extraTime?.home != null && extraTime?.away != null) {
+            return [extraTime.home, extraTime.away];
+        }
+    }
+
+    return [homeFt, awayFt];
 }
 
 function formatWorldCupMatchStatus(match) {
