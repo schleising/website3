@@ -2,14 +2,60 @@ from __future__ import annotations
 
 import json
 import re
+from datetime import date, datetime, timedelta, timezone
 from functools import lru_cache
 from pathlib import Path
 from typing import TYPE_CHECKING, Callable
+from zoneinfo import ZoneInfo
 
 if TYPE_CHECKING:
     from .models import Match, Score, TableItem, Team
 
 WC_CURRENT_EDITION = "2026"
+# Westernmost host timezone — match day rolls at Pacific midnight so late West Coast
+# kickoffs stay on the same tournament day as Mexico City / Eastern venues.
+WC_TOURNAMENT_TZ = ZoneInfo("America/Los_Angeles")
+
+
+def wc_tournament_today(*, now: datetime | None = None) -> date:
+    current = now or datetime.now(timezone.utc)
+    return current.astimezone(WC_TOURNAMENT_TZ).date()
+
+
+def wc_tournament_day_start_utc(day: date | None = None) -> datetime:
+    tournament_day = day or wc_tournament_today()
+    return datetime(
+        tournament_day.year,
+        tournament_day.month,
+        tournament_day.day,
+        tzinfo=WC_TOURNAMENT_TZ,
+    ).astimezone(timezone.utc)
+
+
+def wc_tournament_day_end_utc(day: date | None = None) -> datetime:
+    tournament_day = day or wc_tournament_today()
+    next_day_start = wc_tournament_day_start_utc(tournament_day + timedelta(days=1))
+    return next_day_start - timedelta(microseconds=1)
+
+
+def match_on_wc_tournament_day(match: "Match", day: date | None = None) -> bool:
+    tournament_day = day or wc_tournament_today()
+    kickoff = match.utc_date
+    if kickoff.tzinfo is None:
+        kickoff = kickoff.replace(tzinfo=timezone.utc)
+    return kickoff.astimezone(WC_TOURNAMENT_TZ).date() == tournament_day
+
+
+def next_wc_tournament_midnight_utc(*, now: datetime | None = None) -> datetime:
+    current = now or datetime.now(timezone.utc)
+    local_now = current.astimezone(WC_TOURNAMENT_TZ)
+    next_midnight_local = datetime(
+        local_now.year,
+        local_now.month,
+        local_now.day,
+        tzinfo=WC_TOURNAMENT_TZ,
+    ) + timedelta(days=1)
+    return next_midnight_local.astimezone(timezone.utc)
 WC_CREST_UNKNOWN_URL = "/images/football/crests/unknown_team.svg"
 WC_CREST_STATIC_DIR = (
     Path(__file__).resolve().parents[1] / "static" / "images" / "football" / "crests" / "wc"

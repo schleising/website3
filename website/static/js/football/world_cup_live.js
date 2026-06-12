@@ -7,6 +7,8 @@ let worldCupLoadedDayKey = null;
 let worldCupEdition = "";
 let worldCupIsAllMatchesView = false;
 
+let worldCupTournamentTimeZone = "America/Los_Angeles";
+
 const worldCupHtmlElement = document.documentElement;
 const worldCupBasePathRaw = String(worldCupHtmlElement.dataset.footballBasePath ?? "/football").trim();
 const worldCupBasePath = worldCupBasePathRaw === "/" ? "" : worldCupBasePathRaw.replace(/\/+$/, "");
@@ -22,6 +24,9 @@ document.addEventListener("readystatechange", (event) => {
         return;
     }
 
+    worldCupTournamentTimeZone = String(
+        contentPad.dataset.wcTournamentTz || "America/Los_Angeles"
+    ).trim();
     worldCupEdition = String(contentPad.dataset.worldCupEdition || "").trim();
     worldCupIsAllMatchesView = contentPad.dataset.allMatchesView === "true";
     worldCupLoadedDayKey = getWorldCupDayKey(new Date());
@@ -217,6 +222,20 @@ function hasRefreshableWorldCupMatchToday(matchList) {
     return matchList.some((match) => refreshStatuses.has(match.status) && isWorldCupTodayMatch(match));
 }
 
+function getWorldCupDateKeyInTournamentTimeZone(dateValue) {
+    const formatter = new Intl.DateTimeFormat("en-CA", {
+        timeZone: worldCupTournamentTimeZone,
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+    });
+    const parts = formatter.formatToParts(dateValue);
+    const year = parts.find((part) => part.type === "year")?.value ?? "";
+    const month = parts.find((part) => part.type === "month")?.value ?? "";
+    const day = parts.find((part) => part.type === "day")?.value ?? "";
+    return `${year}-${month}-${day}`;
+}
+
 function isWorldCupTodayMatch(match) {
     if (!match || typeof match !== "object") {
         return false;
@@ -232,10 +251,8 @@ function isWorldCupTodayMatch(match) {
         return false;
     }
 
-    const now = new Date();
-    return parsedDate.getFullYear() === now.getFullYear()
-        && parsedDate.getMonth() === now.getMonth()
-        && parsedDate.getDate() === now.getDate();
+    return getWorldCupDateKeyInTournamentTimeZone(parsedDate)
+        === getWorldCupDateKeyInTournamentTimeZone(new Date());
 }
 
 function syncWorldCupPollingInterval() {
@@ -253,7 +270,7 @@ function syncWorldCupPollingInterval() {
 }
 
 function getWorldCupDayKey(dateValue) {
-    return `${dateValue.getFullYear()}-${dateValue.getMonth()}-${dateValue.getDate()}`;
+    return getWorldCupDateKeyInTournamentTimeZone(dateValue);
 }
 
 function hasWorldCupDayChangedSinceLoad() {

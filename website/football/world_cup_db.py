@@ -3,7 +3,6 @@ from __future__ import annotations
 import logging
 import re
 from datetime import UTC, datetime, timedelta
-from zoneinfo import ZoneInfo
 
 from pydantic import BaseModel, Field
 from pymongo import ASCENDING
@@ -51,6 +50,9 @@ from .world_cup_utils import (
     standings_label_to_slug,
     team_is_confirmed,
     WC_CREST_UNKNOWN_URL,
+    wc_tournament_day_end_utc,
+    wc_tournament_day_start_utc,
+    wc_tournament_today,
 )
 
 WC_MATCH_COLLECTION_PATTERN = re.compile(r"^wc_matches_(\d{4})$")
@@ -62,7 +64,6 @@ WC_LIVE_STANDINGS_COLLECTION_PATTERN = re.compile(r"^live_wc_standings_(\d{4})$"
 WC_LIVE_DAYS_BEFORE_TODAY = 7
 WC_LIVE_DAYS_AFTER_TODAY = 6
 WC_CURRENT_GROUP_QUALIFICATION_SPOTS = 3
-LONDON_TZ = ZoneInfo("Europe/London")
 
 
 class WorldCupGroupStandings(BaseModel):
@@ -214,22 +215,18 @@ async def _retrieve_group_standings_from_collection(
 
 
 def _wc_live_scores_window() -> tuple[datetime, datetime]:
-    today_start = datetime.now(tz=LONDON_TZ).replace(
-        hour=0, minute=0, second=0, microsecond=0
+    tournament_today = wc_tournament_today()
+    window_start = wc_tournament_day_start_utc(
+        tournament_today - timedelta(days=WC_LIVE_DAYS_BEFORE_TODAY)
     )
-    window_start = today_start - timedelta(days=WC_LIVE_DAYS_BEFORE_TODAY)
-    window_end = (today_start + timedelta(days=WC_LIVE_DAYS_AFTER_TODAY)).replace(
-        hour=23, minute=59, second=59, microsecond=0
+    window_end = wc_tournament_day_end_utc(
+        tournament_today + timedelta(days=WC_LIVE_DAYS_AFTER_TODAY)
     )
     return window_start, window_end
 
 
 def _wc_today_scores_window() -> tuple[datetime, datetime]:
-    today_start = datetime.now(tz=LONDON_TZ).replace(
-        hour=0, minute=0, second=0, microsecond=0
-    )
-    today_end = today_start.replace(hour=23, minute=59, second=59, microsecond=0)
-    return today_start, today_end
+    return wc_tournament_day_start_utc(), wc_tournament_day_end_utc()
 
 
 async def retrieve_matches_in_window(
