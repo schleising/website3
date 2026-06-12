@@ -875,11 +875,11 @@ Two Mongo collections, mirroring `pl_table_{season}` + `live_pl_table`:
 **Live overlay rules** (`backend/src/football/world_cup.py`):
 
 1. Start from the official per-group `LiveTableItem` rows in `wc_standings_{edition}`.
-2. Consider only **in-progress** group-stage matches on **tournament today** (§3.6) — `has_started` and **not** `has_finished`.
-3. Add provisional Pld / Pts / GD and live score chip (`score_string`, `css_class`, red dot) for those matches only.
-4. When any tournament-day group match **finishes**, run `sync_standings()` first (updates official snapshot), then re-apply the overlay for any matches still in play.
-
-This avoids double-counting: finished results live in the official snapshot; the overlay must not add `played_games += 1` again for the same match (the bug that occurred when UK/UTC “today” diverged from host-region kickoff dates).
+2. Consider all **started** group-stage matches on **tournament today** (§3.6) — in progress **and** finished.
+3. For every such match, set the live **display** fields (`score_string`, `css_class`, `has_started`; red dot only while `in-play`).
+4. Add provisional Pld / Pts / GD increments **only** for matches that have started and **not** finished (avoids double-counting once `sync_standings` has caught up).
+5. When any tournament-day group match **finishes**, run `sync_standings()` first (updates official snapshot), then re-apply the overlay (finished matches keep their score chip for the rest of the tournament day; stats come from the official row).
+6. When `update_live_standings(None)` runs (e.g. after `sync_standings` on restart), reload tournament-day started matches from `wc_matches_{edition}` in Mongo so display chips are not lost.
 
 **WebSocket** — `WS /football/ws/world-cup-table/`:
 
