@@ -79,12 +79,74 @@ function centerNextUnfinishedMatch() {
     }
 
     requestAnimationFrame(() => {
-        targetCard.scrollIntoView({
-            behavior: "smooth",
-            block: "center",
-            inline: "nearest",
-        });
+        scrollToMatchCard(targetCard);
     });
+}
+
+function scrollToMatchCard(card) {
+    const bracketScroll = card.closest(".world-cup-bracket-scroll");
+    if (bracketScroll instanceof HTMLElement) {
+        scrollMatchCardInBracket(card, bracketScroll);
+        return;
+    }
+
+    card.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+        inline: "nearest",
+    });
+}
+
+function scrollMatchCardInBracket(card, bracketScroll) {
+    const contentContainer = document.getElementById("content");
+    const panel = bracketScroll.closest(".world-cup-bracket-panel");
+    const headerScroll = panel?.querySelector(".world-cup-bracket-header-scroll");
+
+    requestAnimationFrame(() => {
+        const horizontalTarget = getCenteredScrollOffset(
+            card,
+            bracketScroll,
+            "horizontal"
+        );
+        bracketScroll.scrollTo({
+            left: horizontalTarget,
+            behavior: "smooth",
+        });
+        if (headerScroll instanceof HTMLElement) {
+            headerScroll.scrollTo({
+                left: horizontalTarget,
+                behavior: "smooth",
+            });
+        }
+
+        if (contentContainer instanceof HTMLElement) {
+            contentContainer.scrollTo({
+                top: getCenteredScrollOffset(card, contentContainer, "vertical"),
+                behavior: "smooth",
+            });
+        } else {
+            card.scrollIntoView({
+                behavior: "smooth",
+                block: "center",
+                inline: "nearest",
+            });
+        }
+    });
+}
+
+function getCenteredScrollOffset(element, container, axis) {
+    const containerRect = container.getBoundingClientRect();
+    const elementRect = element.getBoundingClientRect();
+
+    if (axis === "horizontal") {
+        const elementCenter = elementRect.left + elementRect.width / 2;
+        const containerCenter = containerRect.left + containerRect.width / 2;
+        return container.scrollLeft + (elementCenter - containerCenter);
+    }
+
+    const elementCenter = elementRect.top + elementRect.height / 2;
+    const containerCenter = containerRect.top + containerRect.height / 2;
+    return container.scrollTop + (elementCenter - containerCenter);
 }
 
 function collectMatchCardEntries() {
