@@ -7,8 +7,15 @@ import argparse
 import json
 import sys
 from pathlib import Path
+from typing import TypedDict
 
 from pymongo import MongoClient
+
+
+class TeamRegistryEntry(TypedDict):
+    id: int
+    tla: str | None
+    short_name: str
 
 ROOT = Path(__file__).resolve().parents[1]
 TEAM_REGISTRY_PATH = ROOT / "website" / "football" / "wc_team_registry.json"
@@ -75,6 +82,14 @@ TIER_B_IDS: dict[str, int] = {
 }
 
 
+def _optional_str(value: object) -> str | None:
+    if value is None:
+        return None
+    if isinstance(value, str):
+        return value
+    return str(value)
+
+
 def _load_json(path: Path) -> dict:
     with path.open(encoding="utf-8") as handle:
         return json.load(handle)
@@ -100,10 +115,10 @@ def _bump_flag_cache_version() -> int:
     return version
 
 
-def _live_teams(host: str, database_name: str) -> dict[str, dict[str, object]]:
+def _live_teams(host: str, database_name: str) -> dict[str, TeamRegistryEntry]:
     client = MongoClient(f"mongodb://{host}:27017/")
     collection = client[database_name][f"wc_matches_{LIVE_EDITION}"]
-    teams: dict[str, dict[str, object]] = {}
+    teams: dict[str, TeamRegistryEntry] = {}
     for document in collection.find({}, {"home_team": 1, "away_team": 1}):
         for side in ("home_team", "away_team"):
             team = document.get(side) or {}
@@ -111,18 +126,20 @@ def _live_teams(host: str, database_name: str) -> dict[str, dict[str, object]]:
             name = team.get("name")
             if not isinstance(team_id, int) or not isinstance(name, str):
                 continue
+            short_name = team.get("short_name")
+            tla = team.get("tla")
             teams[name] = {
                 "id": team_id,
-                "tla": team.get("tla"),
-                "short_name": team.get("short_name") or name,
+                "tla": tla if isinstance(tla, str) else None,
+                "short_name": short_name if isinstance(short_name, str) else name,
             }
     return teams
 
 
 def _tier_a_lookup(
     country: str,
-    live_teams: dict[str, dict[str, object]],
-) -> dict[str, object] | None:
+    live_teams: dict[str, TeamRegistryEntry],
+) -> TeamRegistryEntry | None:
     candidates = [country]
     alias = TIER_A_ALIASES.get(country)
     if alias is not None:
@@ -154,25 +171,25 @@ def _remove_orphan_crests(flag_registry: dict[str, dict[str, str]]) -> list[str]
 def build_registries(
     old_team_registry: dict[str, dict[str, object]],
     old_flag_registry: dict[str, dict[str, str]],
-    live_teams: dict[str, dict[str, object]],
-) -> tuple[dict[str, dict[str, object]], dict[str, dict[str, str]], list[str]]:
+    live_teams: dict[str, TeamRegistryEntry],
+) -> tuple[dict[str, TeamRegistryEntry], dict[str, dict[str, str]], list[str]]:
     commons_by_country = _commons_by_country(old_flag_registry)
-    new_team_registry: dict[str, dict[str, object]] = {}
+    new_team_registry: dict[str, TeamRegistryEntry] = {}
     changes: list[str] = []
 
     for country in sorted(old_team_registry):
         tier_a = _tier_a_lookup(country, live_teams)
         if tier_a is not None:
-            entry = {
+            entry: TeamRegistryEntry = {
                 "id": tier_a["id"],
-                "tla": tier_a.get("tla") or old_team_registry[country].get("tla"),
+                "tla": tier_a.get("tla") or _optional_str(old_team_registry[country].get("tla")),
                 "short_name": tier_a.get("short_name") or country,
             }
         elif country in TIER_B_IDS:
             entry = {
                 "id": TIER_B_IDS[country],
-                "tla": old_team_registry[country].get("tla"),
-                "short_name": old_team_registry[country].get("short_name") or country,
+                "tla": _optional_str(old_team_registry[country].get("tla")),
+                "short_name": _optional_str(old_team_registry[country].get("short_name")) or country,
             }
         else:
             raise KeyError(f"No tier-A or tier-B mapping for {country}")
@@ -195,7 +212,7 @@ def build_registries(
             raise KeyError(f"No Wikimedia mapping for {country}")
         new_flag_registry[team_id] = {"country": country, "commons_file": commons_file}
 
-    used_ids = {int(entry["id"]) for entry in new_team_registry.values()}
+    used_ids = {entry["id"] for entry in new_team_registry.values()}
     tier_b_used = sorted(team_id for team_id in used_ids if SYNTHETIC_MIN <= team_id <= SYNTHETIC_MAX)
     if len(tier_b_used) != len({entry["id"] for c, entry in new_team_registry.items() if c in TIER_B_IDS}):
         raise ValueError("Duplicate synthetic id assigned")

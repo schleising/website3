@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import re
+from collections.abc import Sequence
 from datetime import UTC, datetime, timedelta
 
 from pydantic import BaseModel, Field
@@ -392,11 +393,13 @@ def _build_placeholder_table_items(teams: list[Team]) -> list[TableItem]:
     ]
 
 
-def _group_has_results(table: list[TableItem]) -> bool:
+def _group_has_results(table: Sequence[TableItem]) -> bool:
     return any(item.played_games > 0 for item in table)
 
 
-def normalise_group_table(table: list[TableItem], matches: list[Match]) -> list[TableItem]:
+def normalise_group_table(
+    table: Sequence[TableItem], matches: list[Match]
+) -> list[TableItem]:
     if len(table) == 0:
         teams = _extract_teams_from_matches(matches)
         if len(teams) == 0:
@@ -406,22 +409,22 @@ def normalise_group_table(table: list[TableItem], matches: list[Match]) -> list[
     if not _group_has_results(table):
         return _build_placeholder_table_items(_unique_teams([item.team for item in table]))
 
-    return table
+    return list(table)
 
 
-def _clear_position_labels(table: list[TableItem]) -> None:
+def _clear_position_labels(table: Sequence[TableItem]) -> None:
     for table_item in table:
         table_item.position_label = None
 
 
 def _apply_guaranteed_qualification_labels(
-    table: list[TableItem],
+    table: Sequence[TableItem],
     *,
     qualification_spots: int = WC_CURRENT_GROUP_QUALIFICATION_SPOTS,
 ) -> list[TableItem]:
     if len(table) == 0 or len(table) <= qualification_spots:
         _clear_position_labels(table)
-        return table
+        return list(table)
 
     team_count = len(table)
     total_matches_per_team = max(team_count - 1, 0)
@@ -440,7 +443,7 @@ def _apply_guaranteed_qualification_labels(
     cutoff_row = table[qualification_spots]
     cutoff_team_id = cutoff_row.team.id
     if cutoff_team_id is None:
-        return table
+        return list(table)
 
     cutoff_max_points = max_points_by_team_id[cutoff_team_id]
 
@@ -451,7 +454,7 @@ def _apply_guaranteed_qualification_labels(
         if adjusted_points_by_team_id[team_id] > cutoff_max_points:
             table_item.position_label = "Q"
 
-    return table
+    return list(table)
 
 
 def qualified_team_ids_for_next_round(
@@ -553,7 +556,7 @@ def _apply_final_group_champion_label(
 async def prepare_group_table_for_display(
     edition: str,
     group_slug: str,
-    table: list[TableItem],
+    table: Sequence[TableItem],
     matches: list[Match],
     *,
     all_edition_matches: list[Match] | None = None,
@@ -976,7 +979,10 @@ def standings_from_api_table(table: Table) -> list[WorldCupGroupStandings]:
                 group_slug=slug,
                 group_label=standing.group,
                 group_enum=group_slug_to_enum(slug),
-                table=standing.table,
+                table=[
+                    LiveTableItem.model_validate(row.model_dump())
+                    for row in standing.table
+                ],
             )
         )
 

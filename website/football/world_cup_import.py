@@ -82,8 +82,14 @@ def _team_from_name(name: str, registry: dict[str, dict[str, object]]) -> Team:
         return Team(name=name, short_name=name, tla=None, id=None, crest=None)
 
     team_id = entry.get("id")
+    parsed_id: int | None = None
+    if isinstance(team_id, int):
+        parsed_id = team_id
+    elif isinstance(team_id, str) and team_id.isdigit():
+        parsed_id = int(team_id)
+
     return Team(
-        id=int(team_id) if team_id is not None else None,
+        id=parsed_id,
         name=name,
         short_name=str(entry.get("short_name", name)),
         tla=str(entry["tla"]) if entry.get("tla") is not None else None,

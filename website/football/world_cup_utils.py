@@ -280,9 +280,9 @@ def edition_is_historic(edition: str) -> bool:
     return edition != WC_CURRENT_EDITION
 
 
-def edition_summary_rules_sections(edition: str) -> list[dict[str, list[str]]]:
+def edition_summary_rules_sections(edition: str) -> list[dict[str, str | list[str]]]:
     """Visitor-facing rules grouped for the edition Summary page."""
-    sections: list[dict[str, list[str]]] = []
+    sections: list[dict[str, str | list[str]]] = []
     year = int(edition)
     has_groups = edition_has_group_stage(edition)
     has_knockout = edition_has_knockout_stage(edition)
@@ -946,7 +946,9 @@ def group_stage_labels_for_edition(edition: str) -> tuple[str, ...]:
 def overview_group_order_for_edition(edition: str) -> tuple[str, ...]:
     """Later group phases first so the overview reads top-down toward the group stage."""
     stages = group_stages_for_edition(edition)
-    if len(stages) <= 1:
+    if len(stages) == 0:
+        return ()
+    if len(stages) == 1:
         return stages[0]
     return tuple(slug for stage in reversed(stages) for slug in stage)
 
@@ -1122,7 +1124,10 @@ def filter_confirmed_knockout_matches(matches: list["Match"]) -> list["Match"]:
 
 def _knockout_fixture_key(match: "Match") -> tuple[str, str]:
     if knockout_match_has_confirmed_teams(match):
-        home_id, away_id = match.home_team.id, match.away_team.id
+        home_id = match.home_team.id
+        away_id = match.away_team.id
+        if home_id is None or away_id is None:
+            return (match.stage, f"match:{match.id}")
         team_ids = sorted((home_id, away_id))
         return (match.stage, f"teams:{team_ids[0]}:{team_ids[1]}")
     return (match.stage, f"match:{match.id}")
