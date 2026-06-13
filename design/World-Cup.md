@@ -908,6 +908,21 @@ Knockout rounds do not need live table updates (no standings table).
 | Live standings chip | `Score.display_scoreline()` on backend; same ET-not-pens rule |
 | Annotation | `world_cup_score_annotation()` — `(aet)`, `(4-2 pens)`, `(replay)` |
 
+### 9.4 Push notifications
+
+WC match notifications use the same `compare_match_states_and_notify()` / `send_push_notification()` path as the Premier League (`backend/src/football/push_notifications.py`). Triggers run from `WorldCup._notify_match_updates()` on every match ingest **before** Mongo is updated.
+
+**Ingest paths that notify:**
+
+| Path | When |
+| ---- | ---- |
+| `get_todays_matches()` | Tournament-day poll (every 4s in play; at kickoff; daily midnight Pacific + 1 min) |
+| `sync_matches()` | Full-tournament sync (daily + on deploy) — must notify **before** `_write_matches()` so a container restart during a live match still detects status/score changes |
+
+**Tournament-day poll:** `dateFrom` / `dateTo` span the full Pacific-day UTC range (often two UTC calendar dates), so UK-morning / US-evening kickoffs are not missed. `schedule_live_updates()` re-schedules the next Pacific midnight poll when the current tournament day has no remaining fixtures.
+
+**Subscriptions:** users must select national teams on `/football/world-cup/subscriptions/` (merged with PL selections in `football_push`). `send_push_notification` logs `Sending Notification:` at INFO when a push is attempted; absence of that line means no state change was detected or no subscribers matched the team IDs.
+
 ## 10. UI Notes
 
 ### 10.1 Overview stacking
