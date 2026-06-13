@@ -132,7 +132,7 @@
 {% endblock %}
 
 {% block content %}
-<div class="football-content-pad" data-live-matches-view="{{ 'true' if live_matches|default(false) else 'false' }}"{% if all_matches_view|default(false) %} data-all-matches-view="true"{% endif %}{% if world_cup_section|default(false) and enable_live_updates|default(false) %} data-world-cup-live="true" data-world-cup-edition="{{ selected_edition|default('') }}" data-wc-tournament-tz="America/Los_Angeles"{% endif %}{% if world_cup_section|default(false) and enable_live_standings|default(false) %} data-world-cup-standings-live="true" data-world-cup-edition="{{ selected_edition|default('') }}" data-wc-tournament-tz="America/Los_Angeles"{% endif %}>
+<div class="football-content-pad" data-live-matches-view="{{ 'true' if live_matches|default(false) else 'false' }}"{% if all_matches_view|default(false) %} data-all-matches-view="true"{% endif %}{% if world_cup_section|default(false) and enable_live_updates|default(false) %} data-world-cup-live="true" data-world-cup-edition="{{ selected_edition|default('') }}" data-wc-tournament-tz="America/Los_Angeles"{% endif %}{% if world_cup_section|default(false) and enable_live_standings|default(false) %} data-world-cup-standings-live="true" data-world-cup-edition="{{ selected_edition|default('') }}" data-wc-tournament-tz="America/Los_Angeles"{% endif %}{% if world_cup_section|default(false) and auto_center_next_match|default(false) %} data-auto-center-next-match="true"{% endif %}>
 {% block football_content %}
 {% endblock %}
 </div>

@@ -5,6 +5,7 @@ document.addEventListener("readystatechange", (event) => {
 
     const jumpMenu = document.getElementById("world-cup-jump-menu");
     const jumpLinks = document.querySelectorAll(".football-jump-link");
+    const contentPad = document.querySelector(".football-content-pad");
 
     jumpLinks.forEach((link) => {
         link.addEventListener("click", (clickEvent) => {
@@ -27,7 +28,96 @@ document.addEventListener("readystatechange", (event) => {
             jumpMenu.removeAttribute("open");
         }
     });
+
+    if (contentPad?.dataset.autoCenterNextMatch === "true") {
+        requestAnimationFrame(() => {
+            centerNextUnfinishedMatch();
+        });
+    }
 });
+
+function centerNextUnfinishedMatch() {
+    const matchEntries = collectMatchCardEntries();
+    if (matchEntries.length === 0) {
+        return;
+    }
+
+    const now = new Date();
+    let targetCard = null;
+
+    const liveEntries = matchEntries.filter(
+        (entry) => entry.card.dataset.matchLive === "true"
+    );
+    if (liveEntries.length > 0) {
+        targetCard = pickEarliestMatchEntry(liveEntries).card;
+    }
+
+    if (!targetCard) {
+        const unfinishedUpcoming = matchEntries.filter(
+            (entry) =>
+                entry.card.dataset.matchFinished !== "true" &&
+                entry.time.getTime() >= now.getTime()
+        );
+        if (unfinishedUpcoming.length > 0) {
+            targetCard = pickEarliestMatchEntry(unfinishedUpcoming).card;
+        }
+    }
+
+    if (!targetCard) {
+        const unfinishedPast = matchEntries.filter(
+            (entry) =>
+                entry.card.dataset.matchFinished !== "true" &&
+                entry.time.getTime() < now.getTime()
+        );
+        if (unfinishedPast.length > 0) {
+            targetCard = pickLatestMatchEntry(unfinishedPast).card;
+        }
+    }
+
+    if (!targetCard) {
+        targetCard = pickLatestMatchEntry(matchEntries).card;
+    }
+
+    requestAnimationFrame(() => {
+        targetCard.scrollIntoView({
+            behavior: "smooth",
+            block: "center",
+            inline: "nearest",
+        });
+    });
+}
+
+function collectMatchCardEntries() {
+    const entries = [];
+
+    for (const card of document.querySelectorAll(".score-widget[data-match-time]")) {
+        const matchTimeRaw = card.getAttribute("data-match-time");
+        if (!matchTimeRaw) {
+            continue;
+        }
+
+        const time = new Date(matchTimeRaw);
+        if (Number.isNaN(time.getTime())) {
+            continue;
+        }
+
+        entries.push({ card, time });
+    }
+
+    return entries;
+}
+
+function pickEarliestMatchEntry(entries) {
+    return entries.reduce((earliest, entry) =>
+        entry.time.getTime() < earliest.time.getTime() ? entry : earliest
+    );
+}
+
+function pickLatestMatchEntry(entries) {
+    return entries.reduce((latest, entry) =>
+        entry.time.getTime() > latest.time.getTime() ? entry : latest
+    );
+}
 
 function smoothScrollToAnchor(anchorHref) {
     if (!anchorHref || !anchorHref.startsWith("#")) {
@@ -39,5 +129,7 @@ function smoothScrollToAnchor(anchorHref) {
         return;
     }
 
-    target.scrollIntoView({ behavior: "smooth", block: "start" });
+    requestAnimationFrame(() => {
+        target.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
 }

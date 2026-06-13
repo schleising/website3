@@ -140,6 +140,10 @@ function updateWorldCupScoreWidget(match) {
     const [homeScore, awayScore] = worldCupDisplayScore(match);
     homeElement.textContent = homeScore ?? "-";
     awayElement.textContent = awayScore ?? "-";
+
+    scoreWidget.dataset.matchFinished = match.status === "FINISHED" ? "true" : "false";
+    scoreWidget.dataset.matchLive =
+        match.status === "IN_PLAY" || match.status === "PAUSED" ? "true" : "false";
 }
 
 function worldCupMatchWentToExtraTime(score) {

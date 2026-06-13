@@ -135,6 +135,7 @@ async def _build_world_cup_context(
         "show_summary_nav": edition_is_historic(selected_edition),
         "enable_live_updates": is_current_edition,
         "enable_live_standings": is_current_edition and has_group_stage,
+        "auto_center_next_match": is_current_edition,
         "show_world_cup_nav": await world_cup_nav_available(),
         "show_edition_selector": show_edition_selector and len(available_editions) > 1,
         "available_editions": [
