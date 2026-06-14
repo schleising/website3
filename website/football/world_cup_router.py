@@ -309,7 +309,6 @@ def _round_slug_if_valid(round_slug: str) -> str | None:
     return slug
 
 
-@world_cup_router.get("", response_class=HTMLResponse)
 @world_cup_router.get("/", response_class=HTMLResponse)
 async def get_world_cup_overview(
     request: Request,

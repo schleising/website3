@@ -195,7 +195,6 @@ def _request_can_use_tools(request: Request) -> bool:
 
 
 @feeds_router.get("/", response_class=HTMLResponse)
-@feeds_router.get("", response_class=HTMLResponse)
 async def feed_reader_page(
     request: Request,
     category: str = "all",
