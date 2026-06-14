@@ -20,7 +20,7 @@ from fastapi import (
     Response,
     status,
 )
-from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 from .football_db import (
@@ -719,6 +719,14 @@ async def get_live_matches(
     request: Request,
 ):
     logging.debug(f"/football/: {request}")
+
+    # TODO: Remove World Cup root redirect after the competition ends.
+    if await world_cup_nav_available():
+        football_root_path = str(_build_football_mode_context(request)["football_root_path"])
+        return RedirectResponse(
+            url=f"{football_root_path}world-cup/",
+            status_code=302,
+        )
 
     season_context = await _build_football_season_context(
         request,
