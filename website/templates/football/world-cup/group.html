@@ -61,7 +61,7 @@
   <div class="world-cup-group-layout">
   <section class="world-cup-group-standings-panel" aria-label="{{ group_label }} standings">
     {% if is_current_edition|default(false) %}
-    <p class="world-cup-qualification-note">Top three teams qualify for the knockout stage.</p>
+    <p class="world-cup-qualification-note">Top two in each group qualify; the eight best third-placed teams also reach the Round of 32.</p>
     {% endif %}
     {% if standings.table|length > 0 %}
     {{ world_cup_group_table(standings.table, group_label, football_root, selected_edition, group_slug=group_slug, live_table=enable_live_standings|default(false)) }}

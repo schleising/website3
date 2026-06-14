@@ -186,8 +186,13 @@ def standings_rules_visitor_lines(edition: str) -> list[str]:
     if edition == WC_CURRENT_EDITION:
         return [
             points_rule,
-            "Teams are ranked by points, then goal difference, then goals scored.",
-            "Q marks teams who have already secured a place in the knockout stage.",
+            "The top two teams in each group qualify for the Round of 32.",
+            "The eight best third-placed teams across all groups also advance.",
+            "Third-placed teams are ranked on points, goal difference, goals scored, "
+            "fair play, then the FIFA World Ranking.",
+            "If teams are level on points within a group, head-to-head results "
+            "between the tied teams decide the ranking first.",
+            "Q marks teams who have already secured a top-two place in the group.",
         ]
 
     if not edition_has_knockout_stage(edition):
@@ -316,7 +321,12 @@ def edition_summary_rules_sections(edition: str) -> list[dict[str, str | list[st
         format_lines.append(
             f"Group stage ({group_count} groups), then a knockout bracket."
         )
-        if year >= 1998:
+        if edition == WC_CURRENT_EDITION:
+            format_lines.append(
+                "Top two from each group and the eight best third-placed teams "
+                "advanced to the Round of 32."
+            )
+        elif year >= 1998:
             format_lines.append("Top two from each group advanced to the knockout stage.")
         elif year >= 1986:
             format_lines.append("Top two from each group advanced to the knockout stage.")

@@ -130,7 +130,7 @@
         </h4>
         <div class="world-cup-overview-block-header-actions">
           {% if is_current_edition|default(false) %}
-          <p class="world-cup-qualification-note">Top three qualify</p>
+          <p class="world-cup-qualification-note">Top two qualify; eight third-placed teams also advance</p>
           {% endif %}
           {{ world_cup_standings_rules_help(selected_edition, help_id='overview-' ~ selected_edition ~ '-' ~ block.slug) }}
         </div>
