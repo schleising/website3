@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import logging
 import re
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
+from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
 from pydantic import BaseModel, Field
@@ -65,6 +66,35 @@ WC_LIVE_STANDINGS_COLLECTION_PATTERN = re.compile(r"^live_wc_standings_(\d{4})$"
 WC_LIVE_DAYS_BEFORE_TODAY = 7
 WC_LIVE_DAYS_AFTER_TODAY = 6
 WC_CURRENT_GROUP_QUALIFICATION_SPOTS = 2
+WC_BEST_THIRD_PLACE_SPOTS = 8
+WC_CURRENT_EDITION_GROUP_SIZE = 4
+WC_WORST_CASE_LOSS_GOALS = 3
+
+
+@dataclass(frozen=True)
+class _ThirdPlaceStats:
+    points: int
+    goal_difference: int
+    goals_for: int
+    team_name: str = ""
+
+    def rank_key(self) -> tuple[int, int, int, str]:
+        return (
+            -self.points,
+            -self.goal_difference,
+            -self.goals_for,
+            self.team_name.casefold(),
+        )
+
+
+@dataclass
+class _ThirdPlaceGroupProfile:
+    third_row: TableItem | None
+    is_group_complete: bool
+    is_third_locked: bool
+    final_third_stats: _ThirdPlaceStats | None
+    min_third_stats: _ThirdPlaceStats | None
+    best_third_stats: _ThirdPlaceStats | None
 
 
 class WorldCupGroupStandings(BaseModel):
@@ -457,6 +487,221 @@ def _apply_guaranteed_qualification_labels(
     return list(table)
 
 
+def _team_remaining_group_matches(table_item: TableItem, team_count: int) -> int:
+    return max(team_count - 1 - table_item.played_games, 0)
+
+
+def _team_max_points_in_group(table_item: TableItem, team_count: int) -> int:
+    remaining_matches = _team_remaining_group_matches(table_item, team_count)
+    return table_item.points + (remaining_matches * 3)
+
+
+def _team_max_goal_projection(table_item: TableItem, remaining_matches: int) -> tuple[int, int]:
+    return (
+        table_item.goal_difference + (WC_WORST_CASE_LOSS_GOALS * remaining_matches),
+        table_item.goals_for + (WC_WORST_CASE_LOSS_GOALS * remaining_matches),
+    )
+
+
+def _team_min_goal_projection(table_item: TableItem, remaining_matches: int) -> tuple[int, int]:
+    return (
+        table_item.goal_difference - (WC_WORST_CASE_LOSS_GOALS * remaining_matches),
+        table_item.goals_for,
+    )
+
+
+def _group_is_complete(table: Sequence[TableItem], team_count: int) -> bool:
+    if team_count == 0:
+        return False
+    required_matches = team_count - 1
+    return all(item.played_games >= required_matches for item in table)
+
+
+def _is_locked_in_group_position(
+    table: Sequence[TableItem],
+    position_index: int,
+    team_count: int,
+) -> bool:
+    if len(table) <= position_index + 1:
+        return False
+
+    leader = table[position_index]
+    chaser = table[position_index + 1]
+    if leader.team.id is None or chaser.team.id is None:
+        return False
+
+    return leader.points > _team_max_points_in_group(chaser, team_count)
+
+
+def _third_place_stats_from_row(table_item: TableItem) -> _ThirdPlaceStats:
+    return _ThirdPlaceStats(
+        points=table_item.points,
+        goal_difference=table_item.goal_difference,
+        goals_for=table_item.goals_for,
+        team_name=table_item.team.display_name,
+    )
+
+
+def _third_place_stats_are_better(
+    left: _ThirdPlaceStats,
+    right: _ThirdPlaceStats,
+) -> bool:
+    return left.rank_key() < right.rank_key()
+
+
+def _max_third_place_stats(stats: Sequence[_ThirdPlaceStats]) -> _ThirdPlaceStats | None:
+    if len(stats) == 0:
+        return None
+
+    return min(stats, key=lambda item: item.rank_key())
+
+
+def _best_possible_third_place_stats(table: Sequence[TableItem], team_count: int) -> _ThirdPlaceStats | None:
+    if len(table) < 3:
+        return None
+
+    if _group_is_complete(table, team_count):
+        return _third_place_stats_from_row(table[2])
+
+    candidate_stats: list[_ThirdPlaceStats] = []
+    for row in table[1:team_count]:
+        remaining_matches = _team_remaining_group_matches(row, team_count)
+        max_goal_difference, max_goals_for = _team_max_goal_projection(row, remaining_matches)
+        candidate_stats.append(
+            _ThirdPlaceStats(
+                points=_team_max_points_in_group(row, team_count),
+                goal_difference=max_goal_difference,
+                goals_for=max_goals_for,
+                team_name=row.team.display_name,
+            )
+        )
+
+    return _max_third_place_stats(candidate_stats)
+
+
+def _build_third_place_group_profile(table: Sequence[TableItem]) -> _ThirdPlaceGroupProfile:
+    team_count = len(table)
+    if team_count < WC_CURRENT_EDITION_GROUP_SIZE:
+        return _ThirdPlaceGroupProfile(
+            third_row=None,
+            is_group_complete=False,
+            is_third_locked=False,
+            final_third_stats=None,
+            min_third_stats=None,
+            best_third_stats=None,
+        )
+
+    third_row = table[2]
+    is_group_complete = _group_is_complete(table, team_count)
+    is_third_locked = _is_locked_in_group_position(table, 2, team_count)
+    best_third_stats = _best_possible_third_place_stats(table, team_count)
+    final_third_stats = (
+        _third_place_stats_from_row(third_row) if is_group_complete else None
+    )
+
+    min_third_stats: _ThirdPlaceStats | None = None
+    if is_third_locked and not is_group_complete:
+        remaining_matches = _team_remaining_group_matches(third_row, team_count)
+        min_goal_difference, min_goals_for = _team_min_goal_projection(
+            third_row,
+            remaining_matches,
+        )
+        min_third_stats = _ThirdPlaceStats(
+            points=third_row.points,
+            goal_difference=min_goal_difference,
+            goals_for=min_goals_for,
+            team_name=third_row.team.display_name,
+        )
+
+    return _ThirdPlaceGroupProfile(
+        third_row=third_row,
+        is_group_complete=is_group_complete,
+        is_third_locked=is_third_locked,
+        final_third_stats=final_third_stats,
+        min_third_stats=min_third_stats,
+        best_third_stats=best_third_stats,
+    )
+
+
+def _is_guaranteed_best_third_placed(
+    candidate_stats: _ThirdPlaceStats,
+    competitor_stats: Sequence[_ThirdPlaceStats],
+) -> bool:
+    better_count = sum(
+        1
+        for stats in competitor_stats
+        if _third_place_stats_are_better(stats, candidate_stats)
+    )
+    return better_count < WC_BEST_THIRD_PLACE_SPOTS
+
+
+def _apply_current_edition_qualification_labels(
+    group_tables: Mapping[str, Sequence[TableItem]],
+) -> None:
+    profiles: dict[str, _ThirdPlaceGroupProfile] = {}
+
+    for slug, table in group_tables.items():
+        if not _group_has_results(table):
+            _clear_position_labels(table)
+            continue
+
+        if len(table) >= WC_CURRENT_GROUP_QUALIFICATION_SPOTS + 1:
+            _apply_guaranteed_qualification_labels(
+                table,
+                qualification_spots=WC_CURRENT_GROUP_QUALIFICATION_SPOTS,
+            )
+        profiles[slug] = _build_third_place_group_profile(table)
+
+    for slug, profile in profiles.items():
+        if profile.third_row is None or profile.best_third_stats is None:
+            continue
+
+        if profile.is_group_complete:
+            candidate_stats = profile.final_third_stats
+        elif profile.is_third_locked:
+            candidate_stats = profile.min_third_stats
+        else:
+            continue
+
+        if candidate_stats is None:
+            continue
+
+        competitor_stats = [
+            other_profile.best_third_stats
+            for other_slug, other_profile in profiles.items()
+            if other_slug != slug and other_profile.best_third_stats is not None
+        ]
+        if _is_guaranteed_best_third_placed(candidate_stats, competitor_stats):
+            profile.third_row.position_label = "Q"
+
+
+async def _fetch_all_sorted_group_tables_for_qualification(
+    edition: str,
+) -> dict[str, list[TableItem]]:
+    if edition == WC_CURRENT_EDITION and live_wc_standings is not None:
+        collection = live_wc_standings
+    else:
+        collection = _get_standings_collection(edition)
+
+    standings = await _retrieve_group_standings_from_collection(collection, edition)
+    if len(standings) == 0:
+        standings = await _compute_group_standings_from_matches(edition)
+
+    group_tables: dict[str, list[TableItem]] = {}
+    for group in standings:
+        matches = await retrieve_group_matches(edition, group.group_slug)
+        prepared = normalise_group_table(group.table, matches)
+        if _group_has_results(prepared):
+            prepared = sort_group_table_rows(
+                prepared,
+                edition,
+                group_slug=group.group_slug,
+            )
+        group_tables[group.group_slug] = prepared
+
+    return group_tables
+
+
 def qualified_team_ids_for_next_round(
     edition: str,
     group_slug: str,
@@ -582,7 +827,10 @@ async def prepare_group_table_for_display(
     )
 
     if edition == WC_CURRENT_EDITION:
-        return _apply_guaranteed_qualification_labels(prepared)
+        all_group_tables = await _fetch_all_sorted_group_tables_for_qualification(edition)
+        all_group_tables[group_slug] = prepared
+        _apply_current_edition_qualification_labels(all_group_tables)
+        return prepared
 
     if edition_matches is None:
         edition_matches = await retrieve_all_edition_matches(edition)
@@ -622,6 +870,35 @@ async def prepare_group_table_for_display(
     return prepared
 
 
+def _sort_live_group_table_rows(
+    table: list[LiveTableItem],
+    edition: str,
+    *,
+    group_slug: str,
+) -> list[LiveTableItem]:
+    sorted_rows = sort_group_table_rows(
+        list(table),
+        edition,
+        group_slug=group_slug,
+    )
+    rows_by_team_id = {
+        row.team.id: row for row in table if row.team.id is not None
+    }
+    reordered: list[LiveTableItem] = []
+    for sorted_row in sorted_rows:
+        team_id = sorted_row.team.id
+        if team_id is None:
+            continue
+        live_row = rows_by_team_id.get(team_id)
+        if live_row is None:
+            continue
+        live_row.position = sorted_row.position
+        live_row.points = sorted_row.points
+        reordered.append(live_row)
+
+    return reordered
+
+
 def apply_live_qualification_labels(
     edition: str,
     groups: list[WorldCupGroupStandings],
@@ -629,11 +906,22 @@ def apply_live_qualification_labels(
     if edition != WC_CURRENT_EDITION:
         return
 
+    group_tables: dict[str, Sequence[TableItem]] = {}
     for group in groups:
         if not _group_has_results(group.table):
             _clear_position_labels(group.table)
             continue
-        _apply_guaranteed_qualification_labels(group.table)
+
+        reordered = _sort_live_group_table_rows(
+            group.table,
+            edition,
+            group_slug=group.group_slug,
+        )
+        group.table.clear()
+        group.table.extend(reordered)
+        group_tables[group.group_slug] = group.table
+
+    _apply_current_edition_qualification_labels(group_tables)
 
 
 async def retrieve_distinct_knockout_stages(edition: str) -> set[str]:

@@ -192,7 +192,8 @@ def standings_rules_visitor_lines(edition: str) -> list[str]:
             "fair play, then the FIFA World Ranking.",
             "If teams are level on points within a group, head-to-head results "
             "between the tied teams decide the ranking first.",
-            "Q marks teams who have already secured a top-two place in the group.",
+            "Q marks teams who have already secured a top-two place in the group, "
+            "or a guaranteed place among the eight best third-placed teams.",
         ]
 
     if not edition_has_knockout_stage(edition):
