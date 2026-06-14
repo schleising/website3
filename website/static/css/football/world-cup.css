@@ -1050,6 +1050,10 @@
 }
 
 @media screen and (max-width: 44rem) {
+    .world-cup-qualification-note {
+        display: none;
+    }
+
     .world-cup-group-page {
         height: calc(100dvh - 9rem);
         overflow: hidden;
