@@ -55,6 +55,7 @@ from .world_cup_utils import (
     build_group_matchday_groups,
     world_cup_display_score,
     world_cup_score_annotation,
+    world_cup_all_matches_bg_label,
     normalise_group_slug,
     normalise_round_slug,
     round_slug_to_label,
@@ -75,6 +76,7 @@ TEMPLATES.env.filters["edition_hides_goal_difference_column"] = (
 )
 TEMPLATES.env.filters["format_goal_average"] = format_goal_average
 TEMPLATES.env.filters["standings_rules_visitor_lines"] = standings_rules_visitor_lines
+TEMPLATES.env.filters["world_cup_all_matches_bg_label"] = world_cup_all_matches_bg_label
 
 
 def _football_context_helpers():

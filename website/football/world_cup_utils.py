@@ -1108,6 +1108,24 @@ def stage_to_label(stage: str) -> str:
     return WC_STAGE_TO_LABEL.get(stage, stage.replace("_", " ").title())
 
 
+def world_cup_all_matches_bg_label(match: "Match") -> str | None:
+    """Background watermark for All Matches cards: group, play-off, or knockout round."""
+    if match.stage == WC_GROUP_STAGE:
+        if match.group is None:
+            return None
+        return group_slug_to_label(group_enum_to_slug(match.group))
+
+    if match.stage == WC_GROUP_PLAYOFF:
+        if match.group is None:
+            return "Group play-off"
+        return group_playoff_round_label(group_enum_to_slug(match.group))
+
+    if match.stage in WC_STAGE_TO_LABEL:
+        return stage_to_label(match.stage)
+
+    return None
+
+
 def team_is_confirmed(team: "Team") -> bool:
     if team.id is None:
         return False

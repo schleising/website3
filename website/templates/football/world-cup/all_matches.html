@@ -55,7 +55,7 @@
     </div>
     <div class="football-grid">
       {% for match in day_group.matches %}
-      {{ world_cup_match_card(match, football_root=football_root, edition=selected_edition, highlight_winner=match.stage != 'GROUP_STAGE') }}
+      {{ world_cup_match_card(match, football_root=football_root, edition=selected_edition, highlight_winner=match.stage != 'GROUP_STAGE', show_round_background=true) }}
       {% endfor %}
     </div>
   </section>
