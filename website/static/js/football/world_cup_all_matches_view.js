@@ -84,17 +84,37 @@ function centerNextUnfinishedMatch() {
 }
 
 function scrollToMatchCard(card) {
+    const scrollTarget = resolveOverviewScrollTarget(card);
+
     const bracketScroll = card.closest(".world-cup-bracket-scroll");
     if (bracketScroll instanceof HTMLElement) {
         scrollMatchCardInBracket(card, bracketScroll);
         return;
     }
 
-    card.scrollIntoView({
+    const contentContainer = document.getElementById("content");
+    if (contentContainer instanceof HTMLElement && scrollTarget !== card) {
+        requestAnimationFrame(() => {
+            contentContainer.scrollTo({
+                top: getCenteredScrollOffset(scrollTarget, contentContainer, "vertical"),
+                behavior: "smooth",
+            });
+        });
+        return;
+    }
+
+    scrollTarget.scrollIntoView({
         behavior: "smooth",
         block: "center",
         inline: "nearest",
     });
+}
+
+const OVERVIEW_GROUP_BLOCK_SELECTOR = ".world-cup-overview-group-block";
+
+function resolveOverviewScrollTarget(card) {
+    const groupBlock = card.closest(OVERVIEW_GROUP_BLOCK_SELECTOR);
+    return groupBlock instanceof HTMLElement ? groupBlock : card;
 }
 
 function scrollMatchCardInBracket(card, bracketScroll) {
