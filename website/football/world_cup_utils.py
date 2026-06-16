@@ -1280,6 +1280,22 @@ def world_cup_display_score(match: "Match") -> tuple[int | None, int | None]:
     return world_cup_score_display_scoreline(match.score)
 
 
+def world_cup_match_status_display(match: "Match") -> str:
+    """Return match status text for cards, including live minute when available."""
+    from .models import MatchStatus
+
+    status = match.status
+    if status in {MatchStatus.scheduled, MatchStatus.timed, MatchStatus.awarded}:
+        return "Not Started"
+    if status == MatchStatus.in_play:
+        if match.minute is not None:
+            if match.injury_time is not None:
+                return f"{match.minute}+{match.injury_time}'"
+            return f"{match.minute}'"
+        return "In Play"
+    return str(status)
+
+
 def world_cup_score_annotation(match: "Match") -> str | None:
     score = match.score
     home_score = score.full_time.home

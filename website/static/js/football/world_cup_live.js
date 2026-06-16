@@ -128,7 +128,9 @@ function updateWorldCupScoreWidget(match) {
         return;
     }
 
-    const statusElement = scoreWidget.getElementsByClassName("match-status")[0];
+    const statusElement =
+        scoreWidget.querySelector(".world-cup-match-status-text") ||
+        scoreWidget.getElementsByClassName("match-status")[0];
     const homeElement = scoreWidget.getElementsByClassName("home-team-score")[0];
     const awayElement = scoreWidget.getElementsByClassName("away-team-score")[0];
 
