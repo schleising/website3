@@ -1,5 +1,7 @@
 {% extends "football/world-cup/world-cup-base.html" %}
-{% from "football/world-cup/_group_team_list.html" import world_cup_group_team_list %}
+{% from "football/world-cup/_overview_standings.html" import world_cup_overview_standings %}
+{% from "football/world-cup/_qualification_note.html" import world_cup_qualification_note %}
+{% from "football/world-cup/_standings_rules_help.html" import world_cup_standings_rules_help %}
 
 {% block title %}<title>Football - World Cup Groups</title>{% endblock %}
 
@@ -37,31 +39,37 @@
   </div>
   {% endif %}
 
-  <div class="world-cup-groups-grid">
+  <div class="world-cup-overview-groups-grid">
     {% for group in stage_section.summaries %}
-    <a
-      class="world-cup-group-card-link"
-      href="{{ football_root }}world-cup/groups/{{ group.slug }}/?edition={{ selected_edition }}"
-      aria-label="Open {{ group.label }}"
+    <section
+      class="world-cup-overview-group-block site-card"
+      id="wc-group-{{ group.slug }}"
+      aria-labelledby="wc-group-heading-{{ group.slug }}"
     >
-      <section class="world-cup-group-card site-card">
-        <div class="world-cup-group-card-header">
-          <h4>{{ group.label }}</h4>
-          {% if group.next_match %}
-          <p class="world-cup-group-next">
-            Next: {{ group.next_match.home_team.display_name }} vs {{ group.next_match.away_team.display_name }}
-          </p>
-          {% elif group.table|length > 0 and group.table[0].played_games > 0 %}
-          <p class="world-cup-group-next">Group complete</p>
-          {% else %}
-          <p class="world-cup-group-next">Fixtures scheduled</p>
+      <div class="world-cup-overview-block-header">
+        <h4 id="wc-group-heading-{{ group.slug }}">
+          <a href="{{ football_root }}world-cup/groups/{{ group.slug }}/?edition={{ selected_edition }}">{{ group.label }}</a>
+        </h4>
+        <div class="world-cup-overview-block-header-actions">
+          {% if is_current_edition|default(false) %}
+          {{ world_cup_qualification_note() }}
           {% endif %}
+          {{ world_cup_standings_rules_help(selected_edition, help_id=selected_edition ~ '-' ~ group.slug) }}
         </div>
-        {% if group.table|length > 0 %}
-        {{ world_cup_group_team_list(group.table) }}
-        {% endif %}
-      </section>
-    </a>
+      </div>
+      {% if group.next_match %}
+      <p class="world-cup-group-next">
+        Next: {{ group.next_match.home_team.display_name }} vs {{ group.next_match.away_team.display_name }}
+      </p>
+      {% elif group.table|length > 0 and group.table[0].played_games > 0 %}
+      <p class="world-cup-group-next">Group complete</p>
+      {% else %}
+      <p class="world-cup-group-next">Fixtures scheduled</p>
+      {% endif %}
+      {% if group.table|length > 0 %}
+      {{ world_cup_overview_standings(group.table, football_root, selected_edition, group.slug, live_table=enable_live_standings|default(false)) }}
+      {% endif %}
+    </section>
     {% endfor %}
   </div>
   {% endfor %}
