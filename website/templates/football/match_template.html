@@ -53,12 +53,12 @@
     {% if day_group.matches|length > 0 %}
     <div class="football-grid">
     {% for match in day_group.matches %}
-      <div class="score-widget site-card" id="{{ match.id }}" data-match-time="{{ match.local_date.isoformat() }}">
+      <div class="score-widget site-card" id="{{ match.id }}" data-match-time="{{ match.utc_date|kickoff_utc_iso }}">
         <div class="date-and-time">
           {% if live_matches %}
-          <div class="match-start">{{ match.local_date.strftime('%H:%M %Z') }}</div>
+          <time class="match-start" datetime="{{ match.utc_date|kickoff_utc_iso }}" data-kickoff-format="time"></time>
           {% else %}
-          <div class="match-start">{{ match.local_date.strftime('%a %d %b %H:%M %Z') }}</div>
+          <time class="match-start" datetime="{{ match.utc_date|kickoff_utc_iso }}" data-kickoff-format="full"></time>
           {% endif %}
           <div class="match-meta-actions">
             <a
@@ -117,12 +117,12 @@
 {% elif matches|length > 0 %}
 <div class="football-grid football-grid--standalone">
 {% for match in matches %}
-  <div class="score-widget site-card" id="{{ match.id }}">
+  <div class="score-widget site-card" id="{{ match.id }}" data-match-time="{{ match.utc_date|kickoff_utc_iso }}">
     <div class="date-and-time">
       {% if  live_matches %}
-      <div class="match-start">{{ match.local_date.strftime('%H:%M %Z') }}</div>
+      <time class="match-start" datetime="{{ match.utc_date|kickoff_utc_iso }}" data-kickoff-format="time"></time>
       {% else %}
-      <div class="match-start">{{ match.local_date.strftime('%a %d %b %H:%M %Z') }}</div>
+      <time class="match-start" datetime="{{ match.utc_date|kickoff_utc_iso }}" data-kickoff-format="full"></time>
       {% endif %}
       <div class="match-meta-actions">
         <a

@@ -1,4 +1,4 @@
-from datetime import timezone
+from datetime import datetime, timezone
 from typing import Self
 from zoneinfo import ZoneInfo
 from dataclasses import dataclass
@@ -69,7 +69,18 @@ class TeamPointsData:
         ) * 5
 
 
+def kickoff_utc_iso(value: datetime) -> str:
+    """Return an ISO-8601 UTC timestamp with an explicit Z suffix for HTML/JS."""
+    if value.tzinfo is None:
+        utc_value = value.replace(tzinfo=timezone.utc)
+    else:
+        utc_value = value.astimezone(timezone.utc)
+
+    return utc_value.replace(microsecond=0).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
 def update_match_timezone(matches: list[Match]) -> list[Match]:
+    """Populate local_date in Europe/London for server-side day grouping only."""
     local_tz = ZoneInfo("Europe/London")
 
     for match in matches:

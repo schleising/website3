@@ -199,7 +199,7 @@ function isTodayMatch(match) {
         return false;
     }
 
-    const rawDate = match.local_date || match.utc_date;
+    const rawDate = match.utc_date || match.local_date;
     if (!rawDate) {
         return false;
     }

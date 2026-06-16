@@ -145,7 +145,7 @@
         {% endif %}
         <article class="score-widget site-card" id="{{ match.id }}">
           <div class="date-and-time">
-            <div class="match-start">{{ match_date.strftime('%a %d %b %Y %H:%M %Z') }}</div>
+            <time class="match-start" datetime="{{ match.utc_date|kickoff_utc_iso }}" data-kickoff-format="long"></time>
             <div class="h2h-match-meta">
               <div class="h2h-season-pill">{{ match_competition_label }} {{ match_season_label }}</div>
               <div class="match-status">{{ match.status }}</div>

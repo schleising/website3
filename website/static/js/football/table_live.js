@@ -901,8 +901,20 @@ function parseStartTimeMs(startTimeIso) {
 }
 
 function formatLiveMatchStart(startTimeIso) {
-    const parsedDate = new Date(String(startTimeIso || ""));
-    if (Number.isNaN(parsedDate.getTime())) {
+    const parseKickoffUtc = window.FootballMatchTimes?.parseKickoffUtc
+        ?? ((isoString) => {
+            const raw = String(isoString || "").trim();
+            if (raw === "") {
+                return null;
+            }
+            const hasTimezone = /(?:Z|[+-]\d{2}:\d{2})$/i.test(raw);
+            const normalized = hasTimezone ? raw : `${raw}Z`;
+            const parsed = new Date(normalized);
+            return Number.isNaN(parsed.getTime()) ? null : parsed;
+        });
+
+    const parsedDate = parseKickoffUtc(startTimeIso);
+    if (!parsedDate) {
         return "Kickoff";
     }
 

@@ -43,7 +43,7 @@ from .football_db import (
     delete_push_subscription,
 )
 
-from .football_utils import update_match_timezone, create_bet_standings
+from .football_utils import update_match_timezone, create_bet_standings, kickoff_utc_iso
 from .world_cup_db import world_cup_nav_available
 from .chatbot_history_api import (
     football_history_api_router,
@@ -90,6 +90,7 @@ from .world_cup_db import (
 from .world_cup_utils import WC_CURRENT_EDITION
 
 TEMPLATES = Jinja2Templates("/app/templates")
+TEMPLATES.env.filters["kickoff_utc_iso"] = kickoff_utc_iso
 
 football_router = APIRouter(prefix="/football")
 football_router.include_router(football_history_api_router, prefix="/api/history")
@@ -1481,9 +1482,7 @@ async def get_simplified_matches(request: Request) -> SimplifiedFootballData:
         simplified_football_data.matches.append(
             SimplifiedMatch(
                 status=str(match.status),
-                start_time_iso=match.utc_date.astimezone(
-                    tz=ZoneInfo("Europe/London")
-                ).isoformat(),
+                start_time_iso=kickoff_utc_iso(match.utc_date),
                 home_team=str(match.home_team.short_name),
                 home_team_crest=str(match.home_team.local_crest),
                 home_team_score=match.score.full_time.home,

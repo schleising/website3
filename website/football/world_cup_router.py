@@ -5,7 +5,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 from ..account.csrf import validate_csrf
-from .football_utils import update_match_timezone
+from .football_utils import update_match_timezone, kickoff_utc_iso
 from .models import (
     SubscriptionPreferencesResponse,
     SubscriptionPreferencesUpdateRequest,
@@ -79,6 +79,7 @@ TEMPLATES.env.filters["edition_hides_goal_difference_column"] = (
 TEMPLATES.env.filters["format_goal_average"] = format_goal_average
 TEMPLATES.env.filters["standings_rules_visitor_lines"] = standings_rules_visitor_lines
 TEMPLATES.env.filters["world_cup_all_matches_bg_label"] = world_cup_all_matches_bg_label
+TEMPLATES.env.filters["kickoff_utc_iso"] = kickoff_utc_iso
 
 
 def _football_context_helpers():
