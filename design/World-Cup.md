@@ -1,7 +1,7 @@
 # World Cup Section — Design Proposal
 
 Status: Implemented — **2026** live via football-data.org; **1930–2022** static in Mongo (§15); historic **Summary** page (§4.10); tie-breaker / play-off / replay rules (§16); live standings + tournament timezone (§3.6, §9).
-Date: 2026-05-27 (updated 2026-05-28 — live standings parity, tournament timezone, score display)
+Date: 2026-05-27 (updated 2026-05-27 — API rate limiting, standings sync on FT, kickoff ingest)
 Scope: World Cup area within the existing Football section
 
 **Launch scope:** edition **2026** live via football-data.org. **Historic editions** **1930–2022** imported from openfootball (§15); edition pill switches between all years in Mongo. **Summary** nav and page for every edition except **2026** (§4.10).
@@ -210,6 +210,8 @@ The 2026 tournament is played across **US, Canada, and Mexico**. Kickoffs are sh
 - **Client** (`world_cup_live.js`) — `data-wc-tournament-tz` on `.football-content-pad`; `isWorldCupTodayMatch()` compares dates in that zone
 
 **Do not** use `Europe/London` or UTC midnight for WC “today” in standings or live ingest.
+
+**Kickoff times from the API:** WC match ingest uses football-data.org `utcDate` **as returned** — there is **no** midnight→15:00 `Europe/London` placeholder fix. That normalisation applies to **Premier League only** (`Football.get_matches_between_dates()` in `football.py`). WC host venues span multiple time zones; rewriting midnight UTC kickoffs would mis-assign games to the wrong tournament day (e.g. early-window group fixtures).
 
 All routes live under `/football/world-cup/` (PWA mode: `/world-cup/` with existing `football_root_path` stripping).
 
@@ -522,6 +524,8 @@ flowchart TB
 | `website/football/world_cup_db.py`            | Queries, overview assembly, `build_knockout_bracket_diagram()`          |
 | `website/football/world_cup_utils.py`         | Stage/group mapping, knockout ordering, 2026 fixture labels, flag URLs   |
 | `backend/src/football/world_cup.py`           | Scheduled fetch + live poll for WC competition                          |
+| `backend/src/football/football_main.py`       | Spaced bootstrap queue; shared `DailyApiRetryScheduler` for PL + WC     |
+| `backend/src/utils/network_utils.py`          | Global 4 s limiter, `get_request()`, live-period logging                |
 | `website/templates/football/world-cup/_match_card.html` | Shared `world_cup_match_card` macro for all WC fixture lists    |
 | `website/templates/football/world-cup/_team_link.html`  | Team badge + link/display helpers (`world_cup_team_badge`, etc.) |
 | `website/templates/football/world-cup/_knockout_bracket.html` | Bracket grid macro                                      |
@@ -825,19 +829,30 @@ Response headers to monitor: `X-RequestsAvailable`, `X-RequestCounter-Reset`, `X
 
 **Implication:** football-data.org is used for the **current edition only** (live ingest). Past editions return 403 and are **not** fetched from this API — they are loaded once from an external dataset into Mongo and never updated (§15).
 
+**Global rate limiting:** PL and WC share one token and one **4 s minimum gap** between v4 requests. See [`Football-API-Rate-Limiting.md`](Football-API-Rate-Limiting.md) for the full policy (`FootballApiRateLimiter`, `DailyApiRetryScheduler`, bootstrap spacing, live-poll discard-on-failure). WC-specific: a standings refresh on full time is an **expected second call** in the same poll task (matches, then standings) — both pass through the global limiter.
+
 ### 8.6 Ingestion schedule
 
 **Current edition only** — mirror the PL worker in `backend/src/football/football.py`. Past editions are not synced; see §15.
+
+**Worker bootstrap** (`football_main.py`): on deploy, six API tasks are queued at **4 s intervals** (PL table → PL matches → PL live → WC `sync_matches` → WC `sync_standings` → WC `get_todays_matches`). An INFO log (`Football API startup requests completed`) fires when all six finish. The worker does **not** call `/competitions/WC/teams` or download crests — local flag paths only (§7.3, [`Football-API-Rate-Limiting.md`](Football-API-Rate-Limiting.md) §3.1).
+
+**Recurring daily schedule** (Pacific midnight boundary — §3.6):
+
+| Time (relative) | Task |
+| --------------- | ---- |
+| Midnight Pacific | `sync_matches` |
+| +30 s | `sync_standings` |
+| +1 min | `get_todays_matches` |
 
 
 | Job                      | Frequency                            | Endpoint(s)                                              | Notes                                                        |
 | ------------------------ | ------------------------------------ | -------------------------------------------------------- | ------------------------------------------------------------ |
 | Full tournament sync     | Daily + on deploy                    | `/competitions/WC/matches?dateFrom={start}&dateTo={end}` | Current edition only; use season `startDate` / `endDate`     |
-| Group standings sync     | Daily at **Pacific midnight**; on deploy; when a group match **finishes** | `/competitions/WC/standings?season={year}&date={tournament_today}` | Official snapshot → `wc_standings_{edition}` (SSR)          |
-| Teams sync               | Weekly / on deploy                   | `/competitions/WC/teams`                                 | Current edition only; tier-A team ids/names — no flag download from API |
+| Group standings sync     | Daily at **Pacific midnight**; on deploy; **once when a group match newly finishes** (§9.2) | `/competitions/WC/standings?season={year}&date={tournament_today}` | Official snapshot → `wc_standings_{edition}` (SSR)          |
 | Live match poll          | Every 4s while any match is in play  | `/competitions/WC/matches?dateFrom={tournament_today}&dateTo={tournament_today}` | Tournament-day calendar (§3.6); current edition only         |
-| Flag cache               | On demand (operator script)          | Wikimedia Commons                                        | Download SVG flags per `wc_flag_registry` keyed by `team_id` (§7.3.3) |
-| Live standings write     | After each live poll                 | (derived locally)                                        | Overlay in-progress group matches onto official base → `live_wc_standings_{edition}` (§9.2) |
+| Flag cache               | On demand (operator script)          | Wikimedia Commons                                        | Download SVG flags per `wc_flag_registry` keyed by `team_id` (§7.3.3) — **not** the live worker |
+| Live standings write     | After each live poll (and after `sync_standings`) | (derived locally)                                        | Overlay in-progress group matches onto official base → `live_wc_standings_{edition}` (§9.2) |
 
 
 Suggested tournament window for 2026 ingest: `2026-06-11` to `2026-07-19`.
@@ -876,10 +891,22 @@ Two Mongo collections, mirroring `pl_table_{season}` + `live_pl_table`:
 
 1. Start from the official per-group `LiveTableItem` rows in `wc_standings_{edition}`.
 2. Consider all **started** group-stage matches on **tournament today** (§3.6) — in progress **and** finished.
-3. For every such match, set the live **display** fields (`score_string`, `css_class`, `has_started`; red dot only while `in-play`).
-4. Add provisional Pld / Pts / GD increments **only** for matches that have started and **not** finished (avoids double-counting once `sync_standings` has caught up).
-5. When any tournament-day group match **finishes**, run `sync_standings()` first (updates official snapshot), then re-apply the overlay (finished matches keep their score chip for the rest of the tournament day; stats come from the official row).
-6. When `update_live_standings(None)` runs (e.g. after `sync_standings` on restart), reload tournament-day started matches from `wc_matches_{edition}` in Mongo so display chips are not lost.
+3. For every such match, set the live **display** fields (`score_string`, `css_class`, `has_started`, `has_finished`; red dot only while `in-play`).
+4. Add provisional Pld / Pts / GD increments **only** for matches that have started and **not** finished (`has_finished` → skip stat `+=`; display fields from step 3 still apply). This avoids double-counting once the official snapshot includes today’s results.
+5. When a tournament-day **group** match **newly** reaches full time, refresh official standings before the overlay:
+   - `_any_group_matches_newly_finished()` compares the live API payload to Mongo **before** `_write_matches()` — true only on the first poll where status transitions to `FINISHED` (not on every later poll while the game stays finished, and not on restart when Mongo already has `FINISHED`).
+   - On true: `sync_standings()` (API `?date={tournament_today}`) updates `wc_standings_{edition}`, then `update_live_standings()` runs again with the poll’s match list. Finished rows keep their score chip; numeric stats come from the refreshed official row.
+6. When `update_live_standings(None)` runs (e.g. after `sync_standings` on deploy/restart), reload tournament-day started matches from `wc_matches_{edition}` in Mongo so display chips are not lost. Stat increments for finished matches are still skipped (step 4), so restart after bootstrap does **not** double-count — official standings from step 5 / daily sync already include completed games.
+
+**End-to-end on full time:**
+
+```
+get_todays_matches poll
+  → newly finished? (compare API vs Mongo, pre-write)
+  → notify + write matches
+  → sync_standings (if newly finished) → official wc_standings updated
+  → update_live_standings(matches) → live_wc_standings: chips + in-play deltas only
+```
 
 **WebSocket** — `WS /football/ws/world-cup-table/`:
 
@@ -916,12 +943,26 @@ WC match notifications use the same `compare_match_states_and_notify()` / `send_
 
 | Path | When |
 | ---- | ---- |
-| `get_todays_matches()` | Tournament-day poll (every 4s in play; at kickoff; daily midnight Pacific + 1 min) |
+| `get_todays_matches()` | Tournament-day poll (every 4s in play; at kickoff; daily midnight Pacific + 1 min). Also triggers inline `sync_standings()` when a group match **newly** finishes (§9.2) |
 | `sync_matches()` | Full-tournament sync (daily + on deploy) — must notify **before** `_write_matches()` so a container restart during a live match still detects status/score changes |
+| `sync_standings()` | Daily Pacific midnight +30s; on deploy (bootstrap); on newly finished group match (§9.2) |
 
 **Tournament-day poll:** `dateFrom` / `dateTo` span the full Pacific-day UTC range (often two UTC calendar dates), so UK-morning / US-evening kickoffs are not missed. `schedule_live_updates()` re-schedules the next Pacific midnight poll when the current tournament day has no remaining fixtures.
 
 **Subscriptions:** users must select national teams on `/football/world-cup/subscriptions/` (merged with PL selections in `football_push`). `send_push_notification` logs `Sending Notification:` at INFO when a push is attempted; absence of that line means no state change was detected or no subscribers matched the team IDs.
+
+### 9.5 Worker logging and HTTP session
+
+Shared with PL — see [`Football-API-Rate-Limiting.md`](Football-API-Rate-Limiting.md) for policy detail.
+
+| Concern | Implementation |
+| ------- | -------------- |
+| Per-request API logging | DEBUG only via `get_request()` in `network_utils.py` |
+| Live poll periods | `LivePollPeriodTracker("WC")` — INFO when a tournament-day polling **period** starts, ends, or is scheduled for a future kickoff (not one line per 4 s request) |
+| Live poll failure | WARNING + schedule normal next poll; `update_live_standings(None)` from Mongo when the matches request fails |
+| Daily task failure | `DailyApiRetryScheduler` exponential backoff until success |
+| HTTP retries | Shared `requests_session` — urllib3 `Retry(total=3, connect=2, read=2, status=0)` for transient connect/read errors only; **no** automatic retry on 429 (rate limit handled by the 4 s limiter). `urllib3.connectionpool` log level set to ERROR in `football/__init__.py` to suppress benign retry warnings |
+| Diagnostic scripts | `scripts/football_api_poll.sh`, `scripts/football_live_poll.py` — operator tools using the same session/retry pattern |
 
 ## 10. UI Notes
 
@@ -1033,7 +1074,8 @@ Query param on all HTML routes: `?edition={year}` (default = current edition via
 
 - [x] Extend `/football/ws/` with `competition: "world-cup"` for live scores
 - [x] Live group standings on overview and group pages (`/ws/world-cup-table/`, `get_world_cup_standings`)
-- [x] Tournament-day timezone + live overlay rules (§3.6, §9.2) — no double-counting of `Pld`
+- [x] Tournament-day timezone + live overlay rules (§3.6, §9.2) — provisional stats in-play only; `sync_standings` on newly finished group match
+- [x] Global API rate limiting + spaced bootstrap (§8.5, §9.5; [`Football-API-Rate-Limiting.md`](Football-API-Rate-Limiting.md))
 - [x] All matches + team fixture pages
 
 ### Phase 4 — Optional enhancements
@@ -1084,6 +1126,9 @@ See §15. Summary:
 | 17  | Summary play-off rules  | **Group play-offs** section on Summary only when play-off data exists (**1954**, **1958**) — definite wording      | §4.10, §16.4                  |
 | 18  | Tournament “today” TZ   | `America/Los_Angeles` for standings cutoffs and live polling; UK time for display only                             | §3.6, §8.6, §9.2              |
 | 19  | Live standings SSR vs WS | SSR reads official `wc_standings_{edition}`; WebSocket reads `live_wc_standings_{edition}` (PL uses `live_pl_table` for both) | §9.2                          |
+| 20  | Standings on full time  | Inline `sync_standings()` when a group match **newly** finishes (pre-write Mongo compare); live overlay skips stat increments for finished matches | §8.6, §9.2                    |
+| 21  | WC kickoff ingest       | No PL midnight→15:00 London fix; use API `utcDate` as-is (§3.6)                                                  | §3.6                          |
+| 22  | Worker crest/teams API  | No `/competitions/WC/teams` or crest download in worker; local flags only                                          | §7.3, §8.6, [`Football-API-Rate-Limiting.md`](Football-API-Rate-Limiting.md) §3.1 |
 
 
 ## 15. Historical Editions — Static Backfill
