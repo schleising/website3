@@ -141,6 +141,7 @@ def build_live_poll_url(competition: str) -> str:
 def create_backend_session(api_token: str) -> Session:
     """Match backend/src/football/__init__.py session setup."""
     session = Session()
+    # Retry TCP/TLS connect and read failures only — not HTTP status codes (429 etc.).
     retry_policy = Retry(
         total=3,
         connect=2,
@@ -148,7 +149,6 @@ def create_backend_session(api_token: str) -> Session:
         redirect=0,
         status=0,
         backoff_factor=0.5,
-        status_forcelist=[429, 500, 502, 503, 504],
         allowed_methods=["GET"],
     )
     adapter = HTTPAdapter(max_retries=retry_policy)
