@@ -23,6 +23,7 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 import requests
+from urllib3.util.retry import Retry
 from requests import Response, Session, status_codes
 from requests.adapters import HTTPAdapter
 from requests.exceptions import (
@@ -35,7 +36,7 @@ from requests.exceptions import (
 
 # --- configuration switches ---------------------------------------------------
 
-USE_SESSION = False  # True = reuse requests.Session (backend default); False = requests.get each poll
+USE_SESSION = True  # True = reuse requests.Session (backend default); False = requests.get each poll
 COMPETITION = "WC"  # "PL" or "WC"
 POLL_INTERVAL_SECONDS = 4
 REQUEST_TIMEOUT_SECONDS = 5
@@ -140,7 +141,17 @@ def build_live_poll_url(competition: str) -> str:
 def create_backend_session(api_token: str) -> Session:
     """Match backend/src/football/__init__.py session setup."""
     session = Session()
-    adapter = HTTPAdapter(max_retries=0)
+    retry_policy = Retry(
+        total=3,
+        connect=2,
+        read=2,
+        redirect=0,
+        status=0,
+        backoff_factor=0.5,
+        status_forcelist=[429, 500, 502, 503, 504],
+        allowed_methods=["GET"],
+    )
+    adapter = HTTPAdapter(max_retries=retry_policy)
     session.mount("https://", adapter)
     session.headers.update(
         {
