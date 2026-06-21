@@ -1,7 +1,7 @@
 # World Cup Section — Design Proposal
 
 Status: Implemented — **2026** live via football-data.org; **1930–2022** static in Mongo (§15); historic **Summary** page (§4.10); tie-breaker / play-off / replay rules (§16); live standings + tournament timezone (§3.6, §9).
-Date: 2026-05-27 (updated 2026-05-27 — API rate limiting, standings sync on FT, kickoff ingest)
+Date: 2026-05-27 (updated 2026-06-21 — live poll scheduling via `schedule_earlier_task`, §9.6)
 Scope: World Cup area within the existing Football section
 
 **Launch scope:** edition **2026** live via football-data.org. **Historic editions** **1930–2022** imported from openfootball (§15); edition pill switches between all years in Mongo. **Summary** nav and page for every edition except **2026** (§4.10).
@@ -525,6 +525,7 @@ flowchart TB
 | `website/football/world_cup_utils.py`         | Stage/group mapping, knockout ordering, 2026 fixture labels, flag URLs   |
 | `backend/src/football/world_cup.py`           | Scheduled fetch + live poll for WC competition                          |
 | `backend/src/football/football_main.py`       | Spaced bootstrap queue; shared `DailyApiRetryScheduler` for PL + WC     |
+| `backend/src/task_scheduler/task_scheduler.py` | Worker task queue; **`schedule_earlier_task()`** for live polls (§9.6)  |
 | `backend/src/utils/network_utils.py`          | Global 4 s limiter, `get_request()`, live-period logging                |
 | `website/templates/football/world-cup/_match_card.html` | Shared `world_cup_match_card` macro for all WC fixture lists    |
 | `website/templates/football/world-cup/_team_link.html`  | Team badge + link/display helpers (`world_cup_team_badge`, etc.) |
@@ -839,18 +840,20 @@ Response headers to monitor: `X-RequestsAvailable`, `X-RequestCounter-Reset`, `X
 
 **Recurring daily schedule** (Pacific midnight boundary — §3.6):
 
-| Time (relative) | Task |
-| --------------- | ---- |
-| Midnight Pacific | `sync_matches` |
-| +30 s | `sync_standings` |
-| +1 min | `get_todays_matches` |
+| Time (relative) | Task | Scheduler API |
+| --------------- | ---- | ------------- |
+| Midnight Pacific | `sync_matches` | `schedule_task` (periodic) |
+| +30 s | `sync_standings` | `schedule_task` (periodic) |
+| +1 min | `get_todays_matches` | `schedule_earlier_task` (periodic — §9.6) |
+
+`sync_matches` / `sync_standings` keep the existing `schedule_task` periodic model. **`get_todays_matches` is different** — many code paths may schedule the next poll, but only **one** pending task may exist; the scheduler enforces that (§9.6).
 
 
 | Job                      | Frequency                            | Endpoint(s)                                              | Notes                                                        |
 | ------------------------ | ------------------------------------ | -------------------------------------------------------- | ------------------------------------------------------------ |
 | Full tournament sync     | Daily + on deploy                    | `/competitions/WC/matches?dateFrom={start}&dateTo={end}` | Current edition only; use season `startDate` / `endDate`     |
 | Group standings sync     | Daily at **Pacific midnight**; on deploy; **once when a group match newly finishes** (§9.2) | `/competitions/WC/standings?season={year}&date={tournament_today}` | Official snapshot → `wc_standings_{edition}` (SSR)          |
-| Live match poll          | Every 4s while any match is in play  | `/competitions/WC/matches?dateFrom={tournament_today}&dateTo={tournament_today}` | Tournament-day calendar (§3.6); current edition only         |
+| Live match poll          | Every 4s while any match is in play; at next kickoff; daily at **Pacific midnight + 1 min** | `/competitions/WC/matches?dateFrom={tournament_today}&dateTo={tournament_today}` | One pending task via `schedule_earlier_task` (§9.6) |
 | Flag cache               | On demand (operator script)          | Wikimedia Commons                                        | Download SVG flags per `wc_flag_registry` keyed by `team_id` (§7.3.3) — **not** the live worker |
 | Live standings write     | After each live poll (and after `sync_standings`) | (derived locally)                                        | Overlay in-progress group matches onto official base → `live_wc_standings_{edition}` (§9.2) |
 
@@ -947,7 +950,7 @@ WC match notifications use the same `compare_match_states_and_notify()` / `send_
 | `sync_matches()` | Full-tournament sync (daily + on deploy) — must notify **before** `_write_matches()` so a container restart during a live match still detects status/score changes |
 | `sync_standings()` | Daily Pacific midnight +30s; on deploy (bootstrap); on newly finished group match (§9.2) |
 
-**Tournament-day poll:** `dateFrom` / `dateTo` span the full Pacific-day UTC range (often two UTC calendar dates), so UK-morning / US-evening kickoffs are not missed. `schedule_live_updates()` re-schedules the next Pacific midnight poll when the current tournament day has no remaining fixtures.
+**Tournament-day poll:** `dateFrom` / `dateTo` span the full Pacific-day UTC range (often two UTC calendar dates), so UK-morning / US-evening kickoffs are not missed. Scheduling rules are in **§9.6** — there is no separate queue-management logic in `world_cup.py`.
 
 **Subscriptions:** users must select national teams on `/football/world-cup/subscriptions/` (merged with PL selections in `football_push`). `send_push_notification` logs `Sending Notification:` at INFO when a push is attempted; absence of that line means no state change was detected or no subscribers matched the team IDs.
 
@@ -963,6 +966,94 @@ Shared with PL — see [`Football-API-Rate-Limiting.md`](Football-API-Rate-Limit
 | Daily task failure | `DailyApiRetryScheduler` exponential backoff until success |
 | HTTP retries | Shared `requests_session` — urllib3 `Retry(total=3, connect=2, read=2, status=0)` for transient connect/read errors only; **no** automatic retry on 429 (rate limit handled by the 4 s limiter). `urllib3.connectionpool` log level set to ERROR in `football/__init__.py` to suppress benign retry warnings |
 | Diagnostic scripts | `scripts/football_api_poll.sh`, `scripts/football_live_poll.py` — operator tools using the same session/retry pattern |
+
+### 9.6 Live poll scheduling (`get_todays_matches`)
+
+Several code paths schedule the next World Cup match poll (in-play every 4 s, next kickoff, API failure retry, end-of-day handoff, daily refresh). **At most one** pending `WorldCup.get_todays_matches` task should exist. Queue coalescing is handled entirely by the task scheduler — **`world_cup.py` must not implement its own deduplication helpers**.
+
+#### TaskScheduler — `schedule_earlier_task()`
+
+Add to `backend/src/task_scheduler/task_scheduler.py` (name indicative; implementation may differ slightly):
+
+```python
+def schedule_earlier_task(
+    self,
+    time: datetime,
+    function: Callable,
+    interval: timedelta | None = None,
+) -> bool
+```
+
+**Task identity:** the scheduled **callback** (`function` reference). `WorldCup.get_todays_matches` and `Football.get_todays_matches` are separate identities.
+
+**Normalisation:** convert `time` to UTC; if `time` is in the past, treat as **now** (same rule as `schedule_task` today).
+
+**Queue rules** — when scheduling `(time, function, interval)`:
+
+| Pending task for `function`? | Relation of new `time` to pending | Action |
+| ---------------------------- | --------------------------------- | ------ |
+| No | — | Add the task |
+| Yes | New time **earlier** than pending | **Replace** pending with the new task (time and `interval` from this call) |
+| Yes | New time **equal** to pending | **Ignore** (keep existing task unchanged) |
+| Yes | New time **later** than pending | **Ignore** (keep existing task unchanged) |
+
+**Earliest poll wins.** Live code may call `schedule_earlier_task` freely from every path; later or duplicate schedules are no-ops.
+
+**Periodic tasks:** when a periodic task runs, its next occurrence must be queued with **`schedule_earlier_task`**, not `schedule_task`, so periodic and one-shot schedules share the same single slot per callback. Existing `get_runnable_tasks` periodic re-queue logic should be updated accordingly.
+
+**Unchanged:** `schedule_task` remains for tasks that **may** legitimately stack (e.g. bootstrap one-offs, `DailyApiRetryScheduler` retries, `sync_matches` / `sync_standings` dailies).
+
+#### Daily refresh time
+
+All **daily anchor** schedules for `get_todays_matches` use **Pacific midnight + 1 minute** (same instant as the old recurring daily job):
+
+```python
+_next_daily_get_todays_matches_utc()  # _next_wc_tournament_midnight_utc() + 1 min
+```
+
+Pass `interval=timedelta(days=1)` on daily anchors so the next tournament day is re-queued automatically after each daily run.
+
+**Why + 1 min and a daily poll:** knockout gaps and late tournament stages may have **days with no fixtures**, but API data (postponements, bracket updates, assigned teams) can still change. A daily `get_todays_matches` call refreshes tournament-day state even when nothing is played.
+
+#### WC call sites (all use `schedule_earlier_task`)
+
+| Caller | Typical `time` | `interval` |
+| ------ | -------------- | ---------- |
+| `WorldCup.__init__` | Next Pacific midnight **+ 1 min** | `1 day` |
+| `schedule_live_updates` — in play | `now + 4 s` | `None` |
+| `schedule_live_updates` — upcoming kickoff | Next match `utc_date` (or `now + 4 s` if overdue) | `None` |
+| `schedule_live_updates` / `_schedule_next_tournament_poll` — no fixtures left today | Next Pacific midnight **+ 1 min** | `1 day` |
+| `get_todays_matches` — API/parse failure | `now + 4 s` | `None` |
+| Out of tournament window | `WC_TOURNAMENT_START` or next daily anchor | `1 day` when scheduling daily anchor |
+
+Every row calls `schedule_earlier_task` directly — **no wrapper** in `WorldCup`.
+
+#### Expected behaviour (examples)
+
+Assume pending daily poll **tomorrow 07:01 UTC** (`interval=1 day`):
+
+| New schedule from | New time | Result |
+| ----------------- | -------- | ------ |
+| Upcoming kickoff today | 16:00 UTC | **Replace** → poll at 16:00 (daily interval cleared until next daily anchor) |
+| Duplicate daily handoff | 07:01 UTC | **Ignore** (equal) |
+| In-play poll after 16:00 run | 16:00:04 UTC | **Add/replace** → earlier than any later kickoff poll still pending |
+
+Assume pending **16:00 UTC** kickoff poll:
+
+| New schedule from | New time | Result |
+| ----------------- | -------- | ------ |
+| Daily recurring re-arm | Tomorrow 07:01 UTC | **Ignore** (later) |
+| End-of-day handoff | Tomorrow 07:01 UTC, `interval=1 day` | **Ignore** until 16:00 poll has run; after it runs, handoff **adds** daily anchor |
+
+This resolves the duplicate **07:00 / 07:01** and double **16:00** log lines: two paths scheduling the same or later instant collapse to one queued task; only **earlier** polls preempt.
+
+#### Logging note
+
+`LivePollPeriodTracker.log_poll_period_scheduled` may still emit INFO when application code *attempts* to schedule a later poll that the scheduler ignores. If that proves noisy, downgrade those attempts to DEBUG or log only when `schedule_earlier_task` actually changes the queue (scheduler-side enhancement — optional).
+
+#### Premier League
+
+`Football.get_todays_matches` should adopt the same `schedule_earlier_task` pattern for consistency (separate callback identity from WC).
 
 ## 10. UI Notes
 
@@ -1076,6 +1167,7 @@ Query param on all HTML routes: `?edition={year}` (default = current edition via
 - [x] Live group standings on overview and group pages (`/ws/world-cup-table/`, `get_world_cup_standings`)
 - [x] Tournament-day timezone + live overlay rules (§3.6, §9.2) — provisional stats in-play only; `sync_standings` on newly finished group match
 - [x] Global API rate limiting + spaced bootstrap (§8.5, §9.5; [`Football-API-Rate-Limiting.md`](Football-API-Rate-Limiting.md))
+- [x] Live poll queue — `schedule_earlier_task` in TaskScheduler; WC `get_todays_matches` call sites (§9.6)
 - [x] All matches + team fixture pages
 
 ### Phase 4 — Optional enhancements
@@ -1129,6 +1221,7 @@ See §15. Summary:
 | 20  | Standings on full time  | Inline `sync_standings()` when a group match **newly** finishes (pre-write Mongo compare); live overlay skips stat increments for finished matches | §8.6, §9.2                    |
 | 21  | WC kickoff ingest       | No PL midnight→15:00 London fix; use API `utcDate` as-is (§3.6)                                                  | §3.6                          |
 | 22  | Worker crest/teams API  | No `/competitions/WC/teams` or crest download in worker; local flags only                                          | §7.3, §8.6, [`Football-API-Rate-Limiting.md`](Football-API-Rate-Limiting.md) §3.1 |
+| 23  | Live poll task queue    | **`schedule_earlier_task`** — one pending task per callback; earliest time wins; no dedup logic in `world_cup.py` | §8.6, §9.6                    |
 
 
 ## 15. Historical Editions — Static Backfill
