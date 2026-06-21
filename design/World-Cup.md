@@ -36,7 +36,7 @@ The Premier League implementation is the template. Reuse:
 | Live scores WebSocket | `WS /football/ws/`                                       | Extend with `competition: "world-cup"` param (same endpoint)                    |
 | Live standings WebSocket | `WS /football/ws/world-cup-table/`                    | Dedicated endpoint; message `get_world_cup_standings` (§9.2)                    |
 | Kickoff display timezone | `football_utils.update_match_timezone()` → `Europe/London` | Unchanged — UK-local times in templates                                         |
-| Tournament day timezone | `WC_TOURNAMENT_TZ` in `world_cup_utils.py`              | `America/Los_Angeles` — westernmost host TZ for “today” cutoffs (§3.6)          |
+| Tournament day timezone | `shared/football/world_cup_tournament.py` (`WC_TOURNAMENT_TZ`) | `America/Los_Angeles` — westernmost host TZ for “today” cutoffs (§3.6)          |
 
 
 Do **not** reuse without adaptation:
@@ -192,9 +192,9 @@ Overview and groups index show **stage dividers** when multiple phases exist. Ov
 
 The 2026 tournament is played across **US, Canada, and Mexico**. Kickoffs are shown to users in **UK local time** (`update_match_timezone()` → `Europe/London`), but **standings cutoffs and live polling** must use a host-region calendar — not UK/UTC — or late West Coast matches are assigned to the wrong day and live tables double-count results.
 
-**Canonical timezone:** `America/Los_Angeles` (`WC_TOURNAMENT_TZ` in `world_cup_utils.py`). Pacific is the **westernmost** host offset, so “tournament today” only advances at West Coast midnight; a late LA kickoff stays on the same tournament day as an earlier Mexico City or Eastern US game.
+**Canonical timezone:** `America/Los_Angeles` (`WC_TOURNAMENT_TZ` in `shared/football/world_cup_tournament.py`). Pacific is the **westernmost** host offset, so “tournament today” only advances at West Coast midnight; a late LA kickoff stays on the same tournament day as an earlier Mexico City or Eastern US game.
 
-**Helpers** (`world_cup_utils.py`):
+**Helpers** (`shared/football/world_cup_tournament.py`; re-exported from `website/football/world_cup_utils.py`):
 
 | Function | Purpose |
 | -------- | ------- |
@@ -355,7 +355,9 @@ Each section is one group play-off (e.g. `Group 3 play-off`), with match cards a
 
 ### 4.9 Push notification subscriptions (`GET /football/world-cup/subscriptions/`)
 
-National-team notification preferences for the current edition. Reuses PL `subscriptions.js` and storage; WC team selections merge with existing PL selections.
+National-team notification preferences for the current edition. Reuses PL `subscriptions.js` and storage; WC team selections merge with existing PL selections. Visiting with a non-current `?edition=` **redirects** to `/football/world-cup/subscriptions/` (current edition).
+
+**Save API:** `PUT /football/world-cup/subscription/preferences/` (page URL remains `/subscriptions/`).
 
 **Template:** `templates/football/world-cup/subscriptions.html`
 
@@ -700,11 +702,11 @@ Execute in order when building or correcting the flag cache:
 
 #### 7.3.4 Acceptance criteria (flags)
 
-- [ ] All 48 tier-A nations use the same football-data.org `team.id` in 2026 live data and in every historical edition where they appear.
-- [ ] Every tier-B nation in `wc_team_registry.json` has a unique synthetic ID and a matching `{id}.svg` on disk.
-- [ ] Argentina (and other tier-A examples) show the same flag in 1930 and 2026.
-- [ ] Defunct nations (e.g. `West Germany`, `Soviet Union`) show the correct historical flag, not the successor state.
-- [ ] No orphan SVG files under `crests/wc/`; no registry entry without a local file.
+- [x] All 48 tier-A nations use the same football-data.org `team.id` in 2026 live data and in every historical edition where they appear.
+- [x] Every tier-B nation in `wc_team_registry.json` has a unique synthetic ID and a matching `{id}.svg` on disk.
+- [x] Argentina (and other tier-A examples) show the same flag in 1930 and 2026.
+- [x] Defunct nations (e.g. `West Germany`, `Soviet Union`) show the correct historical flag, not the successor state.
+- [x] No orphan SVG files under `crests/wc/`; no registry entry without a local file.
 
 ## 8. API & Ingestion
 
@@ -865,7 +867,7 @@ When 2026 ends, stop the live worker for that edition; the final Mongo snapshot 
 ### 8.7 Auth and attribution
 
 - **Auth:** `X-Auth-Token: {token}` — reuse existing secret file.
-- **Optional headers:** `X-Unfold-Goals`, `X-Unfold-Bookings`, etc. (see [lookup tables](https://docs.football-data.org/general/v4/lookup_tables.html)) — not required for v1.
+- **Optional headers:** `X-Unfold-Goals`, `X-Unfold-Bookings`, etc. (see [lookup tables](https://docs.football-data.org/general/v4/lookup_tables.html)) — not required for v1; not available on the project’s free live-scores tier.
 - **Attribution:** Keep footer: “Data sourced from [football-data.org](https://www.football-data.org/)”.
 
 ## 9. Live Updates
@@ -890,6 +892,8 @@ Two Mongo collections, mirroring `pl_table_{season}` + `live_pl_table`:
 | Official snapshot | `wc_standings_{edition}` | `sync_standings()` | **SSR** — `retrieve_group_standings()` / `retrieve_all_group_standings()` |
 | Live overlay | `live_wc_standings_{edition}` | `update_live_standings()` | **WebSocket** — `get_wc_live_group_standings_db()` |
 
+**Qualification (Q) labels (2026):** computed from the **official** standings snapshot only — updated after a group match finishes (`sync_standings` on newly finished match) or on daily sync. In-play provisional stats in the live overlay do **not** drive Q labels; results can still change until full time.
+
 **Live overlay rules** (`backend/src/football/world_cup.py`):
 
 1. Start from the official per-group `LiveTableItem` rows in `wc_standings_{edition}`.
@@ -911,10 +915,11 @@ get_todays_matches poll
   → update_live_standings(matches) → live_wc_standings: chips + in-play deltas only
 ```
 
-**WebSocket** — `WS /football/ws/world-cup-table/`:
+**WebSocket** — `WS /football/ws/world-cup-table/?edition=2026`:
 
 ```javascript
-{ "messageType": "get_world_cup_standings", "edition": "2026" }
+// Edition from query string; body field is optional (server falls back to query param).
+{ "messageType": "get_world_cup_standings" }
 ```
 
 Response: `WorldCupStandingsList` with per-group `LiveTableItem` rows. Client: `world_cup_standings_live.js` patches overview mini tables and full group tables.
@@ -1135,7 +1140,7 @@ Popup actions row: **Apply** (submit) on the left; **Current Edition** / **Curre
 | GET    | `/football/world-cup/summary/`          | Historic edition summary (§4.10)                   |
 | GET    | `/football/world-cup/teams/{team_id}/`  | Team fixtures                                      |
 | GET    | `/football/world-cup/subscriptions/`    | National-team push notification preferences        |
-| PUT    | `/football/world-cup/subscriptions/`    | Save notification preferences (API)                |
+| PUT    | `/football/world-cup/subscription/preferences/` | Save notification preferences (API)          |
 | WS     | `/football/ws/` (extended)              | Live scores (`competition: "world-cup"`)            |
 | WS     | `/football/ws/world-cup-table/`         | Live group standings (`get_world_cup_standings`)   |
 | GET    | `/football/world-cup/api/`              | Optional simplified JSON (mirror `/football/api/`) |
@@ -1473,7 +1478,7 @@ When a knockout tie was drawn, some early tournaments scheduled a **replay** rat
 | `filter_superseded_knockout_replays()` | `world_cup_utils.py` | Knockout view: replay leg only |
 | `world_cup_score_annotation()` | `world_cup_utils.py` | `(replay)`, `(aet)`, pens |
 | `world_cup_display_score()` / `world_cup_score_display_scoreline()` | `world_cup_utils.py` | Match-card scoreline (ET yes, pens no) |
-| `wc_tournament_today()` / `match_on_wc_tournament_day()` | `world_cup_utils.py` | Tournament-day calendar (`America/Los_Angeles`) — §3.6 |
+| `wc_tournament_today()` / `match_on_wc_tournament_day()` | `shared/football/world_cup_tournament.py` | Tournament-day calendar (`America/Los_Angeles`) — §3.6 |
 | `get_wc_live_group_standings_db()` | `world_cup_db.py` | Read `live_wc_standings_{edition}` for WebSocket |
 | `world_cup_edition_switch_url_for_edition()` | `world_cup_utils.py` | Build **Current Edition** URL from `edition_switch_path` |
 | `_normalize_knockout_replays()` | `world_cup_import.py` | Import both replay legs |
@@ -1505,6 +1510,7 @@ When a knockout tie was drawn, some early tournaments scheduled a **replay** rat
 | Live scores JS       | `website/static/js/football/football.js`                                                                                     |
 | WC live JS           | `website/static/js/football/world_cup_live.js`                                                                               |
 | WC standings live JS | `website/static/js/football/world_cup_standings_live.js`                                                                     |
+| Shared WC helpers / models | `shared/football/world_cup_tournament.py`, `shared/football/mongo_models.py` |
 | WC backend worker    | `backend/src/football/world_cup.py` (ingest, tournament-day poll, live standings)                                          |
 | Bracket scroll JS    | `website/static/js/football/world_cup_bracket.js`                                                                            |
 | Table live JS        | `website/static/js/football/table_live.js`                                                                                   |
