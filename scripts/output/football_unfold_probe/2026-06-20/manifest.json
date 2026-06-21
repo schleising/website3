@@ -1,0 +1,55 @@
+{
+  "tournament_day": "2026-06-20",
+  "tournament_timezone": "America/Los_Angeles",
+  "url": "https://api.football-data.org/v4/competitions/WC/matches?dateFrom=2026-06-20&dateTo=2026-06-21&season=2026",
+  "files": [
+    {
+      "slug": "baseline",
+      "file": "scripts/output/football_unfold_probe/2026-06-20/baseline.json",
+      "ok": true,
+      "status_code": 200,
+      "match_count": 9,
+      "unfold_headers": null
+    },
+    {
+      "slug": "X-Unfold-Lineups",
+      "file": "scripts/output/football_unfold_probe/2026-06-20/X-Unfold-Lineups.json",
+      "ok": true,
+      "status_code": 200,
+      "match_count": 9,
+      "unfold_headers": {
+        "X-Unfold-Lineups": "true"
+      }
+    },
+    {
+      "slug": "X-Unfold-Bookings",
+      "file": "scripts/output/football_unfold_probe/2026-06-20/X-Unfold-Bookings.json",
+      "ok": true,
+      "status_code": 200,
+      "match_count": 9,
+      "unfold_headers": {
+        "X-Unfold-Bookings": "true"
+      }
+    },
+    {
+      "slug": "X-Unfold-Subs",
+      "file": "scripts/output/football_unfold_probe/2026-06-20/X-Unfold-Subs.json",
+      "ok": true,
+      "status_code": 200,
+      "match_count": 9,
+      "unfold_headers": {
+        "X-Unfold-Subs": "true"
+      }
+    },
+    {
+      "slug": "X-Unfold-Goals",
+      "file": "scripts/output/football_unfold_probe/2026-06-20/X-Unfold-Goals.json",
+      "ok": true,
+      "status_code": 200,
+      "match_count": 9,
+      "unfold_headers": {
+        "X-Unfold-Goals": "true"
+      }
+    }
+  ]
+}
