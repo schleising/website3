@@ -835,7 +835,7 @@ function drawGrid(svg, device_id, series) {
         label.setAttribute("font-size", "12");
         label.textContent = chartPeriod === 'daily'
             ? new Date(xTick * timeScale).toLocaleTimeString([], { hour: '2-digit' })
-            : new Date(xTick * timeScale).toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
+            : new Date(xTick * timeScale).toLocaleDateString([], { weekday: 'short' });
         xLabels.appendChild(label);
     }
 
