@@ -62,21 +62,27 @@ body {
     top: 0;
     z-index: 20;
     margin: -0.75rem -0.75rem 0;
-    padding: 0.85rem 1.05rem 0.7rem;
+    padding: 0.75rem 1.05rem;
     border-bottom: 0.0625rem solid var(--line);
     background: linear-gradient(180deg, hsla(170, 50%, 96%, 0.97), hsla(205, 58%, 94%, 0.94));
     backdrop-filter: blur(0.5rem);
     box-shadow: 0 0.35rem 1.2rem hsla(212, 34%, 16%, 0.08);
 }
 
+.header-top {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+}
+
 .chart-controls {
     display: flex;
+    flex: 1 1 auto;
     flex-wrap: wrap;
+    justify-content: center;
     align-items: center;
     gap: 0.65rem;
-    margin-top: 0.45rem;
-    padding-top: 0.5rem;
-    border-top: 0.0625rem dashed hsla(211, 26%, 28%, 0.18);
+    min-width: 0;
 }
 
 .period-toggle {
@@ -152,28 +158,17 @@ body {
     outline-offset: 0.125rem;
 }
 
-.header-top {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 0.8rem;
-}
-
 .header h1 {
     margin: 0;
+    flex: 0 0 auto;
     font-family: var(--font-display);
     font-size: clamp(1.5rem, 2.6vw, 2.2rem);
     line-height: 1.08;
     letter-spacing: -0.02rem;
 }
 
-.subtitle {
-    margin: 0;
-    color: var(--text-subtle);
-    font-size: 0.92rem;
-}
-
 .theme-switch {
+    flex: 0 0 auto;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -497,10 +492,35 @@ body.dark-mode .sticky-header {
 
     .sticky-header {
         margin: -0.48rem -0.48rem 0;
-        padding: 0.7rem 0.78rem 0.62rem;
+        padding: 0.62rem 0.78rem;
+    }
+
+    .header-top {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        grid-template-rows: auto auto;
+        align-items: center;
+        gap: 0.5rem 0.65rem;
+    }
+
+    .header h1 {
+        grid-row: 1;
+        grid-column: 1;
+    }
+
+    .theme-switch {
+        grid-row: 1;
+        grid-column: 2;
+        justify-self: end;
+        width: 2.92rem;
+        height: 1.64rem;
     }
 
     .chart-controls {
+        grid-row: 2;
+        grid-column: 1 / -1;
+        flex: none;
+        justify-content: flex-start;
         gap: 0.5rem;
     }
 
@@ -517,11 +537,6 @@ body.dark-mode .sticky-header {
     .charts {
         grid-template-columns: 1fr;
         gap: 0.5rem;
-    }
-
-    .theme-switch {
-        width: 2.92rem;
-        height: 1.64rem;
     }
 
     .theme-switch-thumb {
