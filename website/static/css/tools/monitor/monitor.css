@@ -330,6 +330,28 @@ p.monitor-data.status-offline {
     padding: 0.06rem 0.5rem;
 }
 
+.temperature-readout {
+    display: inline-flex;
+    align-items: baseline;
+    justify-content: flex-end;
+    gap: 0;
+    max-width: 100%;
+}
+
+.temperature-current-value {
+    color: var(--accent);
+}
+
+.temperature-overlay-value {
+    color: var(--chart-overlay);
+}
+
+.temperature-overlay-value:not([hidden])::before {
+    content: " / ";
+    color: var(--text-subtle);
+    font-weight: 500;
+}
+
 .data-container.device-offline {
     border-color: hsla(7, 58%, 45%, 0.35);
 }
@@ -374,8 +396,14 @@ p.monitor-data.status-offline {
     opacity: 0.85;
 }
 
-.chart-svg .temperature-circle {
-    fill: hsl(13, 90%, 53%);
+.chart-svg .temperature-circle-current {
+    fill: var(--accent);
+    stroke: hsl(0, 0%, 100%);
+    stroke-width: 1.5;
+}
+
+.chart-svg .temperature-circle-overlay {
+    fill: var(--chart-overlay);
     stroke: hsl(0, 0%, 100%);
     stroke-width: 1.5;
 }

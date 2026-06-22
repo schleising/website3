@@ -10,9 +10,9 @@
   <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#182230">
   <link type="text/css" rel="stylesheet" href="/css/tools/fonts.css?v1.1.0" />
   <link type="text/css" rel="stylesheet" href="/css/tools/monitor/reset.css?v1.1.0" />
-  <link type="text/css" rel="stylesheet" href="/css/tools/monitor/monitor.css?v1.4.2" />
+  <link type="text/css" rel="stylesheet" href="/css/tools/monitor/monitor.css?v1.4.3" />
   <script defer src="/js/tools/monitor/scope.js?v1.1.0"></script>
-  <script defer src="/js/tools/monitor/monitor.js?v1.3.1"></script>
+  <script defer src="/js/tools/monitor/monitor.js?v1.4.0"></script>
   <script defer src="/js/tools/monitor/theme-toggle.js?v1.1.0"></script>
   <link rel="icon" type="image/ico" sizes="48x48" href="/icons/tools/monitor/favicon-48x48-20260504.ico" />
   <link rel="manifest" href="/manifests/tools/monitor/monitor-20260504.webmanifest" crossorigin="use-credentials" />
@@ -71,7 +71,9 @@
           <p class="monitor-title">Status:</p>
           <p class="monitor-data" id="status-{{ data.device_id }}"></p>
           <p class="monitor-title">Temperature:</p>
-          <p class="monitor-data" id="temperature-{{ data.device_id }}"></p>
+          <p class="monitor-data temperature-readout" id="temperature-{{ data.device_id }}">
+            <span class="temperature-current-value">--</span><span class="temperature-overlay-value" hidden></span>
+          </p>
           <p class="monitor-title">Humidity:</p>
           <p class="monitor-data" id="humidity-{{ data.device_id }}"></p>
           <div class="svg-container" id="svg-container-{{ data.device_id }}">

@@ -26,6 +26,187 @@ const xPadding = 30;
 const yPadding = 40;
 let isReloadingForUpdate = false;
 
+/** @type {Map<string, {temperature: number, timestamp: string}>} */
+const latestSensorReadings = new Map();
+
+/** @type {string | null} */
+let activeScrubDeviceId = null;
+
+/**
+ * @param {number} value
+ * @returns {string}
+ */
+function formatTemperature(value) {
+    return value.toFixed(1) + "°C";
+}
+
+/**
+ * @param {string} device_id
+ * @returns {Array<{timestamp: string, temp: number, humidity: number}>}
+ */
+function getDeviceTimeseries(device_id) {
+    const device = deviceData?.find(element => element.device_id === device_id);
+    return device?.data ?? [];
+}
+
+/**
+ * @param {Array<{timestamp: string, temp: number, humidity: number}>} data
+ * @param {Date} targetTime
+ * @returns {number | null}
+ */
+function getClosestTemperatureAtTime(data, targetTime) {
+    if (data.length === 0) {
+        return null;
+    }
+
+    const targetMs = targetTime.getTime();
+    let closestPoint = data[0];
+    let closestDistance = Math.abs(new Date(closestPoint.timestamp).getTime() - targetMs);
+
+    for (const point of data) {
+        const distance = Math.abs(new Date(point.timestamp).getTime() - targetMs);
+        if (distance < closestDistance) {
+            closestPoint = point;
+            closestDistance = distance;
+        }
+    }
+
+    return closestPoint.temp;
+}
+
+/**
+ * @param {Array<{timestamp: string, temp: number, humidity: number}>} data
+ * @returns {number | null}
+ */
+function getHistoricTemperatureAtNow(data) {
+    if (!showPreviousPeriod) {
+        return null;
+    }
+
+    const now = new Date();
+    const currentBounds = getPeriodBounds(chartPeriod, 0);
+    const previousBounds = getPeriodBounds(chartPeriod, 1);
+    const elapsedMs = now.getTime() - currentBounds.start.getTime();
+    const historicTarget = new Date(previousBounds.start.getTime() + elapsedMs);
+    const previousData = filterDataForPeriod(data, chartPeriod, 1);
+
+    return getClosestTemperatureAtTime(previousData, historicTarget);
+}
+
+/**
+ * @param {string} device_id
+ * @param {number} currentTemp
+ * @param {number | null | undefined} overlayTemp
+ */
+function updateTemperatureReadout(device_id, currentTemp, overlayTemp = null) {
+    const readout = document.getElementById("temperature-" + device_id);
+    if (readout == null) {
+        return;
+    }
+
+    const currentValue = readout.querySelector(".temperature-current-value");
+    const overlayValue = readout.querySelector(".temperature-overlay-value");
+    if (currentValue == null || overlayValue == null) {
+        return;
+    }
+
+    currentValue.textContent = formatTemperature(currentTemp);
+
+    if (showPreviousPeriod && overlayTemp != null) {
+        overlayValue.textContent = formatTemperature(overlayTemp);
+        overlayValue.hidden = false;
+    } else {
+        overlayValue.textContent = "";
+        overlayValue.hidden = true;
+    }
+}
+
+/**
+ * @param {string} device_id
+ */
+function restoreLiveReadouts(device_id) {
+    const latestReading = latestSensorReadings.get(device_id);
+    if (latestReading == null) {
+        return;
+    }
+
+    const time = document.getElementById("time-" + device_id);
+    if (time != null) {
+        time.innerText = new Date(latestReading.timestamp)
+            .toLocaleString([], { weekday: 'short', month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+    }
+
+    const historicTemp = getHistoricTemperatureAtNow(getDeviceTimeseries(device_id));
+    updateTemperatureReadout(device_id, latestReading.temperature, historicTemp);
+}
+
+/**
+ * @param {SVGPolylineElement | null} polyline
+ * @param {number} mouseX
+ * @returns {SVGPoint | null}
+ */
+function getClosestPointByX(polyline, mouseX) {
+    if (polyline == null || polyline.points.length === 0) {
+        return null;
+    }
+
+    let closestPoint = polyline.points[0];
+    let closestDistance = Math.abs(closestPoint.x - mouseX);
+
+    for (let i = 1; i < polyline.points.length; i++) {
+        const point = polyline.points[i];
+        const distance = Math.abs(point.x - mouseX);
+        if (distance < closestDistance) {
+            closestPoint = point;
+            closestDistance = distance;
+        }
+    }
+
+    return closestPoint;
+}
+
+/**
+ * @param {SVGElement} svg
+ * @param {string} className
+ * @param {SVGPoint} point
+ */
+function setScrubMarker(svg, className, point) {
+    let marker = svg.querySelector("." + className);
+    if (marker == null) {
+        marker = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+        marker.setAttribute("class", className);
+        marker.setAttribute("r", "5");
+        svg.appendChild(marker);
+    }
+
+    marker.setAttribute("cx", String(point.x));
+    marker.setAttribute("cy", String(point.y));
+}
+
+/**
+ * @param {SVGElement} svg
+ */
+function clearScrubMarkers(svg) {
+    svg.querySelectorAll(".temperature-circle-current, .temperature-circle-overlay").forEach(marker => {
+        marker.remove();
+    });
+}
+
+/**
+ * @param {string} device_id
+ */
+function clearChartScrub(device_id) {
+    const svg = document.getElementById("chart-" + device_id);
+    if (svg != null) {
+        clearScrubMarkers(svg);
+    }
+
+    if (activeScrubDeviceId === device_id) {
+        activeScrubDeviceId = null;
+        restoreLiveReadouts(device_id);
+    }
+}
+
 /**
  * @param {'daily' | 'weekly'} period
  * @returns {number}
@@ -161,6 +342,7 @@ function initializeChartControls() {
 
             if (deviceData != null) {
                 drawCharts();
+                refreshAllTemperatureReadouts();
             }
         });
     });
@@ -173,9 +355,18 @@ function initializeChartControls() {
 
             if (deviceData != null) {
                 drawCharts();
+                refreshAllTemperatureReadouts();
             }
         });
     }
+}
+
+function refreshAllTemperatureReadouts() {
+    latestSensorReadings.forEach((_reading, device_id) => {
+        if (activeScrubDeviceId !== device_id) {
+            restoreLiveReadouts(device_id);
+        }
+    });
 }
 
 function promptForWaitingWorker(registration) {
@@ -307,91 +498,61 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Add event listener for mouse leave on each svg element
         svg.addEventListener('mouseleave', () => {
-            // Remove the circle on mouse leave
-            const circle = svg.querySelector('.temperature-circle');
-            if (circle != null) {
-                circle.remove();
-            }
+            const device_id = svg.id.split("-").slice(1).join("-");
+            clearChartScrub(device_id);
         });
 
         // Add event listener for touch end on each svg element
         svg.addEventListener('touchend', () => {
-            // Remove the circle on touch end
-            const circle = svg.querySelector('.temperature-circle');
-            if (circle != null) {
-                circle.remove();
-            }
+            const device_id = svg.id.split("-").slice(1).join("-");
+            clearChartScrub(device_id);
         });
     });
 });
 
 function handleMoveEvent(svg, clientX, clientY) {
-    // Draw a circle on the polyline closest to the mouse position in the x axis
-    // Get the closest point to the mouse position
-    // Get the mouse position in the SVG element
     const point = svg.createSVGPoint();
     point.x = clientX;
     point.y = clientY;
     const mousePosition = point.matrixTransform(svg.getScreenCTM().inverse());
 
-    // Get the device id from the svg id by stripping the "chart-" prefix
     const device_id = svg.id.split("-").slice(1).join("-");
+    const currentPolyline = svg.querySelector('.temperature-current') ?? svg.querySelector('.temperature');
+    const closestCurrentPoint = getClosestPointByX(currentPolyline, mousePosition.x);
 
-    // Get the child polyline element
-    const polyline = svg.querySelector('.temperature-current') ?? svg.querySelector('.temperature');
-
-    if (polyline == null || polyline.points.length === 0) {
+    if (closestCurrentPoint == null) {
         return;
     }
 
-    // Iterate over the length of the polyline and get the closest point to the mouse position in the x axis
-    let closestPoint = null;
-    let closestDistance = Number.MAX_VALUE;
+    activeScrubDeviceId = device_id;
+    clearScrubMarkers(svg);
 
-    for (let i = 0; i < polyline.points.length; i++) {
-        const p = polyline.points[i];
-        const distance = Math.abs(p.x - mousePosition.x);
-
-        if (distance < closestDistance) {
-            closestPoint = p;
-            closestDistance = distance;
-        }
-    }
-
-    // Draw a circle on the closest point
-    const circle = svg.querySelector('.temperature-circle');
-    if (circle != null) {
-        circle.remove();
-    }
-
-    const newCircle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-    newCircle.setAttribute("class", "temperature-circle");
-    newCircle.setAttribute("cx", closestPoint.x);
-    newCircle.setAttribute("cy", closestPoint.y);
-    newCircle.setAttribute("r", 5);
-    newCircle.setAttribute("fill", "red");
-    svg.appendChild(newCircle);
-
-    // Update the temperature and time data labels
-    const temperature = document.getElementById("temperature-" + device_id);
-    const time = document.getElementById("time-" + device_id);
-
-    // Transform the point to the original coordinates
     const matrix = transformationMatrices.get(device_id);
-
-    // Check if the transformation matrix exists
     if (matrix == null) {
         console.error("Transformation matrix not found for device:", device_id);
         return;
     }
 
-    // Get the original point
-    const originalPoint = matrix.inverse().transformPoint(closestPoint);
+    const currentOriginalPoint = matrix.inverse().transformPoint(closestCurrentPoint);
+    let overlayTemp = null;
 
-    // Set the temperature and time data
-    temperature.innerText = originalPoint.y.toFixed(1) + "°C";
-    time.innerText = new Date(originalPoint.x * timeScale)
-        .toLocaleString([], { weekday: 'short', month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+    const overlayPolyline = svg.querySelector('.temperature-overlay');
+    const closestOverlayPoint = getClosestPointByX(overlayPolyline, mousePosition.x);
+    if (showPreviousPeriod && closestOverlayPoint != null) {
+        setScrubMarker(svg, "temperature-circle-overlay", closestOverlayPoint);
+        const overlayOriginalPoint = matrix.inverse().transformPoint(closestOverlayPoint);
+        overlayTemp = overlayOriginalPoint.y;
+    }
+
+    setScrubMarker(svg, "temperature-circle-current", closestCurrentPoint);
+
+    updateTemperatureReadout(device_id, currentOriginalPoint.y, overlayTemp);
+
+    const time = document.getElementById("time-" + device_id);
+    if (time != null) {
+        time.innerText = new Date(currentOriginalPoint.x * timeScale)
+            .toLocaleString([], { weekday: 'short', month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+    }
 }
 
 // Fetch the latest temperature data from the server every 5 seconds and update the page
@@ -406,13 +567,20 @@ async function fetchSensorData() {
             response_data.data.forEach(element => {
                 const containerElement = document.getElementById("data-container-" + element.device_id);
 
+                latestSensorReadings.set(element.device_id, {
+                    temperature: element.temperature,
+                    timestamp: element.timestamp,
+                });
+
                 // Update the device name
                 document.getElementById("device-" + element.device_id).innerText = element.device_name;
 
                 // Update the time data in Tue, 01 Jan, 21:54 format
-                timeString = new Date(element.timestamp)
-                    .toLocaleString([], { weekday: 'short', month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit' });
-                document.getElementById("time-" + element.device_id).innerText = timeString;
+                if (activeScrubDeviceId !== element.device_id) {
+                    timeString = new Date(element.timestamp)
+                        .toLocaleString([], { weekday: 'short', month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+                    document.getElementById("time-" + element.device_id).innerText = timeString;
+                }
 
                 // Update the status data
                 statusString = element.online ? "Online" : "Offline";
@@ -427,7 +595,10 @@ async function fetchSensorData() {
                 }
 
                 // Update the temperature data to 1 decimal place
-                document.getElementById("temperature-" + element.device_id).innerText = element.temperature.toFixed(1) + "°C";
+                if (activeScrubDeviceId !== element.device_id) {
+                    const historicTemp = getHistoricTemperatureAtNow(getDeviceTimeseries(element.device_id));
+                    updateTemperatureReadout(element.device_id, element.temperature, historicTemp);
+                }
 
                 // Update the humidity data to 1 decimal place
                 document.getElementById("humidity-" + element.device_id).innerText = element.humidity.toFixed(1) + "%";
@@ -449,6 +620,7 @@ async function fetchTemperatureData() {
             // Update the temperature data
             deviceData = response_data.data;
             drawCharts();
+            refreshAllTemperatureReadouts();
         })
         .catch(error => {
             console.error('Error fetching temperature data:', error);
