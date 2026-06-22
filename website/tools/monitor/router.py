@@ -111,13 +111,14 @@ async def timeseries() -> TimeseriesDataResponse:
     # Create a list to store the timeseries data
     timeseries_data: list[TimeseriesData] = []
 
-    # Get the timeseries data for each device over the last 24 hours
+    # Get the timeseries data for each device over the last 14 days
+    # (supports daily/weekly charts with previous-period overlay)
     for device_name in device_names:
         # Get the data for the device
         data = sensor_data_collection.find(
             {
                 "device_name": device_name,
-                "timestamp": {"$gte": datetime.now() - timedelta(days=1)},
+                "timestamp": {"$gte": datetime.now() - timedelta(days=14)},
             }
         ).sort([("timestamp", 1)])
 

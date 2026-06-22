@@ -16,6 +16,7 @@
     --warn-text: hsl(8, 66%, 32%);
     --chart-grid: hsla(211, 26%, 26%, 0.2);
     --chart-text: hsla(214, 20%, 36%, 0.95);
+    --chart-overlay: hsl(24, 86%, 48%);
     --shadow-soft: 0 0.625rem 1.75rem hsla(212, 34%, 16%, 0.1);
 }
 
@@ -54,6 +55,101 @@ body {
     flex-direction: column;
     gap: 0.2rem;
     padding: 0.1rem 0.3rem;
+}
+
+.sticky-header {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    margin: -0.75rem -0.75rem 0;
+    padding: 0.85rem 1.05rem 0.7rem;
+    border-bottom: 0.0625rem solid var(--line);
+    background: linear-gradient(180deg, hsla(170, 50%, 96%, 0.97), hsla(205, 58%, 94%, 0.94));
+    backdrop-filter: blur(0.5rem);
+    box-shadow: 0 0.35rem 1.2rem hsla(212, 34%, 16%, 0.08);
+}
+
+.chart-controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.65rem;
+    margin-top: 0.45rem;
+    padding-top: 0.5rem;
+    border-top: 0.0625rem dashed hsla(211, 26%, 28%, 0.18);
+}
+
+.period-toggle {
+    display: inline-flex;
+    padding: 0.14rem;
+    border: 0.0625rem solid var(--line);
+    border-radius: 62.4375rem;
+    background: var(--panel-strong);
+    box-shadow: var(--shadow-soft);
+}
+
+.period-btn {
+    border: 0;
+    background: transparent;
+    color: var(--text-subtle);
+    font-family: var(--font-body);
+    font-size: 0.82rem;
+    font-weight: 600;
+    line-height: 1;
+    padding: 0.42rem 0.85rem;
+    border-radius: 62.4375rem;
+    cursor: pointer;
+    transition: background 160ms ease, color 160ms ease, box-shadow 160ms ease;
+}
+
+.period-btn:hover {
+    color: var(--text-main);
+}
+
+.period-btn.active {
+    color: var(--text-main);
+    background: var(--accent-soft);
+    box-shadow: inset 0 0 0 0.0625rem hsla(191, 74%, 40%, 0.22);
+}
+
+.period-btn:focus-visible {
+    outline: 0.125rem solid hsla(191, 82%, 44%, 0.56);
+    outline-offset: 0.125rem;
+}
+
+.overlay-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.34rem 0.7rem;
+    border: 0.0625rem solid var(--line);
+    border-radius: 62.4375rem;
+    background: var(--panel-strong);
+    box-shadow: var(--shadow-soft);
+    color: var(--text-subtle);
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    user-select: none;
+}
+
+.overlay-toggle input {
+    width: 0.95rem;
+    height: 0.95rem;
+    margin: 0;
+    accent-color: var(--accent);
+    cursor: pointer;
+}
+
+.overlay-toggle:has(input:checked) {
+    color: var(--text-main);
+    background: var(--accent-soft);
+    border-color: hsla(191, 74%, 40%, 0.28);
+}
+
+.overlay-toggle:focus-within {
+    outline: 0.125rem solid hsla(191, 82%, 44%, 0.56);
+    outline-offset: 0.125rem;
 }
 
 .header-top {
@@ -275,6 +371,14 @@ p.monitor-data.status-offline {
     stroke-linecap: round;
 }
 
+.chart-svg .temperature-overlay {
+    stroke: var(--chart-overlay);
+    stroke-width: 2;
+    stroke-linejoin: round;
+    stroke-linecap: round;
+    opacity: 0.85;
+}
+
 .chart-svg .temperature-circle {
     fill: hsl(13, 90%, 53%);
     stroke: hsl(0, 0%, 100%);
@@ -298,6 +402,7 @@ p.monitor-data.status-offline {
         --warn-text: hsl(8, 84%, 84%);
         --chart-grid: hsla(211, 34%, 82%, 0.23);
         --chart-text: hsla(209, 30%, 86%, 0.95);
+        --chart-overlay: hsl(28, 90%, 58%);
         --shadow-soft: 0 0.625rem 1.75rem hsla(214, 40%, 5%, 0.32);
     }
 
@@ -322,6 +427,7 @@ body.light-mode {
     --warn-text: hsl(8, 66%, 32%);
     --chart-grid: hsla(211, 26%, 26%, 0.2);
     --chart-text: hsla(214, 20%, 36%, 0.95);
+    --chart-overlay: hsl(24, 86%, 48%);
     --shadow-soft: 0 0.625rem 1.75rem hsla(212, 34%, 16%, 0.1);
 }
 
@@ -345,6 +451,7 @@ body.dark-mode {
     --warn-text: hsl(8, 84%, 84%);
     --chart-grid: hsla(211, 34%, 82%, 0.23);
     --chart-text: hsla(209, 30%, 86%, 0.95);
+    --chart-overlay: hsl(28, 90%, 58%);
     --shadow-soft: 0 0.625rem 1.75rem hsla(214, 40%, 5%, 0.32);
 }
 
@@ -379,9 +486,32 @@ body.dark-mode .theme-switch-thumb-moon {
     fill: hsl(209, 34%, 86%);
 }
 
+body.dark-mode .sticky-header {
+    background: linear-gradient(180deg, hsla(214, 24%, 12%, 0.97), hsla(206, 26%, 16%, 0.94));
+}
+
 @media screen and (max-width: 44rem) {
     .outer {
         padding: 0.48rem;
+    }
+
+    .sticky-header {
+        margin: -0.48rem -0.48rem 0;
+        padding: 0.7rem 0.78rem 0.62rem;
+    }
+
+    .chart-controls {
+        gap: 0.5rem;
+    }
+
+    .period-btn {
+        font-size: 0.78rem;
+        padding: 0.38rem 0.72rem;
+    }
+
+    .overlay-toggle {
+        font-size: 0.78rem;
+        padding: 0.3rem 0.58rem;
     }
 
     .charts {

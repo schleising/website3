@@ -1,4 +1,5 @@
 const serviceWorkerPath = '/sw.js';
+const chartSettingsStorageKey = 'monitor.chartSettings';
 
 // The chart data to be fetched from the server
 /**
@@ -11,13 +12,171 @@ var deviceData = null;
  */
 var transformationMatrices = new Map();
 
+/** @type {'daily' | 'weekly'} */
+let chartPeriod = 'daily';
+let showPreviousPeriod = false;
+
 // Scale the time data by 1000 to convert from milliseconds to seconds
 const timeScale = 1000;
+const dayMs = 24 * 60 * 60 * 1000;
+const weekMs = 7 * dayMs;
 
 // x and y border padding
 const xPadding = 30;
 const yPadding = 40;
 let isReloadingForUpdate = false;
+
+/**
+ * @param {'daily' | 'weekly'} period
+ * @returns {number}
+ */
+function getPeriodDurationMs(period) {
+    return period === 'daily' ? dayMs : weekMs;
+}
+
+/**
+ * Rolling window bounds ending at now for the current period, or the
+ * immediately preceding window of equal length for periodOffset 1.
+ *
+ * @param {'daily' | 'weekly'} period
+ * @param {number} periodOffset 0 for current period, 1 for previous
+ * @returns {{start: Date, end: Date}}
+ */
+function getPeriodBounds(period, periodOffset) {
+    const now = new Date();
+    const durationMs = getPeriodDurationMs(period);
+    const end = new Date(now.getTime() - periodOffset * durationMs);
+    const start = new Date(end.getTime() - durationMs);
+    return { start, end };
+}
+
+/**
+ * @param {Array<{timestamp: string, temp: number, humidity: number}>} data
+ * @param {'daily' | 'weekly'} period
+ * @param {number} periodOffset
+ * @returns {Array<{timestamp: string, temp: number, humidity: number}>}
+ */
+function filterDataForPeriod(data, period, periodOffset) {
+    const { start, end } = getPeriodBounds(period, periodOffset);
+    return data.filter(point => {
+        const timestamp = new Date(point.timestamp);
+        return timestamp >= start && timestamp < end;
+    });
+}
+
+/**
+ * @param {Array<{timestamp: string, temp: number, humidity: number}>} data
+ * @param {'daily' | 'weekly'} period
+ * @returns {Array<{timestamp: string, temp: number, humidity: number}>}
+ */
+function alignPreviousPeriodData(data, period) {
+    const offsetMs = period === 'daily' ? dayMs : weekMs;
+    return data.map(point => ({
+        ...point,
+        timestamp: new Date(new Date(point.timestamp).getTime() + offsetMs).toISOString(),
+    }));
+}
+
+/**
+ * @param {Array<{timestamp: string, temp: number, humidity: number}>} data
+ * @returns {{current: Array<{timestamp: string, temp: number, humidity: number}>, overlay: Array<{timestamp: string, temp: number, humidity: number}> | null, bounds: {minTimestamp: number, maxTimestamp: number}}}
+ */
+function getChartSeries(data) {
+    const current = filterDataForPeriod(data, chartPeriod, 0);
+    const bounds = getPeriodBounds(chartPeriod, 0);
+    let overlay = null;
+
+    if (showPreviousPeriod) {
+        const previous = filterDataForPeriod(data, chartPeriod, 1);
+        overlay = alignPreviousPeriodData(previous, chartPeriod);
+    }
+
+    return {
+        current,
+        overlay,
+        bounds: {
+            minTimestamp: bounds.start.getTime() / timeScale,
+            maxTimestamp: bounds.end.getTime() / timeScale,
+        },
+    };
+}
+
+function loadChartSettings() {
+    try {
+        const storedSettings = localStorage.getItem(chartSettingsStorageKey);
+        if (storedSettings == null) {
+            return;
+        }
+
+        const settings = JSON.parse(storedSettings);
+        if (settings.period === 'daily' || settings.period === 'weekly') {
+            chartPeriod = settings.period;
+        }
+        if (typeof settings.showPreviousPeriod === 'boolean') {
+            showPreviousPeriod = settings.showPreviousPeriod;
+        }
+    } catch (error) {
+        // Ignore storage read errors.
+    }
+}
+
+function persistChartSettings() {
+    try {
+        localStorage.setItem(chartSettingsStorageKey, JSON.stringify({
+            period: chartPeriod,
+            showPreviousPeriod,
+        }));
+    } catch (error) {
+        // Ignore storage write errors.
+    }
+}
+
+function syncChartControls() {
+    document.querySelectorAll('.period-btn').forEach(button => {
+        const isActive = button.getAttribute('data-period') === chartPeriod;
+        button.classList.toggle('active', isActive);
+        button.setAttribute('aria-checked', isActive ? 'true' : 'false');
+    });
+
+    const overlayToggle = document.getElementById('overlay-toggle');
+    if (overlayToggle != null) {
+        overlayToggle.checked = showPreviousPeriod;
+    }
+}
+
+function initializeChartControls() {
+    loadChartSettings();
+    syncChartControls();
+
+    document.querySelectorAll('.period-btn').forEach(button => {
+        button.addEventListener('click', () => {
+            const nextPeriod = button.getAttribute('data-period');
+            if (nextPeriod !== 'daily' && nextPeriod !== 'weekly') {
+                return;
+            }
+
+            chartPeriod = nextPeriod;
+            syncChartControls();
+            persistChartSettings();
+
+            if (deviceData != null) {
+                drawCharts();
+            }
+        });
+    });
+
+    const overlayToggle = document.getElementById('overlay-toggle');
+    if (overlayToggle != null) {
+        overlayToggle.addEventListener('change', () => {
+            showPreviousPeriod = overlayToggle.checked;
+            persistChartSettings();
+
+            if (deviceData != null) {
+                drawCharts();
+            }
+        });
+    }
+}
 
 function promptForWaitingWorker(registration) {
     if (!registration || !registration.waiting) {
@@ -87,6 +246,8 @@ async function updateServiceWorkerRegistration() {
 
 // Add event listener for the page to be ready to use
 document.addEventListener('DOMContentLoaded', () => {
+    initializeChartControls();
+
     // Check if the browser supports service workers
     if ('serviceWorker' in navigator) {
         // Create the service worker and register it
@@ -177,7 +338,11 @@ function handleMoveEvent(svg, clientX, clientY) {
     const device_id = svg.id.split("-").slice(1).join("-");
 
     // Get the child polyline element
-    const polyline = svg.querySelector('.temperature');
+    const polyline = svg.querySelector('.temperature-current') ?? svg.querySelector('.temperature');
+
+    if (polyline == null || polyline.points.length === 0) {
+        return;
+    }
 
     // Iterate over the length of the polyline and get the closest point to the mouse position in the x axis
     let closestPoint = null;
@@ -319,9 +484,11 @@ function updateCharts() {
 // Function to get the transformation matrix of the chart
 /**
  * @param {string} device_id
- * @param {Array<{timestamp: string, temp: number, humidity: number}>} data
+ * @param {{current: Array<{timestamp: string, temp: number, humidity: number}>, overlay: Array<{timestamp: string, temp: number, humidity: number}> | null, bounds: {minTimestamp: number, maxTimestamp: number}}} series
  */
-function setTransformationMatrix(device_id, data) {
+function setTransformationMatrix(device_id, series) {
+    const { current, overlay, bounds } = series;
+
     // Get the chart svg element
     const svgContainer = document.getElementById("svg-container-" + device_id);
 
@@ -332,21 +499,27 @@ function setTransformationMatrix(device_id, data) {
     const height = (width * 9 / 16);
     svgContainer.style.height = height + "px";
 
-    // Get the minimum and maximum temperature values
-    const minTemp = Math.floor(Math.min(...data.map(d => d.temp)));
-    const maxTemp = Math.ceil(Math.max(...data.map(d => d.temp)));
+    const temperatures = current.map(d => d.temp);
+    if (overlay != null) {
+        temperatures.push(...overlay.map(d => d.temp));
+    }
 
-    // Get the minimum and maximum timestamp values
-    const minTimestamp = new Date(data[0].timestamp).getTime() / timeScale;
-    const maxTimestamp = new Date(data[data.length - 1].timestamp).getTime() / timeScale;
+    const defaultTemp = 20;
+    const minTemp = temperatures.length > 0 ? Math.floor(Math.min(...temperatures)) : defaultTemp - 1;
+    const maxTemp = temperatures.length > 0 ? Math.ceil(Math.max(...temperatures)) : defaultTemp + 1;
+
+    const minTimestamp = bounds.minTimestamp;
+    const maxTimestamp = bounds.maxTimestamp;
 
     // Get the x and y translation needed to move the top left corner to the origin
     const xTranslation = -minTimestamp;
     const yTranslation = -maxTemp;
 
     // Get the x and y scale needed to fit the data in the SVG container
-    const xScale = (width - 2 * xPadding) / (maxTimestamp - minTimestamp);
-    const yScale = (height - 2 * yPadding) / (maxTemp - minTemp);
+    const xRange = Math.max(maxTimestamp - minTimestamp, 1);
+    const yRange = Math.max(maxTemp - minTemp, 1);
+    const xScale = (width - 2 * xPadding) / xRange;
+    const yScale = (height - 2 * yPadding) / yRange;
 
     // Create the transformation matrix
     const matrix = new DOMMatrix()
@@ -360,8 +533,10 @@ function setTransformationMatrix(device_id, data) {
 
 // Function to draw the chart of the temperature data
 function drawChart(device_id, data) {
+    const series = getChartSeries(data);
+
     // Set the transformation matrix of the chart
-    setTransformationMatrix(device_id, data);
+    setTransformationMatrix(device_id, series);
 
     // Get the chart svg element
     const svg = document.getElementById("chart-" + device_id);
@@ -376,30 +551,36 @@ function drawChart(device_id, data) {
     svg.setAttribute("height", "100%");
 
     // Draw the grid
-    drawGrid(svg, device_id, data);
+    drawGrid(svg, device_id, series);
 
     // Draw the temperature data
-    drawTemperature(svg, device_id, data);
+    drawTemperature(svg, device_id, series);
 }
 
 /**
  * Function to draw the grid for the chart
  * @param {SVGElement} svg
  * @param {string} device_id
- * @param {Array<{timestamp: string, temp: number, humidity: number}>} data
+ * @param {{current: Array<{timestamp: string, temp: number, humidity: number}>, overlay: Array<{timestamp: string, temp: number, humidity: number}> | null, bounds: {minTimestamp: number, maxTimestamp: number}}} series
  * @returns {void}
  */
-function drawGrid(svg, device_id, data) {
+function drawGrid(svg, device_id, series) {
+    const { current, overlay, bounds } = series;
+
     // Get the transformation matrix of the chart
     const matrix = transformationMatrices.get(device_id);
 
-    // Get the minimum and maximum temperature values
-    const minTemp = Math.floor(Math.min(...data.map(d => d.temp)));
-    const maxTemp = Math.ceil(Math.max(...data.map(d => d.temp)));
+    const temperatures = current.map(d => d.temp);
+    if (overlay != null) {
+        temperatures.push(...overlay.map(d => d.temp));
+    }
 
-    // Get the minimum and maximum timestamp values
-    const minTimestamp = new Date(data[0].timestamp).getTime() / timeScale;
-    const maxTimestamp = new Date(data[data.length - 1].timestamp).getTime() / timeScale;
+    const defaultTemp = 20;
+    const minTemp = temperatures.length > 0 ? Math.floor(Math.min(...temperatures)) : defaultTemp - 1;
+    const maxTemp = temperatures.length > 0 ? Math.ceil(Math.max(...temperatures)) : defaultTemp + 1;
+
+    const minTimestamp = bounds.minTimestamp;
+    const maxTimestamp = bounds.maxTimestamp;
 
     // Create the top left, bottom left and bottom right corners of the grid
     const topLeft = matrix.transformPoint(new DOMPoint(minTimestamp, maxTemp));
@@ -452,8 +633,10 @@ function drawGrid(svg, device_id, data) {
     yGrid.setAttribute("id", "y-grid-" + device_id);
     grid.appendChild(yGrid);
 
-    // Create the x axis ticks and labels, one tick per hour
-    const xTickInterval = 2 * 60 * 60 * 1000 / timeScale;
+    // Create the x axis ticks and labels
+    const xTickInterval = chartPeriod === 'daily'
+        ? 2 * 60 * 60 * 1000 / timeScale
+        : 24 * 60 * 60 * 1000 / timeScale;
     const xTickStart = Math.ceil(minTimestamp / xTickInterval) * xTickInterval;
     const xTickEnd = Math.floor(maxTimestamp / xTickInterval) * xTickInterval;
     for (let xTick = xTickStart; xTick <= xTickEnd; xTick += xTickInterval) {
@@ -478,7 +661,9 @@ function drawGrid(svg, device_id, data) {
         label.setAttribute("y", bottomLeft.y + 20);
         label.setAttribute("text-anchor", "middle");
         label.setAttribute("font-size", "12");
-        label.textContent = new Date(xTick * timeScale).toLocaleTimeString([], { hour: '2-digit' });
+        label.textContent = chartPeriod === 'daily'
+            ? new Date(xTick * timeScale).toLocaleTimeString([], { hour: '2-digit' })
+            : new Date(xTick * timeScale).toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
         xLabels.appendChild(label);
     }
 
@@ -535,40 +720,76 @@ function drawGrid(svg, device_id, data) {
 }
 
 function updateChart(device_id, data) {
+    const series = getChartSeries(data);
+
     // Set the transformation matrix of the chart
-    setTransformationMatrix(device_id, data);
+    setTransformationMatrix(device_id, series);
 
     // Get the chart svg element
     const svg = document.getElementById("chart-" + device_id);
 
     // Draw the grid
-    drawGrid(svg, device_id, data);
+    drawGrid(svg, device_id, series);
 
     // Update the temperature data
-    drawTemperature(svg, device_id, data);
+    drawTemperature(svg, device_id, series);
 }
 
-// Function to draw the temperature data on the chart
-function drawTemperature(svg, device_id, data) {
-    // Get the transformation matrix of the chart
+/**
+ * @param {SVGElement} svg
+ * @param {string} device_id
+ * @param {Array<{timestamp: string, temp: number, humidity: number}>} data
+ * @param {string} className
+ * @param {string} elementId
+ */
+function drawTemperatureLine(svg, device_id, data, className, elementId) {
     const matrix = transformationMatrices.get(device_id);
-
-    // Get the temperature data points
-    const points = data.map(d => matrix.transformPoint(new DOMPoint(new Date(d.timestamp).getTime() / timeScale, d.temp)));
-
-    // Remove the existing temperature data if it exists
-    const existingTemperature = document.getElementById("temperature-line-" + device_id);
-    if (existingTemperature != null) {
-        svg.removeChild(existingTemperature);
+    const existingLine = document.getElementById(elementId);
+    if (existingLine != null) {
+        svg.removeChild(existingLine);
     }
 
-    // Create the temperature data path
+    if (data.length === 0) {
+        return;
+    }
+
+    const points = data.map(d => matrix.transformPoint(
+        new DOMPoint(new Date(d.timestamp).getTime() / timeScale, d.temp)
+    ));
+
     const temperature = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
-    temperature.setAttribute("class", "temperature");
-    temperature.setAttribute("id", "temperature-line-" + device_id);
+    temperature.setAttribute("class", className);
+    temperature.setAttribute("id", elementId);
     temperature.setAttribute("fill", "none");
-    temperature.setAttribute("stroke", "dodgerblue");
     temperature.setAttribute("stroke-width", "1");
     temperature.setAttribute("points", points.map(p => `${p.x},${p.y}`).join(" "));
     svg.appendChild(temperature);
+}
+
+// Function to draw the temperature data on the chart
+function drawTemperature(svg, device_id, series) {
+    const { current, overlay } = series;
+
+    if (overlay != null && overlay.length > 0) {
+        drawTemperatureLine(
+            svg,
+            device_id,
+            overlay,
+            "temperature-overlay",
+            "temperature-overlay-line-" + device_id
+        );
+    } else {
+        const existingOverlay = document.getElementById("temperature-overlay-line-" + device_id);
+        if (existingOverlay != null) {
+            svg.removeChild(existingOverlay);
+        }
+    }
+
+    drawTemperatureLine(
+        svg,
+        device_id,
+        current,
+        "temperature temperature-current",
+        "temperature-line-" + device_id
+    );
 }

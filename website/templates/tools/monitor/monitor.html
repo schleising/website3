@@ -10,9 +10,9 @@
   <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#182230">
   <link type="text/css" rel="stylesheet" href="/css/tools/fonts.css?v1.1.0" />
   <link type="text/css" rel="stylesheet" href="/css/tools/monitor/reset.css?v1.1.0" />
-  <link type="text/css" rel="stylesheet" href="/css/tools/monitor/monitor.css?v1.3.3" />
+  <link type="text/css" rel="stylesheet" href="/css/tools/monitor/monitor.css?v1.4.0" />
   <script defer src="/js/tools/monitor/scope.js?v1.1.0"></script>
-  <script defer src="/js/tools/monitor/monitor.js?v1.2.1"></script>
+  <script defer src="/js/tools/monitor/monitor.js?v1.3.1"></script>
   <script defer src="/js/tools/monitor/theme-toggle.js?v1.1.0"></script>
   <link rel="icon" type="image/ico" sizes="48x48" href="/icons/tools/monitor/favicon-48x48-20260504.ico" />
   <link rel="manifest" href="/manifests/tools/monitor/monitor-20260504.webmanifest" crossorigin="use-credentials" />
@@ -21,7 +21,7 @@
 
 <body>
   <div class="outer">
-    <header class="header">
+    <header class="header sticky-header">
       <div class="header-top">
         <h1>Home Monitor</h1>
         <button id="theme-toggle-button" class="theme-switch" type="button" aria-label="Toggle dark mode" aria-pressed="false" title="Toggle dark mode">
@@ -50,6 +50,16 @@
         </button>
       </div>
       <p class="subtitle">Live temperature and humidity readings with rolling charts.</p>
+      <div class="chart-controls">
+        <div class="period-toggle" role="radiogroup" aria-label="Chart period">
+          <button type="button" class="period-btn active" data-period="daily" aria-checked="true" role="radio">Daily</button>
+          <button type="button" class="period-btn" data-period="weekly" aria-checked="false" role="radio">Weekly</button>
+        </div>
+        <label class="overlay-toggle">
+          <input type="checkbox" id="overlay-toggle" />
+          <span class="overlay-toggle-label">Previous period</span>
+        </label>
+      </div>
     </header>
     <main class="charts">
       {% for data in sensor_data.data %}
