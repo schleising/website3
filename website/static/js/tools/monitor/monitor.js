@@ -29,8 +29,8 @@ let isReloadingForUpdate = false;
 /** @type {Map<string, {temperature: number, timestamp: string}>} */
 const latestSensorReadings = new Map();
 
-/** @type {string | null} */
-let activeScrubDeviceId = null;
+/** @type {{device_id: string, scrubTimestamp: number} | null} */
+let activeScrubState = null;
 
 /**
  * @param {number} value
@@ -194,6 +194,67 @@ function clearScrubMarkers(svg) {
 
 /**
  * @param {string} device_id
+ * @param {number} chartX
+ */
+function applyScrubAtChartX(device_id, chartX) {
+    const svg = document.getElementById("chart-" + device_id);
+    const matrix = transformationMatrices.get(device_id);
+    if (svg == null || matrix == null) {
+        return;
+    }
+
+    const currentPolyline = svg.querySelector('.temperature-current') ?? svg.querySelector('.temperature');
+    const closestCurrentPoint = getClosestPointByX(currentPolyline, chartX);
+    if (closestCurrentPoint == null) {
+        return;
+    }
+
+    clearScrubMarkers(svg);
+
+    const currentOriginalPoint = matrix.inverse().transformPoint(closestCurrentPoint);
+    let overlayTemp = null;
+
+    const overlayPolyline = svg.querySelector('.temperature-overlay');
+    const closestOverlayPoint = getClosestPointByX(overlayPolyline, chartX);
+    if (showPreviousPeriod && closestOverlayPoint != null) {
+        setScrubMarker(svg, "temperature-circle-overlay", closestOverlayPoint);
+        overlayTemp = matrix.inverse().transformPoint(closestOverlayPoint).y;
+    }
+
+    setScrubMarker(svg, "temperature-circle-current", closestCurrentPoint);
+    updateTemperatureReadout(device_id, currentOriginalPoint.y, overlayTemp);
+
+    const time = document.getElementById("time-" + device_id);
+    if (time != null) {
+        time.innerText = new Date(currentOriginalPoint.x * timeScale)
+            .toLocaleString([], { weekday: 'short', month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+    }
+
+    activeScrubState = { device_id, scrubTimestamp: currentOriginalPoint.x };
+}
+
+/**
+ * @param {string} device_id
+ */
+function restoreActiveScrubMarkers(device_id) {
+    if (activeScrubState == null || activeScrubState.device_id !== device_id) {
+        return;
+    }
+
+    const matrix = transformationMatrices.get(device_id);
+    if (matrix == null) {
+        return;
+    }
+
+    const chartX = matrix.transformPoint(
+        new DOMPoint(activeScrubState.scrubTimestamp, 0)
+    ).x;
+
+    applyScrubAtChartX(device_id, chartX);
+}
+
+/**
+ * @param {string} device_id
  */
 function clearChartScrub(device_id) {
     const svg = document.getElementById("chart-" + device_id);
@@ -201,8 +262,8 @@ function clearChartScrub(device_id) {
         clearScrubMarkers(svg);
     }
 
-    if (activeScrubDeviceId === device_id) {
-        activeScrubDeviceId = null;
+    if (activeScrubState?.device_id === device_id) {
+        activeScrubState = null;
         restoreLiveReadouts(device_id);
     }
 }
@@ -363,7 +424,9 @@ function initializeChartControls() {
 
 function refreshAllTemperatureReadouts() {
     latestSensorReadings.forEach((_reading, device_id) => {
-        if (activeScrubDeviceId !== device_id) {
+        if (activeScrubState?.device_id === device_id) {
+            restoreActiveScrubMarkers(device_id);
+        } else {
             restoreLiveReadouts(device_id);
         }
     });
@@ -515,44 +578,9 @@ function handleMoveEvent(svg, clientX, clientY) {
     point.x = clientX;
     point.y = clientY;
     const mousePosition = point.matrixTransform(svg.getScreenCTM().inverse());
-
     const device_id = svg.id.split("-").slice(1).join("-");
-    const currentPolyline = svg.querySelector('.temperature-current') ?? svg.querySelector('.temperature');
-    const closestCurrentPoint = getClosestPointByX(currentPolyline, mousePosition.x);
 
-    if (closestCurrentPoint == null) {
-        return;
-    }
-
-    activeScrubDeviceId = device_id;
-    clearScrubMarkers(svg);
-
-    const matrix = transformationMatrices.get(device_id);
-    if (matrix == null) {
-        console.error("Transformation matrix not found for device:", device_id);
-        return;
-    }
-
-    const currentOriginalPoint = matrix.inverse().transformPoint(closestCurrentPoint);
-    let overlayTemp = null;
-
-    const overlayPolyline = svg.querySelector('.temperature-overlay');
-    const closestOverlayPoint = getClosestPointByX(overlayPolyline, mousePosition.x);
-    if (showPreviousPeriod && closestOverlayPoint != null) {
-        setScrubMarker(svg, "temperature-circle-overlay", closestOverlayPoint);
-        const overlayOriginalPoint = matrix.inverse().transformPoint(closestOverlayPoint);
-        overlayTemp = overlayOriginalPoint.y;
-    }
-
-    setScrubMarker(svg, "temperature-circle-current", closestCurrentPoint);
-
-    updateTemperatureReadout(device_id, currentOriginalPoint.y, overlayTemp);
-
-    const time = document.getElementById("time-" + device_id);
-    if (time != null) {
-        time.innerText = new Date(currentOriginalPoint.x * timeScale)
-            .toLocaleString([], { weekday: 'short', month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit' });
-    }
+    applyScrubAtChartX(device_id, mousePosition.x);
 }
 
 // Fetch the latest temperature data from the server every 5 seconds and update the page
@@ -576,7 +604,7 @@ async function fetchSensorData() {
                 document.getElementById("device-" + element.device_id).innerText = element.device_name;
 
                 // Update the time data in Tue, 01 Jan, 21:54 format
-                if (activeScrubDeviceId !== element.device_id) {
+                if (activeScrubState?.device_id !== element.device_id) {
                     timeString = new Date(element.timestamp)
                         .toLocaleString([], { weekday: 'short', month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit' });
                     document.getElementById("time-" + element.device_id).innerText = timeString;
@@ -595,7 +623,7 @@ async function fetchSensorData() {
                 }
 
                 // Update the temperature data to 1 decimal place
-                if (activeScrubDeviceId !== element.device_id) {
+                if (activeScrubState?.device_id !== element.device_id) {
                     const historicTemp = getHistoricTemperatureAtNow(getDeviceTimeseries(element.device_id));
                     updateTemperatureReadout(element.device_id, element.temperature, historicTemp);
                 }
@@ -629,14 +657,16 @@ async function fetchTemperatureData() {
 
 // Function to draw the charts of the temperature data
 function drawCharts() {
-    // Loop through the device data and draw the charts
     deviceData.forEach(element => {
-        // Get the device data
         const device_id = element.device_id;
         const data = element.data;
+        const svg = document.getElementById("chart-" + device_id);
 
-        // Draw the chart
-        drawChart(device_id, data);
+        if (svg != null && svg.querySelector(".grid") != null) {
+            updateChart(device_id, data);
+        } else {
+            drawChart(device_id, data);
+        }
     });
 }
 
@@ -727,6 +757,7 @@ function drawChart(device_id, data) {
 
     // Draw the temperature data
     drawTemperature(svg, device_id, series);
+    restoreActiveScrubMarkers(device_id);
 }
 
 /**
@@ -905,6 +936,7 @@ function updateChart(device_id, data) {
 
     // Update the temperature data
     drawTemperature(svg, device_id, series);
+    restoreActiveScrubMarkers(device_id);
 }
 
 /**
