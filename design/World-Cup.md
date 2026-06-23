@@ -1375,7 +1375,7 @@ The **Pos** column may show a letter instead of the numeric rank:
 
 | Label | Meaning | When |
 | ----- | ------- | ---- |
-| **Q** | Qualified | Team advanced **without** needing a group play-off (direct qualifier). Historic: group winner, or runner-up when no play-off was required. **2026 only:** a team with a **mathematically clinched** top-two group place, or a third-placed team guaranteed among the eight best third-placed teams (live tables). While group fixtures remain, clinch uses points plus H2H mini-league steps 1–3 only; overall group GD/GF (§16.2 steps 4–5) apply to **Q** only once every group match has finished. |
+| **Q** | Qualified | Team advanced **without** needing a group play-off (direct qualifier). Historic: group winner, or runner-up when no play-off was required. **2026 only:** a team with a **mathematically clinched** top-two group place, or a third-placed team guaranteed among the eight best third-placed teams (live tables). While group fixtures remain, clinch uses points plus H2H mini-league steps 1–3 only; overall group GD/GF (§16.2 steps 4–5) apply to **Q** only once every group match has finished. Third-placed **Q** compares points across groups while any group is live; GD and goals scored apply only after **all** groups have reached full time. |
 | **P** | Play-off | Team took part in a **group play-off** for the last knockout place (**1930–1958** era when a play-off exists for that group). Both participants receive **P**, whether they won or lost. |
 | **C** | Champion | **1950 only:** winner of the **final round** group when the edition has **no knockout stage** (`has_knockout_stage: false`). Replaces the position number for the leader once the group is complete. |
 

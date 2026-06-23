@@ -80,13 +80,15 @@ class _ThirdPlaceStats:
     goals_for: int
     team_name: str = ""
 
-    def rank_key(self) -> tuple[int, int, int, str]:
-        return (
-            -self.points,
-            -self.goal_difference,
-            -self.goals_for,
-            self.team_name.casefold(),
-        )
+    def rank_key(self, *, use_goal_metrics: bool = True) -> tuple[int | str, ...]:
+        base: tuple[int, ...] = (-self.points,)
+        if use_goal_metrics:
+            return base + (
+                -self.goal_difference,
+                -self.goals_for,
+                self.team_name.casefold(),
+            )
+        return base + (self.team_name.casefold(),)
 
 
 @dataclass
@@ -665,15 +667,35 @@ def _third_place_stats_from_row(table_item: TableItem) -> _ThirdPlaceStats:
 def _third_place_stats_are_better(
     left: _ThirdPlaceStats,
     right: _ThirdPlaceStats,
+    *,
+    use_goal_metrics: bool,
 ) -> bool:
-    return left.rank_key() < right.rank_key()
+    if left.points > right.points:
+        return True
+    if left.points < right.points:
+        return False
+    if not use_goal_metrics:
+        return False
+    if left.goal_difference > right.goal_difference:
+        return True
+    if left.goal_difference < right.goal_difference:
+        return False
+    if left.goals_for > right.goals_for:
+        return True
+    if left.goals_for < right.goals_for:
+        return False
+    return left.team_name.casefold() < right.team_name.casefold()
 
 
-def _max_third_place_stats(stats: Sequence[_ThirdPlaceStats]) -> _ThirdPlaceStats | None:
+def _max_third_place_stats(
+    stats: Sequence[_ThirdPlaceStats],
+    *,
+    use_goal_metrics: bool,
+) -> _ThirdPlaceStats | None:
     if len(stats) == 0:
         return None
 
-    return min(stats, key=lambda item: item.rank_key())
+    return min(stats, key=lambda item: item.rank_key(use_goal_metrics=use_goal_metrics))
 
 
 def _best_possible_third_place_stats(table: Sequence[TableItem], team_count: int) -> _ThirdPlaceStats | None:
@@ -696,7 +718,25 @@ def _best_possible_third_place_stats(table: Sequence[TableItem], team_count: int
             )
         )
 
-    return _max_third_place_stats(candidate_stats)
+    return _max_third_place_stats(candidate_stats, use_goal_metrics=True)
+
+
+def _all_group_stages_complete(
+    group_tables: Mapping[str, Sequence[TableItem]],
+    *,
+    edition: str = WC_CURRENT_EDITION,
+) -> bool:
+    expected_slugs = group_order_for_edition(edition)
+    if len(group_tables) < len(expected_slugs):
+        return False
+
+    for slug in expected_slugs:
+        table = group_tables.get(slug)
+        if table is None or not _group_has_results(table):
+            return False
+        if not _group_is_complete(table, len(table)):
+            return False
+    return True
 
 
 def _build_third_place_group_profile(table: Sequence[TableItem]) -> _ThirdPlaceGroupProfile:
@@ -746,11 +786,17 @@ def _build_third_place_group_profile(table: Sequence[TableItem]) -> _ThirdPlaceG
 def _is_guaranteed_best_third_placed(
     candidate_stats: _ThirdPlaceStats,
     competitor_stats: Sequence[_ThirdPlaceStats],
+    *,
+    use_goal_metrics: bool,
 ) -> bool:
     better_count = sum(
         1
         for stats in competitor_stats
-        if _third_place_stats_are_better(stats, candidate_stats)
+        if _third_place_stats_are_better(
+            stats,
+            candidate_stats,
+            use_goal_metrics=use_goal_metrics,
+        )
     )
     return better_count < WC_BEST_THIRD_PLACE_SPOTS
 
@@ -780,6 +826,8 @@ def _apply_current_edition_qualification_labels(
             )
         profiles[slug] = _build_third_place_group_profile(table)
 
+    use_goal_metrics = _all_group_stages_complete(group_tables)
+
     for slug, profile in profiles.items():
         if profile.third_row is None or profile.best_third_stats is None:
             continue
@@ -799,7 +847,11 @@ def _apply_current_edition_qualification_labels(
             for other_slug, other_profile in profiles.items()
             if other_slug != slug and other_profile.best_third_stats is not None
         ]
-        if _is_guaranteed_best_third_placed(candidate_stats, competitor_stats):
+        if _is_guaranteed_best_third_placed(
+            candidate_stats,
+            competitor_stats,
+            use_goal_metrics=use_goal_metrics,
+        ):
             profile.third_row.position_label = "Q"
 
 

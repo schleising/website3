@@ -189,8 +189,10 @@ def standings_rules_visitor_lines(edition: str) -> list[str]:
             points_rule,
             "The top two teams in each group qualify for the Round of 32.",
             "The eight best third-placed teams across all groups also advance.",
-            "Third-placed teams are ranked on points, goal difference, goals scored, "
-            "fair play, then the FIFA World Ranking.",
+            "Third-placed teams are ranked on points, then goal difference, then goals scored "
+            "(fair play and the FIFA World Ranking follow if still tied).",
+            "For live Q labels among third-placed teams, only points count until every group "
+            "has finished; goal difference and goals scored apply after that.",
             "Within a group, teams level on points are ranked by:",
             "1) most points in head-to-head matches among the tied teams;",
             "2) superior goal difference in those head-to-head matches;",

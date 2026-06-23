@@ -284,12 +284,137 @@ class WorldCupBestThirdQualificationTests(unittest.TestCase):
             for points in range(10, 2, -1)
         ]
 
-        self.assertFalse(_is_guaranteed_best_third_placed(candidate, competitors))
+        self.assertFalse(
+            _is_guaranteed_best_third_placed(
+                candidate,
+                competitors,
+                use_goal_metrics=True,
+            )
+        )
 
         self.assertTrue(
             _is_guaranteed_best_third_placed(
                 candidate,
                 competitors[:7],
+                use_goal_metrics=True,
+            )
+        )
+
+    def test_third_place_q_uses_points_only_until_all_groups_finish(self) -> None:
+        locked_third = [
+            _table_row(
+                position=1,
+                team=_team(1, "Leader"),
+                played_games=3,
+                won=3,
+                draw=0,
+                lost=0,
+                goals_for=5,
+                goals_against=1,
+            ),
+            _table_row(
+                position=2,
+                team=_team(2, "Runner"),
+                played_games=3,
+                won=1,
+                draw=1,
+                lost=1,
+                goals_for=3,
+                goals_against=3,
+            ),
+            _table_row(
+                position=3,
+                team=_team(3, "Locked Third"),
+                played_games=3,
+                won=1,
+                draw=1,
+                lost=1,
+                goals_for=2,
+                goals_against=3,
+            ),
+            _table_row(
+                position=4,
+                team=_team(4, "Fourth"),
+                played_games=3,
+                won=0,
+                draw=1,
+                lost=2,
+                goals_for=2,
+                goals_against=4,
+            ),
+        ]
+        weaker_third = [
+            _table_row(
+                position=1,
+                team=_team(5, "Other Leader"),
+                played_games=2,
+                won=2,
+                draw=0,
+                lost=0,
+                goals_for=4,
+                goals_against=1,
+            ),
+            _table_row(
+                position=2,
+                team=_team(6, "Other Runner"),
+                played_games=2,
+                won=1,
+                draw=0,
+                lost=1,
+                goals_for=2,
+                goals_against=2,
+            ),
+            _table_row(
+                position=3,
+                team=_team(7, "Other Third"),
+                played_games=2,
+                won=0,
+                draw=1,
+                lost=1,
+                goals_for=1,
+                goals_against=3,
+            ),
+            _table_row(
+                position=4,
+                team=_team(8, "Other Fourth"),
+                played_games=2,
+                won=0,
+                draw=1,
+                lost=1,
+                goals_for=1,
+                goals_against=2,
+            ),
+        ]
+
+        _apply_current_edition_qualification_labels(
+            {
+                "a": locked_third,
+                "b": weaker_third,
+            }
+        )
+
+        self.assertEqual(locked_third[2].position_label, "Q")
+
+    def test_third_place_comparison_ignores_goal_difference_until_enabled(self) -> None:
+        from website.football.world_cup_db import _third_place_stats_are_better
+
+        rival = _ThirdPlaceStats(points=4, goal_difference=5, goals_for=3, team_name="Rival")
+        candidate = _ThirdPlaceStats(
+            points=4, goal_difference=2, goals_for=4, team_name="Candidate"
+        )
+
+        self.assertFalse(
+            _third_place_stats_are_better(
+                rival,
+                candidate,
+                use_goal_metrics=False,
+            )
+        )
+        self.assertTrue(
+            _third_place_stats_are_better(
+                rival,
+                candidate,
+                use_goal_metrics=True,
             )
         )
 
