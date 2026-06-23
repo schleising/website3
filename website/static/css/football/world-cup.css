@@ -525,6 +525,8 @@
     position: relative;
     display: inline-flex;
     flex: 0 0 auto;
+    --wc-standings-rules-gap: 0.4rem;
+    --wc-standings-rules-margin: 1rem;
 }
 
 .world-cup-standings-rules-help-btn {
@@ -559,11 +561,14 @@
 }
 
 .world-cup-standings-rules-help-popup {
-    position: absolute;
-    z-index: 30;
-    top: calc(100% + 0.4rem);
-    right: 0;
+    position: fixed;
+    z-index: 100;
+    top: 50%;
+    left: var(--wc-standings-rules-left, 1rem);
+    right: auto;
     width: min(18.5rem, calc(100vw - 2rem));
+    max-height: min(85vh, 32rem);
+    overflow-y: auto;
     padding: 0.7rem 0.8rem;
     border: 0.0625rem solid var(--line, #c5d3e2);
     border-radius: 0.45rem;
@@ -573,6 +578,7 @@
     font-size: 0.82rem;
     line-height: 1.45;
     text-align: left;
+    transform: translateY(-50%);
     visibility: hidden;
     opacity: 0;
     pointer-events: none;
@@ -585,6 +591,17 @@
     visibility: visible;
     opacity: 1;
     pointer-events: auto;
+}
+
+.world-cup-standings-rules-help:hover .world-cup-standings-rules-help-popup::before,
+.world-cup-standings-rules-help:focus-within .world-cup-standings-rules-help-popup::before,
+.world-cup-standings-rules-help.is-open .world-cup-standings-rules-help-popup::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    background: rgba(16, 32, 56, 0.35);
+    pointer-events: none;
 }
 
 .world-cup-standings-rules-help-title {
