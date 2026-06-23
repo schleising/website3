@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import re
 from datetime import date, datetime, timedelta, timezone
+from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
 from typing import TYPE_CHECKING, Callable
@@ -190,8 +191,12 @@ def standings_rules_visitor_lines(edition: str) -> list[str]:
             "The eight best third-placed teams across all groups also advance.",
             "Third-placed teams are ranked on points, goal difference, goals scored, "
             "fair play, then the FIFA World Ranking.",
-            "If teams are level on points within a group, head-to-head results "
-            "between the tied teams decide the ranking first.",
+            "Within a group, teams level on points are ranked by:",
+            "1) most points in head-to-head matches among the tied teams;",
+            "2) superior goal difference in those head-to-head matches;",
+            "3) most goals scored in those head-to-head matches;",
+            "4) superior goal difference in all group matches;",
+            "5) most goals scored in all group matches.",
             "Q marks teams who have already secured a top-two place in the group, "
             "or a guaranteed place among the eight best third-placed teams.",
         ]
@@ -750,6 +755,297 @@ def _sort_group_table_rows_playoff_era(
     )
 
 
+@dataclass(frozen=True)
+class _HeadToHeadStats:
+    points: int
+    goal_difference: int
+    goals_for: int
+
+
+def _empty_head_to_head_stats() -> _HeadToHeadStats:
+    return _HeadToHeadStats(0, 0, 0)
+
+
+def compute_head_to_head_stats(
+    team_ids: set[int],
+    matches: list["Match"],
+    *,
+    group_slug: str | None = None,
+    edition: str = WC_CURRENT_EDITION,
+) -> dict[int, _HeadToHeadStats]:
+    """Mini-league stats among tied teams from finished group-stage matches."""
+    from .models import MatchStatus
+
+    stats: dict[int, _HeadToHeadStats] = {
+        team_id: _empty_head_to_head_stats() for team_id in team_ids
+    }
+    if len(team_ids) < 2:
+        return stats
+
+    group_enum = group_slug_to_enum(group_slug) if group_slug is not None else None
+
+    for match in matches:
+        if match.stage != WC_GROUP_STAGE:
+            continue
+        if group_enum is not None and match.group != group_enum:
+            continue
+
+        home_id = match.home_team.id
+        away_id = match.away_team.id
+        if home_id is None or away_id is None:
+            continue
+        if home_id not in team_ids or away_id not in team_ids:
+            continue
+        if match.status != MatchStatus.finished:
+            continue
+
+        home_score = match.score.full_time.home
+        away_score = match.score.full_time.away
+        if home_score is None or away_score is None:
+            continue
+
+        home_stats = stats[home_id]
+        away_stats = stats[away_id]
+        home_points = home_stats.points
+        away_points = away_stats.points
+        if home_score > away_score:
+            home_points += compute_group_table_points(1, 0, edition)
+        elif away_score > home_score:
+            away_points += compute_group_table_points(1, 0, edition)
+        else:
+            draw_points = compute_group_table_points(0, 1, edition)
+            home_points += draw_points
+            away_points += draw_points
+
+        stats[home_id] = _HeadToHeadStats(
+            home_points,
+            home_stats.goal_difference + (home_score - away_score),
+            home_stats.goals_for + home_score,
+        )
+        stats[away_id] = _HeadToHeadStats(
+            away_points,
+            away_stats.goal_difference + (away_score - home_score),
+            away_stats.goals_for + away_score,
+        )
+
+    return stats
+
+
+def _unfinished_head_to_head_matches(
+    team_ids: set[int],
+    matches: list["Match"],
+    *,
+    group_slug: str,
+) -> list["Match"]:
+    from .models import MatchStatus
+
+    group_enum = group_slug_to_enum(group_slug)
+    unfinished: list["Match"] = []
+    for match in matches:
+        if match.stage != WC_GROUP_STAGE or match.group != group_enum:
+            continue
+        if match.status == MatchStatus.finished:
+            continue
+        home_id = match.home_team.id
+        away_id = match.away_team.id
+        if home_id in team_ids and away_id in team_ids:
+            unfinished.append(match)
+    return unfinished
+
+
+def _apply_head_to_head_match_result(
+    stats: dict[int, _HeadToHeadStats],
+    home_id: int,
+    away_id: int,
+    home_score: int,
+    away_score: int,
+    *,
+    edition: str,
+) -> None:
+    home_stats = stats[home_id]
+    away_stats = stats[away_id]
+    home_points = home_stats.points
+    away_points = away_stats.points
+    if home_score > away_score:
+        home_points += compute_group_table_points(1, 0, edition)
+    elif away_score > home_score:
+        away_points += compute_group_table_points(1, 0, edition)
+    else:
+        draw_points = compute_group_table_points(0, 1, edition)
+        home_points += draw_points
+        away_points += draw_points
+
+    stats[home_id] = _HeadToHeadStats(
+        home_points,
+        home_stats.goal_difference + (home_score - away_score),
+        home_stats.goals_for + home_score,
+    )
+    stats[away_id] = _HeadToHeadStats(
+        away_points,
+        away_stats.goal_difference + (away_score - home_score),
+        away_stats.goals_for + away_score,
+    )
+
+
+def project_head_to_head_stats(
+    team_id: int,
+    team_ids: set[int],
+    matches: list["Match"],
+    *,
+    group_slug: str,
+    edition: str = WC_CURRENT_EDITION,
+    optimize: str,
+) -> _HeadToHeadStats:
+    """Best- or worst-case H2H mini-league stats from remaining intra-set fixtures."""
+    stats = dict(
+        compute_head_to_head_stats(
+            team_ids,
+            matches,
+            group_slug=group_slug,
+            edition=edition,
+        )
+    )
+    for match in _unfinished_head_to_head_matches(team_ids, matches, group_slug=group_slug):
+        home_id = match.home_team.id
+        away_id = match.away_team.id
+        if home_id is None or away_id is None:
+            continue
+        if optimize == "max":
+            if team_id == home_id:
+                _apply_head_to_head_match_result(
+                    stats, home_id, away_id, 3, 0, edition=edition
+                )
+            elif team_id == away_id:
+                _apply_head_to_head_match_result(
+                    stats, home_id, away_id, 0, 3, edition=edition
+                )
+        elif optimize == "min":
+            if team_id == home_id:
+                _apply_head_to_head_match_result(
+                    stats, home_id, away_id, 0, 3, edition=edition
+                )
+            elif team_id == away_id:
+                _apply_head_to_head_match_result(
+                    stats, home_id, away_id, 3, 0, edition=edition
+                )
+    return stats.get(team_id, _empty_head_to_head_stats())
+
+
+def head_to_head_tiebreak_rank_key(
+    h2h: _HeadToHeadStats,
+    *,
+    group_goal_difference: int,
+    group_goals_for: int,
+    team_name: str,
+    group_is_complete: bool = True,
+) -> tuple[int | str, ...]:
+    base: tuple[int, ...] = (
+        -h2h.points,
+        -h2h.goal_difference,
+        -h2h.goals_for,
+    )
+    if group_is_complete:
+        return base + (-group_goal_difference, -group_goals_for, team_name.casefold())
+    return base + (team_name.casefold(),)
+
+
+def head_to_head_only_tiebreak_rank_key(
+    h2h: _HeadToHeadStats,
+    *,
+    team_name: str,
+) -> tuple[int | str, ...]:
+    return head_to_head_tiebreak_rank_key(
+        h2h,
+        group_goal_difference=0,
+        group_goals_for=0,
+        team_name=team_name,
+        group_is_complete=False,
+    )
+
+
+def h2h_only_outranks(
+    challenger_h2h: _HeadToHeadStats,
+    candidate_h2h: _HeadToHeadStats,
+    *,
+    challenger_name: str,
+    candidate_name: str,
+) -> bool:
+    challenger_key = head_to_head_only_tiebreak_rank_key(
+        challenger_h2h,
+        team_name=challenger_name,
+    )
+    candidate_key = head_to_head_only_tiebreak_rank_key(
+        candidate_h2h,
+        team_name=candidate_name,
+    )
+    return challenger_key < candidate_key
+
+
+def _head_to_head_sort_key(
+    row: "TableItem",
+    h2h_stats: dict[int, _HeadToHeadStats],
+) -> tuple[int | str, ...]:
+    team_id = row.team.id
+    stats = (
+        h2h_stats.get(team_id, _empty_head_to_head_stats())
+        if team_id is not None
+        else _empty_head_to_head_stats()
+    )
+    return (
+        -stats.points,
+        -stats.goal_difference,
+        -stats.goals_for,
+        -row.goal_difference,
+        -row.goals_for,
+        row.team.display_name.casefold(),
+    )
+
+
+def _sort_2026_points_tier(
+    rows: list["TableItem"],
+    matches: list["Match"],
+    *,
+    group_slug: str,
+    edition: str,
+) -> list["TableItem"]:
+    if len(rows) <= 1:
+        return rows
+
+    team_ids = {row.team.id for row in rows if row.team.id is not None}
+    h2h_stats = compute_head_to_head_stats(
+        team_ids,
+        matches,
+        group_slug=group_slug,
+        edition=edition,
+    )
+    return sorted(rows, key=lambda row: _head_to_head_sort_key(row, h2h_stats))
+
+
+def _sort_group_table_rows_2026(
+    table: list["TableItem"],
+    *,
+    edition_matches: list["Match"],
+    group_slug: str,
+    edition: str,
+) -> list["TableItem"]:
+    tiers_by_points: dict[int, list["TableItem"]] = {}
+    for row in table:
+        points = compute_group_table_points(row.won, row.draw, edition)
+        tiers_by_points.setdefault(points, []).append(row)
+
+    ordered_rows: list["TableItem"] = []
+    for points in sorted(tiers_by_points.keys(), reverse=True):
+        ordered_rows.extend(
+            _sort_2026_points_tier(
+                tiers_by_points[points],
+                edition_matches,
+                group_slug=group_slug,
+                edition=edition,
+            )
+        )
+    return ordered_rows
+
+
 def group_table_row_sort_key(
     *,
     won: int,
@@ -795,6 +1091,17 @@ def sort_group_table_rows(
             table,
             edition,
             playoff_match,
+        )
+    elif (
+        edition == WC_CURRENT_EDITION
+        and edition_matches is not None
+        and group_slug is not None
+    ):
+        ordered_rows = _sort_group_table_rows_2026(
+            table,
+            edition_matches=edition_matches,
+            group_slug=group_slug,
+            edition=edition,
         )
     else:
         ordered_rows = sorted(

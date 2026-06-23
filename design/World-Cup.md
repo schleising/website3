@@ -1353,7 +1353,7 @@ After sorting by **points** (descending), ties are split using the rules below. 
 | **Goal average** | **1958–1966** | **Goal average** (goals for ÷ goals against). Teams with **zero goals conceded** rank above any finite average; among those, higher **goals for** wins. Table column shows **GA** (formatted to two decimals; `∞` when conceded is 0 but goals were scored). |
 | **Goal difference** | **1970–1990** | **Goal difference**, then **goals scored**. Column shows **GD**. |
 | **Goal difference (3-point wins)** | **1994–2022** | Same as 1970–1990. Column shows **GD**. |
-| **Current (2026)** | **2026** | Upstream football-data.org standings order; site applies live **Q** labels for mathematically clinched top-three spots (§16.3). Column shows **GD**. |
+| **Current (2026)** | **2026** | After points, ties among the involved teams use **head-to-head** mini-league ordering: (1) most H2H points, (2) H2H goal difference, (3) H2H goals scored, (4) overall group goal difference, (5) overall group goals scored, then team name. Implemented in `sort_group_table_rows()` via `compute_head_to_head_stats()`. Column shows **GD**. Live **Q** labels use the same sorted order (§16.3). |
 
 #### 1958 special case (group play-off era)
 
@@ -1375,7 +1375,7 @@ The **Pos** column may show a letter instead of the numeric rank:
 
 | Label | Meaning | When |
 | ----- | ------- | ---- |
-| **Q** | Qualified | Team advanced **without** needing a group play-off (direct qualifier). Historic: group winner, or runner-up when no play-off was required. **2026 only:** top three with a **mathematically clinched** spot (live tables). |
+| **Q** | Qualified | Team advanced **without** needing a group play-off (direct qualifier). Historic: group winner, or runner-up when no play-off was required. **2026 only:** a team with a **mathematically clinched** top-two group place, or a third-placed team guaranteed among the eight best third-placed teams (live tables). While group fixtures remain, clinch uses points plus H2H mini-league steps 1–3 only; overall group GD/GF (§16.2 steps 4–5) apply to **Q** only once every group match has finished. |
 | **P** | Play-off | Team took part in a **group play-off** for the last knockout place (**1930–1958** era when a play-off exists for that group). Both participants receive **P**, whether they won or lost. |
 | **C** | Champion | **1950 only:** winner of the **final round** group when the edition has **no knockout stage** (`has_knockout_stage: false`). Replaces the position number for the leader once the group is complete. |
 
@@ -1441,7 +1441,7 @@ When a knockout tie was drawn, some early tournaments scheduled a **replay** rat
 | **1982** | 6 + 4 | Yes | 2 | GD, GF | GD | — | Q | — |
 | **1986–1990** | 6× letter | Yes | 2 | GD, GF | GD | — | Q | — |
 | **1994–2022** | varies | Yes | **3** | GD, GF | GD | — | Q | — |
-| **2026** | 12× letter | Yes | **3** | API order + live **Q** (top 3) | GD | — | **Q** (live) | — |
+| **2026** | 12× letter | Yes | **3** | H2H mini-league (§16.2), then GD, GF | GD | — | **Q** (live) | — |
 
 “—” = not applicable or no instances in the imported dataset.
 
@@ -1473,7 +1473,8 @@ When a knockout tie was drawn, some early tournaments scheduled a **replay** rat
 | `edition_summary_rules_sections()` | `world_cup_utils.py` | Summary “Rules for this edition” blocks |
 | `edition_summary_synopsis()` | `world_cup_utils.py` | Load synopsis from `wc_edition_summaries.json` |
 | `edition_is_historic()` | `world_cup_utils.py` | `edition != WC_CURRENT_EDITION` → Summary nav |
-| `sort_group_table_rows()` | `world_cup_utils.py` | Edition-aware ordering (1930–1954 play-offs; 1958 GA + play-offs) |
+| `sort_group_table_rows()` | `world_cup_utils.py` | Edition-aware ordering (1930–1954 play-offs; 1958 GA + play-offs; 2026 H2H) |
+| `compute_head_to_head_stats()` | `world_cup_utils.py` | Mini-league stats for tied teams (2026 tie-breakers) |
 | `prepare_group_table_for_display()` | `world_cup_db.py` | Sort + Q/P/C labels |
 | `filter_superseded_knockout_replays()` | `world_cup_utils.py` | Knockout view: replay leg only |
 | `world_cup_score_annotation()` | `world_cup_utils.py` | `(replay)`, `(aet)`, pens |

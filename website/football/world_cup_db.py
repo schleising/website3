@@ -30,6 +30,8 @@ from .world_cup_utils import (
     list_group_playoff_matches_for_edition,
     playoff_participant_team_ids,
     sort_group_table_rows,
+    project_head_to_head_stats,
+    h2h_only_outranks,
     group_order_for_edition,
     group_stages_for_edition,
     group_index_stages_for_edition,
@@ -315,7 +317,7 @@ async def get_wc_live_group_standings_db(edition: str) -> list[WorldCupGroupStan
 
     standings = await _retrieve_group_standings_from_collection(collection, edition)
     if edition == WC_CURRENT_EDITION:
-        apply_live_qualification_labels(edition, standings)
+        await apply_live_qualification_labels(edition, standings)
 
     return standings
 
@@ -447,10 +449,101 @@ def _clear_position_labels(table: Sequence[TableItem]) -> None:
         table_item.position_label = None
 
 
+def _is_h2h_mini_league_clinched_for_qualification(
+    candidate: TableItem,
+    table: Sequence[TableItem],
+    matches: list[Match],
+    *,
+    group_slug: str,
+    team_count: int,
+    edition: str = WC_CURRENT_EDITION,
+) -> bool:
+    """Clinch via H2H steps 1–3 only while the group still has fixtures left."""
+    candidate_id = candidate.team.id
+    if candidate_id is None:
+        return False
+
+    floor_points = candidate.points
+    contenders = [
+        row
+        for row in table
+        if row.team.id is not None
+        and row.team.id != candidate_id
+        and _team_max_points_in_group(row, team_count) >= floor_points
+    ]
+    if len(contenders) == 0:
+        return True
+
+    for contender in contenders:
+        if _team_max_points_in_group(contender, team_count) > floor_points:
+            return False
+
+    tier_ids = {candidate_id}
+    for contender in contenders:
+        if contender.team.id is not None:
+            tier_ids.add(contender.team.id)
+
+    candidate_h2h = project_head_to_head_stats(
+        candidate_id,
+        tier_ids,
+        matches,
+        group_slug=group_slug,
+        edition=edition,
+        optimize="min",
+    )
+    for contender in contenders:
+        contender_id = contender.team.id
+        if contender_id is None:
+            continue
+        contender_h2h = project_head_to_head_stats(
+            contender_id,
+            tier_ids,
+            matches,
+            group_slug=group_slug,
+            edition=edition,
+            optimize="max",
+        )
+        if h2h_only_outranks(
+            contender_h2h,
+            candidate_h2h,
+            challenger_name=contender.team.display_name,
+            candidate_name=candidate.team.display_name,
+        ):
+            return False
+
+    return True
+
+
+def _is_guaranteed_top_spots_h2h(
+    candidate: TableItem,
+    table: Sequence[TableItem],
+    matches: list[Match],
+    *,
+    group_slug: str,
+    team_count: int,
+    qualification_spots: int,
+    edition: str = WC_CURRENT_EDITION,
+) -> bool:
+    if _group_is_complete(table, team_count):
+        return False
+
+    return _is_h2h_mini_league_clinched_for_qualification(
+        candidate,
+        table,
+        matches,
+        group_slug=group_slug,
+        team_count=team_count,
+        edition=edition,
+    )
+
+
 def _apply_guaranteed_qualification_labels(
     table: Sequence[TableItem],
     *,
     qualification_spots: int = WC_CURRENT_GROUP_QUALIFICATION_SPOTS,
+    group_slug: str | None = None,
+    group_matches: list[Match] | None = None,
+    edition: str = WC_CURRENT_EDITION,
 ) -> list[TableItem]:
     if len(table) == 0 or len(table) <= qualification_spots:
         _clear_position_labels(table)
@@ -470,6 +563,11 @@ def _apply_guaranteed_qualification_labels(
         adjusted_points_by_team_id[team_id] = table_item.points
         table_item.position_label = None
 
+    if _group_is_complete(table, team_count):
+        for table_item in table[:qualification_spots]:
+            table_item.position_label = "Q"
+        return list(table)
+
     cutoff_row = table[qualification_spots]
     cutoff_team_id = cutoff_row.team.id
     if cutoff_team_id is None:
@@ -483,6 +581,28 @@ def _apply_guaranteed_qualification_labels(
             continue
         if adjusted_points_by_team_id[team_id] > cutoff_max_points:
             table_item.position_label = "Q"
+
+    for index in range(min(qualification_spots, len(table))):
+        table_item = table[index]
+        if table_item.position_label == "Q":
+            continue
+        if _is_locked_in_group_position(table, index, team_count):
+            table_item.position_label = "Q"
+
+    if group_matches is not None and group_slug is not None:
+        for table_item in table[:qualification_spots]:
+            if table_item.position_label == "Q":
+                continue
+            if _is_guaranteed_top_spots_h2h(
+                table_item,
+                table,
+                group_matches,
+                group_slug=group_slug,
+                team_count=team_count,
+                qualification_spots=qualification_spots,
+                edition=edition,
+            ):
+                table_item.position_label = "Q"
 
     return list(table)
 
@@ -637,6 +757,8 @@ def _is_guaranteed_best_third_placed(
 
 def _apply_current_edition_qualification_labels(
     group_tables: Mapping[str, Sequence[TableItem]],
+    *,
+    group_matches_by_slug: Mapping[str, list[Match]] | None = None,
 ) -> None:
     profiles: dict[str, _ThirdPlaceGroupProfile] = {}
 
@@ -649,6 +771,12 @@ def _apply_current_edition_qualification_labels(
             _apply_guaranteed_qualification_labels(
                 table,
                 qualification_spots=WC_CURRENT_GROUP_QUALIFICATION_SPOTS,
+                group_slug=slug,
+                group_matches=(
+                    group_matches_by_slug.get(slug)
+                    if group_matches_by_slug is not None
+                    else None
+                ),
             )
         profiles[slug] = _build_third_place_group_profile(table)
 
@@ -677,7 +805,7 @@ def _apply_current_edition_qualification_labels(
 
 async def _fetch_all_sorted_group_tables_for_qualification(
     edition: str,
-) -> dict[str, list[TableItem]]:
+) -> tuple[dict[str, list[TableItem]], dict[str, list[Match]]]:
     if edition == WC_CURRENT_EDITION and live_wc_standings is not None:
         collection = live_wc_standings
     else:
@@ -688,18 +816,21 @@ async def _fetch_all_sorted_group_tables_for_qualification(
         standings = await _compute_group_standings_from_matches(edition)
 
     group_tables: dict[str, list[TableItem]] = {}
+    group_matches: dict[str, list[Match]] = {}
     for group in standings:
         matches = await retrieve_group_matches(edition, group.group_slug)
+        group_matches[group.group_slug] = matches
         prepared = normalise_group_table(group.table, matches)
         if _group_has_results(prepared):
             prepared = sort_group_table_rows(
                 prepared,
                 edition,
                 group_slug=group.group_slug,
+                edition_matches=matches,
             )
         group_tables[group.group_slug] = prepared
 
-    return group_tables
+    return group_tables, group_matches
 
 
 def qualified_team_ids_for_next_round(
@@ -823,13 +954,19 @@ async def prepare_group_table_for_display(
         prepared,
         edition,
         group_slug=group_slug,
-        edition_matches=edition_matches,
+        edition_matches=matches if edition == WC_CURRENT_EDITION else edition_matches,
     )
 
     if edition == WC_CURRENT_EDITION:
-        all_group_tables = await _fetch_all_sorted_group_tables_for_qualification(edition)
+        all_group_tables, group_matches = (
+            await _fetch_all_sorted_group_tables_for_qualification(edition)
+        )
         all_group_tables[group_slug] = prepared
-        _apply_current_edition_qualification_labels(all_group_tables)
+        group_matches[group_slug] = matches
+        _apply_current_edition_qualification_labels(
+            all_group_tables,
+            group_matches_by_slug=group_matches,
+        )
         return prepared
 
     if edition_matches is None:
@@ -875,11 +1012,13 @@ def _sort_live_group_table_rows(
     edition: str,
     *,
     group_slug: str,
+    edition_matches: list[Match] | None = None,
 ) -> list[LiveTableItem]:
     sorted_rows = sort_group_table_rows(
         list(table),
         edition,
         group_slug=group_slug,
+        edition_matches=edition_matches,
     )
     rows_by_team_id = {
         row.team.id: row for row in table if row.team.id is not None
@@ -899,7 +1038,7 @@ def _sort_live_group_table_rows(
     return reordered
 
 
-def apply_live_qualification_labels(
+async def apply_live_qualification_labels(
     edition: str,
     groups: list[WorldCupGroupStandings],
 ) -> None:
@@ -907,21 +1046,28 @@ def apply_live_qualification_labels(
         return
 
     group_tables: dict[str, Sequence[TableItem]] = {}
+    group_matches: dict[str, list[Match]] = {}
     for group in groups:
         if not _group_has_results(group.table):
             _clear_position_labels(group.table)
             continue
 
+        matches = await retrieve_group_matches(edition, group.group_slug)
+        group_matches[group.group_slug] = matches
         reordered = _sort_live_group_table_rows(
             group.table,
             edition,
             group_slug=group.group_slug,
+            edition_matches=matches,
         )
         group.table.clear()
         group.table.extend(reordered)
         group_tables[group.group_slug] = group.table
 
-    _apply_current_edition_qualification_labels(group_tables)
+    _apply_current_edition_qualification_labels(
+        group_tables,
+        group_matches_by_slug=group_matches,
+    )
 
 
 async def retrieve_distinct_knockout_stages(edition: str) -> set[str]:
