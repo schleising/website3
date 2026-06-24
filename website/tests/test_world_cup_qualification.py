@@ -2,12 +2,13 @@ from __future__ import annotations
 
 import unittest
 
-from website.football.models import TableItem, Team
 from website.football.world_cup_db import (
     _apply_current_edition_qualification_labels,
+    _apply_guaranteed_qualification_labels,
     _is_guaranteed_best_third_placed,
     _ThirdPlaceStats,
 )
+from website.football.models import Match, TableItem, Team
 
 
 def _team(team_id: int, name: str) -> Team:
@@ -417,6 +418,113 @@ class WorldCupBestThirdQualificationTests(unittest.TestCase):
                 use_goal_metrics=True,
             )
         )
+
+    def test_q_suppressed_for_team_while_their_match_is_in_progress(self) -> None:
+        from datetime import datetime, timezone
+
+        leader = _team(1, "Leader")
+        runner = _team(2, "Runner")
+        third = _team(3, "Third")
+        fourth = _team(4, "Fourth")
+        table = [
+            _table_row(
+                position=1,
+                team=leader,
+                played_games=2,
+                won=2,
+                draw=0,
+                lost=0,
+                goals_for=5,
+                goals_against=1,
+            ),
+            _table_row(
+                position=2,
+                team=runner,
+                played_games=2,
+                won=1,
+                draw=0,
+                lost=1,
+                goals_for=3,
+                goals_against=3,
+            ),
+            _table_row(
+                position=3,
+                team=third,
+                played_games=2,
+                won=0,
+                draw=0,
+                lost=2,
+                goals_for=1,
+                goals_against=4,
+            ),
+            _table_row(
+                position=4,
+                team=fourth,
+                played_games=2,
+                won=0,
+                draw=0,
+                lost=2,
+                goals_for=0,
+                goals_against=3,
+            ),
+        ]
+        in_play_match = Match.model_validate(
+            {
+                "area": {"id": 1, "name": "World", "code": "INT", "flag": None},
+                "competition": {
+                    "id": 2000,
+                    "name": "FIFA World Cup",
+                    "code": "WC",
+                    "type": "CUP",
+                    "emblem": "",
+                },
+                "season": {
+                    "id": 1,
+                    "startDate": "2026-06-11",
+                    "endDate": "2026-07-19",
+                    "currentMatchday": 3,
+                    "winner": None,
+                },
+                "id": 99,
+                "utcDate": datetime(2026, 6, 20, 18, 0, tzinfo=timezone.utc),
+                "status": "IN_PLAY",
+                "minute": 80,
+                "matchday": 3,
+                "stage": "GROUP_STAGE",
+                "group": "GROUP_A",
+                "lastUpdated": "2026-06-20T18:30:00Z",
+                "homeTeam": {
+                    "id": leader.id,
+                    "name": leader.name,
+                    "shortName": leader.short_name,
+                    "tla": "LEA",
+                    "crest": "",
+                },
+                "awayTeam": {
+                    "id": fourth.id,
+                    "name": fourth.name,
+                    "shortName": fourth.short_name,
+                    "tla": "FOU",
+                    "crest": "",
+                },
+                "score": {
+                    "winner": "HOME_TEAM",
+                    "duration": "REGULAR",
+                    "fullTime": {"home": 2, "away": 0},
+                    "halfTime": {"home": 1, "away": 0},
+                },
+                "odds": {"msg": ""},
+                "referees": [],
+            }
+        )
+
+        _apply_guaranteed_qualification_labels(
+            table,
+            group_slug="a",
+            group_matches=[in_play_match],
+        )
+
+        self.assertIsNone(table[0].position_label)
 
 
 if __name__ == "__main__":

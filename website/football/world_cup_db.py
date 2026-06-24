@@ -565,9 +565,14 @@ def _apply_guaranteed_qualification_labels(
         adjusted_points_by_team_id[team_id] = table_item.points
         table_item.position_label = None
 
-    if _group_is_complete(table, team_count):
+    if _group_is_complete(table, team_count, group_matches=group_matches):
         for table_item in table[:qualification_spots]:
             table_item.position_label = "Q"
+        if group_matches is not None:
+            in_progress_team_ids = _teams_in_progress_from_matches(group_matches)
+            for table_item in table[:qualification_spots]:
+                if table_item.team.id in in_progress_team_ids:
+                    table_item.position_label = None
         return list(table)
 
     cutoff_row = table[qualification_spots]
@@ -606,6 +611,12 @@ def _apply_guaranteed_qualification_labels(
             ):
                 table_item.position_label = "Q"
 
+    if group_matches is not None:
+        in_progress_team_ids = _teams_in_progress_from_matches(group_matches)
+        for table_item in table[:qualification_spots]:
+            if table_item.team.id in in_progress_team_ids:
+                table_item.position_label = None
+
     return list(table)
 
 
@@ -632,7 +643,15 @@ def _team_min_goal_projection(table_item: TableItem, remaining_matches: int) -> 
     )
 
 
-def _group_is_complete(table: Sequence[TableItem], team_count: int) -> bool:
+def _group_is_complete(
+    table: Sequence[TableItem],
+    team_count: int,
+    *,
+    group_matches: list[Match] | None = None,
+) -> bool:
+    if group_matches is not None and len(group_matches) > 0:
+        return _group_matches_are_complete(group_matches)
+
     if team_count == 0:
         return False
     required_matches = team_count - 1
@@ -698,11 +717,16 @@ def _max_third_place_stats(
     return min(stats, key=lambda item: item.rank_key(use_goal_metrics=use_goal_metrics))
 
 
-def _best_possible_third_place_stats(table: Sequence[TableItem], team_count: int) -> _ThirdPlaceStats | None:
+def _best_possible_third_place_stats(
+    table: Sequence[TableItem],
+    team_count: int,
+    *,
+    group_matches: list[Match] | None = None,
+) -> _ThirdPlaceStats | None:
     if len(table) < 3:
         return None
 
-    if _group_is_complete(table, team_count):
+    if _group_is_complete(table, team_count, group_matches=group_matches):
         return _third_place_stats_from_row(table[2])
 
     candidate_stats: list[_ThirdPlaceStats] = []
@@ -724,6 +748,7 @@ def _best_possible_third_place_stats(table: Sequence[TableItem], team_count: int
 def _all_group_stages_complete(
     group_tables: Mapping[str, Sequence[TableItem]],
     *,
+    group_matches_by_slug: Mapping[str, list[Match]] | None = None,
     edition: str = WC_CURRENT_EDITION,
 ) -> bool:
     expected_slugs = group_order_for_edition(edition)
@@ -734,12 +759,23 @@ def _all_group_stages_complete(
         table = group_tables.get(slug)
         if table is None or not _group_has_results(table):
             return False
-        if not _group_is_complete(table, len(table)):
+        group_matches = (
+            group_matches_by_slug.get(slug) if group_matches_by_slug is not None else None
+        )
+        if not _group_is_complete(
+            table,
+            len(table),
+            group_matches=group_matches,
+        ):
             return False
     return True
 
 
-def _build_third_place_group_profile(table: Sequence[TableItem]) -> _ThirdPlaceGroupProfile:
+def _build_third_place_group_profile(
+    table: Sequence[TableItem],
+    *,
+    group_matches: list[Match] | None = None,
+) -> _ThirdPlaceGroupProfile:
     team_count = len(table)
     if team_count < WC_CURRENT_EDITION_GROUP_SIZE:
         return _ThirdPlaceGroupProfile(
@@ -752,9 +788,17 @@ def _build_third_place_group_profile(table: Sequence[TableItem]) -> _ThirdPlaceG
         )
 
     third_row = table[2]
-    is_group_complete = _group_is_complete(table, team_count)
+    is_group_complete = _group_is_complete(
+        table,
+        team_count,
+        group_matches=group_matches,
+    )
     is_third_locked = _is_locked_in_group_position(table, 2, team_count)
-    best_third_stats = _best_possible_third_place_stats(table, team_count)
+    best_third_stats = _best_possible_third_place_stats(
+        table,
+        team_count,
+        group_matches=group_matches,
+    )
     final_third_stats = (
         _third_place_stats_from_row(third_row) if is_group_complete else None
     )
@@ -824,13 +868,31 @@ def _apply_current_edition_qualification_labels(
                     else None
                 ),
             )
-        profiles[slug] = _build_third_place_group_profile(table)
+        profiles[slug] = _build_third_place_group_profile(
+            table,
+            group_matches=(
+                group_matches_by_slug.get(slug)
+                if group_matches_by_slug is not None
+                else None
+            ),
+        )
 
-    use_goal_metrics = _all_group_stages_complete(group_tables)
+    use_goal_metrics = _all_group_stages_complete(
+        group_tables,
+        group_matches_by_slug=group_matches_by_slug,
+    )
 
     for slug, profile in profiles.items():
         if profile.third_row is None or profile.best_third_stats is None:
             continue
+
+        group_matches = (
+            group_matches_by_slug.get(slug) if group_matches_by_slug is not None else None
+        )
+        if group_matches is not None:
+            in_progress_team_ids = _teams_in_progress_from_matches(group_matches)
+            if profile.third_row.team.id in in_progress_team_ids:
+                continue
 
         if profile.is_group_complete:
             candidate_stats = profile.final_third_stats
@@ -855,13 +917,25 @@ def _apply_current_edition_qualification_labels(
             profile.third_row.position_label = "Q"
 
 
-async def _fetch_all_sorted_group_tables_for_qualification(
+def _merge_position_labels_from_official(
+    live_table: Sequence[LiveTableItem],
+    official_table: Sequence[TableItem],
+) -> None:
+    labels_by_team_id = {
+        row.team.id: row.position_label
+        for row in official_table
+        if row.team.id is not None
+    }
+    for row in live_table:
+        team_id = row.team.id
+        row.position_label = labels_by_team_id.get(team_id) if team_id is not None else None
+
+
+async def _fetch_official_group_tables_for_qualification(
     edition: str,
 ) -> tuple[dict[str, list[TableItem]], dict[str, list[Match]]]:
-    if edition == WC_CURRENT_EDITION and live_wc_standings is not None:
-        collection = live_wc_standings
-    else:
-        collection = _get_standings_collection(edition)
+    """Official wc_standings snapshot only — never the live overlay collection."""
+    collection = _get_standings_collection(edition)
 
     standings = await _retrieve_group_standings_from_collection(collection, edition)
     if len(standings) == 0:
@@ -883,6 +957,12 @@ async def _fetch_all_sorted_group_tables_for_qualification(
         group_tables[group.group_slug] = prepared
 
     return group_tables, group_matches
+
+
+async def _fetch_all_sorted_group_tables_for_qualification(
+    edition: str,
+) -> tuple[dict[str, list[TableItem]], dict[str, list[Match]]]:
+    return await _fetch_official_group_tables_for_qualification(edition)
 
 
 def qualified_team_ids_for_next_round(
@@ -961,11 +1041,32 @@ _TERMINAL_MATCH_STATUSES = {
     MatchStatus.awarded,
 }
 
+_IN_PROGRESS_MATCH_STATUSES = {
+    MatchStatus.in_play,
+    MatchStatus.paused,
+}
+
+
+def _teams_in_progress_from_matches(matches: list[Match]) -> set[int]:
+    team_ids: set[int] = set()
+    for match in matches:
+        if match.stage != WC_GROUP_STAGE:
+            continue
+        if match.status not in _IN_PROGRESS_MATCH_STATUSES:
+            continue
+        for team in (match.home_team, match.away_team):
+            if team.id is not None:
+                team_ids.add(team.id)
+    return team_ids
+
 
 def _group_matches_are_complete(matches: list[Match]) -> bool:
-    if len(matches) == 0:
+    group_matches = [
+        match for match in matches if match.stage == WC_GROUP_STAGE
+    ]
+    if len(group_matches) == 0:
         return False
-    return all(match.status in _TERMINAL_MATCH_STATUSES for match in matches)
+    return all(match.status in _TERMINAL_MATCH_STATUSES for match in group_matches)
 
 
 def _apply_final_group_champion_label(
@@ -1097,29 +1198,34 @@ async def apply_live_qualification_labels(
     if edition != WC_CURRENT_EDITION:
         return
 
-    group_tables: dict[str, Sequence[TableItem]] = {}
-    group_matches: dict[str, list[Match]] = {}
+    official_tables, group_matches_by_slug = (
+        await _fetch_official_group_tables_for_qualification(edition)
+    )
+    _apply_current_edition_qualification_labels(
+        official_tables,
+        group_matches_by_slug=group_matches_by_slug,
+    )
+
     for group in groups:
         if not _group_has_results(group.table):
             _clear_position_labels(group.table)
             continue
 
-        matches = await retrieve_group_matches(edition, group.group_slug)
-        group_matches[group.group_slug] = matches
+        matches = group_matches_by_slug.get(group.group_slug)
+        if matches is None:
+            matches = await retrieve_group_matches(edition, group.group_slug)
         reordered = _sort_live_group_table_rows(
             group.table,
             edition,
             group_slug=group.group_slug,
             edition_matches=matches,
         )
+        _merge_position_labels_from_official(
+            reordered,
+            official_tables.get(group.group_slug, []),
+        )
         group.table.clear()
         group.table.extend(reordered)
-        group_tables[group.group_slug] = group.table
-
-    _apply_current_edition_qualification_labels(
-        group_tables,
-        group_matches_by_slug=group_matches,
-    )
 
 
 async def retrieve_distinct_knockout_stages(edition: str) -> set[str]:
