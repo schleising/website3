@@ -765,11 +765,22 @@
     overflow-x: hidden;
 }
 
+.right-sidebar:has(#feeds-sidebar-feed-groups) .main-nav {
+    justify-content: flex-start;
+    flex: 1 1 auto;
+    min-height: 100%;
+}
+
 .right-sidebar:has(#feeds-sidebar-feed-groups) .sub-level-nav-container {
     width: 100%;
     min-width: 0;
     max-width: 100%;
     overflow: hidden;
+    align-self: stretch;
+}
+
+.right-sidebar:has(#feeds-sidebar-feed-groups) #feeds-sidebar-feed-groups {
+    display: none;
 }
 
 .right-sidebar:has(#feeds-sidebar-feed-groups) .feed-sidebar-feed-panel {

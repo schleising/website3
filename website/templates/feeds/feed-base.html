@@ -24,7 +24,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 {% endif %}
 <link rel="stylesheet" href="/css/tools/fonts.css?v1.0.0">
-<link rel="stylesheet" href="/css/feeds/feeds.css?v1.3.3">
+<link rel="stylesheet" href="/css/feeds/feeds.css?v1.3.5">
 {% endblock %}
 
 {% block scripts %}
@@ -33,7 +33,7 @@
 {% endif %}
 <script defer src="/js/feeds/sidebar.js?v1.0.18"></script>
 {% if feed_page_mode in ["reader", "search"] %}
-  <script defer src="/js/feeds/reader.js?v1.0.88"></script>
+  <script defer src="/js/feeds/reader.js?v1.0.89"></script>
 {% elif feed_page_mode == "settings" %}
 <script defer src="/js/feeds/settings.js?v1.0.25"></script>
 {% elif feed_page_mode == "stats" %}
@@ -100,6 +100,9 @@ data-category-shortcut="recently-read"
 {% if not show_left_sidebar and request.state.user != None %}
 <a href="https://www.schleising.net/account/logout/" class="sub-level-nav feed-sidebar-link">Logout</a>
 {% endif %}
+{% endblock %}
+
+{% block sidebar_data %}
 <script
   id="feeds-sidebar-feed-groups"
   type="application/json"

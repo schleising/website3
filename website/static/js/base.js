@@ -756,12 +756,7 @@ function measureSidebarContentWidth(sidebar) {
 }
 
 function sidebarUsesCollapsedFeedSizing(sidebar) {
-    const content = sidebar.querySelector(".sub-level-nav-container");
-    if (!content) {
-        return false;
-    }
-
-    return content.querySelector("#feeds-sidebar-feed-groups") !== null;
+    return sidebar.querySelector("#feeds-sidebar-feed-groups") !== null;
 }
 
 function withSidebarFullyExpanded(content, measureFn, options = {}) {

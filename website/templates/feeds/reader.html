@@ -54,6 +54,7 @@
   data-selected-search="{{ selected_search|default('') }}"
   data-is-search-page="{{ 'true' if feed_page_mode == 'search' else 'false' }}"
   data-selected-feed-id="{{ selected_feed_id|default('') }}"
+  data-is-web-app="{{ 'true' if is_web_app else 'false' }}"
   data-articles-endpoint="{{ feeds_root_path }}api/articles/"
   data-article-statuses-endpoint="{{ feeds_root_path }}api/articles/statuses/"
   data-sidebar-endpoint="{{ feeds_root_path }}api/sidebar/"

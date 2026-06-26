@@ -49,6 +49,57 @@
 
     const sidebarEndpoint = root.dataset.sidebarEndpoint || "/feeds/api/sidebar/";
     const readerSyncEndpoint = root.dataset.readerSyncEndpoint || "/feeds/api/reader/sync/";
+    /** @type {boolean} */
+    const isWebApp = String(root.dataset.isWebApp || "false").toLowerCase() === "true";
+    /** @type {boolean} */
+    let loginRedirectScheduled = false;
+
+    /**
+     * Build login URL with return path for expired-session redirects.
+     *
+     * @returns {string}
+     */
+    function buildLoginRedirectUrl() {
+        const nextTarget = isWebApp
+            ? window.location.href
+            : `${window.location.pathname}${window.location.search}`;
+
+        if (isWebApp) {
+            return `https://www.schleising.net/account/login/?next=${encodeURIComponent(nextTarget)}`;
+        }
+
+        return `/account/login/?next=${encodeURIComponent(nextTarget)}`;
+    }
+
+    /**
+     * Redirect to login when an API response indicates an expired session.
+     *
+     * @param {Response} response
+     * @returns {boolean} True when redirecting to login.
+     */
+    function handleReaderAuthFailure(response) {
+        if (response.status !== 401 || loginRedirectScheduled) {
+            return false;
+        }
+
+        loginRedirectScheduled = true;
+        window.location.assign(buildLoginRedirectUrl());
+        return true;
+    }
+
+    /**
+     * Fetch helper that redirects to login when the session has expired.
+     *
+     * @param {RequestInfo | URL} url
+     * @param {RequestInit} [options]
+     * @returns {Promise<Response>}
+     */
+    async function readerFetch(url, options = {}) {
+        const response = await fetch(url, options);
+        handleReaderAuthFailure(response);
+        return response;
+    }
+
     /** @type {string} */
     const markOpenEndpointTemplate = root.dataset.markOpenEndpointTemplate || "";
     /** @type {string} */
@@ -1173,7 +1224,7 @@
         pendingOpenIds.add(articleId);
 
         try {
-            const response = await fetch(buildMarkOpenUrl(articleId), {
+            const response = await readerFetch(buildMarkOpenUrl(articleId), {
                 method: "POST",
                 headers: {
                     "X-CSRF-Token": csrfToken,
@@ -1213,7 +1264,7 @@
         schedulePagePrefetchCheck();
 
         try {
-            const response = await fetch(buildMarkReadUrl(articleId), {
+            const response = await readerFetch(buildMarkReadUrl(articleId), {
                 method: "POST",
                 headers: {
                     "X-CSRF-Token": csrfToken,
@@ -1260,7 +1311,7 @@
         schedulePagePrefetchCheck();
 
         try {
-            const response = await fetch(buildMarkUnreadUrl(articleId), {
+            const response = await readerFetch(buildMarkUnreadUrl(articleId), {
                 method: "POST",
                 headers: {
                     "X-CSRF-Token": csrfToken,
@@ -1323,7 +1374,7 @@
         schedulePagePrefetchCheck();
 
         try {
-            const response = await fetch(buildMarkSaveUrl(articleId), {
+            const response = await readerFetch(buildMarkSaveUrl(articleId), {
                 method: "POST",
                 headers: {
                     "X-CSRF-Token": csrfToken,
@@ -1367,7 +1418,7 @@
         schedulePagePrefetchCheck();
 
         try {
-            const response = await fetch(buildMarkUnsaveUrl(articleId), {
+            const response = await readerFetch(buildMarkUnsaveUrl(articleId), {
                 method: "POST",
                 headers: {
                     "X-CSRF-Token": csrfToken,
@@ -2071,7 +2122,7 @@
         const requestOffset = getPagingRequestOffset();
 
         try {
-            const response = await fetch(buildArticlesUrl(requestOffset, pageSize), {
+            const response = await readerFetch(buildArticlesUrl(requestOffset, pageSize), {
                 method: "GET",
                 cache: "no-store",
             });
@@ -2603,7 +2654,7 @@
 
             if (headArticles.length === 0) {
                 try {
-                    const fallbackResponse = await fetch(buildArticlesUrl(0, headProbeLimit), {
+                    const fallbackResponse = await readerFetch(buildArticlesUrl(0, headProbeLimit), {
                         method: "GET",
                         cache: "no-store",
                     });
@@ -2680,7 +2731,7 @@
      */
     async function refreshSidebarMeta() {
         try {
-            const response = await fetch(sidebarEndpoint, {
+            const response = await readerFetch(sidebarEndpoint, {
                 method: "GET",
                 cache: "no-store",
             });
@@ -2707,15 +2758,19 @@
         try {
             const refreshLimit = Math.max(pageSize, getCards().length, getPagingRequestOffset());
             const [sidebarResponse, articleResponse] = await Promise.all([
-                fetch(sidebarEndpoint, {
+                readerFetch(sidebarEndpoint, {
                     method: "GET",
                     cache: "no-store",
                 }),
-                fetch(buildArticlesUrl(0, refreshLimit), {
+                readerFetch(buildArticlesUrl(0, refreshLimit), {
                     method: "GET",
                     cache: "no-store",
                 }),
             ]);
+
+            if (handleReaderAuthFailure(sidebarResponse) || handleReaderAuthFailure(articleResponse)) {
+                return;
+            }
 
             if (!sidebarResponse.ok || !articleResponse.ok) {
                 return;
@@ -2844,7 +2899,7 @@
         }
 
         try {
-            const response = await fetch(articleStatusesEndpoint, {
+            const response = await readerFetch(articleStatusesEndpoint, {
                 method: "POST",
                 cache: "no-store",
                 headers: {
@@ -2881,7 +2936,7 @@
                 .map(getCardArticleId)
                 .filter(articleId => articleId !== "");
 
-            const response = await fetch(readerSyncEndpoint, {
+            const response = await readerFetch(readerSyncEndpoint, {
                 method: "POST",
                 cache: "no-store",
                 headers: {
