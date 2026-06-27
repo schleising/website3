@@ -301,6 +301,45 @@ class WorldCupBestThirdQualificationTests(unittest.TestCase):
             )
         )
 
+    def test_nine_thirds_tied_on_points_cannot_all_receive_q(self) -> None:
+        candidate = _ThirdPlaceStats(points=4, goal_difference=0, goals_for=3, team_name="Candidate")
+        tied_rivals = [
+            _ThirdPlaceStats(points=4, goal_difference=0, goals_for=3, team_name=f"Rival {index}")
+            for index in range(8)
+        ]
+
+        self.assertFalse(
+            _is_guaranteed_best_third_placed(
+                candidate,
+                tied_rivals,
+                use_goal_metrics=False,
+            )
+        )
+
+        group_tables = {}
+        for index, slug in enumerate(("a", "b", "c", "d", "e", "f", "g", "h", "i")):
+            _, table = _completed_group(
+                slug,
+                [
+                    (index * 10 + 1, f"{slug}-1", 3, 0, 0, 5, 1),
+                    (index * 10 + 2, f"{slug}-2", 2, 0, 1, 4, 3),
+                    (index * 10 + 3, f"{slug}-3", 1, 1, 1, 3, 3),
+                    (index * 10 + 4, f"{slug}-4", 0, 0, 3, 1, 6),
+                ],
+            )
+            group_tables[slug] = table
+
+        _apply_current_edition_qualification_labels(group_tables)
+
+        qualified_thirds = [
+            slug
+            for slug, table in group_tables.items()
+            if table[2].position_label == "Q"
+        ]
+        self.assertEqual(len(qualified_thirds), 8)
+        self.assertNotIn("i", qualified_thirds)
+        self.assertIn("a", qualified_thirds)
+
     def test_third_place_q_uses_points_only_until_all_groups_finish(self) -> None:
         locked_third = [
             _table_row(

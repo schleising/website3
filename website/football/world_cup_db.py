@@ -827,22 +827,35 @@ def _build_third_place_group_profile(
     )
 
 
+def _competitor_threatens_third_place_spot(
+    competitor: _ThirdPlaceStats,
+    candidate: _ThirdPlaceStats,
+    *,
+    use_goal_metrics: bool,
+) -> bool:
+    if not use_goal_metrics:
+        return competitor.points >= candidate.points
+    return competitor.rank_key(use_goal_metrics=True) <= candidate.rank_key(
+        use_goal_metrics=True
+    )
+
+
 def _is_guaranteed_best_third_placed(
     candidate_stats: _ThirdPlaceStats,
     competitor_stats: Sequence[_ThirdPlaceStats],
     *,
     use_goal_metrics: bool,
 ) -> bool:
-    better_count = sum(
+    threatening_count = sum(
         1
         for stats in competitor_stats
-        if _third_place_stats_are_better(
+        if _competitor_threatens_third_place_spot(
             stats,
             candidate_stats,
             use_goal_metrics=use_goal_metrics,
         )
     )
-    return better_count < WC_BEST_THIRD_PLACE_SPOTS
+    return threatening_count < WC_BEST_THIRD_PLACE_SPOTS
 
 
 def _apply_current_edition_qualification_labels(
