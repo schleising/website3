@@ -64,7 +64,7 @@ class FeedHelperTests(unittest.TestCase):
         self.assertFalse(is_public_http_url("https://10.0.0.5/feed.xml"))
 
     def test_is_public_http_url_uses_dns_resolution_for_hostnames(self) -> None:
-        feed_utils._resolve_hostname_addresses.cache_clear()
+        feed_utils._cached_successful_hostname_resolution.cache_clear()
         with patch.object(
             feed_utils,
             "_resolve_hostname_addresses",

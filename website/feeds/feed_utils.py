@@ -18,6 +18,13 @@ LOCAL_HOSTNAMES = {
 }
 
 
+class _DnsResolutionUnavailable(LookupError):
+    """DNS lookup failed or returned no usable addresses.
+
+    Raised from the LRU-backed resolver so transient failures are not cached.
+    """
+
+
 def _parse_ip_address(candidate: str) -> ipaddress.IPv4Address | ipaddress.IPv6Address | None:
     """Return an IP address object when candidate is a literal address."""
 
@@ -28,19 +35,15 @@ def _parse_ip_address(candidate: str) -> ipaddress.IPv4Address | ipaddress.IPv6A
 
 
 @lru_cache(maxsize=2048)
-def _resolve_hostname_addresses(
-    hostname: str,
+def _cached_successful_hostname_resolution(
+    normalized_hostname: str,
 ) -> tuple[ipaddress.IPv4Address | ipaddress.IPv6Address, ...]:
-    """Resolve hostname to unique addresses for public-network checks."""
-
-    normalized_hostname = hostname.strip().rstrip(".").lower()
-    if normalized_hostname == "":
-        return ()
+    """Resolve hostnames and cache only successful lookups."""
 
     try:
         address_info = socket.getaddrinfo(normalized_hostname, None, proto=socket.IPPROTO_TCP)
-    except (socket.gaierror, OSError):
-        return ()
+    except (socket.gaierror, OSError) as exc:
+        raise _DnsResolutionUnavailable(normalized_hostname) from exc
 
     seen_addresses: set[str] = set()
     resolved_addresses: list[ipaddress.IPv4Address | ipaddress.IPv6Address] = []
@@ -61,37 +64,67 @@ def _resolve_hostname_addresses(
         seen_addresses.add(canonical_ip)
         resolved_addresses.append(parsed_ip)
 
+    if len(resolved_addresses) == 0:
+        raise _DnsResolutionUnavailable(normalized_hostname)
+
     return tuple(resolved_addresses)
+
+
+def _resolve_hostname_addresses(
+    hostname: str,
+) -> tuple[ipaddress.IPv4Address | ipaddress.IPv6Address, ...]:
+    """Resolve hostname to unique addresses for public-network checks."""
+
+    normalized_hostname = hostname.strip().rstrip(".").lower()
+    if normalized_hostname == "":
+        return ()
+
+    try:
+        return _cached_successful_hostname_resolution(normalized_hostname)
+    except _DnsResolutionUnavailable:
+        return ()
 
 
 def is_public_http_url(url: str) -> bool:
     """Return True when URL is HTTP(S) and resolves to globally-routable hosts."""
 
+    return explain_public_http_url_block(url) is None
+
+
+def explain_public_http_url_block(url: str) -> str | None:
+    """Return a rejection reason, or None when the URL is allowed."""
+
     parsed = urlparse(str(url).strip())
     if parsed.scheme.lower() not in {"http", "https"}:
-        return False
+        return f"Blocked unsupported URL scheme: {parsed.scheme or '(missing)'}"
 
     hostname = (parsed.hostname or "").strip().rstrip(".").lower()
     if hostname == "":
-        return False
+        return "Blocked URL with missing hostname."
 
     if hostname in LOCAL_HOSTNAMES:
-        return False
+        return f"Blocked local hostname: {hostname}"
 
     try:
         _ = parsed.port
     except ValueError:
-        return False
+        return f"Blocked URL with invalid port: {url}"
 
     parsed_ip = _parse_ip_address(hostname)
     if parsed_ip is not None:
-        return bool(parsed_ip.is_global)
+        if parsed_ip.is_global:
+            return None
+        return f"Blocked non-public IP literal: {hostname}"
 
     resolved_addresses = _resolve_hostname_addresses(hostname)
     if len(resolved_addresses) == 0:
-        return False
+        return f"Blocked URL after DNS resolution failure: {hostname}"
 
-    return all(address.is_global for address in resolved_addresses)
+    for address in resolved_addresses:
+        if not address.is_global:
+            return f"Blocked non-public resolved address for {hostname}: {address}"
+
+    return None
 
 
 def normalize_feed_url(feed_url: str) -> str:
