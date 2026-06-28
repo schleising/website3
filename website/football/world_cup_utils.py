@@ -1674,6 +1674,31 @@ def world_cup_knockout_tv_station(match: "Match") -> str | None:
     return _load_knockout_tv_lookup().get(frozenset({home, away}))
 
 
+WC_KNOCKOUT_TV_LOGO_PATHS: dict[str, str] = {
+    "BBC": "/images/football/tv_logos/bbc_one.svg",
+    "ITV": "/images/football/tv_logos/itv_one.svg",
+}
+
+WC_KNOCKOUT_TV_LOGO_LABELS: dict[str, str] = {
+    "BBC": "BBC One",
+    "ITV": "ITV",
+}
+
+
+def world_cup_knockout_tv_logo_url(match: "Match") -> str | None:
+    station = world_cup_knockout_tv_station(match)
+    if station is None:
+        return None
+    return WC_KNOCKOUT_TV_LOGO_PATHS.get(station)
+
+
+def world_cup_knockout_tv_logo_label(match: "Match") -> str | None:
+    station = world_cup_knockout_tv_station(match)
+    if station is None:
+        return None
+    return WC_KNOCKOUT_TV_LOGO_LABELS.get(station, station)
+
+
 def world_cup_score_annotation(match: "Match") -> str | None:
     score = match.score
     home_score = score.full_time.home

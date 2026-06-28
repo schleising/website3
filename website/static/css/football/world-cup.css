@@ -1063,11 +1063,22 @@
 }
 
 .world-cup-kickoff-line {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
     white-space: nowrap;
 }
 
-.world-cup-tv-station {
-    font-weight: 600;
+.world-cup-tv-logo-wrap {
+    display: inline-flex;
+    align-items: center;
+    flex: 0 0 auto;
+}
+
+.world-cup-tv-logo {
+    display: block;
+    height: 0.85rem;
+    width: auto;
 }
 
 .world-cup-score-widget--final {

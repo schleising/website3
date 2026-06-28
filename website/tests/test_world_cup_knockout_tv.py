@@ -9,6 +9,8 @@ from website.football.models import Match, Team
 from website.football.world_cup_utils import (
     _load_knockout_tv_lookup,
     _normalise_tv_team_name,
+    world_cup_knockout_tv_logo_label,
+    world_cup_knockout_tv_logo_url,
     world_cup_knockout_tv_station,
 )
 
@@ -93,6 +95,23 @@ class WorldCupKnockoutTvTests(unittest.TestCase):
             away=Team(id=2, name="Paraguay", short_name="Paraguay"),
         )
         self.assertEqual(world_cup_knockout_tv_station(match), "BBC")
+        self.assertEqual(
+            world_cup_knockout_tv_logo_url(match),
+            "/images/football/tv_logos/bbc_one.svg",
+        )
+        self.assertEqual(world_cup_knockout_tv_logo_label(match), "BBC One")
+
+    def test_itv_logo_url(self) -> None:
+        match = _knockout_match(
+            stage="LAST_32",
+            home=Team(id=1, name="South Africa", short_name="South Africa"),
+            away=Team(id=2, name="Canada", short_name="Canada"),
+        )
+        self.assertEqual(
+            world_cup_knockout_tv_logo_url(match),
+            "/images/football/tv_logos/itv_one.svg",
+        )
+        self.assertEqual(world_cup_knockout_tv_logo_label(match), "ITV")
 
     def test_not_shown_for_group_stage(self) -> None:
         match = _knockout_match(
