@@ -55,6 +55,7 @@ from .world_cup_utils import (
     build_group_matchday_groups,
     world_cup_display_score,
     world_cup_match_status_display,
+    world_cup_knockout_tv_station,
     world_cup_score_annotation,
     world_cup_all_matches_bg_label,
     normalise_group_slug,
@@ -71,6 +72,7 @@ TEMPLATES.env.filters["knockout_match_has_confirmed_teams"] = (
 )
 TEMPLATES.env.filters["world_cup_display_score"] = world_cup_display_score
 TEMPLATES.env.filters["world_cup_match_status_display"] = world_cup_match_status_display
+TEMPLATES.env.filters["world_cup_knockout_tv_station"] = world_cup_knockout_tv_station
 TEMPLATES.env.filters["world_cup_score_annotation"] = world_cup_score_annotation
 TEMPLATES.env.filters["edition_uses_goal_average"] = edition_uses_goal_average
 TEMPLATES.env.filters["edition_hides_goal_difference_column"] = (

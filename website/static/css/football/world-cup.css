@@ -1062,6 +1062,14 @@
     opacity: 0.72;
 }
 
+.world-cup-kickoff-line {
+    white-space: nowrap;
+}
+
+.world-cup-tv-station {
+    font-weight: 600;
+}
+
 .world-cup-score-widget--final {
     border-color: color-mix(in srgb, var(--brand-soft), #ffffff 35%);
 }

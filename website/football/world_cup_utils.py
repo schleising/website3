@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import csv
 import json
 import re
+import unicodedata
 from datetime import date, datetime, timedelta, timezone
 from dataclasses import dataclass
 from functools import lru_cache
@@ -13,6 +15,7 @@ if TYPE_CHECKING:
     from .models import Match, Score, TableItem, Team
 
 WC_CURRENT_EDITION = "2026"
+WC_KNOCKOUT_TV_PATH = Path(__file__).resolve().parent / "wc_knockout_tv.csv"
 # Westernmost host timezone — match day rolls at Pacific midnight so late West Coast
 # kickoffs stay on the same tournament day as Mexico City / Eastern venues.
 WC_TOURNAMENT_TZ = ZoneInfo("America/Los_Angeles")
@@ -1603,6 +1606,72 @@ def world_cup_match_status_display(match: "Match") -> str:
             return f"{match.minute}'"
         return "In Play"
     return str(status)
+
+
+_TV_TEAM_ALIASES: dict[str, str] = {
+    "bosnia herzegovina": "bosnia herzegovina",
+    "bosnia h": "bosnia herzegovina",
+    "cote divoire": "ivory coast",
+    "cote d ivoire": "ivory coast",
+    "côte d ivoire": "ivory coast",
+    "ivory coast": "ivory coast",
+    "cape verde": "cape verde",
+    "cabo verde": "cape verde",
+    "dr congo": "dr congo",
+    "democratic republic of the congo": "dr congo",
+    "congo dr": "dr congo",
+    "united states": "usa",
+    "usa": "usa",
+}
+
+
+def _normalise_tv_team_name(name: str | None) -> str:
+    if name is None:
+        return ""
+    decomposed = unicodedata.normalize("NFKD", name)
+    ascii_name = "".join(
+        character for character in decomposed if not unicodedata.combining(character)
+    )
+    collapsed = re.sub(r"[^\w\s]", " ", ascii_name.casefold())
+    collapsed = re.sub(r"\s+", " ", collapsed).strip()
+    return _TV_TEAM_ALIASES.get(collapsed, collapsed)
+
+
+@lru_cache(maxsize=1)
+def _load_knockout_tv_lookup() -> dict[frozenset[str], str]:
+    lookup: dict[frozenset[str], str] = {}
+    if not WC_KNOCKOUT_TV_PATH.is_file():
+        return lookup
+
+    with WC_KNOCKOUT_TV_PATH.open(newline="", encoding="utf-8") as handle:
+        reader = csv.reader(handle)
+        next(reader, None)
+        for row in reader:
+            if len(row) < 6:
+                continue
+            team_one = _normalise_tv_team_name(row[2])
+            team_two = _normalise_tv_team_name(row[4])
+            station = row[5].strip()
+            if team_one == "" or team_two == "" or station == "":
+                continue
+            lookup[frozenset({team_one, team_two})] = station
+
+    return lookup
+
+
+def world_cup_knockout_tv_station(match: "Match") -> str | None:
+    """UK broadcaster for a knockout match, when listed in wc_knockout_tv.csv."""
+    if match.stage in {WC_GROUP_STAGE, WC_GROUP_PLAYOFF}:
+        return None
+    if not knockout_match_has_confirmed_teams(match):
+        return None
+
+    home = _normalise_tv_team_name(match.home_team.display_name)
+    away = _normalise_tv_team_name(match.away_team.display_name)
+    if home == "" or away == "":
+        return None
+
+    return _load_knockout_tv_lookup().get(frozenset({home, away}))
 
 
 def world_cup_score_annotation(match: "Match") -> str | None:
