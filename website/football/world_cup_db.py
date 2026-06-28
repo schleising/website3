@@ -50,6 +50,7 @@ from .world_cup_utils import (
     filter_confirmed_knockout_matches,
     filter_superseded_knockout_replays,
     order_knockout_stages_for_bracket,
+    resolve_2026_knockout_fixture_maps,
     resolve_world_cup_crest_url,
     standings_label_to_slug,
     team_is_confirmed,
@@ -1738,7 +1739,20 @@ async def build_knockout_bracket_diagram(
     if len(stage_matches) == 0:
         return None
 
-    stage_matches = order_knockout_stages_for_bracket(stage_matches)
+    fixture_maps: dict[str, dict[int, Match]] | None = None
+    if edition == WC_CURRENT_EDITION:
+        group_tables, _ = await _fetch_all_sorted_group_tables_for_qualification(
+            edition
+        )
+        fixture_maps = resolve_2026_knockout_fixture_maps(
+            stage_matches,
+            group_tables,
+        )
+
+    stage_matches = order_knockout_stages_for_bracket(
+        stage_matches,
+        fixture_maps=fixture_maps,
+    )
 
     first_round_count = len(stage_matches[0][1])
     grid_rows = max(BRACKET_CARD_GRID_ROWS, _bracket_grid_row_count(first_round_count))
@@ -1754,6 +1768,7 @@ async def build_knockout_bracket_diagram(
                 match,
                 ordered_matches,
                 bracket_index=match_index,
+                fixture_map=fixture_maps.get(stage) if fixture_maps else None,
             )
             slots.append(
                 _bracket_slot_from_match(

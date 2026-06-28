@@ -1694,9 +1694,20 @@ WC_2026_KNOCKOUT_FIXTURES: dict[str, dict[int, tuple[str, str]]] = {
     },
 }
 
+# Visual bracket slot order: consecutive pairs feed the same next-round match.
 WC_2026_KNOCKOUT_BRACKET_ORDER: dict[str, tuple[int, ...]] = {
-    "LAST_32": (73, 75, 74, 77, 76, 78, 79, 80, 83, 84, 81, 82, 86, 88, 85, 87),
+    "LAST_32": (74, 77, 73, 75, 83, 84, 81, 82, 76, 78, 79, 80, 86, 88, 85, 87),
     "LAST_16": (89, 90, 93, 94, 91, 92, 95, 96),
+    "QUARTER_FINALS": (97, 98, 99, 100),
+    "SEMI_FINALS": (101, 102),
+    "FINAL": (104,),
+    "THIRD_PLACE": (103,),
+}
+
+# Kick-off order for assigning FIFA fixture numbers when feeder labels are absent.
+WC_2026_KNOCKOUT_CHRONOLOGICAL_ORDER: dict[str, tuple[int, ...]] = {
+    "LAST_32": (73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88),
+    "LAST_16": (90, 89, 91, 92, 93, 94, 95, 96),
     "QUARTER_FINALS": (97, 98, 99, 100),
     "SEMI_FINALS": (101, 102),
     "FINAL": (104,),
@@ -1830,16 +1841,177 @@ def chronological_knockout_fixture_map(
     matches: list["Match"],
 ) -> dict[int, "Match"]:
     """Assign FIFA fixture numbers by sorting matches within the stage by kick-off time."""
-    bracket_order = WC_2026_KNOCKOUT_BRACKET_ORDER.get(stage, ())
-    if len(bracket_order) == 0:
+    chrono_order = WC_2026_KNOCKOUT_CHRONOLOGICAL_ORDER.get(stage)
+    if chrono_order is None:
+        chrono_order = WC_2026_KNOCKOUT_BRACKET_ORDER.get(stage, ())
+    if len(chrono_order) == 0:
         return {}
 
     chrono_matches = sorted(matches, key=lambda match: match.utc_date)
     mapping: dict[int, Match] = {}
     for index, match in enumerate(chrono_matches):
-        if index >= len(bracket_order):
+        if index >= len(chrono_order):
             break
-        mapping[bracket_order[index]] = match
+        mapping[chrono_order[index]] = match
+    return mapping
+
+
+def _team_id_at_group_position(
+    group_tables: dict[str, list["TableItem"]],
+    group_letter: str,
+    position: int,
+) -> int | None:
+    table = group_tables.get(group_letter.lower())
+    if table is None:
+        return None
+    for row in table:
+        if row.position == position and row.team.id is not None:
+            return row.team.id
+    return None
+
+
+def _team_ids_for_knockout_feeder_label(
+    label: str,
+    group_tables: dict[str, list["TableItem"]],
+) -> set[int]:
+    normalised = normalise_knockout_feeder_label(label)
+    if normalised is None:
+        return set()
+
+    winner_group = _FEEDER_WINNER_GROUP_RE.match(normalised)
+    if winner_group is not None:
+        team_id = _team_id_at_group_position(
+            group_tables,
+            winner_group.group(1),
+            1,
+        )
+        return {team_id} if team_id is not None else set()
+
+    runner_up_group = _FEEDER_RUNNER_UP_GROUP_RE.match(normalised)
+    if runner_up_group is not None:
+        team_id = _team_id_at_group_position(
+            group_tables,
+            runner_up_group.group(1),
+            2,
+        )
+        return {team_id} if team_id is not None else set()
+
+    if normalised.startswith("3rd Group "):
+        group_letters = normalised.removeprefix("3rd Group ").split("/")
+        team_ids: set[int] = set()
+        for group_letter in group_letters:
+            team_id = _team_id_at_group_position(group_tables, group_letter, 3)
+            if team_id is not None:
+                team_ids.add(team_id)
+        return team_ids
+
+    return set()
+
+
+def _match_fits_2026_knockout_fixture(
+    match: "Match",
+    stage: str,
+    fixture_number: int,
+    group_tables: dict[str, list["TableItem"]],
+) -> bool:
+    fixtures = WC_2026_KNOCKOUT_FIXTURES.get(stage)
+    if fixtures is None or fixture_number not in fixtures:
+        return False
+
+    home_id = match.home_team.id if team_is_confirmed(match.home_team) else None
+    away_id = match.away_team.id if team_is_confirmed(match.away_team) else None
+    if home_id is None or away_id is None:
+        return False
+
+    home_label, away_label = fixtures[fixture_number]
+    home_candidates = _team_ids_for_knockout_feeder_label(home_label, group_tables)
+    away_candidates = _team_ids_for_knockout_feeder_label(away_label, group_tables)
+    if len(home_candidates) == 0 or len(away_candidates) == 0:
+        return False
+
+    return (home_id in home_candidates and away_id in away_candidates) or (
+        home_id in away_candidates and away_id in home_candidates
+    )
+
+
+def resolve_2026_knockout_fixture_maps(
+    stage_matches: list[tuple[tuple[str, str, str], list["Match"]]],
+    group_tables: dict[str, list["TableItem"]],
+) -> dict[str, dict[int, "Match"]]:
+    """Map FIFA fixture numbers to matches using feeder labels and group standings."""
+    maps: dict[str, dict[int, Match]] = {}
+
+    for (_stage, _round_slug, _label), matches in stage_matches:
+        stage = _stage
+        stage_map: dict[int, Match] = {}
+        used_match_ids: set[int] = set()
+
+        for match in matches:
+            fixture_number = identify_knockout_fixture_number(stage, match)
+            if fixture_number is None:
+                continue
+            stage_map[fixture_number] = match
+            used_match_ids.add(match.id)
+
+        if stage == "LAST_32" and len(group_tables) > 0:
+            bracket_order = WC_2026_KNOCKOUT_BRACKET_ORDER.get(stage, ())
+            for fixture_number in bracket_order:
+                if fixture_number in stage_map:
+                    continue
+                for match in matches:
+                    if match.id in used_match_ids:
+                        continue
+                    if not _match_fits_2026_knockout_fixture(
+                        match,
+                        stage,
+                        fixture_number,
+                        group_tables,
+                    ):
+                        continue
+                    stage_map[fixture_number] = match
+                    used_match_ids.add(match.id)
+                    break
+
+        maps[stage] = _knockout_fixture_map(
+            stage,
+            matches,
+            resolved=stage_map,
+        )
+
+    return maps
+
+
+def _knockout_fixture_map(
+    stage: str,
+    matches: list["Match"],
+    *,
+    resolved: dict[int, "Match"] | None = None,
+) -> dict[int, "Match"]:
+    mapping: dict[int, Match] = dict(resolved or {})
+    used_ids = {match.id for match in mapping.values()}
+
+    for match in matches:
+        if match.id in used_ids:
+            continue
+        fixture_number = identify_knockout_fixture_number(stage, match)
+        if fixture_number is not None and fixture_number not in mapping:
+            mapping[fixture_number] = match
+            used_ids.add(match.id)
+
+    remaining = [match for match in matches if match.id not in used_ids]
+    if len(remaining) == 0:
+        return mapping
+
+    chrono_order = WC_2026_KNOCKOUT_CHRONOLOGICAL_ORDER.get(stage)
+    if chrono_order is None:
+        chrono_order = WC_2026_KNOCKOUT_BRACKET_ORDER.get(stage, ())
+    available_numbers = [fixture_number for fixture_number in chrono_order if fixture_number not in mapping]
+    chrono_matches = sorted(remaining, key=lambda item: item.utc_date)
+    for index, match in enumerate(chrono_matches):
+        if index >= len(available_numbers):
+            break
+        mapping[available_numbers[index]] = match
+
     return mapping
 
 
@@ -1847,11 +2019,11 @@ def chronological_knockout_fixture_number(
     stage: str,
     match: "Match",
     matches: list["Match"],
+    *,
+    fixture_map: dict[int, "Match"] | None = None,
 ) -> int | None:
-    for fixture_number, mapped_match in chronological_knockout_fixture_map(
-        stage,
-        matches,
-    ).items():
+    resolved_map = fixture_map or _knockout_fixture_map(stage, matches)
+    for fixture_number, mapped_match in resolved_map.items():
         if mapped_match.id == match.id:
             return fixture_number
     return None
@@ -1863,12 +2035,23 @@ def bracket_fixture_number_for_match(
     matches: list["Match"],
     *,
     bracket_index: int | None = None,
+    fixture_map: dict[int, "Match"] | None = None,
 ) -> int | None:
+    if fixture_map is not None:
+        for fixture_number, mapped_match in fixture_map.items():
+            if mapped_match.id == match.id:
+                return fixture_number
+
     fixture_number = identify_knockout_fixture_number(stage, match)
     if fixture_number is not None:
         return fixture_number
 
-    fixture_number = chronological_knockout_fixture_number(stage, match, matches)
+    fixture_number = chronological_knockout_fixture_number(
+        stage,
+        match,
+        matches,
+        fixture_map=fixture_map,
+    )
     if fixture_number is not None:
         return fixture_number
 
@@ -1904,11 +2087,18 @@ def order_knockout_round_by_fixture_feeders(
     *,
     prev_stage: str,
     next_stage: str,
+    fixture_maps: dict[str, dict[int, "Match"]] | None = None,
 ) -> list["Match"] | None:
     if len(prev_matches) != 2 * len(next_ordered):
         return None
 
-    prev_fixture_map = chronological_knockout_fixture_map(prev_stage, prev_matches)
+    prev_fixture_map = (
+        fixture_maps.get(prev_stage)
+        if fixture_maps is not None and prev_stage in fixture_maps
+        else None
+    )
+    if prev_fixture_map is None:
+        prev_fixture_map = _knockout_fixture_map(prev_stage, prev_matches)
     next_bracket_order = WC_2026_KNOCKOUT_BRACKET_ORDER.get(next_stage, ())
     next_fixtures = WC_2026_KNOCKOUT_FIXTURES.get(next_stage, {})
     if len(prev_fixture_map) == 0 or len(next_bracket_order) == 0:
@@ -1953,7 +2143,10 @@ def _order_knockout_stages_by_results(
 ) -> list[tuple[tuple[str, str, str], list["Match"]]] | None:
     ordered_by_stage: dict[str, list["Match"]] = {}
     last_meta, last_matches = stage_matches[-1]
-    ordered_by_stage[last_meta[0]] = sorted(last_matches, key=lambda match: match.utc_date)
+    ordered_by_stage[last_meta[0]] = order_knockout_matches_for_bracket(
+        last_meta[0],
+        last_matches,
+    )
 
     for index in range(len(stage_matches) - 2, -1, -1):
         meta, prev_matches = stage_matches[index]
@@ -1973,10 +2166,16 @@ def _order_knockout_stages_by_results(
 
 def _order_knockout_stages_by_fixture_feeders(
     stage_matches: list[tuple[tuple[str, str, str], list["Match"]]],
+    *,
+    fixture_maps: dict[str, dict[int, "Match"]] | None = None,
 ) -> list[tuple[tuple[str, str, str], list["Match"]]]:
     ordered_by_stage: dict[str, list["Match"]] = {}
     last_meta, last_matches = stage_matches[-1]
-    ordered_by_stage[last_meta[0]] = sorted(last_matches, key=lambda match: match.utc_date)
+    ordered_by_stage[last_meta[0]] = order_knockout_matches_for_bracket(
+        last_meta[0],
+        last_matches,
+        fixture_map=fixture_maps.get(last_meta[0]) if fixture_maps else None,
+    )
 
     for index in range(len(stage_matches) - 2, -1, -1):
         meta, prev_matches = stage_matches[index]
@@ -1987,9 +2186,14 @@ def _order_knockout_stages_by_fixture_feeders(
             ordered_by_stage[next_stage],
             prev_stage=stage,
             next_stage=next_stage,
+            fixture_maps=fixture_maps,
         )
         if reordered is None:
-            reordered = order_stage_by_chronological_fixtures(stage, prev_matches)
+            reordered = order_knockout_matches_for_bracket(
+                stage,
+                prev_matches,
+                fixture_map=fixture_maps.get(stage) if fixture_maps else None,
+            )
         ordered_by_stage[stage] = reordered
 
     return [(meta, ordered_by_stage[meta[0]]) for meta, _ in stage_matches]
@@ -2028,11 +2232,10 @@ def _find_bracket_feeder_match(
         if winner_match is not None:
             fixture_num = int(winner_match.group(1))
             if fixture_num in WC_2026_KNOCKOUT_FIXTURES.get(prev_stage, {}):
-                for match in prev_matches:
-                    if match.id in used_ids:
-                        continue
-                    if identify_knockout_fixture_number(prev_stage, match) == fixture_num:
-                        return match
+                fixture_map = _knockout_fixture_map(prev_stage, prev_matches)
+                feeder = fixture_map.get(fixture_num)
+                if feeder is not None and feeder.id not in used_ids:
+                    return feeder
     return None
 
 
@@ -2077,24 +2280,31 @@ def order_knockout_round_by_next_round(
 
 def order_knockout_stages_for_bracket(
     stage_matches: list[tuple[tuple[str, str, str], list["Match"]]],
+    *,
+    fixture_maps: dict[str, dict[int, "Match"]] | None = None,
 ) -> list[tuple[tuple[str, str, str], list["Match"]]]:
     if len(stage_matches) == 0:
         return stage_matches
+
+    feeder_ordered = _order_knockout_stages_by_fixture_feeders(
+        stage_matches,
+        fixture_maps=fixture_maps,
+    )
+
+    if fixture_maps is not None:
+        return feeder_ordered
 
     if all(
         _knockout_stage_has_fixture_order(stage, matches)
         for (stage, _, _), matches in stage_matches
     ):
-        return [
-            (meta, order_knockout_matches_for_bracket(meta[0], matches))
-            for meta, matches in stage_matches
-        ]
+        return feeder_ordered
 
     result_ordered = _order_knockout_stages_by_results(stage_matches)
     if result_ordered is not None:
         return result_ordered
 
-    return _order_knockout_stages_by_fixture_feeders(stage_matches)
+    return feeder_ordered
 
 
 def identify_knockout_fixture_number(stage: str, match: "Match") -> int | None:
@@ -2128,24 +2338,31 @@ def identify_knockout_fixture_number(stage: str, match: "Match") -> int | None:
     return None
 
 
-def order_knockout_matches_for_bracket(stage: str, matches: list["Match"]) -> list["Match"]:
+def order_knockout_matches_for_bracket(
+    stage: str,
+    matches: list["Match"],
+    *,
+    fixture_map: dict[int, "Match"] | None = None,
+) -> list["Match"]:
     bracket_order = WC_2026_KNOCKOUT_BRACKET_ORDER.get(stage)
     if bracket_order is None or len(matches) <= 1:
         return matches
 
-    matches_by_fixture: dict[int, Match] = {}
-    unmatched: list[Match] = []
-    for match in matches:
-        fixture_number = identify_knockout_fixture_number(stage, match)
-        if fixture_number is None:
-            unmatched.append(match)
-            continue
-        matches_by_fixture[fixture_number] = match
+    resolved_map = fixture_map or _knockout_fixture_map(stage, matches)
+    ordered = [
+        resolved_map[fixture_number]
+        for fixture_number in bracket_order
+        if fixture_number in resolved_map
+    ]
+    if len(ordered) == len(matches):
+        return ordered
 
-    ordered = [matches_by_fixture[fixture_number] for fixture_number in bracket_order if fixture_number in matches_by_fixture]
-    if len(unmatched) > 0:
-        unmatched.sort(key=lambda item: item.utc_date)
-        ordered.extend(unmatched)
+    used_ids = {match.id for match in ordered}
+    remaining = sorted(
+        (match for match in matches if match.id not in used_ids),
+        key=lambda item: item.utc_date,
+    )
+    ordered.extend(remaining)
     return ordered
 
 
