@@ -323,13 +323,17 @@ class ResultSet(BaseModel):
 
 
 class FullTime(BaseModel):
-    home: int | None = None
-    away: int | None = None
+    home: int | None = football_api_field("home", "homeTeam", default=None)
+    away: int | None = football_api_field("away", "awayTeam", default=None)
+
+    model_config = ConfigDict(populate_by_name=True)
 
 
 class HalfTime(BaseModel):
-    home: int | None = None
-    away: int | None = None
+    home: int | None = football_api_field("home", "homeTeam", default=None)
+    away: int | None = football_api_field("away", "awayTeam", default=None)
+
+    model_config = ConfigDict(populate_by_name=True)
 
 
 class Score(BaseModel):
@@ -337,6 +341,9 @@ class Score(BaseModel):
     duration: str
     full_time: FullTime = football_api_field("full_time", "fullTime")
     half_time: HalfTime = football_api_field("half_time", "halfTime")
+    regular_time: FullTime | None = football_api_field(
+        "regular_time", "regularTime", default=None
+    )
     extra_time: FullTime | None = football_api_field(
         "extra_time", "extraTime", default=None
     )

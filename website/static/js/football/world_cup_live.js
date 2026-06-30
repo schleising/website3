@@ -143,9 +143,84 @@ function updateWorldCupScoreWidget(match) {
     homeElement.textContent = homeScore ?? "-";
     awayElement.textContent = awayScore ?? "-";
 
+    const annotationElement = scoreWidget.querySelector(".world-cup-score-annotation");
+    const annotation = worldCupScoreAnnotation(match);
+    if (annotationElement) {
+        annotationElement.textContent = annotation ?? "";
+        annotationElement.hidden = !annotation;
+    }
+
     scoreWidget.dataset.matchFinished = match.status === "FINISHED" ? "true" : "false";
     scoreWidget.dataset.matchLive =
         match.status === "IN_PLAY" || match.status === "PAUSED" ? "true" : "false";
+}
+
+function worldCupScoreUsesApiExtraTimeFormat(score) {
+    const regularTime = score?.regular_time;
+    if (regularTime?.home != null && regularTime?.away != null) {
+        return true;
+    }
+
+    const homeFt = score?.full_time?.home;
+    const awayFt = score?.full_time?.away;
+    if (homeFt == null || awayFt == null) {
+        return false;
+    }
+
+    if (score.duration === "PENALTY_SHOOTOUT" && homeFt !== awayFt) {
+        return true;
+    }
+
+    if (score.duration === "EXTRA_TIME" && homeFt !== awayFt) {
+        return true;
+    }
+
+    return false;
+}
+
+function worldCupNinetyMinuteScoreline(score) {
+    if (worldCupScoreUsesApiExtraTimeFormat(score)) {
+        const regularTime = score?.regular_time;
+        if (regularTime?.home != null && regularTime?.away != null) {
+            return [regularTime.home, regularTime.away];
+        }
+    }
+
+    return [score?.full_time?.home ?? null, score?.full_time?.away ?? null];
+}
+
+function worldCupPostExtraTimeScoreline(score) {
+    if (worldCupScoreUsesApiExtraTimeFormat(score)) {
+        if (score.duration === "PENALTY_SHOOTOUT") {
+            const regularTime = score?.regular_time;
+            if (regularTime?.home != null && regularTime?.away != null) {
+                let homeTotal = regularTime.home;
+                let awayTotal = regularTime.away;
+                const extraTime = score.extra_time;
+                if (extraTime?.home != null && extraTime?.away != null) {
+                    homeTotal += extraTime.home;
+                    awayTotal += extraTime.away;
+                }
+                return [homeTotal, awayTotal];
+            }
+
+            const homeFt = score?.full_time?.home;
+            const awayFt = score?.full_time?.away;
+            if (homeFt != null && awayFt != null && homeFt === awayFt) {
+                return [homeFt, awayFt];
+            }
+            return [null, null];
+        }
+
+        return [score?.full_time?.home ?? null, score?.full_time?.away ?? null];
+    }
+
+    const extraTime = score?.extra_time;
+    if (extraTime?.home != null && extraTime?.away != null) {
+        return [extraTime.home, extraTime.away];
+    }
+
+    return [score?.full_time?.home ?? null, score?.full_time?.away ?? null];
 }
 
 function worldCupMatchWentToExtraTime(score) {
@@ -176,13 +251,36 @@ function worldCupDisplayScore(match) {
     }
 
     if (worldCupMatchWentToExtraTime(score)) {
-        const extraTime = score.extra_time;
-        if (extraTime?.home != null && extraTime?.away != null) {
-            return [extraTime.home, extraTime.away];
-        }
+        return worldCupPostExtraTimeScoreline(score);
     }
 
     return [homeFt, awayFt];
+}
+
+function worldCupScoreAnnotation(match) {
+    const score = match?.score;
+    const homeScore = score?.full_time?.home;
+    const awayScore = score?.full_time?.away;
+    if (homeScore == null || awayScore == null) {
+        return null;
+    }
+
+    const penalties = score?.penalties;
+    if (penalties?.home != null && penalties?.away != null) {
+        return `(${penalties.home}-${penalties.away} pens)`;
+    }
+
+    const [home90, away90] = worldCupNinetyMinuteScoreline(score);
+    if (home90 == null || away90 == null || home90 !== away90) {
+        return null;
+    }
+
+    const [postEtHome, postEtAway] = worldCupDisplayScore(match);
+    if (postEtHome != null && postEtAway != null && postEtHome !== postEtAway) {
+        return "(aet)";
+    }
+
+    return null;
 }
 
 function formatWorldCupMatchStatus(match) {

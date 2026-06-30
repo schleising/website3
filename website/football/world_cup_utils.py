@@ -1528,24 +1528,101 @@ def knockout_winner_side(match: "Match") -> str | None:
     if match.status not in {MatchStatus.finished, MatchStatus.awarded}:
         return None
 
-    home_score = match.score.full_time.home
-    away_score = match.score.full_time.away
-    if home_score is None or away_score is None:
-        return None
-
-    winner_side = _winner_side_from_scores(home_score, away_score)
-    if winner_side is not None:
-        return winner_side
-
     penalties = match.score.penalties
     if penalties is not None and penalties.home is not None and penalties.away is not None:
-        return _winner_side_from_scores(penalties.home, penalties.away)
+        winner_side = _winner_side_from_scores(penalties.home, penalties.away)
+        if winner_side is not None:
+            return winner_side
 
-    extra_time = match.score.extra_time
-    if extra_time is not None and extra_time.home is not None and extra_time.away is not None:
-        return _winner_side_from_scores(extra_time.home, extra_time.away)
+    home_score, away_score = world_cup_score_display_scoreline(match.score)
+    if home_score is not None and away_score is not None:
+        winner_side = _winner_side_from_scores(home_score, away_score)
+        if winner_side is not None:
+            return winner_side
 
-    return None
+    home_ft = match.score.full_time.home
+    away_ft = match.score.full_time.away
+    if home_ft is None or away_ft is None:
+        return None
+
+    return _winner_side_from_scores(home_ft, away_ft)
+
+
+def _world_cup_score_uses_api_extra_time_format(score: "Score") -> bool:
+    """True when extra_time holds ET-period goals only (football-data API), not cumulative."""
+    regular_time = score.regular_time
+    if (
+        regular_time is not None
+        and regular_time.home is not None
+        and regular_time.away is not None
+    ):
+        return True
+
+    home_ft = score.full_time.home
+    away_ft = score.full_time.away
+    if home_ft is None or away_ft is None:
+        return False
+
+    if score.duration == "PENALTY_SHOOTOUT" and home_ft != away_ft:
+        return True
+
+    if score.duration == "EXTRA_TIME" and home_ft != away_ft:
+        return True
+
+    return False
+
+
+def _world_cup_ninety_minute_scoreline(score: "Score") -> tuple[int | None, int | None]:
+    if _world_cup_score_uses_api_extra_time_format(score):
+        regular_time = score.regular_time
+        if (
+            regular_time is not None
+            and regular_time.home is not None
+            and regular_time.away is not None
+        ):
+            return regular_time.home, regular_time.away
+
+    return score.full_time.home, score.full_time.away
+
+
+def _world_cup_post_extra_time_scoreline(score: "Score") -> tuple[int | None, int | None]:
+    if _world_cup_score_uses_api_extra_time_format(score):
+        if score.duration == "PENALTY_SHOOTOUT":
+            regular_time = score.regular_time
+            if (
+                regular_time is not None
+                and regular_time.home is not None
+                and regular_time.away is not None
+            ):
+                home_total = regular_time.home
+                away_total = regular_time.away
+                extra_time = score.extra_time
+                if (
+                    extra_time is not None
+                    and extra_time.home is not None
+                    and extra_time.away is not None
+                ):
+                    home_total += extra_time.home
+                    away_total += extra_time.away
+                return home_total, away_total
+
+            home_ft = score.full_time.home
+            away_ft = score.full_time.away
+            if home_ft is not None and away_ft is not None and home_ft == away_ft:
+                return home_ft, away_ft
+            return None, None
+
+        return score.full_time.home, score.full_time.away
+
+    extra_time = score.extra_time
+    if (
+        extra_time is not None
+        and extra_time.home is not None
+        and extra_time.away is not None
+    ):
+        return extra_time.home, extra_time.away
+
+    return score.full_time.home, score.full_time.away
 
 
 def _world_cup_match_went_to_extra_time(score: "Score") -> bool:
@@ -1576,13 +1653,7 @@ def world_cup_score_display_scoreline(score: "Score") -> tuple[int | None, int |
         return home_ft, away_ft
 
     if _world_cup_match_went_to_extra_time(score):
-        extra_time = score.extra_time
-        if (
-            extra_time is not None
-            and extra_time.home is not None
-            and extra_time.away is not None
-        ):
-            return extra_time.home, extra_time.away
+        return _world_cup_post_extra_time_scoreline(score)
 
     return home_ft, away_ft
 
@@ -1717,9 +1788,6 @@ def world_cup_score_annotation(match: "Match") -> str | None:
             return f"({penalties.home}-{penalties.away} pens)"
         return "(replay)"
 
-    if home_score != away_score:
-        return None
-
     penalties = score.penalties
     if (
         penalties is not None
@@ -1728,12 +1796,15 @@ def world_cup_score_annotation(match: "Match") -> str | None:
     ):
         return f"({penalties.home}-{penalties.away} pens)"
 
-    extra_time = score.extra_time
+    home_90, away_90 = _world_cup_ninety_minute_scoreline(score)
+    if home_90 is None or away_90 is None or home_90 != away_90:
+        return None
+
+    post_et_home, post_et_away = world_cup_score_display_scoreline(score)
     if (
-        extra_time is not None
-        and extra_time.home is not None
-        and extra_time.away is not None
-        and extra_time.home != extra_time.away
+        post_et_home is not None
+        and post_et_away is not None
+        and post_et_home != post_et_away
     ):
         return "(aet)"
 
