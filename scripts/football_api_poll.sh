@@ -92,6 +92,86 @@ print(len(matches) if isinstance(matches, list) else "?")
 PY
 }
 
+match_status_summary() {
+  local body_file="$1"
+  python3 - "$body_file" <<'PY' 2>/dev/null || echo "in_play=? statuses=?"
+import json
+import sys
+from collections import Counter
+
+with open(sys.argv[1], encoding="utf-8") as handle:
+    payload = json.load(handle)
+matches = payload.get("matches")
+if not isinstance(matches, list):
+    print("in_play=? statuses=?")
+    raise SystemExit(0)
+
+live_statuses = {"IN_PLAY", "PAUSED", "SUSPENDED"}
+in_play = sum(
+    1 for match in matches
+    if isinstance(match, dict) and match.get("status") in live_statuses
+)
+counts = Counter(
+    match.get("status", "?")
+    for match in matches
+    if isinstance(match, dict)
+)
+status_bits = ",".join(f"{status}:{count}" for status, count in sorted(counts.items()))
+print(f"in_play={in_play} statuses={{{status_bits}}}")
+PY
+}
+
+print_match_statuses() {
+  local body_file="$1"
+  python3 - "$body_file" <<'PY' 2>/dev/null || true
+import json
+import sys
+
+with open(sys.argv[1], encoding="utf-8") as handle:
+    payload = json.load(handle)
+matches = payload.get("matches")
+if not isinstance(matches, list):
+    raise SystemExit(0)
+
+
+def team_name(match: dict, side: str) -> str:
+    team = match.get(f"{side}Team") or {}
+    return team.get("shortName") or team.get("name") or "?"
+
+
+def format_score(match: dict) -> str:
+    score = match.get("score") or {}
+    full_time = score.get("fullTime") or {}
+    home = full_time.get("home")
+    away = full_time.get("away")
+    if home is None or away is None:
+        return "-"
+    return f"{home}-{away}"
+
+
+def format_status(match: dict) -> str:
+    status = match.get("status") or "?"
+    minute = match.get("minute")
+    if status in {"IN_PLAY", "PAUSED", "SUSPENDED"} and minute is not None:
+        injury = match.get("injuryTime")
+        if injury:
+            return f"{status} {minute}+{injury}'"
+        return f"{status} {minute}'"
+    return status
+
+
+for match in sorted(matches, key=lambda item: item.get("utcDate") or ""):
+    if not isinstance(match, dict):
+        continue
+    home = team_name(match, "home")
+    away = team_name(match, "away")
+    score = format_score(match)
+    stage = match.get("stage") or "?"
+    status = format_status(match)
+    print(f"  {status:14} {home} {score} {away} ({stage})")
+PY
+}
+
 show_verbose_trace() {
   local label="$1"
   local verbose_file="$2"
@@ -174,7 +254,9 @@ while true; do
     elapsed_ms="$(format_elapsed_ms "$stats")"
     if [[ "$http_code" == "200" ]]; then
       match_count="$(count_matches "$body_file")"
-      echo "$ts SUCCESS HTTP $http_code elapsed=${elapsed_ms}ms matches=${match_count} rate={${rate_headers}}"
+      status_summary="$(match_status_summary "$body_file")"
+      echo "$ts SUCCESS HTTP $http_code elapsed=${elapsed_ms}ms matches=${match_count} ${status_summary} rate={${rate_headers}}"
+      print_match_statuses "$body_file"
     else
       echo "$ts ERROR HTTP $http_code elapsed=${elapsed_ms}ms rate={${rate_headers}}" >&2
       echo >&2
