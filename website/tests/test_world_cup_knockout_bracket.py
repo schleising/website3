@@ -10,6 +10,8 @@ from website.football.world_cup_utils import (
     WC_2026_KNOCKOUT_BRACKET_ORDER,
     WC_2026_KNOCKOUT_FIXTURES,
     _fixture_number_from_winner_match_label,
+    apply_knockout_feeder_teams,
+    bracket_team_label,
     order_knockout_round_by_fixture_feeders,
     order_knockout_stages_for_bracket,
     resolve_2026_knockout_fixture_maps,
@@ -289,6 +291,123 @@ class WorldCupKnockoutBracketTests(unittest.TestCase):
         self.assertEqual(ordered_last_32[0].id, 7401)
         self.assertEqual(ordered_last_32[1].id, 7701)
         self.assertEqual(ordered_last_32[2].id, 7301)
+
+
+def _finished_knockout_match(
+    *,
+    fixture: int,
+    stage: str,
+    utc_date: str,
+    home_team: dict,
+    away_team: dict,
+    home_score: int,
+    away_score: int,
+) -> Match:
+    payload = copy.deepcopy(_MATCH_TEMPLATE)
+    payload.update(
+        {
+            "id": fixture,
+            "stage": stage,
+            "utcDate": utc_date,
+            "status": "FINISHED",
+            "homeTeam": home_team,
+            "awayTeam": away_team,
+            "score": {
+                "winner": "HOME_TEAM" if home_score > away_score else "AWAY_TEAM",
+                "duration": "REGULAR",
+                "fullTime": {"home": home_score, "away": away_score},
+                "halfTime": {"home": 0, "away": 0},
+            },
+        }
+    )
+    return Match.model_validate(payload)
+
+
+class WorldCupKnockoutFeederWinnerTests(unittest.TestCase):
+    def test_apply_knockout_feeder_teams_fills_winner_match_slot(self) -> None:
+        feeder_match = _finished_knockout_match(
+            fixture=74,
+            stage="LAST_32",
+            utc_date="2026-06-29T19:00:00Z",
+            home_team={"id": 100, "name": "Germany", "shortName": "GER"},
+            away_team={"id": 200, "name": "France", "shortName": "FRA"},
+            home_score=2,
+            away_score=1,
+        )
+        next_round_match = _knockout_match(
+            fixture=89,
+            stage="LAST_16",
+            utc_date="2026-07-04T19:00:00Z",
+            home_team={"name": "Winner Match 74", "shortName": "W74"},
+            away_team={"name": "Winner Match 77", "shortName": "W77"},
+        )
+
+        enriched = apply_knockout_feeder_teams(
+            next_round_match,
+            {74: feeder_match, 89: next_round_match},
+        )
+
+        self.assertEqual(enriched.home_team.id, 100)
+        self.assertEqual(enriched.home_team.name, "Germany")
+        self.assertEqual(enriched.away_team.name, "Winner Match 77")
+        self.assertEqual(
+            bracket_team_label(
+                enriched.home_team,
+                stage="LAST_16",
+                fixture_number=89,
+                side="home",
+            ),
+            "GER",
+        )
+
+    def test_apply_knockout_feeder_teams_fills_loser_match_slot(self) -> None:
+        semi_match = _finished_knockout_match(
+            fixture=101,
+            stage="SEMI_FINALS",
+            utc_date="2026-07-14T19:00:00Z",
+            home_team={"id": 300, "name": "Spain", "shortName": "ESP"},
+            away_team={"id": 400, "name": "Brazil", "shortName": "BRA"},
+            home_score=1,
+            away_score=2,
+        )
+        third_place_match = _knockout_match(
+            fixture=103,
+            stage="THIRD_PLACE",
+            utc_date="2026-07-18T19:00:00Z",
+            home_team={"name": "Loser Match 101", "shortName": "L101"},
+            away_team={"name": "Loser Match 102", "shortName": "L102"},
+        )
+
+        enriched = apply_knockout_feeder_teams(
+            third_place_match,
+            {101: semi_match, 103: third_place_match},
+        )
+
+        self.assertEqual(enriched.home_team.id, 300)
+        self.assertEqual(enriched.home_team.name, "Spain")
+
+    def test_apply_knockout_feeder_teams_leaves_unfinished_feeder_unchanged(self) -> None:
+        feeder_match = _knockout_match(
+            fixture=74,
+            stage="LAST_32",
+            utc_date="2026-06-29T19:00:00Z",
+            home_team={"id": 100, "name": "Germany", "shortName": "GER"},
+            away_team={"id": 200, "name": "France", "shortName": "FRA"},
+        )
+        next_round_match = _knockout_match(
+            fixture=89,
+            stage="LAST_16",
+            utc_date="2026-07-04T19:00:00Z",
+            home_team={"name": "Winner Match 74", "shortName": "W74"},
+            away_team={"name": "Winner Match 77", "shortName": "W77"},
+        )
+
+        enriched = apply_knockout_feeder_teams(
+            next_round_match,
+            {74: feeder_match, 89: next_round_match},
+        )
+
+        self.assertEqual(enriched.home_team.name, "Winner Match 74")
 
 
 if __name__ == "__main__":

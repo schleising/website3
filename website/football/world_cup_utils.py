@@ -1978,6 +1978,138 @@ def knockout_winner_team_id(match: "Match") -> int | None:
     return team.id
 
 
+def knockout_winner_team(match: "Match") -> "Team | None":
+    from .models import MatchStatus
+
+    if match.status not in {MatchStatus.finished, MatchStatus.awarded}:
+        return None
+
+    side = knockout_winner_side(match)
+    if side is None:
+        return None
+
+    team = match.home_team if side == "home" else match.away_team
+    if not team_is_confirmed(team):
+        return None
+    return team
+
+
+def knockout_loser_team(match: "Match") -> "Team | None":
+    from .models import MatchStatus
+
+    if match.status not in {MatchStatus.finished, MatchStatus.awarded}:
+        return None
+
+    side = knockout_winner_side(match)
+    if side is None:
+        return None
+
+    team = match.away_team if side == "home" else match.home_team
+    if not team_is_confirmed(team):
+        return None
+    return team
+
+
+def _fixture_number_from_loser_match_label(label: str) -> int | None:
+    loser_match = _FEEDER_LOSER_MATCH_RE.match(label.strip())
+    if loser_match is None:
+        return None
+    return int(loser_match.group(1))
+
+
+def resolve_knockout_feeder_team(
+    team: "Team",
+    *,
+    matches_by_fixture: dict[int, "Match"],
+) -> "Team | None":
+    if team_is_confirmed(team):
+        return team
+
+    label = bracket_feeder_label_from_team(team)
+    if label is None:
+        return None
+
+    winner_fixture = _fixture_number_from_winner_match_label(label)
+    if winner_fixture is not None:
+        feeder_match = matches_by_fixture.get(winner_fixture)
+        if feeder_match is None:
+            return None
+        return knockout_winner_team(feeder_match)
+
+    loser_fixture = _fixture_number_from_loser_match_label(label)
+    if loser_fixture is not None:
+        feeder_match = matches_by_fixture.get(loser_fixture)
+        if feeder_match is None:
+            return None
+        return knockout_loser_team(feeder_match)
+
+    return None
+
+
+def _knockout_team_slot_changed(current: "Team", resolved: "Team | None") -> bool:
+    if resolved is None:
+        return False
+    if team_is_confirmed(resolved) and not team_is_confirmed(current):
+        return True
+    if team_is_confirmed(resolved) and team_is_confirmed(current):
+        return current.id != resolved.id
+    return False
+
+
+def apply_knockout_feeder_teams(
+    match: "Match",
+    matches_by_fixture: dict[int, "Match"],
+) -> "Match":
+    home_team = resolve_knockout_feeder_team(
+        match.home_team,
+        matches_by_fixture=matches_by_fixture,
+    )
+    away_team = resolve_knockout_feeder_team(
+        match.away_team,
+        matches_by_fixture=matches_by_fixture,
+    )
+
+    updates: dict[str, Team] = {}
+    if _knockout_team_slot_changed(match.home_team, home_team):
+        assert home_team is not None
+        updates["home_team"] = home_team
+    if _knockout_team_slot_changed(match.away_team, away_team):
+        assert away_team is not None
+        updates["away_team"] = away_team
+
+    if len(updates) == 0:
+        return match
+    return match.model_copy(update=updates)
+
+
+def merge_knockout_fixture_maps(
+    stage_matches: list[tuple[tuple[str, str, str], list["Match"]]],
+    *,
+    fixture_maps: dict[str, dict[int, "Match"]] | None = None,
+    extra_matches: list[tuple[str, list["Match"]]] | None = None,
+) -> dict[int, "Match"]:
+    merged: dict[int, Match] = {}
+
+    if fixture_maps is not None:
+        for stage_map in fixture_maps.values():
+            merged.update(stage_map)
+
+    for (stage, _round_slug, _label), matches in stage_matches:
+        if fixture_maps is not None and stage in fixture_maps:
+            stage_map = fixture_maps[stage]
+        else:
+            stage_map = _knockout_fixture_map(stage, matches)
+        for fixture_number, match in stage_map.items():
+            merged.setdefault(fixture_number, match)
+
+    for stage, matches in extra_matches or []:
+        stage_map = _knockout_fixture_map(stage, matches)
+        for fixture_number, match in stage_map.items():
+            merged.setdefault(fixture_number, match)
+
+    return merged
+
+
 def knockout_round_team_ids(match: "Match") -> tuple[int | None, int | None]:
     home_id = match.home_team.id if team_is_confirmed(match.home_team) else None
     away_id = match.away_team.id if team_is_confirmed(match.away_team) else None

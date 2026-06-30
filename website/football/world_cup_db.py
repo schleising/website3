@@ -51,6 +51,8 @@ from .world_cup_utils import (
     filter_superseded_knockout_replays,
     order_knockout_stages_for_bracket,
     resolve_2026_knockout_fixture_maps,
+    merge_knockout_fixture_maps,
+    apply_knockout_feeder_teams,
     resolve_world_cup_crest_url,
     standings_label_to_slug,
     team_is_confirmed,
@@ -1754,6 +1756,15 @@ async def build_knockout_bracket_diagram(
         fixture_maps=fixture_maps,
     )
 
+    third_place_matches = await retrieve_knockout_matches(edition, "THIRD_PLACE")
+    matches_by_fixture = merge_knockout_fixture_maps(
+        stage_matches,
+        fixture_maps=fixture_maps,
+        extra_matches=[("THIRD_PLACE", third_place_matches)]
+        if len(third_place_matches) > 0
+        else None,
+    )
+
     first_round_count = len(stage_matches[0][1])
     grid_rows = max(BRACKET_CARD_GRID_ROWS, _bracket_grid_row_count(first_round_count))
     rounds: list[BracketRoundColumn] = []
@@ -1772,7 +1783,7 @@ async def build_knockout_bracket_diagram(
             )
             slots.append(
                 _bracket_slot_from_match(
-                    match,
+                    apply_knockout_feeder_teams(match, matches_by_fixture),
                     stage=stage,
                     fixture_number=fixture_number,
                     grid_row_start=row_start,
@@ -1791,7 +1802,6 @@ async def build_knockout_bracket_diagram(
         )
 
     third_place_slot: BracketSlot | None = None
-    third_place_matches = await retrieve_knockout_matches(edition, "THIRD_PLACE")
     if len(third_place_matches) > 0:
         third_place_match = third_place_matches[0]
         third_place_fixture = identify_knockout_fixture_number(
@@ -1809,7 +1819,7 @@ async def build_knockout_bracket_diagram(
             third_place_row_start + third_place_span - 1,
         )
         third_place_slot = _bracket_slot_from_match(
-            third_place_match,
+            apply_knockout_feeder_teams(third_place_match, matches_by_fixture),
             stage="THIRD_PLACE",
             fixture_number=third_place_fixture,
             grid_row_start=third_place_row_start,
