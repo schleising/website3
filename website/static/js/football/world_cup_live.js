@@ -7,7 +7,20 @@ let worldCupLoadedDayKey = null;
 let worldCupEdition = "";
 let worldCupIsAllMatchesView = false;
 
+let worldCupLastInPlayAt = 0;
+
 let worldCupTournamentTimeZone = "America/Los_Angeles";
+
+const WORLD_CUP_POLL_GRACE_MS = 5 * 60 * 1000;
+const WORLD_CUP_STATUS_RANK = {
+    SCHEDULED: 1,
+    TIMED: 1,
+    AWARDED: 1,
+    IN_PLAY: 2,
+    PAUSED: 2,
+    SUSPENDED: 2,
+    FINISHED: 3,
+};
 
 const worldCupHtmlElement = document.documentElement;
 const worldCupBasePathRaw = String(worldCupHtmlElement.dataset.footballBasePath ?? "/football").trim();
@@ -76,6 +89,7 @@ function openWorldCupWebSocket() {
         }
 
         const matches = Array.isArray(payload?.matches) ? payload.matches : [];
+        noteWorldCupLiveActivity(matches);
         matches.forEach(updateWorldCupScoreWidget);
         worldCupShouldPoll = hasRefreshableWorldCupMatchToday(matches);
         syncWorldCupPollingInterval();
@@ -125,6 +139,10 @@ function sendWorldCupMessage(currentDayOnly) {
 function updateWorldCupScoreWidget(match) {
     const scoreWidget = document.getElementById(String(match.id));
     if (!scoreWidget) {
+        return;
+    }
+
+    if (!shouldApplyWorldCupMatchUpdate(scoreWidget, match)) {
         return;
     }
 
@@ -313,6 +331,46 @@ function formatWorldCupMatchStatus(match) {
     }
 }
 
+function worldCupStatusRank(status) {
+    return WORLD_CUP_STATUS_RANK[status] ?? 0;
+}
+
+function shouldApplyWorldCupMatchUpdate(scoreWidget, match) {
+    if (!scoreWidget || !match) {
+        return true;
+    }
+
+    const wasFinished = scoreWidget.dataset.matchFinished === "true";
+    const wasLive = scoreWidget.dataset.matchLive === "true";
+    const incomingRank = worldCupStatusRank(match.status);
+
+    if (wasFinished && incomingRank < WORLD_CUP_STATUS_RANK.FINISHED) {
+        return false;
+    }
+
+    if (wasLive && incomingRank < WORLD_CUP_STATUS_RANK.IN_PLAY) {
+        return false;
+    }
+
+    return true;
+}
+
+function noteWorldCupLiveActivity(matchList) {
+    if (
+        matchList.some(
+            (match) => match.status === "IN_PLAY" || match.status === "PAUSED"
+        )
+    ) {
+        worldCupLastInPlayAt = Date.now();
+    }
+}
+
+function hasWorldCupLiveWidgetsOnPage() {
+    return Boolean(
+        document.querySelector('.world-cup-score-widget[data-match-live="true"]')
+    );
+}
+
 function hasRefreshableWorldCupMatchToday(matchList) {
     const refreshStatuses = new Set([
         "SCHEDULED",
@@ -323,7 +381,19 @@ function hasRefreshableWorldCupMatchToday(matchList) {
         "SUSPENDED",
     ]);
 
-    return matchList.some((match) => refreshStatuses.has(match.status) && isWorldCupTodayMatch(match));
+    if (
+        matchList.some(
+            (match) => refreshStatuses.has(match.status) && isWorldCupTodayMatch(match)
+        )
+    ) {
+        return true;
+    }
+
+    if (Date.now() - worldCupLastInPlayAt < WORLD_CUP_POLL_GRACE_MS) {
+        return true;
+    }
+
+    return hasWorldCupLiveWidgetsOnPage();
 }
 
 function getWorldCupDateKeyInTournamentTimeZone(dateValue) {
