@@ -1,8 +1,8 @@
 {% from "football/world-cup/_match_card.html" import world_cup_match_card %}
 {% macro world_cup_knockout_bracket(bracket, football_root='/football/', edition='') %}
 {% if bracket and bracket.rounds|length > 0 %}
-{% set column_template %}{% for round in bracket.rounds %}var(--world-cup-bracket-round-width, 17rem) 0px 1.75rem{% if not loop.last %} 0px{% endif %}{% endfor %}{% endset %}
-{% set bracket_vars %}--world-cup-bracket-rows: {{ bracket.grid_rows }}; --world-cup-bracket-columns: {{ column_template }}; --world-cup-bracket-round-width: 17rem;{% endset %}
+{% set column_template %}{% for round in bracket.rounds %}var(--world-cup-bracket-round-width, 20.5rem) 0px 1.75rem{% if not loop.last %} 0px{% endif %}{% endfor %}{% endset %}
+{% set bracket_vars %}--world-cup-bracket-rows: {{ bracket.grid_rows }}; --world-cup-bracket-columns: {{ column_template }}; --world-cup-bracket-round-width: 20.5rem;{% endset %}
 <section class="world-cup-bracket-panel" aria-label="Knockout bracket">
   <div class="world-cup-bracket-sticky-headers">
     <div class="world-cup-bracket-header-scroll">
