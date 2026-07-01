@@ -90,7 +90,13 @@ function openWorldCupWebSocket() {
 
         const matches = Array.isArray(payload?.matches) ? payload.matches : [];
         noteWorldCupLiveActivity(matches);
+        if (typeof mergeWorldCupKnockoutMatches === "function") {
+            mergeWorldCupKnockoutMatches(matches);
+        }
         matches.forEach(updateWorldCupScoreWidget);
+        if (typeof applyWorldCupKnockoutFeederWinners === "function") {
+            applyWorldCupKnockoutFeederWinners();
+        }
         worldCupShouldPoll = hasRefreshableWorldCupMatchToday(matches);
         syncWorldCupPollingInterval();
     };
@@ -99,7 +105,13 @@ function openWorldCupWebSocket() {
         worldCupShouldPoll = false;
         syncWorldCupPollingInterval();
 
-        const shouldRequestCurrentDayOnly = !(worldCupIsAllMatchesView && !worldCupHasHydratedFullWindow);
+        const needsFullKnockoutWindow =
+            typeof worldCupKnockoutNeedsFullMatchWindow === "function"
+            && worldCupKnockoutNeedsFullMatchWindow();
+        const shouldRequestCurrentDayOnly = !(
+            (worldCupIsAllMatchesView && !worldCupHasHydratedFullWindow)
+            || needsFullKnockoutWindow
+        );
         sendWorldCupMessage(shouldRequestCurrentDayOnly);
         worldCupHasHydratedFullWindow = true;
     });

@@ -105,6 +105,7 @@ WC_VERSIONED_ASSETS: frozenset[str] = frozenset(
         "css/table.css",
         "css/football/world-cup.css",
         "js/football/world_cup_live.js",
+        "js/football/world_cup_knockout_feeders.js",
         "js/football/world_cup_all_matches_view.js",
         "js/football/world_cup_standings_live.js",
         "js/football/world_cup_bracket.js",

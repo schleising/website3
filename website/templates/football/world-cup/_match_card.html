@@ -4,7 +4,7 @@
 {% set loser_side = 'away' if winner_side == 'home' else ('home' if winner_side == 'away' else none) %}
 {% set display_score = match|world_cup_display_score %}
 {% set round_bg_label = match|world_cup_all_matches_bg_label if show_round_background else none %}
-<div class="score-widget site-card world-cup-score-widget{% if match.stage == 'FINAL' %} world-cup-score-widget--final{% endif %}{% if highlight_winner and winner_side %} world-cup-score-widget--result{% endif %}{% if round_bg_label %} world-cup-score-widget--round-labelled{% endif %}" id="{{ match.id }}" data-match-time="{{ match.utc_date|kickoff_utc_iso }}" data-match-finished="{{ 'true' if match.status.has_finished else 'false' }}" data-match-live="{{ 'true' if match.status.is_live else 'false' }}">
+<div class="score-widget site-card world-cup-score-widget{% if match.stage == 'FINAL' %} world-cup-score-widget--final{% endif %}{% if highlight_winner and winner_side %} world-cup-score-widget--result{% endif %}{% if round_bg_label %} world-cup-score-widget--round-labelled{% endif %}" id="{{ match.id }}" data-match-stage="{{ match.stage }}" data-match-time="{{ match.utc_date|kickoff_utc_iso }}" data-match-finished="{{ 'true' if match.status.has_finished else 'false' }}" data-match-live="{{ 'true' if match.status.is_live else 'false' }}">
   {% if round_bg_label %}
   <span class="world-cup-score-widget__round-bg" aria-hidden="true">{{ round_bg_label }}</span>
   {% endif %}
