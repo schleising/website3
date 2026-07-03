@@ -15,7 +15,12 @@ if TYPE_CHECKING:
     from .models import Match, Score, TableItem, Team
 
 WC_CURRENT_EDITION = "2026"
-WC_KNOCKOUT_TV_PATH = Path(__file__).resolve().parent / "wc_knockout_tv.csv"
+WC_KNOCKOUT_TV_FILES: dict[str, Path] = {
+    "LAST_32": Path(__file__).resolve().parent / "wc_last_32_knockout_tv.csv",
+    "LAST_16": Path(__file__).resolve().parent / "wc_last_16_knockout_tv.csv",
+}
+WC_KNOCKOUT_TV_PATHS = tuple(WC_KNOCKOUT_TV_FILES.values())
+WC_KNOCKOUT_TV_TIMEZONE = ZoneInfo("Europe/London")
 # Westernmost host timezone — match day rolls at Pacific midnight so late West Coast
 # kickoffs stay on the same tournament day as Mexico City / Eastern venues.
 WC_TOURNAMENT_TZ = ZoneInfo("America/Los_Angeles")
@@ -1708,41 +1713,96 @@ def _normalise_tv_team_name(name: str | None) -> str:
     return _TV_TEAM_ALIASES.get(collapsed, collapsed)
 
 
+def _tv_team_options(name: str | None) -> list[str]:
+    if name is None:
+        return []
+    options = [
+        _normalise_tv_team_name(option)
+        for option in re.split(r"\s+or\s+", name, flags=re.IGNORECASE)
+    ]
+    return [option for option in options if option != ""]
+
+
+def _normalise_tv_date(value: str | None) -> str:
+    return re.sub(r"\s+", " ", (value or "").strip().casefold())
+
+
+def _normalise_tv_time(value: str | None) -> str:
+    return re.sub(r"\s+", "", (value or "").strip())
+
+
+def _tv_kickoff_key(match: "Match") -> tuple[str, str, str]:
+    kickoff = match.utc_date
+    if kickoff.tzinfo is None:
+        kickoff = kickoff.replace(tzinfo=timezone.utc)
+    local_kickoff = kickoff.astimezone(WC_KNOCKOUT_TV_TIMEZONE)
+    return (
+        match.stage,
+        local_kickoff.strftime("%d %b").casefold(),
+        local_kickoff.strftime("%H:%M"),
+    )
+
+
 @lru_cache(maxsize=1)
 def _load_knockout_tv_lookup() -> dict[frozenset[str], str]:
     lookup: dict[frozenset[str], str] = {}
-    if not WC_KNOCKOUT_TV_PATH.is_file():
-        return lookup
+    for path in WC_KNOCKOUT_TV_FILES.values():
+        if not path.is_file():
+            continue
 
-    with WC_KNOCKOUT_TV_PATH.open(newline="", encoding="utf-8") as handle:
-        reader = csv.reader(handle)
-        next(reader, None)
-        for row in reader:
-            if len(row) < 6:
-                continue
-            team_one = _normalise_tv_team_name(row[2])
-            team_two = _normalise_tv_team_name(row[4])
-            station = row[5].strip()
-            if team_one == "" or team_two == "" or station == "":
-                continue
-            lookup[frozenset({team_one, team_two})] = station
+        with path.open(newline="", encoding="utf-8") as handle:
+            reader = csv.DictReader(handle)
+            for row in reader:
+                team_one_options = _tv_team_options(row.get("Team 1"))
+                team_two_options = _tv_team_options(row.get("Team 2"))
+                station = (row.get("TV") or "").strip()
+                if (
+                    len(team_one_options) == 0
+                    or len(team_two_options) == 0
+                    or station == ""
+                ):
+                    continue
+                for team_one in team_one_options:
+                    for team_two in team_two_options:
+                        lookup[frozenset({team_one, team_two})] = station
+
+    return lookup
+
+
+@lru_cache(maxsize=1)
+def _load_knockout_tv_kickoff_lookup() -> dict[tuple[str, str, str], str]:
+    lookup: dict[tuple[str, str, str], str] = {}
+    for stage, path in WC_KNOCKOUT_TV_FILES.items():
+        if not path.is_file():
+            continue
+
+        with path.open(newline="", encoding="utf-8") as handle:
+            reader = csv.DictReader(handle)
+            for row in reader:
+                tv_date = _normalise_tv_date(row.get("Date"))
+                tv_time = _normalise_tv_time(row.get("Time"))
+                station = (row.get("TV") or "").strip()
+                if tv_date == "" or tv_time == "" or station == "":
+                    continue
+                lookup[(stage, tv_date, tv_time)] = station
 
     return lookup
 
 
 def world_cup_knockout_tv_station(match: "Match") -> str | None:
-    """UK broadcaster for a knockout match, when listed in wc_knockout_tv.csv."""
+    """UK broadcaster for a knockout match, when listed in knockout TV CSVs."""
     if match.stage in {WC_GROUP_STAGE, WC_GROUP_PLAYOFF}:
         return None
-    if not knockout_match_has_confirmed_teams(match):
-        return None
 
-    home = _normalise_tv_team_name(match.home_team.display_name)
-    away = _normalise_tv_team_name(match.away_team.display_name)
-    if home == "" or away == "":
-        return None
+    if knockout_match_has_confirmed_teams(match):
+        home = _normalise_tv_team_name(match.home_team.display_name)
+        away = _normalise_tv_team_name(match.away_team.display_name)
+        if home != "" and away != "":
+            station = _load_knockout_tv_lookup().get(frozenset({home, away}))
+            if station is not None:
+                return station
 
-    return _load_knockout_tv_lookup().get(frozenset({home, away}))
+    return _load_knockout_tv_kickoff_lookup().get(_tv_kickoff_key(match))
 
 
 WC_KNOCKOUT_TV_LOGO_PATHS: dict[str, str] = {

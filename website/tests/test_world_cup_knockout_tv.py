@@ -7,6 +7,7 @@ import unittest
 
 from website.football.models import Match, Team
 from website.football.world_cup_utils import (
+    _load_knockout_tv_kickoff_lookup,
     _load_knockout_tv_lookup,
     _normalise_tv_team_name,
     world_cup_knockout_tv_logo_label,
@@ -52,13 +53,14 @@ def _knockout_match(
     stage: str,
     home: Team,
     away: Team,
+    utc_date: str = "2026-06-28T19:00:00Z",
 ) -> Match:
     payload = copy.deepcopy(_MATCH_TEMPLATE)
     payload.update(
         {
             "id": 1,
             "stage": stage,
-            "utcDate": "2026-06-28T19:00:00Z",
+            "utcDate": utc_date,
             "homeTeam": home.model_dump(by_alias=True),
             "awayTeam": away.model_dump(by_alias=True),
         }
@@ -70,10 +72,11 @@ class WorldCupKnockoutTvTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         _load_knockout_tv_lookup.cache_clear()
+        _load_knockout_tv_kickoff_lookup.cache_clear()
 
     def test_csv_loads_round_of_32_broadcasters(self) -> None:
         lookup = _load_knockout_tv_lookup()
-        self.assertEqual(len(lookup), 16)
+        self.assertEqual(len(lookup), 28)
         self.assertEqual(
             lookup[frozenset({"south africa", "canada"})],
             "ITV",
@@ -81,6 +84,21 @@ class WorldCupKnockoutTvTests(unittest.TestCase):
         self.assertEqual(
             lookup[frozenset({"germany", "paraguay"})],
             "BBC",
+        )
+
+    def test_csv_loads_round_of_16_broadcasters(self) -> None:
+        lookup = _load_knockout_tv_lookup()
+        self.assertEqual(
+            lookup[frozenset({"mexico", "england"})],
+            "BBC",
+        )
+        self.assertEqual(
+            lookup[frozenset({"argentina", "egypt"})],
+            "ITV",
+        )
+        self.assertEqual(
+            lookup[frozenset({"switzerland", "ghana"})],
+            "ITV",
         )
 
     def test_team_name_aliases(self) -> None:
@@ -112,6 +130,44 @@ class WorldCupKnockoutTvTests(unittest.TestCase):
             "/images/football/tv_logos/itv_one.svg",
         )
         self.assertEqual(world_cup_knockout_tv_logo_label(match), "ITV")
+
+    def test_last_16_lookup_on_knockout_match(self) -> None:
+        match = _knockout_match(
+            stage="LAST_16",
+            home=Team(id=1, name="Mexico", short_name="Mexico"),
+            away=Team(id=2, name="England", short_name="England"),
+        )
+        self.assertEqual(world_cup_knockout_tv_station(match), "BBC")
+        self.assertEqual(
+            world_cup_knockout_tv_logo_url(match),
+            "/images/football/tv_logos/bbc_one.svg",
+        )
+
+    def test_last_16_lookup_uses_kickoff_when_both_teams_unresolved(self) -> None:
+        match = _knockout_match(
+            stage="LAST_16",
+            home=Team(name="Winner Match 85", short_name="Winner Match 85"),
+            away=Team(name="Winner Match 86", short_name="Winner Match 86"),
+            utc_date="2026-07-07T16:00:00Z",
+        )
+        self.assertEqual(world_cup_knockout_tv_station(match), "ITV")
+        self.assertEqual(
+            world_cup_knockout_tv_logo_url(match),
+            "/images/football/tv_logos/itv_one.svg",
+        )
+
+    def test_last_16_lookup_uses_kickoff_when_one_team_unresolved(self) -> None:
+        match = _knockout_match(
+            stage="LAST_16",
+            home=Team(id=1, name="Switzerland", short_name="Switzerland"),
+            away=Team(name="Winner Match 87", short_name="Winner Match 87"),
+            utc_date="2026-07-07T20:00:00Z",
+        )
+        self.assertEqual(world_cup_knockout_tv_station(match), "ITV")
+        self.assertEqual(
+            world_cup_knockout_tv_logo_url(match),
+            "/images/football/tv_logos/itv_one.svg",
+        )
 
     def test_not_shown_for_group_stage(self) -> None:
         match = _knockout_match(
