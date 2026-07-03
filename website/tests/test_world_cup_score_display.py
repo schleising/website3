@@ -9,6 +9,7 @@ from website.football.models import Match
 from website.football.world_cup_utils import (
     knockout_winner_side,
     world_cup_display_score,
+    world_cup_match_status_display,
     world_cup_score_annotation,
 )
 
@@ -43,8 +44,17 @@ _MATCH_TEMPLATE: dict = {
 }
 
 
-def _finished_match(score: dict) -> Match:
+def _finished_match(
+    score: dict,
+    *,
+    status: str = "FINISHED",
+    minute: int | None = None,
+    utc_date: str = "2026-07-05T20:00:00Z",
+) -> Match:
     payload = copy.deepcopy(_MATCH_TEMPLATE)
+    payload["status"] = status
+    payload["minute"] = minute
+    payload["utcDate"] = utc_date
     payload["score"] = score
     return Match.model_validate(payload)
 
@@ -127,6 +137,48 @@ class WorldCupScoreDisplayTests(unittest.TestCase):
         self.assertEqual(world_cup_display_score(match), (2, 1))
         self.assertIsNone(world_cup_score_annotation(match))
         self.assertEqual(knockout_winner_side(match), "home")
+
+    def test_paused_at_full_time_draw_shows_full_time(self) -> None:
+        match = _finished_match(
+            {
+                "winner": None,
+                "duration": "REGULAR",
+                "fullTime": {"home": 1, "away": 1},
+                "halfTime": {"home": 0, "away": 0},
+            },
+            status="PAUSED",
+            minute=90,
+        )
+
+        self.assertEqual(world_cup_match_status_display(match), "Full Time")
+
+    def test_paused_at_half_time_still_shows_half_time(self) -> None:
+        match = _finished_match(
+            {
+                "winner": None,
+                "duration": "REGULAR",
+                "fullTime": {"home": 0, "away": 0},
+                "halfTime": {"home": 0, "away": 0},
+            },
+            status="PAUSED",
+            minute=45,
+        )
+
+        self.assertEqual(world_cup_match_status_display(match), "Half Time")
+
+    def test_paused_draw_without_minute_after_regular_time_shows_full_time(self) -> None:
+        match = _finished_match(
+            {
+                "winner": None,
+                "duration": "REGULAR",
+                "fullTime": {"home": 1, "away": 1},
+                "halfTime": {"home": 0, "away": 0},
+            },
+            status="PAUSED",
+            utc_date="2020-07-05T20:00:00Z",
+        )
+
+        self.assertEqual(world_cup_match_status_display(match), "Full Time")
 
 
 if __name__ == "__main__":

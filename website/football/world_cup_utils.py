@@ -1668,6 +1668,25 @@ def world_cup_display_score(match: "Match") -> tuple[int | None, int | None]:
     return world_cup_score_display_scoreline(match.score)
 
 
+def _world_cup_paused_after_regular_time(match: "Match") -> bool:
+    if match.stage in {WC_GROUP_STAGE, WC_GROUP_PLAYOFF}:
+        return False
+
+    if match.minute is not None:
+        return match.minute >= 90
+
+    home_score = match.score.full_time.home
+    away_score = match.score.full_time.away
+    if home_score is None or away_score is None or home_score != away_score:
+        return False
+
+    kickoff = match.utc_date
+    if kickoff.tzinfo is None:
+        kickoff = kickoff.replace(tzinfo=timezone.utc)
+
+    return datetime.now(timezone.utc) - kickoff >= timedelta(minutes=100)
+
+
 def world_cup_match_status_display(match: "Match") -> str:
     """Return match status text for cards, including live minute when available."""
     from .models import MatchStatus
@@ -1681,6 +1700,8 @@ def world_cup_match_status_display(match: "Match") -> str:
                 return f"{match.minute}+{match.injury_time}'"
             return f"{match.minute}'"
         return "In Play"
+    if status == MatchStatus.paused and _world_cup_paused_after_regular_time(match):
+        return "Full Time"
     return str(status)
 
 

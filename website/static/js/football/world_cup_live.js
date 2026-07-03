@@ -313,6 +313,34 @@ function worldCupScoreAnnotation(match) {
     return null;
 }
 
+function worldCupPausedAfterRegularTime(match) {
+    if (match.stage === "GROUP_STAGE" || match.stage === "GROUP_PLAYOFF") {
+        return false;
+    }
+
+    if (match.minute != null) {
+        return match.minute >= 90;
+    }
+
+    const homeScore = match.score?.full_time?.home ?? null;
+    const awayScore = match.score?.full_time?.away ?? null;
+    if (homeScore == null || awayScore == null || homeScore !== awayScore) {
+        return false;
+    }
+
+    const rawDate = match.utc_date || match.utcDate;
+    if (!rawDate) {
+        return false;
+    }
+
+    const kickoff = new Date(rawDate);
+    if (Number.isNaN(kickoff.getTime())) {
+        return false;
+    }
+
+    return Date.now() - kickoff.getTime() >= 100 * 60 * 1000;
+}
+
 function formatWorldCupMatchStatus(match) {
     switch (match.status) {
         case "SCHEDULED":
@@ -329,6 +357,9 @@ function formatWorldCupMatchStatus(match) {
             }
             return "In Play";
         case "PAUSED":
+            if (worldCupPausedAfterRegularTime(match)) {
+                return "Full Time";
+            }
             return "Half Time";
         case "FINISHED":
             return "Full Time";
