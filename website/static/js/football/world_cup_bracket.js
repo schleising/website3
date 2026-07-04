@@ -5,9 +5,22 @@
         }
     }
 
+    function syncBracketColumnLayout(panel) {
+        const headerMatrix = panel.querySelector(".world-cup-bracket-header-matrix");
+        const bodyMatrix = panel.querySelector(".world-cup-bracket-matrix");
+        if (headerMatrix === null || bodyMatrix === null) {
+            return;
+        }
+
+        const bodyStyle = getComputedStyle(bodyMatrix);
+        headerMatrix.style.gridTemplateColumns = bodyStyle.gridTemplateColumns;
+        headerMatrix.style.width = `${bodyMatrix.scrollWidth}px`;
+    }
+
     function initBracketPanel(panel) {
         const headerScroll = panel.querySelector(".world-cup-bracket-header-scroll");
         const bodyScroll = panel.querySelector(".world-cup-bracket-scroll");
+        const bodyMatrix = panel.querySelector(".world-cup-bracket-matrix");
         if (headerScroll === null || bodyScroll === null) {
             return;
         }
@@ -23,6 +36,11 @@
             syncing = false;
         };
 
+        const refreshColumnLayout = () => {
+            syncBracketColumnLayout(panel);
+            linkScroll(bodyScroll, headerScroll);
+        };
+
         headerScroll.addEventListener(
             "scroll",
             () => linkScroll(headerScroll, bodyScroll),
@@ -33,6 +51,21 @@
             () => linkScroll(bodyScroll, headerScroll),
             { passive: true }
         );
+
+        refreshColumnLayout();
+
+        if (bodyMatrix !== null && typeof ResizeObserver !== "undefined") {
+            const resizeObserver = new ResizeObserver(() => {
+                refreshColumnLayout();
+            });
+            resizeObserver.observe(bodyMatrix);
+        } else {
+            window.addEventListener("resize", refreshColumnLayout, { passive: true });
+        }
+
+        if (document.fonts !== undefined && typeof document.fonts.ready?.then === "function") {
+            document.fonts.ready.then(refreshColumnLayout).catch(() => {});
+        }
     }
 
     function initWorldCupBrackets() {
