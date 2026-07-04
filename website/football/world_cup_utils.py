@@ -1891,6 +1891,8 @@ class _StadiumCsvRow:
 class _StadiumLookupData:
     by_team_pair: dict[frozenset[str], list[_StadiumCsvRow]]
     by_feeder_pair: dict[frozenset[str], list[_StadiumCsvRow]]
+    by_fixture_number: dict[int, WorldCupStadiumVenue]
+    by_stage_kickoff: dict[tuple[str, str, str], WorldCupStadiumVenue]
 
 
 def _world_cup_is_2026_edition_match(match: "Match") -> bool:
@@ -1941,8 +1943,15 @@ def _stadium_match_feeder_key(team: "Team") -> str | None:
 def _load_stadium_lookup() -> _StadiumLookupData:
     by_team_pair: dict[frozenset[str], list[_StadiumCsvRow]] = {}
     by_feeder_pair: dict[frozenset[str], list[_StadiumCsvRow]] = {}
+    by_fixture_number: dict[int, WorldCupStadiumVenue] = {}
+    by_stage_kickoff: dict[tuple[str, str, str], WorldCupStadiumVenue] = {}
     if not WC_2026_STADIUMS_PATH.is_file():
-        return _StadiumLookupData(by_team_pair=by_team_pair, by_feeder_pair=by_feeder_pair)
+        return _StadiumLookupData(
+            by_team_pair=by_team_pair,
+            by_feeder_pair=by_feeder_pair,
+            by_fixture_number=by_fixture_number,
+            by_stage_kickoff=by_stage_kickoff,
+        )
 
     with WC_2026_STADIUMS_PATH.open(newline="", encoding="utf-8") as handle:
         reader = csv.DictReader(handle)
@@ -1952,6 +1961,7 @@ def _load_stadium_lookup() -> _StadiumLookupData:
             host_city = (row.get("Host City") or "").strip()
             team_one = (row.get("Team 1") or "").strip()
             team_two = (row.get("Team 2") or "").strip()
+            match_number_raw = (row.get("Match Number") or "").strip()
             if (
                 stage == ""
                 or stadium == ""
@@ -1968,6 +1978,17 @@ def _load_stadium_lookup() -> _StadiumLookupData:
                 stadium=stadium,
                 host_city=host_city,
             )
+            if match_number_raw.isdigit():
+                by_fixture_number[int(match_number_raw)] = stadium_row.venue()
+
+            kickoff_date = _normalise_tv_date(row.get("Date"))
+            kickoff_time = _normalise_tv_time(row.get("Time"))
+            if kickoff_date != "" and kickoff_time != "":
+                stage_key = _stadium_stage_key(stage)
+                by_stage_kickoff[(stage_key, kickoff_date, kickoff_time)] = (
+                    stadium_row.venue()
+                )
+
             team_key = stadium_row.team_key()
             if any(
                 token in team_one.casefold() or token in team_two.casefold()
@@ -1977,7 +1998,12 @@ def _load_stadium_lookup() -> _StadiumLookupData:
             else:
                 by_team_pair.setdefault(team_key, []).append(stadium_row)
 
-    return _StadiumLookupData(by_team_pair=by_team_pair, by_feeder_pair=by_feeder_pair)
+    return _StadiumLookupData(
+        by_team_pair=by_team_pair,
+        by_feeder_pair=by_feeder_pair,
+        by_fixture_number=by_fixture_number,
+        by_stage_kickoff=by_stage_kickoff,
+    )
 
 
 def _pick_stadium_row(
@@ -2007,7 +2033,12 @@ def world_cup_match_stadium_venue(match: "Match") -> WorldCupStadiumVenue | None
         return None
 
     lookup = _load_stadium_lookup()
-    if len(lookup.by_team_pair) == 0 and len(lookup.by_feeder_pair) == 0:
+    if (
+        len(lookup.by_team_pair) == 0
+        and len(lookup.by_feeder_pair) == 0
+        and len(lookup.by_fixture_number) == 0
+        and len(lookup.by_stage_kickoff) == 0
+    ):
         return None
 
     if knockout_match_has_confirmed_teams(match):
@@ -2021,6 +2052,13 @@ def world_cup_match_stadium_venue(match: "Match") -> WorldCupStadiumVenue | None
             if row is not None:
                 return row.venue()
 
+    if match.stage not in {WC_GROUP_STAGE, WC_GROUP_PLAYOFF}:
+        fixture_number = identify_knockout_fixture_number(match.stage, match)
+        if fixture_number is not None:
+            venue = lookup.by_fixture_number.get(fixture_number)
+            if venue is not None:
+                return venue
+
     home_feeder = _stadium_match_feeder_key(match.home_team)
     away_feeder = _stadium_match_feeder_key(match.away_team)
     if home_feeder is not None and away_feeder is not None:
@@ -2030,6 +2068,9 @@ def world_cup_match_stadium_venue(match: "Match") -> WorldCupStadiumVenue | None
         )
         if row is not None:
             return row.venue()
+
+    if match.stage not in {WC_GROUP_STAGE, WC_GROUP_PLAYOFF}:
+        return lookup.by_stage_kickoff.get(_tv_kickoff_key(match))
 
     return None
 

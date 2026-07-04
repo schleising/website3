@@ -114,6 +114,38 @@ class WorldCupStadiumTests(unittest.TestCase):
         self.assertEqual(venue.stadium, "Atlanta Stadium")
         self.assertEqual(venue.host_city, "Atlanta")
 
+    def test_last_16_unconfirmed_feeders_resolve_venue(self) -> None:
+        match = _match(
+            stage="LAST_16",
+            utc_date="2026-07-04T21:00:00Z",
+            home=Team(name="Winner Match 74", short_name="W74"),
+            away=Team(name="Winner Match 77", short_name="W77"),
+            group=None,
+        )
+
+        venue = world_cup_match_stadium_venue(match)
+
+        self.assertIsNotNone(venue)
+        assert venue is not None
+        self.assertEqual(venue.stadium, "Philadelphia Stadium")
+        self.assertEqual(venue.host_city, "Philadelphia")
+
+    def test_last_32_unconfirmed_group_feeders_resolve_venue(self) -> None:
+        match = _match(
+            stage="LAST_32",
+            utc_date="2026-06-30T01:00:00Z",
+            home=Team(name="Winner Group C", short_name="WC"),
+            away=Team(name="Runner-up Group F", short_name="RF"),
+            group=None,
+        )
+
+        venue = world_cup_match_stadium_venue(match)
+
+        self.assertIsNotNone(venue)
+        assert venue is not None
+        self.assertEqual(venue.stadium, "Estadio Monterrey")
+        self.assertEqual(venue.host_city, "Guadalupe")
+
     def test_knockout_feeder_labels_resolve_quarter_final_venue(self) -> None:
         match = _match(
             stage="QUARTER_FINALS",
@@ -129,6 +161,54 @@ class WorldCupStadiumTests(unittest.TestCase):
         assert venue is not None
         self.assertEqual(venue.stadium, "Boston Stadium")
         self.assertEqual(venue.host_city, "Foxborough")
+
+    def test_quarter_final_null_teams_resolve_by_kickoff(self) -> None:
+        match = _match(
+            stage="QUARTER_FINALS",
+            utc_date="2026-07-10T19:00:00Z",
+            home=Team(),
+            away=Team(),
+            group=None,
+        )
+
+        venue = world_cup_match_stadium_venue(match)
+
+        self.assertIsNotNone(venue)
+        assert venue is not None
+        self.assertEqual(venue.stadium, "Los Angeles Stadium")
+        self.assertEqual(venue.host_city, "Los Angeles")
+
+    def test_quarter_final_partial_null_teams_resolve_by_kickoff(self) -> None:
+        match = _match(
+            stage="QUARTER_FINALS",
+            utc_date="2026-07-09T20:00:00Z",
+            home=Team(),
+            away=Team(id=1, name="Morocco", short_name="Morocco"),
+            group=None,
+        )
+
+        venue = world_cup_match_stadium_venue(match)
+
+        self.assertIsNotNone(venue)
+        assert venue is not None
+        self.assertEqual(venue.stadium, "Boston Stadium")
+        self.assertEqual(venue.host_city, "Foxborough")
+
+    def test_final_null_teams_resolve_by_kickoff(self) -> None:
+        match = _match(
+            stage="FINAL",
+            utc_date="2026-07-19T19:00:00Z",
+            home=Team(),
+            away=Team(),
+            group=None,
+        )
+
+        venue = world_cup_match_stadium_venue(match)
+
+        self.assertIsNotNone(venue)
+        assert venue is not None
+        self.assertEqual(venue.stadium, "New York New Jersey Stadium")
+        self.assertEqual(venue.host_city, "East Rutherford")
 
 
 if __name__ == "__main__":

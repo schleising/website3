@@ -1,105 +1,105 @@
-Stage,Team 1,Team 2,Stadium,Host City
-Group A,Mexico,South Africa,Mexico City Stadium,Mexico City
-Group A,South Korea,Czechia,Estadio Guadalajara,Guadalajara
-Group A,Czechia,South Africa,Atlanta Stadium,Atlanta
-Group A,Mexico,South Korea,Estadio Guadalajara,Guadalajara
-Group A,Czechia,Mexico,Mexico City Stadium,Mexico City
-Group A,South Africa,South Korea,Estadio Monterrey,Guadalupe
-Group B,Canada,Bosnia-Herzegovina,Toronto Stadium,Toronto
-Group B,Qatar,Switzerland,San Francisco Bay Area Stadium,Santa Clara
-Group B,Switzerland,Bosnia-Herzegovina,Los Angeles Stadium,Los Angeles
-Group B,Canada,Qatar,BC Place Vancouver,Vancouver
-Group B,Bosnia-Herzegovina,Qatar,Seattle Stadium,Seattle
-Group B,Switzerland,Canada,BC Place Vancouver,Vancouver
-Group C,Brazil,Morocco,New York New Jersey Stadium,East Rutherford
-Group C,Haiti,Scotland,Boston Stadium,Foxborough
-Group C,Scotland,Morocco,Boston Stadium,Foxborough
-Group C,Brazil,Haiti,Philadelphia Stadium,Philadelphia
-Group C,Morocco,Haiti,Atlanta Stadium,Atlanta
-Group C,Scotland,Brazil,Miami Stadium,Miami
-Group D,United States,Paraguay,Los Angeles Stadium,Los Angeles
-Group D,Australia,Turkey,BC Place Vancouver,Vancouver
-Group D,United States,Australia,Seattle Stadium,Seattle
-Group D,Turkey,Paraguay,San Francisco Bay Area Stadium,Santa Clara
-Group D,Paraguay,Australia,San Francisco Bay Area Stadium,Santa Clara
-Group D,Turkey,United States,Los Angeles Stadium,Los Angeles
-Group E,Germany,Curaçao,Houston Stadium,Houston
-Group E,Ivory Coast,Ecuador,Philadelphia Stadium,Philadelphia
-Group E,Germany,Ivory Coast,Toronto Stadium,Toronto
-Group E,Ecuador,Curaçao,Kansas City Stadium,Kansas City
-Group E,Curaçao,Ivory Coast,Philadelphia Stadium,Philadelphia
-Group E,Ecuador,Germany,New York New Jersey Stadium,East Rutherford
-Group F,Netherlands,Japan,Dallas Stadium,Arlington
-Group F,Sweden,Tunisia,Estadio Monterrey,Guadalupe
-Group F,Netherlands,Sweden,Houston Stadium,Houston
-Group F,Tunisia,Japan,Estadio Monterrey,Guadalupe
-Group F,Japan,Sweden,Dallas Stadium,Arlington
-Group F,Tunisia,Netherlands,Kansas City Stadium,Kansas City
-Group G,Belgium,Egypt,Seattle Stadium,Seattle
-Group G,Iran,New Zealand,Los Angeles Stadium,Los Angeles
-Group G,Belgium,Iran,Los Angeles Stadium,Los Angeles
-Group G,New Zealand,Egypt,BC Place Vancouver,Vancouver
-Group G,Egypt,Iran,Seattle Stadium,Seattle
-Group G,New Zealand,Belgium,BC Place Vancouver,Vancouver
-Group H,Spain,Cape Verde Islands,Atlanta Stadium,Atlanta
-Group H,Saudi Arabia,Uruguay,Miami Stadium,Miami
-Group H,Spain,Saudi Arabia,Atlanta Stadium,Atlanta
-Group H,Uruguay,Cape Verde Islands,Miami Stadium,Miami
-Group H,Cape Verde Islands,Saudi Arabia,Houston Stadium,Houston
-Group H,Uruguay,Spain,Estadio Guadalajara,Guadalajara
-Group I,France,Senegal,New York New Jersey Stadium,East Rutherford
-Group I,Iraq,Norway,Boston Stadium,Foxborough
-Group I,France,Iraq,Philadelphia Stadium,Philadelphia
-Group I,Norway,Senegal,New York New Jersey Stadium,East Rutherford
-Group I,Norway,France,Boston Stadium,Foxborough
-Group I,Senegal,Iraq,Toronto Stadium,Toronto
-Group J,Argentina,Algeria,Kansas City Stadium,Kansas City
-Group J,Austria,Jordan,San Francisco Bay Area Stadium,Santa Clara
-Group J,Argentina,Austria,Dallas Stadium,Arlington
-Group J,Jordan,Algeria,San Francisco Bay Area Stadium,Santa Clara
-Group J,Algeria,Austria,Kansas City Stadium,Kansas City
-Group J,Jordan,Argentina,Dallas Stadium,Arlington
-Group K,Portugal,Congo DR,Houston Stadium,Houston
-Group K,Uzbekistan,Colombia,Mexico City Stadium,Mexico City
-Group K,Portugal,Uzbekistan,Houston Stadium,Houston
-Group K,Colombia,Congo DR,Estadio Guadalajara,Guadalajara
-Group K,Colombia,Portugal,Miami Stadium,Miami
-Group K,Congo DR,Uzbekistan,Atlanta Stadium,Atlanta
-Group L,England,Croatia,Dallas Stadium,Arlington
-Group L,Ghana,Panama,Toronto Stadium,Toronto
-Group L,England,Ghana,Boston Stadium,Foxborough
-Group L,Panama,Croatia,Toronto Stadium,Toronto
-Group L,Croatia,Ghana,Philadelphia Stadium,Philadelphia
-Group L,Panama,England,New York New Jersey Stadium,East Rutherford
-Round of 32,Germany,Paraguay,Boston Stadium,Foxborough
-Round of 32,France,Sweden,New York New Jersey Stadium,East Rutherford
-Round of 32,South Africa,Canada,Los Angeles Stadium,Los Angeles
-Round of 32,Netherlands,Morocco,Estadio Monterrey,Guadalupe
-Round of 32,Portugal,Croatia,Toronto Stadium,Toronto
-Round of 32,Spain,Austria,Los Angeles Stadium,Los Angeles
-Round of 32,United States,Bosnia-Herzegovina,San Francisco Bay Area Stadium,Santa Clara
-Round of 32,Belgium,Senegal,Seattle Stadium,Seattle
-Round of 32,Brazil,Japan,Houston Stadium,Houston
-Round of 32,Ivory Coast,Norway,Dallas Stadium,Arlington
-Round of 32,Mexico,Ecuador,Mexico City Stadium,Mexico City
-Round of 32,England,Congo DR,Atlanta Stadium,Atlanta
-Round of 32,Argentina,Cape Verde Islands,Miami Stadium,Miami
-Round of 32,Australia,Egypt,Dallas Stadium,Arlington
-Round of 32,Switzerland,Algeria,BC Place Vancouver,Vancouver
-Round of 32,Colombia,Ghana,Kansas City Stadium,Kansas City
-Round of 16,Paraguay,France,Philadelphia Stadium,Philadelphia
-Round of 16,Canada,Morocco,Houston Stadium,Houston
-Round of 16,Portugal,Spain,Dallas Stadium,Arlington
-Round of 16,United States,Belgium,Seattle Stadium,Seattle
-Round of 16,Brazil,Norway,New York New Jersey Stadium,East Rutherford
-Round of 16,Mexico,England,Mexico City Stadium,Mexico City
-Round of 16,Argentina,Egypt,Atlanta Stadium,Atlanta
-Round of 16,Switzerland,Colombia,BC Place Vancouver,Vancouver
-Quarter-finals,Winner Match 89,Winner Match 90,Boston Stadium,Foxborough
-Quarter-finals,Winner Match 93,Winner Match 94,Los Angeles Stadium,Los Angeles
-Quarter-finals,Winner Match 91,Winner Match 92,Miami Stadium,Miami
-Quarter-finals,Winner Match 95,Winner Match 96,Kansas City Stadium,Kansas City
-Semi-finals,Winner Match 97,Winner Match 98,Dallas Stadium,Arlington
-Semi-finals,Winner Match 99,Winner Match 100,Atlanta Stadium,Atlanta
-Third Place Play-off,Loser Match 101,Loser Match 102,Miami Stadium,Miami
-Final,Winner Match 101,Winner Match 102,New York New Jersey Stadium,East Rutherford
+Match Number,Date,Time,Stage,Team 1,Team 2,Stadium,Host City
+1,,,Group A,Mexico,South Africa,Mexico City Stadium,Mexico City
+2,,,Group A,South Korea,Czechia,Estadio Guadalajara,Guadalajara
+3,,,Group A,Czechia,South Africa,Atlanta Stadium,Atlanta
+4,,,Group A,Mexico,South Korea,Estadio Guadalajara,Guadalajara
+5,,,Group A,Czechia,Mexico,Mexico City Stadium,Mexico City
+6,,,Group A,South Africa,South Korea,Estadio Monterrey,Guadalupe
+7,,,Group B,Canada,Bosnia-Herzegovina,Toronto Stadium,Toronto
+8,,,Group B,Qatar,Switzerland,San Francisco Bay Area Stadium,Santa Clara
+9,,,Group B,Switzerland,Bosnia-Herzegovina,Los Angeles Stadium,Los Angeles
+10,,,Group B,Canada,Qatar,BC Place Vancouver,Vancouver
+11,,,Group B,Bosnia-Herzegovina,Qatar,Seattle Stadium,Seattle
+12,,,Group B,Switzerland,Canada,BC Place Vancouver,Vancouver
+13,,,Group C,Brazil,Morocco,New York New Jersey Stadium,East Rutherford
+14,,,Group C,Haiti,Scotland,Boston Stadium,Foxborough
+15,,,Group C,Scotland,Morocco,Boston Stadium,Foxborough
+16,,,Group C,Brazil,Haiti,Philadelphia Stadium,Philadelphia
+17,,,Group C,Morocco,Haiti,Atlanta Stadium,Atlanta
+18,,,Group C,Scotland,Brazil,Miami Stadium,Miami
+19,,,Group D,United States,Paraguay,Los Angeles Stadium,Los Angeles
+20,,,Group D,Australia,Turkey,BC Place Vancouver,Vancouver
+21,,,Group D,United States,Australia,Seattle Stadium,Seattle
+22,,,Group D,Turkey,Paraguay,San Francisco Bay Area Stadium,Santa Clara
+23,,,Group D,Paraguay,Australia,San Francisco Bay Area Stadium,Santa Clara
+24,,,Group D,Turkey,United States,Los Angeles Stadium,Los Angeles
+25,,,Group E,Germany,Curaçao,Houston Stadium,Houston
+26,,,Group E,Ivory Coast,Ecuador,Philadelphia Stadium,Philadelphia
+27,,,Group E,Germany,Ivory Coast,Toronto Stadium,Toronto
+28,,,Group E,Ecuador,Curaçao,Kansas City Stadium,Kansas City
+29,,,Group E,Curaçao,Ivory Coast,Philadelphia Stadium,Philadelphia
+30,,,Group E,Ecuador,Germany,New York New Jersey Stadium,East Rutherford
+31,,,Group F,Netherlands,Japan,Dallas Stadium,Arlington
+32,,,Group F,Sweden,Tunisia,Estadio Monterrey,Guadalupe
+33,,,Group F,Netherlands,Sweden,Houston Stadium,Houston
+34,,,Group F,Tunisia,Japan,Estadio Monterrey,Guadalupe
+35,,,Group F,Japan,Sweden,Dallas Stadium,Arlington
+36,,,Group F,Tunisia,Netherlands,Kansas City Stadium,Kansas City
+37,,,Group G,Belgium,Egypt,Seattle Stadium,Seattle
+38,,,Group G,Iran,New Zealand,Los Angeles Stadium,Los Angeles
+39,,,Group G,Belgium,Iran,Los Angeles Stadium,Los Angeles
+40,,,Group G,New Zealand,Egypt,BC Place Vancouver,Vancouver
+41,,,Group G,Egypt,Iran,Seattle Stadium,Seattle
+42,,,Group G,New Zealand,Belgium,BC Place Vancouver,Vancouver
+43,,,Group H,Spain,Cape Verde Islands,Atlanta Stadium,Atlanta
+44,,,Group H,Saudi Arabia,Uruguay,Miami Stadium,Miami
+45,,,Group H,Spain,Saudi Arabia,Atlanta Stadium,Atlanta
+46,,,Group H,Uruguay,Cape Verde Islands,Miami Stadium,Miami
+47,,,Group H,Cape Verde Islands,Saudi Arabia,Houston Stadium,Houston
+48,,,Group H,Uruguay,Spain,Estadio Guadalajara,Guadalajara
+49,,,Group I,France,Senegal,New York New Jersey Stadium,East Rutherford
+50,,,Group I,Iraq,Norway,Boston Stadium,Foxborough
+51,,,Group I,France,Iraq,Philadelphia Stadium,Philadelphia
+52,,,Group I,Norway,Senegal,New York New Jersey Stadium,East Rutherford
+53,,,Group I,Norway,France,Boston Stadium,Foxborough
+54,,,Group I,Senegal,Iraq,Toronto Stadium,Toronto
+55,,,Group J,Argentina,Algeria,Kansas City Stadium,Kansas City
+56,,,Group J,Austria,Jordan,San Francisco Bay Area Stadium,Santa Clara
+57,,,Group J,Argentina,Austria,Dallas Stadium,Arlington
+58,,,Group J,Jordan,Algeria,San Francisco Bay Area Stadium,Santa Clara
+59,,,Group J,Algeria,Austria,Kansas City Stadium,Kansas City
+60,,,Group J,Jordan,Argentina,Dallas Stadium,Arlington
+61,,,Group K,Portugal,Congo DR,Houston Stadium,Houston
+62,,,Group K,Uzbekistan,Colombia,Mexico City Stadium,Mexico City
+63,,,Group K,Portugal,Uzbekistan,Houston Stadium,Houston
+64,,,Group K,Colombia,Congo DR,Estadio Guadalajara,Guadalajara
+65,,,Group K,Colombia,Portugal,Miami Stadium,Miami
+66,,,Group K,Congo DR,Uzbekistan,Atlanta Stadium,Atlanta
+67,,,Group L,England,Croatia,Dallas Stadium,Arlington
+68,,,Group L,Ghana,Panama,Toronto Stadium,Toronto
+69,,,Group L,England,Ghana,Boston Stadium,Foxborough
+70,,,Group L,Panama,Croatia,Toronto Stadium,Toronto
+71,,,Group L,Croatia,Ghana,Philadelphia Stadium,Philadelphia
+72,,,Group L,Panama,England,New York New Jersey Stadium,East Rutherford
+73,28 Jun,20:00,Round of 32,South Africa,Canada,Los Angeles Stadium,Los Angeles
+74,29 Jun,18:00,Round of 32,Brazil,Japan,Houston Stadium,Houston
+75,29 Jun,21:30,Round of 32,Germany,Paraguay,Boston Stadium,Foxborough
+76,30 Jun,02:00,Round of 32,Netherlands,Morocco,Estadio Monterrey,Guadalupe
+77,30 Jun,18:00,Round of 32,Ivory Coast,Norway,Dallas Stadium,Arlington
+78,30 Jun,22:00,Round of 32,France,Sweden,New York New Jersey Stadium,East Rutherford
+79,01 Jul,02:00,Round of 32,Mexico,Ecuador,Mexico City Stadium,Mexico City
+80,01 Jul,17:00,Round of 32,England,Congo DR,Atlanta Stadium,Atlanta
+81,01 Jul,21:00,Round of 32,Belgium,Senegal,Seattle Stadium,Seattle
+82,02 Jul,01:00,Round of 32,United States,Bosnia-Herzegovina,San Francisco Bay Area Stadium,Santa Clara
+83,02 Jul,20:00,Round of 32,Spain,Austria,Los Angeles Stadium,Los Angeles
+84,03 Jul,00:00,Round of 32,Portugal,Croatia,Toronto Stadium,Toronto
+85,03 Jul,04:00,Round of 32,Switzerland,Algeria,BC Place Vancouver,Vancouver
+86,03 Jul,19:00,Round of 32,Australia,Egypt,Dallas Stadium,Arlington
+87,03 Jul,23:00,Round of 32,Argentina,Cape Verde Islands,Miami Stadium,Miami
+88,04 Jul,02:30,Round of 32,Colombia,Ghana,Kansas City Stadium,Kansas City
+89,04 Jul,18:00,Round of 16,Paraguay,France,Philadelphia Stadium,Philadelphia
+90,04 Jul,22:00,Round of 16,Canada,Morocco,Houston Stadium,Houston
+91,05 Jul,21:00,Round of 16,Brazil,Norway,New York New Jersey Stadium,East Rutherford
+92,06 Jul,01:00,Round of 16,Mexico,England,Mexico City Stadium,Mexico City
+93,06 Jul,20:00,Round of 16,Portugal,Spain,Dallas Stadium,Arlington
+94,07 Jul,01:00,Round of 16,United States,Belgium,Seattle Stadium,Seattle
+95,07 Jul,17:00,Round of 16,Argentina,Egypt,Atlanta Stadium,Atlanta
+96,07 Jul,21:00,Round of 16,Switzerland,Colombia,BC Place Vancouver,Vancouver
+97,09 Jul,21:00,Quarter-finals,Winner Match 89,Winner Match 90,Boston Stadium,Foxborough
+98,10 Jul,20:00,Quarter-finals,Winner Match 93,Winner Match 94,Los Angeles Stadium,Los Angeles
+99,11 Jul,22:00,Quarter-finals,Winner Match 91,Winner Match 92,Miami Stadium,Miami
+100,12 Jul,02:00,Quarter-finals,Winner Match 95,Winner Match 96,Kansas City Stadium,Kansas City
+101,14 Jul,20:00,Semi-finals,Winner Match 97,Winner Match 98,Dallas Stadium,Arlington
+102,15 Jul,20:00,Semi-finals,Winner Match 99,Winner Match 100,Atlanta Stadium,Atlanta
+103,18 Jul,22:00,Third Place Play-off,Loser Match 101,Loser Match 102,Miami Stadium,Miami
+104,19 Jul,20:00,Final,Winner Match 101,Winner Match 102,New York New Jersey Stadium,East Rutherford
