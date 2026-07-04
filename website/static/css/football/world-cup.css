@@ -1023,6 +1023,29 @@
     gap: 0.65rem;
 }
 
+.world-cup-score-widget .date-and-time {
+    align-items: flex-start;
+    gap: 0.65rem;
+}
+
+.world-cup-kickoff-block {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.18rem;
+    min-width: 0;
+    flex: 1 1 auto;
+}
+
+.world-cup-match-venue {
+    margin: 0;
+    font-size: 0.7rem;
+    font-weight: 500;
+    line-height: 1.35;
+    letter-spacing: 0.01em;
+    color: color-mix(in srgb, var(--brand-strong, #1a3f66) 72%, var(--text-subtle, #5f6b7a));
+}
+
 .world-cup-score-widget .world-cup-kickoff-line {
     gap: 0.5rem;
     flex-shrink: 1;

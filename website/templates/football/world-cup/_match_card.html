@@ -9,9 +9,15 @@
   <span class="world-cup-score-widget__round-bg" aria-hidden="true">{{ round_bg_label }}</span>
   {% endif %}
   <div class="date-and-time">
-    <span class="world-cup-kickoff-line">
-      <time class="match-start" datetime="{{ match.utc_date|kickoff_utc_iso }}" data-kickoff-format="full"></time>{% set tv_logo = match|world_cup_knockout_tv_logo_url %}{% if tv_logo %}<span class="world-cup-tv-logo-wrap" aria-label="{{ match|world_cup_knockout_tv_logo_label }}"><img class="world-cup-tv-logo" src="{{ tv_logo }}" alt="" loading="lazy" decoding="async"></span>{% endif %}
-    </span>
+    <div class="world-cup-kickoff-block">
+      <span class="world-cup-kickoff-line">
+        <time class="match-start" datetime="{{ match.utc_date|kickoff_utc_iso }}" data-kickoff-format="full"></time>{% set tv_logo = match|world_cup_knockout_tv_logo_url %}{% if tv_logo %}<span class="world-cup-tv-logo-wrap" aria-label="{{ match|world_cup_knockout_tv_logo_label }}"><img class="world-cup-tv-logo" src="{{ tv_logo }}" alt="" loading="lazy" decoding="async"></span>{% endif %}
+      </span>
+      {% set venue_label = match|world_cup_match_venue_label %}
+      {% if venue_label %}
+      <p class="world-cup-match-venue">{{ venue_label }}</p>
+      {% endif %}
+    </div>
     <div class="match-meta-actions">
       <div class="match-status">
         <span class="world-cup-match-status-text">{{ match|world_cup_match_status_display }}</span>

@@ -21,6 +21,7 @@ WC_KNOCKOUT_TV_FILES: dict[str, Path] = {
 }
 WC_KNOCKOUT_TV_PATHS = tuple(WC_KNOCKOUT_TV_FILES.values())
 WC_KNOCKOUT_TV_TIMEZONE = ZoneInfo("Europe/London")
+WC_2026_STADIUMS_PATH = Path(__file__).resolve().parent / "wc_2026_stadiums.csv"
 # Westernmost host timezone — match day rolls at Pacific midnight so late West Coast
 # kickoffs stay on the same tournament day as Mexico City / Eastern venues.
 WC_TOURNAMENT_TZ = ZoneInfo("America/Los_Angeles")
@@ -1721,6 +1722,13 @@ _TV_TEAM_ALIASES: dict[str, str] = {
     "congo dr": "dr congo",
     "united states": "usa",
     "usa": "usa",
+    "czech republic": "czechia",
+    "czechia": "czechia",
+    "cape verde islands": "cape verde",
+    "korea republic": "south korea",
+    "south korea": "south korea",
+    "turkiye": "turkey",
+    "turkey": "turkey",
 }
 
 
@@ -1851,6 +1859,186 @@ def world_cup_knockout_tv_logo_label(match: "Match") -> str | None:
     if station is None:
         return None
     return WC_KNOCKOUT_TV_LOGO_LABELS.get(station, station)
+
+
+@dataclass(frozen=True)
+class WorldCupStadiumVenue:
+    stadium: str
+    host_city: str
+
+
+@dataclass(frozen=True)
+class _StadiumCsvRow:
+    stage: str
+    team_one: str
+    team_two: str
+    stadium: str
+    host_city: str
+
+    def venue(self) -> WorldCupStadiumVenue:
+        return WorldCupStadiumVenue(self.stadium, self.host_city)
+
+    def team_key(self) -> frozenset[str]:
+        return frozenset(
+            {
+                _stadium_team_lookup_key(self.team_one),
+                _stadium_team_lookup_key(self.team_two),
+            }
+        )
+
+
+@dataclass(frozen=True)
+class _StadiumLookupData:
+    by_team_pair: dict[frozenset[str], list[_StadiumCsvRow]]
+    by_feeder_pair: dict[frozenset[str], list[_StadiumCsvRow]]
+
+
+def _world_cup_is_2026_edition_match(match: "Match") -> bool:
+    if match.competition.code != "WC":
+        return False
+    return str(match.season.start_date).startswith("2026")
+
+
+def _stadium_team_lookup_key(name: str) -> str:
+    lowered = name.casefold()
+    if "winner match" in lowered or "loser match" in lowered:
+        feeder = normalise_knockout_feeder_label(name)
+        if feeder is not None:
+            return feeder.casefold()
+    return _normalise_tv_team_name(name)
+
+
+def _stadium_stage_key(stage_label: str) -> str:
+    if stage_label.startswith("Group "):
+        return "GROUP_STAGE"
+    return {
+        "Round of 32": "LAST_32",
+        "Round of 16": "LAST_16",
+        "Quarter-finals": "QUARTER_FINALS",
+        "Semi-finals": "SEMI_FINALS",
+        "Third Place Play-off": "THIRD_PLACE",
+        "Final": "FINAL",
+    }.get(stage_label, stage_label)
+
+
+def _stadium_match_feeder_key(team: "Team") -> str | None:
+    if team_is_confirmed(team):
+        return _normalise_tv_team_name(team.display_name)
+
+    feeder = bracket_feeder_label_from_team(team)
+    if feeder is not None:
+        return feeder.casefold()
+
+    label = normalise_knockout_feeder_label(team.display_name)
+    if label is not None:
+        return label.casefold()
+
+    key = _normalise_tv_team_name(team.display_name)
+    return key if key != "" else None
+
+
+@lru_cache(maxsize=1)
+def _load_stadium_lookup() -> _StadiumLookupData:
+    by_team_pair: dict[frozenset[str], list[_StadiumCsvRow]] = {}
+    by_feeder_pair: dict[frozenset[str], list[_StadiumCsvRow]] = {}
+    if not WC_2026_STADIUMS_PATH.is_file():
+        return _StadiumLookupData(by_team_pair=by_team_pair, by_feeder_pair=by_feeder_pair)
+
+    with WC_2026_STADIUMS_PATH.open(newline="", encoding="utf-8") as handle:
+        reader = csv.DictReader(handle)
+        for row in reader:
+            stage = (row.get("Stage") or "").strip()
+            stadium = (row.get("Stadium") or "").strip()
+            host_city = (row.get("Host City") or "").strip()
+            team_one = (row.get("Team 1") or "").strip()
+            team_two = (row.get("Team 2") or "").strip()
+            if (
+                stage == ""
+                or stadium == ""
+                or host_city == ""
+                or team_one == ""
+                or team_two == ""
+            ):
+                continue
+
+            stadium_row = _StadiumCsvRow(
+                stage=stage,
+                team_one=team_one,
+                team_two=team_two,
+                stadium=stadium,
+                host_city=host_city,
+            )
+            team_key = stadium_row.team_key()
+            if any(
+                token in team_one.casefold() or token in team_two.casefold()
+                for token in ("winner match", "loser match")
+            ):
+                by_feeder_pair.setdefault(team_key, []).append(stadium_row)
+            else:
+                by_team_pair.setdefault(team_key, []).append(stadium_row)
+
+    return _StadiumLookupData(by_team_pair=by_team_pair, by_feeder_pair=by_feeder_pair)
+
+
+def _pick_stadium_row(
+    candidates: list[_StadiumCsvRow],
+    match: "Match",
+) -> _StadiumCsvRow | None:
+    if len(candidates) == 0:
+        return None
+    if len(candidates) == 1:
+        return candidates[0]
+
+    stage_key = match.stage
+    stage_matches = [
+        row for row in candidates if _stadium_stage_key(row.stage) == stage_key
+    ]
+    if len(stage_matches) == 1:
+        return stage_matches[0]
+    if len(stage_matches) > 1:
+        return stage_matches[0]
+
+    return candidates[0]
+
+
+def world_cup_match_stadium_venue(match: "Match") -> WorldCupStadiumVenue | None:
+    """Stadium and host city for a 2026 World Cup match, when resolvable."""
+    if not _world_cup_is_2026_edition_match(match):
+        return None
+
+    lookup = _load_stadium_lookup()
+    if len(lookup.by_team_pair) == 0 and len(lookup.by_feeder_pair) == 0:
+        return None
+
+    if knockout_match_has_confirmed_teams(match):
+        home = _normalise_tv_team_name(match.home_team.display_name)
+        away = _normalise_tv_team_name(match.away_team.display_name)
+        if home != "" and away != "":
+            row = _pick_stadium_row(
+                lookup.by_team_pair.get(frozenset({home, away}), []),
+                match,
+            )
+            if row is not None:
+                return row.venue()
+
+    home_feeder = _stadium_match_feeder_key(match.home_team)
+    away_feeder = _stadium_match_feeder_key(match.away_team)
+    if home_feeder is not None and away_feeder is not None:
+        row = _pick_stadium_row(
+            lookup.by_feeder_pair.get(frozenset({home_feeder, away_feeder}), []),
+            match,
+        )
+        if row is not None:
+            return row.venue()
+
+    return None
+
+
+def world_cup_match_venue_label(match: "Match") -> str | None:
+    venue = world_cup_match_stadium_venue(match)
+    if venue is None:
+        return None
+    return f"{venue.stadium}, {venue.host_city}"
 
 
 def world_cup_score_annotation(match: "Match") -> str | None:
