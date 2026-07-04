@@ -49,11 +49,13 @@ def _finished_match(
     *,
     status: str = "FINISHED",
     minute: int | None = None,
+    injury_time: int | None = None,
     utc_date: str = "2026-07-05T20:00:00Z",
 ) -> Match:
     payload = copy.deepcopy(_MATCH_TEMPLATE)
     payload["status"] = status
     payload["minute"] = minute
+    payload["injuryTime"] = injury_time
     payload["utcDate"] = utc_date
     payload["score"] = score
     return Match.model_validate(payload)
@@ -179,6 +181,21 @@ class WorldCupScoreDisplayTests(unittest.TestCase):
         )
 
         self.assertEqual(world_cup_match_status_display(match), "Full Time")
+
+    def test_penalty_shootout_status_ignores_stale_clock(self) -> None:
+        match = _finished_match(
+            {
+                "winner": None,
+                "duration": "PENALTY_SHOOTOUT",
+                "fullTime": {"home": 1, "away": 1},
+                "halfTime": {"home": 0, "away": 0},
+            },
+            status="IN_PLAY",
+            minute=120,
+            injury_time=3,
+        )
+
+        self.assertEqual(world_cup_match_status_display(match), "Penalties")
 
 
 if __name__ == "__main__":

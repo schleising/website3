@@ -348,6 +348,9 @@ function formatWorldCupMatchStatus(match) {
         case "AWARDED":
             return "Not Started";
         case "IN_PLAY":
+            if (match.score?.duration === "PENALTY_SHOOTOUT") {
+                return "Penalties";
+            }
             if (match.minute != null) {
                 let status = `${match.minute}'`;
                 if (match.injury_time != null) {
