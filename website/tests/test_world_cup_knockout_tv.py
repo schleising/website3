@@ -76,7 +76,7 @@ class WorldCupKnockoutTvTests(unittest.TestCase):
 
     def test_csv_loads_round_of_32_broadcasters(self) -> None:
         lookup = _load_knockout_tv_lookup()
-        self.assertEqual(len(lookup), 28)
+        self.assertEqual(len(lookup), 33)
         self.assertEqual(
             lookup[frozenset({"south africa", "canada"})],
             "ITV",
@@ -84,6 +84,29 @@ class WorldCupKnockoutTvTests(unittest.TestCase):
         self.assertEqual(
             lookup[frozenset({"germany", "paraguay"})],
             "BBC",
+        )
+
+    def test_csv_loads_quarter_final_broadcasters(self) -> None:
+        lookup = _load_knockout_tv_lookup()
+        self.assertEqual(
+            lookup[frozenset({"france", "morocco"})],
+            "ITV",
+        )
+        self.assertEqual(
+            lookup[frozenset({"spain", "belgium"})],
+            "BBC",
+        )
+        self.assertEqual(
+            lookup[frozenset({"norway", "england"})],
+            "ITV",
+        )
+        self.assertEqual(
+            lookup[frozenset({"argentina", "switzerland"})],
+            "ITV",
+        )
+        self.assertEqual(
+            lookup[frozenset({"argentina", "colombia"})],
+            "ITV",
         )
 
     def test_csv_loads_round_of_16_broadcasters(self) -> None:
@@ -168,6 +191,40 @@ class WorldCupKnockoutTvTests(unittest.TestCase):
             world_cup_knockout_tv_logo_url(match),
             "/images/football/tv_logos/itv_one.svg",
         )
+
+    def test_quarter_final_lookup_on_knockout_match(self) -> None:
+        match = _knockout_match(
+            stage="QUARTER_FINALS",
+            home=Team(id=1, name="France", short_name="France"),
+            away=Team(id=2, name="Morocco", short_name="Morocco"),
+        )
+        self.assertEqual(world_cup_knockout_tv_station(match), "ITV")
+        self.assertEqual(
+            world_cup_knockout_tv_logo_url(match),
+            "/images/football/tv_logos/itv_one.svg",
+        )
+
+    def test_quarter_final_lookup_uses_kickoff_when_teams_unresolved(self) -> None:
+        match = _knockout_match(
+            stage="QUARTER_FINALS",
+            home=Team(),
+            away=Team(),
+            utc_date="2026-07-09T20:00:00Z",
+        )
+        self.assertEqual(world_cup_knockout_tv_station(match), "ITV")
+        self.assertEqual(
+            world_cup_knockout_tv_logo_url(match),
+            "/images/football/tv_logos/itv_one.svg",
+        )
+
+    def test_quarter_final_lookup_matches_either_slash_alternative(self) -> None:
+        match = _knockout_match(
+            stage="QUARTER_FINALS",
+            home=Team(id=1, name="Argentina", short_name="Argentina"),
+            away=Team(id=2, name="Colombia", short_name="Colombia"),
+            utc_date="2026-07-12T01:00:00Z",
+        )
+        self.assertEqual(world_cup_knockout_tv_station(match), "ITV")
 
     def test_not_shown_for_group_stage(self) -> None:
         match = _knockout_match(

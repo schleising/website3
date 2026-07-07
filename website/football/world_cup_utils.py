@@ -18,6 +18,7 @@ WC_CURRENT_EDITION = "2026"
 WC_KNOCKOUT_TV_FILES: dict[str, Path] = {
     "LAST_32": Path(__file__).resolve().parent / "wc_last_32_knockout_tv.csv",
     "LAST_16": Path(__file__).resolve().parent / "wc_last_16_knockout_tv.csv",
+    "QUARTER_FINALS": Path(__file__).resolve().parent / "wc_qf_knockout_tv.csv",
 }
 WC_KNOCKOUT_TV_PATHS = tuple(WC_KNOCKOUT_TV_FILES.values())
 WC_KNOCKOUT_TV_TIMEZONE = ZoneInfo("Europe/London")
@@ -1747,11 +1748,13 @@ def _normalise_tv_team_name(name: str | None) -> str:
 def _tv_team_options(name: str | None) -> list[str]:
     if name is None:
         return []
-    options = [
-        _normalise_tv_team_name(option)
-        for option in re.split(r"\s+or\s+", name, flags=re.IGNORECASE)
-    ]
-    return [option for option in options if option != ""]
+    options: list[str] = []
+    for segment in re.split(r"\s+or\s+", name, flags=re.IGNORECASE):
+        for option in segment.split("/"):
+            normalised = _normalise_tv_team_name(option)
+            if normalised != "":
+                options.append(normalised)
+    return options
 
 
 def _normalise_tv_date(value: str | None) -> str:
