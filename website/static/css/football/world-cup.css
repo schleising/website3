@@ -800,6 +800,8 @@
 }
 
 .world-cup-bracket-panel {
+    --world-cup-bracket-round-width: 22rem;
+    --world-cup-bracket-row-size: 3.4rem;
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
@@ -974,22 +976,44 @@
     width: 100%;
     min-width: 0;
     max-width: 100%;
+    box-sizing: border-box;
+    flex: 0 0 auto;
 }
 
 .world-cup-bracket-slot-wrap .world-cup-score-widget .date-and-time {
     width: 100%;
     min-width: 0;
+    flex-wrap: wrap;
+    row-gap: 0.2rem;
 }
 
 .world-cup-bracket-slot-wrap .world-cup-kickoff-block {
     width: 100%;
     max-width: 100%;
+    min-width: 0;
+    flex: 1 1 12rem;
+}
+
+.world-cup-bracket-slot-wrap .world-cup-kickoff-line {
+    white-space: normal;
+    flex-wrap: wrap;
 }
 
 .world-cup-bracket-slot-wrap .world-cup-match-venue {
     width: 100%;
     max-width: 100%;
     overflow-wrap: anywhere;
+}
+
+.world-cup-bracket-slot-wrap .match-meta-actions {
+    flex: 0 1 auto;
+    min-width: 0;
+    max-width: 100%;
+}
+
+.world-cup-bracket-slot-wrap .match-status {
+    white-space: normal;
+    text-align: right;
 }
 
 .world-cup-bracket-slot-wrap .team-and-badge,
@@ -1004,8 +1028,10 @@
 
 .world-cup-bracket-slot-wrap .team-name,
 .world-cup-bracket-third-place-slot .team-name {
-    overflow: hidden;
-    text-overflow: ellipsis;
+    overflow: visible;
+    text-overflow: unset;
+    overflow-wrap: anywhere;
+    white-space: normal;
 }
 
 .world-cup-bracket-third-place-slot {
@@ -1029,6 +1055,7 @@
 
 .world-cup-knockout-round-layout,
 .world-cup-team-fixtures-layout {
+    --world-cup-bracket-round-width: 22rem;
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
@@ -1036,7 +1063,14 @@
 
 .world-cup-knockout-round-layout .football-grid,
 .world-cup-overview-knockout-block .football-grid {
-    grid-template-columns: repeat(auto-fill, minmax(20.5rem, 1fr));
+    grid-template-columns: repeat(auto-fill, var(--world-cup-bracket-round-width, 22rem));
+    justify-content: start;
+}
+
+.world-cup-knockout-round-layout .football-grid .score-widget,
+.world-cup-overview-knockout-block .football-grid .score-widget {
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .world-cup-score-widget .date-and-time {

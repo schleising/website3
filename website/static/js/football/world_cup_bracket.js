@@ -12,8 +12,24 @@
             return;
         }
 
-        const bodyStyle = getComputedStyle(bodyMatrix);
-        headerMatrix.style.gridTemplateColumns = bodyStyle.gridTemplateColumns;
+        const panelStyle = getComputedStyle(panel);
+        const roundWidth = panelStyle.getPropertyValue("--world-cup-bracket-round-width").trim();
+        if (roundWidth === "") {
+            return;
+        }
+
+        const roundCount = headerMatrix.querySelectorAll(".world-cup-bracket-round-label").length;
+        const roundTracks = Array.from({ length: roundCount }, (_, index) => {
+            const tracks = [roundWidth, "0px", "1.75rem"];
+            if (index < roundCount - 1) {
+                tracks.push("0px");
+            }
+            return tracks.join(" ");
+        }).join(" ");
+        const columns = roundTracks;
+
+        headerMatrix.style.gridTemplateColumns = columns;
+        bodyMatrix.style.gridTemplateColumns = columns;
         headerMatrix.style.width = `${bodyMatrix.scrollWidth}px`;
     }
 
