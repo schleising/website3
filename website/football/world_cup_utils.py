@@ -19,6 +19,8 @@ WC_KNOCKOUT_TV_FILES: dict[str, Path] = {
     "LAST_32": Path(__file__).resolve().parent / "wc_last_32_knockout_tv.csv",
     "LAST_16": Path(__file__).resolve().parent / "wc_last_16_knockout_tv.csv",
     "QUARTER_FINALS": Path(__file__).resolve().parent / "wc_qf_knockout_tv.csv",
+    "SEMI_FINALS": Path(__file__).resolve().parent / "wc_sf_knockout_tv.csv",
+    "FINAL": Path(__file__).resolve().parent / "wc_final_knockout_tv.csv",
 }
 WC_KNOCKOUT_TV_PATHS = tuple(WC_KNOCKOUT_TV_FILES.values())
 WC_KNOCKOUT_TV_TIMEZONE = ZoneInfo("Europe/London")

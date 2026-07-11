@@ -76,13 +76,28 @@ class WorldCupKnockoutTvTests(unittest.TestCase):
 
     def test_csv_loads_round_of_32_broadcasters(self) -> None:
         lookup = _load_knockout_tv_lookup()
-        self.assertEqual(len(lookup), 33)
+        self.assertEqual(len(lookup), 37)
         self.assertEqual(
             lookup[frozenset({"south africa", "canada"})],
             "ITV",
         )
         self.assertEqual(
             lookup[frozenset({"germany", "paraguay"})],
+            "BBC",
+        )
+
+    def test_csv_loads_semi_final_broadcasters(self) -> None:
+        lookup = _load_knockout_tv_lookup()
+        self.assertEqual(
+            lookup[frozenset({"france", "spain"})],
+            "ITV",
+        )
+        self.assertEqual(
+            lookup[frozenset({"england", "argentina"})],
+            "BBC",
+        )
+        self.assertEqual(
+            lookup[frozenset({"england", "switzerland"})],
             "BBC",
         )
 
@@ -225,6 +240,45 @@ class WorldCupKnockoutTvTests(unittest.TestCase):
             utc_date="2026-07-12T01:00:00Z",
         )
         self.assertEqual(world_cup_knockout_tv_station(match), "ITV")
+
+    def test_semi_final_lookup_on_knockout_match(self) -> None:
+        match = _knockout_match(
+            stage="SEMI_FINALS",
+            home=Team(id=1, name="France", short_name="France"),
+            away=Team(id=2, name="Spain", short_name="Spain"),
+            utc_date="2026-07-14T19:00:00Z",
+        )
+        self.assertEqual(world_cup_knockout_tv_station(match), "ITV")
+        self.assertEqual(
+            world_cup_knockout_tv_logo_url(match),
+            "/images/football/tv_logos/itv_one.svg",
+        )
+
+    def test_semi_final_lookup_matches_either_slash_alternative(self) -> None:
+        match = _knockout_match(
+            stage="SEMI_FINALS",
+            home=Team(id=1, name="England", short_name="England"),
+            away=Team(id=2, name="Switzerland", short_name="Switzerland"),
+            utc_date="2026-07-15T19:00:00Z",
+        )
+        self.assertEqual(world_cup_knockout_tv_station(match), "BBC")
+        self.assertEqual(
+            world_cup_knockout_tv_logo_url(match),
+            "/images/football/tv_logos/bbc_one.svg",
+        )
+
+    def test_final_is_bbc(self) -> None:
+        match = _knockout_match(
+            stage="FINAL",
+            home=Team(),
+            away=Team(),
+            utc_date="2026-07-19T19:00:00Z",
+        )
+        self.assertEqual(world_cup_knockout_tv_station(match), "BBC")
+        self.assertEqual(
+            world_cup_knockout_tv_logo_url(match),
+            "/images/football/tv_logos/bbc_one.svg",
+        )
 
     def test_not_shown_for_group_stage(self) -> None:
         match = _knockout_match(
