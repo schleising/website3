@@ -1110,11 +1110,13 @@
     flex-shrink: 0;
 }
 
-.world-cup-score-widget .date-and-time:has(.world-cup-tv-logo-wrap) {
+.world-cup-score-widget .date-and-time:has(.world-cup-tv-logo-wrap),
+.world-cup-score-widget .date-and-time:has(.world-cup-tv-logos) {
     gap: 0.85rem;
 }
 
-.world-cup-score-widget .date-and-time:has(.world-cup-tv-logo-wrap) .match-meta-actions {
+.world-cup-score-widget .date-and-time:has(.world-cup-tv-logo-wrap) .match-meta-actions,
+.world-cup-score-widget .date-and-time:has(.world-cup-tv-logos) .match-meta-actions {
     margin-left: 0.15rem;
     padding-left: 0.8rem;
     border-left: 0.0625rem solid rgba(120, 149, 183, 0.55);
@@ -1173,6 +1175,13 @@
     align-items: center;
     gap: 0.35rem;
     white-space: nowrap;
+}
+
+.world-cup-tv-logos {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    flex: 0 0 auto;
 }
 
 .world-cup-tv-logo-wrap {

@@ -20,6 +20,7 @@ WC_KNOCKOUT_TV_FILES: dict[str, Path] = {
     "LAST_16": Path(__file__).resolve().parent / "wc_last_16_knockout_tv.csv",
     "QUARTER_FINALS": Path(__file__).resolve().parent / "wc_qf_knockout_tv.csv",
     "SEMI_FINALS": Path(__file__).resolve().parent / "wc_sf_knockout_tv.csv",
+    "THIRD_PLACE": Path(__file__).resolve().parent / "wc_third_place_knockout_tv.csv",
     "FINAL": Path(__file__).resolve().parent / "wc_final_knockout_tv.csv",
 }
 WC_KNOCKOUT_TV_PATHS = tuple(WC_KNOCKOUT_TV_FILES.values())
@@ -1779,9 +1780,25 @@ def _tv_kickoff_key(match: "Match") -> tuple[str, str, str]:
     )
 
 
+def _parse_tv_stations(value: str | None) -> tuple[str, ...]:
+    raw = (value or "").strip()
+    if raw == "":
+        return ()
+
+    stations: list[str] = []
+    seen: set[str] = set()
+    for part in re.split(r"\s*(?:/|,|\band\b)\s*", raw, flags=re.IGNORECASE):
+        station = part.strip().upper()
+        if station == "" or station in seen:
+            continue
+        stations.append(station)
+        seen.add(station)
+    return tuple(stations)
+
+
 @lru_cache(maxsize=1)
-def _load_knockout_tv_lookup() -> dict[frozenset[str], str]:
-    lookup: dict[frozenset[str], str] = {}
+def _load_knockout_tv_lookup() -> dict[frozenset[str], tuple[str, ...]]:
+    lookup: dict[frozenset[str], tuple[str, ...]] = {}
     for path in WC_KNOCKOUT_TV_FILES.values():
         if not path.is_file():
             continue
@@ -1791,23 +1808,23 @@ def _load_knockout_tv_lookup() -> dict[frozenset[str], str]:
             for row in reader:
                 team_one_options = _tv_team_options(row.get("Team 1"))
                 team_two_options = _tv_team_options(row.get("Team 2"))
-                station = (row.get("TV") or "").strip()
+                stations = _parse_tv_stations(row.get("TV"))
                 if (
                     len(team_one_options) == 0
                     or len(team_two_options) == 0
-                    or station == ""
+                    or len(stations) == 0
                 ):
                     continue
                 for team_one in team_one_options:
                     for team_two in team_two_options:
-                        lookup[frozenset({team_one, team_two})] = station
+                        lookup[frozenset({team_one, team_two})] = stations
 
     return lookup
 
 
 @lru_cache(maxsize=1)
-def _load_knockout_tv_kickoff_lookup() -> dict[tuple[str, str, str], str]:
-    lookup: dict[tuple[str, str, str], str] = {}
+def _load_knockout_tv_kickoff_lookup() -> dict[tuple[str, str, str], tuple[str, ...]]:
+    lookup: dict[tuple[str, str, str], tuple[str, ...]] = {}
     for stage, path in WC_KNOCKOUT_TV_FILES.items():
         if not path.is_file():
             continue
@@ -1817,28 +1834,36 @@ def _load_knockout_tv_kickoff_lookup() -> dict[tuple[str, str, str], str]:
             for row in reader:
                 tv_date = _normalise_tv_date(row.get("Date"))
                 tv_time = _normalise_tv_time(row.get("Time"))
-                station = (row.get("TV") or "").strip()
-                if tv_date == "" or tv_time == "" or station == "":
+                stations = _parse_tv_stations(row.get("TV"))
+                if tv_date == "" or tv_time == "" or len(stations) == 0:
                     continue
-                lookup[(stage, tv_date, tv_time)] = station
+                lookup[(stage, tv_date, tv_time)] = stations
 
     return lookup
 
 
-def world_cup_knockout_tv_station(match: "Match") -> str | None:
-    """UK broadcaster for a knockout match, when listed in knockout TV CSVs."""
+def world_cup_knockout_tv_stations(match: "Match") -> tuple[str, ...]:
+    """UK broadcasters for a knockout match, when listed in knockout TV CSVs."""
     if match.stage in {WC_GROUP_STAGE, WC_GROUP_PLAYOFF}:
-        return None
+        return ()
 
     if knockout_match_has_confirmed_teams(match):
         home = _normalise_tv_team_name(match.home_team.display_name)
         away = _normalise_tv_team_name(match.away_team.display_name)
         if home != "" and away != "":
-            station = _load_knockout_tv_lookup().get(frozenset({home, away}))
-            if station is not None:
-                return station
+            stations = _load_knockout_tv_lookup().get(frozenset({home, away}))
+            if stations is not None:
+                return stations
 
-    return _load_knockout_tv_kickoff_lookup().get(_tv_kickoff_key(match))
+    return _load_knockout_tv_kickoff_lookup().get(_tv_kickoff_key(match), ())
+
+
+def world_cup_knockout_tv_station(match: "Match") -> str | None:
+    """Primary UK broadcaster for a knockout match, when listed."""
+    stations = world_cup_knockout_tv_stations(match)
+    if len(stations) == 0:
+        return None
+    return stations[0]
 
 
 WC_KNOCKOUT_TV_LOGO_PATHS: dict[str, str] = {
@@ -1852,18 +1877,41 @@ WC_KNOCKOUT_TV_LOGO_LABELS: dict[str, str] = {
 }
 
 
+@dataclass(frozen=True)
+class WorldCupKnockoutTvLogo:
+    station: str
+    url: str
+    label: str
+
+
+def world_cup_knockout_tv_logos(match: "Match") -> list[WorldCupKnockoutTvLogo]:
+    logos: list[WorldCupKnockoutTvLogo] = []
+    for station in world_cup_knockout_tv_stations(match):
+        url = WC_KNOCKOUT_TV_LOGO_PATHS.get(station)
+        if url is None:
+            continue
+        logos.append(
+            WorldCupKnockoutTvLogo(
+                station=station,
+                url=url,
+                label=WC_KNOCKOUT_TV_LOGO_LABELS.get(station, station),
+            )
+        )
+    return logos
+
+
 def world_cup_knockout_tv_logo_url(match: "Match") -> str | None:
-    station = world_cup_knockout_tv_station(match)
-    if station is None:
+    logos = world_cup_knockout_tv_logos(match)
+    if len(logos) == 0:
         return None
-    return WC_KNOCKOUT_TV_LOGO_PATHS.get(station)
+    return logos[0].url
 
 
 def world_cup_knockout_tv_logo_label(match: "Match") -> str | None:
-    station = world_cup_knockout_tv_station(match)
-    if station is None:
+    logos = world_cup_knockout_tv_logos(match)
+    if len(logos) == 0:
         return None
-    return WC_KNOCKOUT_TV_LOGO_LABELS.get(station, station)
+    return logos[0].label
 
 
 @dataclass(frozen=True)

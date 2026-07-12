@@ -58,6 +58,7 @@ from .world_cup_utils import (
     world_cup_knockout_tv_station,
     world_cup_knockout_tv_logo_url,
     world_cup_knockout_tv_logo_label,
+    world_cup_knockout_tv_logos,
     world_cup_match_venue_label,
     world_cup_score_annotation,
     world_cup_all_matches_bg_label,
@@ -78,6 +79,7 @@ TEMPLATES.env.filters["world_cup_match_status_display"] = world_cup_match_status
 TEMPLATES.env.filters["world_cup_knockout_tv_station"] = world_cup_knockout_tv_station
 TEMPLATES.env.filters["world_cup_knockout_tv_logo_url"] = world_cup_knockout_tv_logo_url
 TEMPLATES.env.filters["world_cup_knockout_tv_logo_label"] = world_cup_knockout_tv_logo_label
+TEMPLATES.env.filters["world_cup_knockout_tv_logos"] = world_cup_knockout_tv_logos
 TEMPLATES.env.filters["world_cup_match_venue_label"] = world_cup_match_venue_label
 TEMPLATES.env.filters["world_cup_score_annotation"] = world_cup_score_annotation
 TEMPLATES.env.filters["edition_uses_goal_average"] = edition_uses_goal_average

@@ -12,7 +12,9 @@ from website.football.world_cup_utils import (
     _normalise_tv_team_name,
     world_cup_knockout_tv_logo_label,
     world_cup_knockout_tv_logo_url,
+    world_cup_knockout_tv_logos,
     world_cup_knockout_tv_station,
+    world_cup_knockout_tv_stations,
 )
 
 _MATCH_TEMPLATE: dict = {
@@ -76,67 +78,67 @@ class WorldCupKnockoutTvTests(unittest.TestCase):
 
     def test_csv_loads_round_of_32_broadcasters(self) -> None:
         lookup = _load_knockout_tv_lookup()
-        self.assertEqual(len(lookup), 37)
+        self.assertEqual(len(lookup), 38)
         self.assertEqual(
             lookup[frozenset({"south africa", "canada"})],
-            "ITV",
+            ("ITV",),
         )
         self.assertEqual(
             lookup[frozenset({"germany", "paraguay"})],
-            "BBC",
+            ("BBC",),
         )
 
     def test_csv_loads_semi_final_broadcasters(self) -> None:
         lookup = _load_knockout_tv_lookup()
         self.assertEqual(
             lookup[frozenset({"france", "spain"})],
-            "ITV",
+            ("ITV",),
         )
         self.assertEqual(
             lookup[frozenset({"england", "argentina"})],
-            "BBC",
+            ("BBC",),
         )
         self.assertEqual(
             lookup[frozenset({"england", "switzerland"})],
-            "BBC",
+            ("BBC",),
         )
 
     def test_csv_loads_quarter_final_broadcasters(self) -> None:
         lookup = _load_knockout_tv_lookup()
         self.assertEqual(
             lookup[frozenset({"france", "morocco"})],
-            "ITV",
+            ("ITV",),
         )
         self.assertEqual(
             lookup[frozenset({"spain", "belgium"})],
-            "BBC",
+            ("BBC",),
         )
         self.assertEqual(
             lookup[frozenset({"norway", "england"})],
-            "ITV",
+            ("ITV",),
         )
         self.assertEqual(
             lookup[frozenset({"argentina", "switzerland"})],
-            "ITV",
+            ("ITV",),
         )
         self.assertEqual(
             lookup[frozenset({"argentina", "colombia"})],
-            "ITV",
+            ("ITV",),
         )
 
     def test_csv_loads_round_of_16_broadcasters(self) -> None:
         lookup = _load_knockout_tv_lookup()
         self.assertEqual(
             lookup[frozenset({"mexico", "england"})],
-            "BBC",
+            ("BBC",),
         )
         self.assertEqual(
             lookup[frozenset({"argentina", "egypt"})],
-            "ITV",
+            ("ITV",),
         )
         self.assertEqual(
             lookup[frozenset({"switzerland", "ghana"})],
-            "ITV",
+            ("ITV",),
         )
 
     def test_team_name_aliases(self) -> None:
@@ -267,13 +269,35 @@ class WorldCupKnockoutTvTests(unittest.TestCase):
             "/images/football/tv_logos/bbc_one.svg",
         )
 
-    def test_final_is_bbc(self) -> None:
+    def test_final_is_bbc_and_itv(self) -> None:
         match = _knockout_match(
             stage="FINAL",
             home=Team(),
             away=Team(),
             utc_date="2026-07-19T19:00:00Z",
         )
+        self.assertEqual(world_cup_knockout_tv_stations(match), ("BBC", "ITV"))
+        logos = world_cup_knockout_tv_logos(match)
+        self.assertEqual(
+            [logo.url for logo in logos],
+            [
+                "/images/football/tv_logos/bbc_one.svg",
+                "/images/football/tv_logos/itv_one.svg",
+            ],
+        )
+        self.assertEqual(
+            [logo.label for logo in logos],
+            ["BBC One", "ITV"],
+        )
+
+    def test_third_place_is_bbc(self) -> None:
+        match = _knockout_match(
+            stage="THIRD_PLACE",
+            home=Team(),
+            away=Team(),
+            utc_date="2026-07-18T21:00:00Z",
+        )
+        self.assertEqual(world_cup_knockout_tv_stations(match), ("BBC",))
         self.assertEqual(world_cup_knockout_tv_station(match), "BBC")
         self.assertEqual(
             world_cup_knockout_tv_logo_url(match),
