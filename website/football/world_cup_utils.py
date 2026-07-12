@@ -15,7 +15,8 @@ if TYPE_CHECKING:
     from .models import Match, Score, TableItem, Team
 
 WC_CURRENT_EDITION = "2026"
-WC_KNOCKOUT_TV_FILES: dict[str, Path] = {
+WC_TV_FILES: dict[str, Path] = {
+    "GROUP_STAGE": Path(__file__).resolve().parent / "wc_group_tv.csv",
     "LAST_32": Path(__file__).resolve().parent / "wc_last_32_knockout_tv.csv",
     "LAST_16": Path(__file__).resolve().parent / "wc_last_16_knockout_tv.csv",
     "QUARTER_FINALS": Path(__file__).resolve().parent / "wc_qf_knockout_tv.csv",
@@ -23,7 +24,8 @@ WC_KNOCKOUT_TV_FILES: dict[str, Path] = {
     "THIRD_PLACE": Path(__file__).resolve().parent / "wc_third_place_knockout_tv.csv",
     "FINAL": Path(__file__).resolve().parent / "wc_final_knockout_tv.csv",
 }
-WC_KNOCKOUT_TV_PATHS = tuple(WC_KNOCKOUT_TV_FILES.values())
+WC_KNOCKOUT_TV_FILES = WC_TV_FILES
+WC_KNOCKOUT_TV_PATHS = tuple(WC_TV_FILES.values())
 WC_KNOCKOUT_TV_TIMEZONE = ZoneInfo("Europe/London")
 WC_2026_STADIUMS_PATH = Path(__file__).resolve().parent / "wc_2026_stadiums.csv"
 # Westernmost host timezone — match day rolls at Pacific midnight so late West Coast
@@ -1760,8 +1762,43 @@ def _tv_team_options(name: str | None) -> list[str]:
     return options
 
 
+_TV_MONTH_ALIASES: dict[str, str] = {
+    "jan": "jan",
+    "january": "jan",
+    "feb": "feb",
+    "february": "feb",
+    "mar": "mar",
+    "march": "mar",
+    "apr": "apr",
+    "april": "apr",
+    "may": "may",
+    "jun": "jun",
+    "june": "jun",
+    "jul": "jul",
+    "july": "jul",
+    "aug": "aug",
+    "august": "aug",
+    "sep": "sep",
+    "sept": "sep",
+    "september": "sep",
+    "oct": "oct",
+    "october": "oct",
+    "nov": "nov",
+    "november": "nov",
+    "dec": "dec",
+    "december": "dec",
+}
+
+
 def _normalise_tv_date(value: str | None) -> str:
-    return re.sub(r"\s+", " ", (value or "").strip().casefold())
+    text = re.sub(r"\s+", " ", (value or "").strip().casefold())
+    parts = text.split(" ")
+    if len(parts) == 2:
+        month = _TV_MONTH_ALIASES.get(parts[1])
+        if month is not None:
+            day = parts[0].lstrip("0") or "0"
+            return f"{int(day):02d} {month}"
+    return text
 
 
 def _normalise_tv_time(value: str | None) -> str:
@@ -1775,7 +1812,7 @@ def _tv_kickoff_key(match: "Match") -> tuple[str, str, str]:
     local_kickoff = kickoff.astimezone(WC_KNOCKOUT_TV_TIMEZONE)
     return (
         match.stage,
-        local_kickoff.strftime("%d %b").casefold(),
+        _normalise_tv_date(local_kickoff.strftime("%d %b")),
         local_kickoff.strftime("%H:%M"),
     )
 
@@ -1797,9 +1834,9 @@ def _parse_tv_stations(value: str | None) -> tuple[str, ...]:
 
 
 @lru_cache(maxsize=1)
-def _load_knockout_tv_lookup() -> dict[frozenset[str], tuple[str, ...]]:
-    lookup: dict[frozenset[str], tuple[str, ...]] = {}
-    for path in WC_KNOCKOUT_TV_FILES.values():
+def _load_knockout_tv_lookup() -> dict[tuple[str, frozenset[str]], tuple[str, ...]]:
+    lookup: dict[tuple[str, frozenset[str]], tuple[str, ...]] = {}
+    for stage, path in WC_TV_FILES.items():
         if not path.is_file():
             continue
 
@@ -1817,7 +1854,7 @@ def _load_knockout_tv_lookup() -> dict[frozenset[str], tuple[str, ...]]:
                     continue
                 for team_one in team_one_options:
                     for team_two in team_two_options:
-                        lookup[frozenset({team_one, team_two})] = stations
+                        lookup[(stage, frozenset({team_one, team_two}))] = stations
 
     return lookup
 
@@ -1825,7 +1862,7 @@ def _load_knockout_tv_lookup() -> dict[frozenset[str], tuple[str, ...]]:
 @lru_cache(maxsize=1)
 def _load_knockout_tv_kickoff_lookup() -> dict[tuple[str, str, str], tuple[str, ...]]:
     lookup: dict[tuple[str, str, str], tuple[str, ...]] = {}
-    for stage, path in WC_KNOCKOUT_TV_FILES.items():
+    for stage, path in WC_TV_FILES.items():
         if not path.is_file():
             continue
 
@@ -1843,15 +1880,17 @@ def _load_knockout_tv_kickoff_lookup() -> dict[tuple[str, str, str], tuple[str, 
 
 
 def world_cup_knockout_tv_stations(match: "Match") -> tuple[str, ...]:
-    """UK broadcasters for a knockout match, when listed in knockout TV CSVs."""
-    if match.stage in {WC_GROUP_STAGE, WC_GROUP_PLAYOFF}:
+    """UK broadcasters for a World Cup match, when listed in TV CSVs."""
+    if match.stage == WC_GROUP_PLAYOFF:
         return ()
 
     if knockout_match_has_confirmed_teams(match):
         home = _normalise_tv_team_name(match.home_team.display_name)
         away = _normalise_tv_team_name(match.away_team.display_name)
         if home != "" and away != "":
-            stations = _load_knockout_tv_lookup().get(frozenset({home, away}))
+            stations = _load_knockout_tv_lookup().get(
+                (match.stage, frozenset({home, away}))
+            )
             if stations is not None:
                 return stations
 
