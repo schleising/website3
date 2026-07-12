@@ -1,7 +1,8 @@
 from datetime import datetime
 from enum import Enum
+from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 # The instance type of the capability, e.g. "online" or "sensorTemperature"
@@ -17,8 +18,16 @@ class HumidityValue(BaseModel):
 
 
 # The state of the capability, e.g. the temperature value
+# Offline devices can return an empty string for sensor readings.
 class State(BaseModel):
-    value: float | bool | HumidityValue
+    value: float | bool | HumidityValue | None
+
+    @field_validator("value", mode="before")
+    @classmethod
+    def empty_string_to_none(cls, value: Any) -> Any:
+        if value == "":
+            return None
+        return value
 
 
 # The container for the capability data
