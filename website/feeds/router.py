@@ -25,6 +25,7 @@ from .feed_db import (
     get_feed_stats_context,
     get_reader_live_sync,
     get_sidebar_meta_for_reader,
+    get_subscription_source_metadata,
     list_feed_admin_rows,
     import_opml,
     mark_article_opened,
@@ -33,6 +34,7 @@ from .feed_db import (
     mark_article_unread,
     mark_article_unsaved,
     normalize_color_hex,
+    normalize_feed_url,
     reorder_category_sort_order,
     set_category_color,
     set_category_muted,
@@ -534,7 +536,14 @@ async def create_subscription(
             detail="Category name is required.",
         )
 
-    normalized_url, source_title = await validate_feed_url(payload.feed_url)
+    try:
+        normalized_url, source_title = await validate_feed_url(payload.feed_url)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        ) from exc
+
     subscription_doc, created_subscription = await create_or_update_subscription(
         user_id=username,
         normalized_url=normalized_url,
@@ -577,7 +586,33 @@ async def update_subscription(
             detail="Category is required.",
         )
 
-    normalized_url, source_title = await validate_feed_url(payload.feed_url)
+    try:
+        requested_normalized_url = normalize_feed_url(payload.feed_url)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        ) from exc
+
+    existing_source = await get_subscription_source_metadata(username, subscription_id)
+    refresh_source = True
+    if (
+        existing_source is not None
+        and existing_source["normalized_url"] == requested_normalized_url
+    ):
+        # Truncate/category toggles should not re-fetch an unchanged feed URL.
+        normalized_url = requested_normalized_url
+        source_title = str(existing_source["source_title"])
+        refresh_source = False
+    else:
+        try:
+            normalized_url, source_title = await validate_feed_url(payload.feed_url)
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=str(exc),
+            ) from exc
+
     updated_doc = await update_subscription_details(
         user_id=username,
         subscription_id=subscription_id,
@@ -585,6 +620,7 @@ async def update_subscription(
         source_title=source_title,
         category_id=payload.category_id,
         truncate_on_display=payload.truncate_on_display,
+        refresh_source=refresh_source,
     )
 
     if updated_doc is None:

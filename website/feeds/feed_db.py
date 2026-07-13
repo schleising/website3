@@ -1403,6 +1403,47 @@ async def load_user_category(
     return FeedCategoryDocument.model_validate(category_doc)
 
 
+async def get_subscription_source_metadata(
+    user_id: str,
+    subscription_id: str,
+) -> dict[str, Any] | None:
+    """Return the existing subscription's feed source URL and title when available."""
+
+    if user_feed_subscriptions_collection is None or feed_sources_collection is None:
+        return None
+
+    try:
+        subscription_object_id = ObjectId(subscription_id)
+    except Exception:
+        return None
+
+    existing_subscription = await user_feed_subscriptions_collection.find_one(
+        {"_id": subscription_object_id, "user_id": user_id}
+    )
+    if existing_subscription is None:
+        return None
+
+    feed_id = existing_subscription.get("feed_id")
+    if not isinstance(feed_id, ObjectId):
+        return None
+
+    source_doc = await feed_sources_collection.find_one({"_id": feed_id})
+    if source_doc is None:
+        return None
+
+    normalized_url = str(source_doc.get("normalized_url", "")).strip()
+    if normalized_url == "":
+        return None
+
+    source_title = resolve_source_display_title(source_doc)
+    return {
+        "subscription": dict(existing_subscription),
+        "normalized_url": normalized_url,
+        "source_title": source_title,
+        "feed_id": feed_id,
+    }
+
+
 async def update_subscription_details(
     user_id: str,
     subscription_id: str,
@@ -1410,10 +1451,16 @@ async def update_subscription_details(
     source_title: str,
     category_id: str,
     truncate_on_display: bool,
+    *,
+    refresh_source: bool = True,
 ) -> dict[str, Any] | None:
-    """Update an existing user subscription URL and category."""
+    """Update an existing user subscription URL and category.
 
-    if user_feed_subscriptions_collection is None:
+    When *refresh_source* is False, the feed URL is assumed unchanged and the
+    existing source document is reused without requesting an immediate refresh.
+    """
+
+    if user_feed_subscriptions_collection is None or feed_sources_collection is None:
         return None
 
     try:
@@ -1425,13 +1472,27 @@ async def update_subscription_details(
     if category_doc is None or category_doc.id is None:
         return None
 
-    source_doc = await ensure_feed_source(normalized_url, source_title)
-
     existing_subscription = await user_feed_subscriptions_collection.find_one(
         {"_id": subscription_object_id, "user_id": user_id}
     )
     if existing_subscription is None:
         return None
+
+    existing_feed_id = existing_subscription.get("feed_id")
+    source_unchanged = (
+        not refresh_source
+        and isinstance(existing_feed_id, ObjectId)
+    )
+
+    if source_unchanged:
+        source_doc = await feed_sources_collection.find_one({"_id": existing_feed_id})
+        if source_doc is None:
+            return None
+        if str(source_doc.get("normalized_url", "")).strip() != normalized_url:
+            source_doc = await ensure_feed_source(normalized_url, source_title)
+            refresh_source = True
+    else:
+        source_doc = await ensure_feed_source(normalized_url, source_title)
 
     now = utc_now()
     duplicate_subscription = await user_feed_subscriptions_collection.find_one(
@@ -1477,7 +1538,7 @@ async def update_subscription_details(
         )
 
     source_id = source_doc.get("_id")
-    if isinstance(source_id, ObjectId):
+    if refresh_source and isinstance(source_id, ObjectId):
         await request_immediate_feed_refresh({source_id})
 
     if updated_subscription is not None:
