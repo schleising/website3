@@ -15,6 +15,9 @@ from .models import (
     TimeseriesDataResponse,
 )
 
+# Devices whose readings should not be shown on the monitor
+IGNORED_DEVICES = frozenset({"Office Thermometer", "Bedroom Thermometer"})
+
 # Set the base template location
 TEMPLATES = Jinja2Templates("/app/templates")
 
@@ -64,7 +67,7 @@ async def get_data() -> SensorDataPoints:
         latest_data = [
             SensorData.model_validate(item["data"])
             async for item in latest_data_db
-            if item["data"]["device_name"] != "Office Thermometer"
+            if item["data"]["device_name"] not in IGNORED_DEVICES
         ]
 
         # Sort the data by device_name
@@ -100,11 +103,12 @@ async def timeseries() -> TimeseriesDataResponse:
     if sensor_data_collection is None:
         return TimeseriesDataResponse(data=[])
 
-    # Get the device names
-    device_names: list[str] = await sensor_data_collection.distinct("device_name")
-
-    # Remove the Office Thermometer from the list
-    device_names.remove("Office Thermometer")
+    # Get the device names, excluding ignored devices
+    device_names: list[str] = [
+        name
+        for name in await sensor_data_collection.distinct("device_name")
+        if name not in IGNORED_DEVICES
+    ]
 
     logging.debug(f"Device names: {device_names}")
 
