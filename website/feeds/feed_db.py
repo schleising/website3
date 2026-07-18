@@ -1431,11 +1431,12 @@ async def get_subscription_source_metadata(
     if source_doc is None:
         return None
 
-    normalized_url = str(source_doc.get("normalized_url", "")).strip()
+    source = dict(source_doc)
+    normalized_url = str(source.get("normalized_url", "")).strip()
     if normalized_url == "":
         return None
 
-    source_title = resolve_source_display_title(source_doc)
+    source_title = resolve_source_display_title(source)
     return {
         "subscription": dict(existing_subscription),
         "normalized_url": normalized_url,
