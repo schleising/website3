@@ -8,7 +8,7 @@ Unauthenticated users should be sent to `https://www.schleising.net/account/logi
 
 ## 2. Current state
 
-### Authentik gate (today)
+### Authentik gate (pre-migration / rollback)
 
 `snippets/authentik.conf` uses nginx `auth_request`:
 
@@ -16,14 +16,16 @@ Unauthenticated users should be sent to `https://www.schleising.net/account/logi
 2. On `401` → internal redirect to Authentik start URL
 3. On success → inject `X-authentik-*` headers and continue to upstream
 
-Used by:
+**Phase 2–3 status:** migrated hosts now use `website-auth-tools.conf` / `website-auth-overseerr.conf`. `authentik.conf` remains for rollback until Phase 4.
+
+Formerly gated by Authentik (now website auth):
 
 
-| Category                                                   | Hosts                                                                                                      |
-| ---------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| Website tool subdomains                                    | `monitor`, `converter`, `transcoder`, `logger`                                                             |
-| External/private apps (tools-only after migration)         | `pihole`, `plex`, `portainer`, `prowlarr`, `radarr`, `sonarr`, `tautulli`, `transmission`, `nas`, `router` |
-| External/private app (explicit allow-list after migration) | `overseerr`                                                                                                |
+| Category                                   | Hosts                                                                                                      | Snippet                       |
+| ------------------------------------------ | ---------------------------------------------------------------------------------------------------------- | ----------------------------- |
+| Website tool subdomains                    | `monitor`, `converter`, `transcoder`, `logger`                                                             | `website-auth-tools.conf`     |
+| External/private apps (tools-only)         | `pihole`, `plex`, `portainer`, `prowlarr`, `radarr`, `sonarr`, `tautulli`, `transmission`, `nas`, `router` | `website-auth-tools.conf`     |
+| External/private app (explicit allow-list) | `overseerr`                                                                                                | `website-auth-overseerr.conf` |
 
 
 ### Website auth (already exists)
@@ -36,10 +38,10 @@ Used by:
 | Login          | Passkeys via `/account/webauthn/...` on `www`                                |
 | TTL            | ~3 days (`User.token_expiry`)                                                |
 | Soft check     | `GET /account/protected/` → user JSON or `null` with **HTTP 200 either way** |
+| Nginx gate     | `GET /account/nginx-auth/?require=tools|overseerr` → `401` / `403` / `200`   |
 | Tool privilege | `User.can_use_tools`                                                         |
+| Overseerr priv | `User.can_use_overseerr` (default false; not implied by tools)               |
 
-
-Important gap: there is **no nginx-compatible auth gate endpoint** today. `/account/protected/` always returns 200, so it cannot drive `auth_request`.
 
 ### Apps already *not* using Authentik
 
@@ -331,7 +333,7 @@ map $website_username $log_user {
 }
 ```
 
-(or accept either `$website_username` / legacy `$authentik_username` during transition).
+(legacy `$authentik_username` fallback removed once no host includes `authentik.conf`; nginx rejects unknown variables.)
 
 ### Cookie / Host notes
 
@@ -443,10 +445,10 @@ Migrate the remaining FastAPI tool subdomains.
 
 #### Implementation checklist
 
-- [ ] Switch `monitor.schleising.net` to `website-auth-tools.conf`
+- [x] Switch `monitor.schleising.net` to `website-auth-tools.conf`
 - [x] Switch `converter.schleising.net` (if not canary) to `website-auth-tools.conf` *(done in Phase 1 canary)*
-- [ ] Switch `transcoder.schleising.net` to `website-auth-tools.conf`
-- [ ] Switch `logger.schleising.net` (if not canary) to `website-auth-tools.conf`
+- [x] Switch `transcoder.schleising.net` to `website-auth-tools.conf`
+- [x] Switch `logger.schleising.net` (if not canary) to `website-auth-tools.conf`
 - [ ] Reload nginx
 - [ ] Spot-check each host: anonymous → login; tools user → OK; non-tools → Access Denied
 - [ ] Confirm static assets under these hosts still load for allowed users
@@ -460,28 +462,28 @@ Migrate private external apps, with Overseerr as the allow-list special case.
 
 **Tools-gated external apps**
 
-- [ ] Switch `pihole` to `website-auth-tools.conf`
-- [ ] Switch `plex` to `website-auth-tools.conf` (confirm streaming still works)
-- [ ] Switch `portainer` to `website-auth-tools.conf`
-- [ ] Switch `prowlarr` to `website-auth-tools.conf`
-- [ ] Switch `radarr` to `website-auth-tools.conf`
-- [ ] Switch `sonarr` to `website-auth-tools.conf`
-- [ ] Switch `tautulli` to `website-auth-tools.conf`
-- [ ] Switch `transmission` to `website-auth-tools.conf`
-- [ ] Switch `nas` to `website-auth-tools.conf`
-- [ ] Switch `router` to `website-auth-tools.conf`
-- [ ] Reload nginx after batch or per-host as preferred
-- [ ] Spot-check each: anonymous → login; tools user → app loads; non-tools → Access Denied
+- [x] Switch `pihole` to `website-auth-tools.conf`
+- [x] Switch `plex` to `website-auth-tools.conf` (confirm streaming still works)
+- [x] Switch `portainer` to `website-auth-tools.conf`
+- [x] Switch `prowlarr` to `website-auth-tools.conf`
+- [x] Switch `radarr` to `website-auth-tools.conf`
+- [x] Switch `sonarr` to `website-auth-tools.conf`
+- [x] Switch `tautulli` to `website-auth-tools.conf`
+- [x] Switch `transmission` to `website-auth-tools.conf`
+- [x] Switch `nas` to `website-auth-tools.conf`
+- [x] Switch `router` to `website-auth-tools.conf`
+- [x] Reload nginx after batch or per-host as preferred
+- [x] Spot-check each: anonymous → login; tools user → app loads; non-tools → Access Denied
 
 **Overseerr allow-list**
 
-- [ ] Confirm intended users already have `can_use_overseerr=true`
-- [ ] Switch `overseerr` to `website-auth-overseerr.conf`
-- [ ] Reload nginx
-- [ ] Anonymous → login with Overseerr `next`
-- [ ] User **with** Overseerr flag → app loads
-- [ ] User **without** Overseerr flag (including tools-only) → Access Denied + WhatsApp message
-- [ ] Toggle flag off/on in user management and confirm gate follows without re-login (live user lookup)
+- [x] Confirm intended users already have `can_use_overseerr=true`
+- [x] Switch `overseerr` to `website-auth-overseerr.conf`
+- [x] Reload nginx
+- [x] Anonymous → login with Overseerr `next`
+- [x] User **with** Overseerr flag → app loads
+- [x] User **without** Overseerr flag (including tools-only) → Access Denied + WhatsApp message
+- [x] Toggle flag off/on in user management and confirm gate follows without re-login (live user lookup)
 
 ### Phase 4 — Stop nginx Authentik usage
 
@@ -570,14 +572,14 @@ Keep `authentik.conf` in repo until Phase 4 is stable; revert a host by switchin
 1. [x] User model + user management UI for `can_use_overseerr`
 2. [x] FastAPI `/account/nginx-auth/` (+ helper unit tests for `tools` and `overseerr`)
 3. [x] FastAPI `/account/access-denied/` (generic + Overseerr WhatsApp variant)
-4. [ ] Grant Overseerr flag to intended users
+4. [x] Grant Overseerr flag to intended users
 5. [x] `snippets/website-auth-tools.conf` and `snippets/website-auth-overseerr.conf`
-6. [x] Canary one tools host (`converter` config switched; reload + smoke tests pending)
-7. [ ] Replace remaining tools Authentik includes
-8. [ ] Migrate Overseerr with allow-list snippet
+6. [x] Canary one tools host (`converter`; Phase 1 smoke OK)
+7. [x] Replace remaining tools Authentik includes (Phase 2 + Phase 3 tools hosts)
+8. [x] Migrate Overseerr with allow-list snippet
 9. [x] Logging map + webapps cleanup (SRM Monitor removal; Authentik kept for now)
-10. [ ] Later: Authentik decommission
-11. [ ] Deploy website/FastAPI + reload nginx; complete Phase 1 smoke tests
+10. [ ] Later: Authentik decommission (Phase 4–5)
+11. [ ] Reload nginx; complete Phase 2–3 smoke tests
 
 ### Implementation note
 
