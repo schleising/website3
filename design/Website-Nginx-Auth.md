@@ -18,22 +18,26 @@ Unauthenticated users should be sent to `https://www.schleising.net/account/logi
 
 Used by:
 
-| Category | Hosts |
-|----------|--------|
-| Website tool subdomains | `monitor`, `converter`, `transcoder`, `logger` |
-| External/private apps (tools-only after migration) | `pihole`, `plex`, `portainer`, `prowlarr`, `radarr`, `sonarr`, `tautulli`, `transmission`, `nas`, `router` |
-| External/private app (explicit allow-list after migration) | `overseerr` |
+
+| Category                                                   | Hosts                                                                                                      |
+| ---------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| Website tool subdomains                                    | `monitor`, `converter`, `transcoder`, `logger`                                                             |
+| External/private apps (tools-only after migration)         | `pihole`, `plex`, `portainer`, `prowlarr`, `radarr`, `sonarr`, `tautulli`, `transmission`, `nas`, `router` |
+| External/private app (explicit allow-list after migration) | `overseerr`                                                                                                |
+
 
 ### Website auth (already exists)
 
-| Piece | Detail |
-|-------|--------|
-| Session | JWT in HTTP-only cookie `token` |
-| Domain | `.schleising.net` (shared across subdomains) |
-| Login | Passkeys via `/account/webauthn/...` on `www` |
-| TTL | ~3 days (`User.token_expiry`) |
-| Soft check | `GET /account/protected/` → user JSON or `null` with **HTTP 200 either way** |
-| Tool privilege | `User.can_use_tools` |
+
+| Piece          | Detail                                                                       |
+| -------------- | ---------------------------------------------------------------------------- |
+| Session        | JWT in HTTP-only cookie `token`                                              |
+| Domain         | `.schleising.net` (shared across subdomains)                                 |
+| Login          | Passkeys via `/account/webauthn/...` on `www`                                |
+| TTL            | ~3 days (`User.token_expiry`)                                                |
+| Soft check     | `GET /account/protected/` → user JSON or `null` with **HTTP 200 either way** |
+| Tool privilege | `User.can_use_tools`                                                         |
+
 
 Important gap: there is **no nginx-compatible auth gate endpoint** today. `/account/protected/` always returns 200, so it cannot drive `auth_request`.
 
@@ -91,6 +95,8 @@ sequenceDiagram
     end
 ```
 
+
+
 ## 4. Scope
 
 ### In scope
@@ -99,15 +105,15 @@ sequenceDiagram
 2. New user privilege flag `can_use_overseerr` (default `false` if absent)
 3. User management UI checkbox to grant/revoke Overseerr access (parallel to `can_use_tools`)
 4. New nginx snippets replacing `authentik.conf` includes:
-   - tools-only gate (most private apps)
-   - Overseerr gate (`require=overseerr`)
+  - tools-only gate (most private apps)
+  - Overseerr gate (`require=overseerr`)
 5. Access Denied page for authenticated-but-not-allowed users (`403` path)
 6. Login redirect using existing `next` allowlist (`*.schleising.net`)
 7. Access-log username via website identity header instead of `$authentik_username`
 8. Update `/webapps` listing:
-   - show Overseerr only when `can_use_overseerr` is true (or always list but access still gated)
-   - remove SRM Monitor
-   - demote Authentik until retired later
+  - show Overseerr only when `can_use_overseerr` is true (or always list but access still gated)
+  - remove SRM Monitor
+  - demote Authentik until retired later
 9. Stop using Authentik outpost for these nginx hosts (keep Authentik running for now; full retirement later)
 
 ### Out of scope (initially)
@@ -153,28 +159,34 @@ GET /account/nginx-auth/
 
 Behaviour:
 
-| Condition | Response |
-|-----------|----------|
-| Missing/invalid/expired `token` cookie | `401 Unauthorized` (empty body) |
-| Valid session but fails privilege check | `403 Forbidden` |
-| Valid session and privilege satisfied | `200 OK` |
+
+| Condition                               | Response                        |
+| --------------------------------------- | ------------------------------- |
+| Missing/invalid/expired `token` cookie  | `401 Unauthorized` (empty body) |
+| Valid session but fails privilege check | `403 Forbidden`                 |
+| Valid session and privilege satisfied   | `200 OK`                        |
+
 
 Response headers on success (for nginx `auth_request_set` / access logs):
 
-| Header | Source |
-|--------|--------|
-| `X-Website-Username` | JWT `sub` / `user.username` |
-| `X-Website-Can-Use-Tools` | `true` / `false` |
-| `X-Website-Can-Use-Overseerr` | `true` / `false` |
+
+| Header                        | Source                      |
+| ----------------------------- | --------------------------- |
+| `X-Website-Username`          | JWT `sub` / `user.username` |
+| `X-Website-Can-Use-Tools`     | `true` / `false`            |
+| `X-Website-Can-Use-Overseerr` | `true` / `false`            |
+
 
 Upstream apps do **not** need these headers for SSO; they are for nginx logging and optional future use.
 
 ### Privilege modes
 
-| Mode | Use for | Rule |
-|------|---------|------|
-| `tools` | All Authentik-gated private apps except Overseerr | Valid JWT **and** `can_use_tools` |
-| `overseerr` | `overseerr.schleising.net` only | Valid JWT **and** `can_use_overseerr` |
+
+| Mode        | Use for                                           | Rule                                  |
+| ----------- | ------------------------------------------------- | ------------------------------------- |
+| `tools`     | All Authentik-gated private apps except Overseerr | Valid JWT **and** `can_use_tools`     |
+| `overseerr` | `overseerr.schleising.net` only                   | Valid JWT **and** `can_use_overseerr` |
+
 
 Nginx subrequest targets:
 
@@ -202,10 +214,12 @@ Add a dedicated page (recommended: `GET /account/access-denied/`) rather than se
 
 There is already a generic `403.html` (“Access Denied”); reuse its look-and-feel, but serve a route nginx can redirect to with optional app context.
 
-| Case | Redirect target | Page message |
-|------|-----------------|--------------|
-| Tools / other gated apps | `/account/access-denied/` | “You do not have access.” |
-| Overseerr | `/account/access-denied/?app=overseerr` | “You do not have access.” plus instruction to contact Steve via WhatsApp to request access |
+
+| Case                     | Redirect target                         | Page message                                                                               |
+| ------------------------ | --------------------------------------- | ------------------------------------------------------------------------------------------ |
+| Tools / other gated apps | `/account/access-denied/`               | “You do not have access.”                                                                  |
+| Overseerr                | `/account/access-denied/?app=overseerr` | “You do not have access.” plus instruction to contact Steve via WhatsApp to request access |
+
 
 Notes:
 
@@ -290,11 +304,13 @@ location @website_no_access {
 
 ### Include sites
 
-| Host | Include |
-|------|---------|
-| `monitor`, `converter`, `transcoder`, `logger` | `website-auth-tools.conf` |
-| `pihole`, `plex`, `portainer`, `prowlarr`, `radarr`, `sonarr`, `tautulli`, `transmission`, `nas`, `router` | `website-auth-tools.conf` |
-| `overseerr` | `website-auth-overseerr.conf` |
+
+| Host                                                                                                       | Include                       |
+| ---------------------------------------------------------------------------------------------------------- | ----------------------------- |
+| `monitor`, `converter`, `transcoder`, `logger`                                                             | `website-auth-tools.conf`     |
+| `pihole`, `plex`, `portainer`, `prowlarr`, `radarr`, `sonarr`, `tautulli`, `transmission`, `nas`, `router` | `website-auth-tools.conf`     |
+| `overseerr`                                                                                                | `website-auth-overseerr.conf` |
+
 
 Replace each:
 
@@ -345,10 +361,12 @@ Optional improvement: after logout, redirect to `/webapps/` rather than leaving 
 
 **Decision:** `403` → Access Denied page (not login, not `/webapps/`), to avoid loops.
 
-| Gate | Redirect |
-|------|----------|
-| tools host + `can_use_tools == false` | `/account/access-denied/` |
+
+| Gate                                     | Redirect                                |
+| ---------------------------------------- | --------------------------------------- |
+| tools host + `can_use_tools == false`    | `/account/access-denied/`               |
 | Overseerr + `can_use_overseerr == false` | `/account/access-denied/?app=overseerr` |
+
 
 Default copy: **You do not have access.**
 
@@ -356,13 +374,15 @@ Overseerr copy: same baseline, plus ask the logged-in user to contact Steve via 
 
 ## 8. Application tiers after migration
 
-| Tier | Auth | Examples |
-|------|------|----------|
-| Public | None | astronomy, football (mostly), bet |
-| Site login (app-enforced) | FastAPI route checks | feeds |
-| Nginx gate: Overseerr allow-list | `/account/nginx-auth/?require=overseerr` | **Overseerr** (`can_use_overseerr`) |
-| Nginx gate: tools | `/account/nginx-auth/?require=tools` | monitor/logger/… + *arr stack, NAS, router, etc. |
-| Retire | Remove from webapps + infra | SRM Monitor |
+
+| Tier                             | Auth                                     | Examples                                         |
+| -------------------------------- | ---------------------------------------- | ------------------------------------------------ |
+| Public                           | None                                     | astronomy, football (mostly), bet                |
+| Site login (app-enforced)        | FastAPI route checks                     | feeds                                            |
+| Nginx gate: Overseerr allow-list | `/account/nginx-auth/?require=overseerr` | **Overseerr** (`can_use_overseerr`)              |
+| Nginx gate: tools                | `/account/nginx-auth/?require=tools`     | monitor/logger/… + *arr stack, NAS, router, etc. |
+| Retire                           | Remove from webapps + infra              | SRM Monitor                                      |
+
 
 ## 9. Migration plan
 
@@ -372,50 +392,50 @@ Build and deploy the website-side pieces before changing any nginx auth includes
 
 #### Implementation checklist
 
-- [ ] Add `can_use_overseerr: bool = False` to the user model
-- [ ] Persist/load the field so missing MongoDB values are treated as `false`
-- [ ] Add Overseerr checkbox to `/account/users/` (parallel to tools access)
-- [ ] Wire user-update form save/load for `can_use_overseerr`
-- [ ] Optional: users-list badge for Overseerr access
-- [ ] Implement `GET /account/nginx-auth/` with `require=tools|overseerr`
-- [ ] Auth gate reads live user record (not JWT-only claims) for privilege checks
-- [ ] Fail closed on unknown/missing `require` values
-- [ ] Return `401` when unauthenticated; `403` when authenticated but denied
-- [ ] Emit `X-Website-Username` (and optional privilege headers) on `200`
-- [ ] Implement `GET /account/access-denied/`
-- [ ] Generic Access Denied copy: “You do not have access.”
-- [ ] Overseerr variant (`?app=overseerr`) includes WhatsApp contact instructions
-- [ ] Access Denied page does not redirect back into login loops
+- [x] Add `can_use_overseerr: bool = False` to the user model
+- [x] Persist/load the field so missing MongoDB values are treated as `false`
+- [x] Add Overseerr checkbox to `/account/users/` (parallel to tools access)
+- [x] Wire user-update form save/load for `can_use_overseerr`
+- [x] Optional: users-list badge for Overseerr access
+- [x] Implement `GET /account/nginx-auth/` with `require=tools|overseerr`
+- [x] Auth gate reads live user record (not JWT-only claims) for privilege checks
+- [x] Fail closed on unknown/missing `require` values
+- [x] Return `401` when unauthenticated; `403` when authenticated but denied
+- [x] Emit `X-Website-Username` (and optional privilege headers) on `200`
+- [x] Implement `GET /account/access-denied/`
+- [x] Generic Access Denied copy: “You do not have access.”
+- [x] Overseerr variant (`?app=overseerr`) includes WhatsApp contact instructions
+- [x] Access Denied page does not redirect back into login loops
 - [ ] Unit/integration tests for auth gate:
-  - [ ] no cookie → 401
-  - [ ] missing `can_use_overseerr` field → treated as false → 403 for Overseerr
-  - [ ] user without Overseerr flag + `require=overseerr` → 403
-  - [ ] user with Overseerr flag + `require=overseerr` → 200
-  - [ ] non-tools user + `require=tools` → 403
-  - [ ] tools user + `require=tools` → 200
-- [ ] Confirm login `next=` allowlist accepts all gated hosts
-- [ ] Remove SRM Monitor from `/webapps`
-- [ ] Grant `can_use_overseerr` to intended users in production DB
-- [ ] Deploy website/FastAPI changes and verify endpoints on www
+  - [ ] no cookie → 401 *(endpoint HTTP test still pending)*
+  - [x] missing `can_use_overseerr` field → treated as false → 403 for Overseerr *(helper unit tests)*
+  - [x] user without Overseerr flag + `require=overseerr` → 403 *(helper unit tests)*
+  - [x] user with Overseerr flag + `require=overseerr` → 200 *(helper unit tests)*
+  - [x] non-tools user + `require=tools` → 403 *(helper unit tests)*
+  - [x] tools user + `require=tools` → 200 *(helper unit tests)*
+- [x] Confirm login `next=` allowlist accepts all gated hosts *(existing `*.schleising.net` allowlist)*
+- [x] Remove SRM Monitor from `/webapps`
+- [x] Grant `can_use_overseerr` to intended users in production DB
+- [x] Deploy website/FastAPI changes and verify endpoints on www
 
 ### Phase 1 — Shadow / canary
 
-Cut over one low-risk tools subdomain first.
+Cut over one low-risk tools subdomain first. **Canary host: `converter.schleising.net`.**
 
 #### Implementation checklist
 
-- [ ] Add `snippets/website-auth-tools.conf` (and shared common snippet if used)
-- [ ] Add `snippets/website-auth-overseerr.conf` (ready, not necessarily enabled yet)
-- [ ] Update nginx `$log_user` map to prefer `$website_username`
-- [ ] Switch **one** canary host (e.g. `logger` or `converter`) from `authentik.conf` to `website-auth-tools.conf`
-- [ ] Reload nginx
-- [ ] Anonymous visit → login redirect with correct `next`
-- [ ] Tools user login → returns to canary app
-- [ ] Non-tools logged-in user → Access Denied (generic copy)
-- [ ] Logout on www → canary requires login again
-- [ ] Access log shows website username for allowed requests
-- [ ] Confirm Authentik still works on non-migrated hosts
-- [ ] Keep `authentik.conf` available for quick rollback of the canary
+- [x] Add `snippets/website-auth-tools.conf` (and shared common snippet if used)
+- [x] Add `snippets/website-auth-overseerr.conf` (ready, not necessarily enabled yet)
+- [x] Update nginx `$log_user` map to prefer `$website_username`
+- [x] Switch **one** canary host (`converter`) from `authentik.conf` to `website-auth-tools.conf`
+- [x] Reload nginx
+- [x] Anonymous visit → login redirect with correct `next`
+- [x] Tools user login → returns to canary app
+- [x] Non-tools logged-in user → Access Denied (generic copy)
+- [x] Logout on www → canary requires login again
+- [x] Access log shows website username for allowed requests
+- [x] Confirm Authentik still works on non-migrated hosts
+- [x] Keep `authentik.conf` available for quick rollback of the canary
 
 ### Phase 2 — Roll remaining website tool hosts
 
@@ -424,7 +444,7 @@ Migrate the remaining FastAPI tool subdomains.
 #### Implementation checklist
 
 - [ ] Switch `monitor.schleising.net` to `website-auth-tools.conf`
-- [ ] Switch `converter.schleising.net` (if not canary) to `website-auth-tools.conf`
+- [x] Switch `converter.schleising.net` (if not canary) to `website-auth-tools.conf` *(done in Phase 1 canary)*
 - [ ] Switch `transcoder.schleising.net` to `website-auth-tools.conf`
 - [ ] Switch `logger.schleising.net` (if not canary) to `website-auth-tools.conf`
 - [ ] Reload nginx
@@ -504,33 +524,35 @@ Keep `authentik.conf` in repo until Phase 4 is stable; revert a host by switchin
 
 ## 10. Risks and mitigations
 
-| Risk | Mitigation |
-|------|------------|
-| Auth subrequest misses cookies | Explicitly forward `Cookie`; test cross-subdomain |
-| Login loop for denied users | Distinct `403` → Access Denied vs `401` → login |
-| Overseerr open to all logged-in users | Explicit `can_use_overseerr`; default false; fail closed |
-| Existing users missing the new field | Treat absent field as false; grant via user management before cutover |
-| Tools users assume Overseerr access | Keep flags independent; document in UI label |
-| Upstream still has weak/local auth | Nginx gate is perimeter only; keep upstream auth where needed |
-| JWT expiry mid-session | Same 3-day TTL as site; 401 → login with `next` |
-| Plex/large streaming + auth_request | Same as Authentik today; keep buffering settings |
-| Internal endpoint abuse | Endpoint only returns auth status; no secrets; rate-limit optional |
-| Host header confusion | Pin auth subrequest Host to www; document why |
+
+| Risk                                  | Mitigation                                                            |
+| ------------------------------------- | --------------------------------------------------------------------- |
+| Auth subrequest misses cookies        | Explicitly forward `Cookie`; test cross-subdomain                     |
+| Login loop for denied users           | Distinct `403` → Access Denied vs `401` → login                       |
+| Overseerr open to all logged-in users | Explicit `can_use_overseerr`; default false; fail closed              |
+| Existing users missing the new field  | Treat absent field as false; grant via user management before cutover |
+| Tools users assume Overseerr access   | Keep flags independent; document in UI label                          |
+| Upstream still has weak/local auth    | Nginx gate is perimeter only; keep upstream auth where needed         |
+| JWT expiry mid-session                | Same 3-day TTL as site; 401 → login with `next`                       |
+| Plex/large streaming + auth_request   | Same as Authentik today; keep buffering settings                      |
+| Internal endpoint abuse               | Endpoint only returns auth status; no secrets; rate-limit optional    |
+| Host header confusion                 | Pin auth subrequest Host to www; document why                         |
+
 
 ## 11. Testing checklist
 
-- Anonymous visit to tools host → login redirect with correct `next`
-- Login as tools user → return to original deep link
-- Login as non-tools user on tools host → Access Denied (“You do not have access.”), no login loop
-- Anonymous visit to Overseerr → login redirect with Overseerr `next`
-- Login as user **without** `can_use_overseerr` → Access Denied with WhatsApp contact message
-- Login as user **with** `can_use_overseerr` → access granted
-- Tools-only user without Overseerr flag → Overseerr Access Denied (WhatsApp variant)
-- User management: toggle Overseerr checkbox persists and takes effect on next request (or after re-login if JWT omits claims — prefer reading live user record in auth gate)
-- Logout on www → gated hosts require login again
-- Access log shows website username
-- Feeds/football/astronomy/bet unchanged
-- SRM Monitor removed from `/webapps`
+- [ ] Anonymous visit to tools host → login redirect with correct `next`
+- [ ] Login as tools user → return to original deep link
+- [ ] Login as non-tools user on tools host → Access Denied (“You do not have access.”), no login loop
+- [ ] Anonymous visit to Overseerr → login redirect with Overseerr `next`
+- [ ] Login as user **without** `can_use_overseerr` → Access Denied with WhatsApp contact message
+- [ ] Login as user **with** `can_use_overseerr` → access granted
+- [ ] Tools-only user without Overseerr flag → Overseerr Access Denied (WhatsApp variant)
+- [ ] User management: toggle Overseerr checkbox persists and takes effect on next request (or after re-login if JWT omits claims — prefer reading live user record in auth gate)
+- [ ] Logout on www → gated hosts require login again
+- [ ] Access log shows website username
+- [ ] Feeds/football/astronomy/bet unchanged
+- [x] SRM Monitor removed from `/webapps`
 
 ## 12. Resolved decisions
 
@@ -545,16 +567,17 @@ Keep `authentik.conf` in repo until Phase 4 is stable; revert a host by switchin
 
 ## 13. Suggested implementation order
 
-1. User model + user management UI for `can_use_overseerr`
-2. FastAPI `/account/nginx-auth/` (+ tests for `tools` and `overseerr`)
-3. FastAPI `/account/access-denied/` (generic + Overseerr WhatsApp variant)
-4. Grant Overseerr flag to intended users
-5. `snippets/website-auth-tools.conf` and `snippets/website-auth-overseerr.conf`
-6. Canary one tools host
-7. Replace remaining tools Authentik includes
-8. Migrate Overseerr with allow-list snippet
-9. Logging map + webapps cleanup (SRM Monitor removal; Authentik kept for now)
-10. Later: Authentik decommission
+1. [x] User model + user management UI for `can_use_overseerr`
+2. [x] FastAPI `/account/nginx-auth/` (+ helper unit tests for `tools` and `overseerr`)
+3. [x] FastAPI `/account/access-denied/` (generic + Overseerr WhatsApp variant)
+4. [ ] Grant Overseerr flag to intended users
+5. [x] `snippets/website-auth-tools.conf` and `snippets/website-auth-overseerr.conf`
+6. [x] Canary one tools host (`converter` config switched; reload + smoke tests pending)
+7. [ ] Replace remaining tools Authentik includes
+8. [ ] Migrate Overseerr with allow-list snippet
+9. [x] Logging map + webapps cleanup (SRM Monitor removal; Authentik kept for now)
+10. [ ] Later: Authentik decommission
+11. [ ] Deploy website/FastAPI + reload nginx; complete Phase 1 smoke tests
 
 ### Implementation note
 
