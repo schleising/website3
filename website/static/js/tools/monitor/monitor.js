@@ -15,6 +15,7 @@ var transformationMatrices = new Map();
 /** @type {'daily' | 'weekly'} */
 let chartPeriod = 'daily';
 let showPreviousPeriod = false;
+let smoothCharts = false;
 
 /** @type {string[]} */
 let chartOrder = [];
@@ -333,17 +334,74 @@ function alignPreviousPeriodData(data, period) {
 }
 
 /**
+ * @returns {number}
+ */
+function getSmoothWindowMs() {
+    // Centered average: ~45 minutes for daily, ~3 hours for weekly.
+    return chartPeriod === 'weekly' ? 3 * 60 * 60 * 1000 : 45 * 60 * 1000;
+}
+
+/**
+ * Centered moving average over a time window. Assumes data is sorted by timestamp.
+ *
+ * @param {Array<{timestamp: string, temp: number, humidity: number}>} data
+ * @param {number} windowMs
+ * @returns {Array<{timestamp: string, temp: number, humidity: number}>}
+ */
+function smoothTemperatureSeries(data, windowMs) {
+    if (data.length < 2 || windowMs <= 0) {
+        return data;
+    }
+
+    const times = data.map(point => new Date(point.timestamp).getTime());
+    const halfWindow = windowMs / 2;
+    let left = 0;
+    let right = 0;
+    let sum = 0;
+
+    return data.map((point, index) => {
+        const center = times[index];
+        const windowStart = center - halfWindow;
+        const windowEnd = center + halfWindow;
+
+        while (right < data.length && times[right] <= windowEnd) {
+            sum += data[right].temp;
+            right += 1;
+        }
+
+        while (left < right && times[left] < windowStart) {
+            sum -= data[left].temp;
+            left += 1;
+        }
+
+        const count = right - left;
+        return {
+            ...point,
+            temp: count > 0 ? sum / count : point.temp,
+        };
+    });
+}
+
+/**
  * @param {Array<{timestamp: string, temp: number, humidity: number}>} data
  * @returns {{current: Array<{timestamp: string, temp: number, humidity: number}>, overlay: Array<{timestamp: string, temp: number, humidity: number}> | null, bounds: {minTimestamp: number, maxTimestamp: number}}}
  */
 function getChartSeries(data) {
-    const current = filterDataForPeriod(data, chartPeriod, 0);
+    let current = filterDataForPeriod(data, chartPeriod, 0);
     const bounds = getPeriodBounds(chartPeriod, 0);
     let overlay = null;
 
     if (showPreviousPeriod) {
         const previous = filterDataForPeriod(data, chartPeriod, 1);
         overlay = alignPreviousPeriodData(previous, chartPeriod);
+    }
+
+    if (smoothCharts) {
+        const windowMs = getSmoothWindowMs();
+        current = smoothTemperatureSeries(current, windowMs);
+        if (overlay != null) {
+            overlay = smoothTemperatureSeries(overlay, windowMs);
+        }
     }
 
     return {
@@ -370,6 +428,9 @@ function loadChartSettings() {
         if (typeof settings.showPreviousPeriod === 'boolean') {
             showPreviousPeriod = settings.showPreviousPeriod;
         }
+        if (typeof settings.smoothCharts === 'boolean') {
+            smoothCharts = settings.smoothCharts;
+        }
         if (Array.isArray(settings.chartOrder)) {
             chartOrder = settings.chartOrder.filter(deviceId => typeof deviceId === 'string');
         }
@@ -391,6 +452,7 @@ function persistChartSettings() {
         localStorage.setItem(chartSettingsStorageKey, JSON.stringify({
             period: chartPeriod,
             showPreviousPeriod,
+            smoothCharts,
             chartOrder: getCurrentChartOrder(),
         }));
     } catch (error) {
@@ -561,6 +623,11 @@ function syncChartControls() {
     if (overlayToggle != null) {
         overlayToggle.checked = showPreviousPeriod;
     }
+
+    const smoothToggle = document.getElementById('smooth-toggle');
+    if (smoothToggle != null) {
+        smoothToggle.checked = smoothCharts;
+    }
 }
 
 function initializeChartControls() {
@@ -589,6 +656,19 @@ function initializeChartControls() {
     if (overlayToggle != null) {
         overlayToggle.addEventListener('change', () => {
             showPreviousPeriod = overlayToggle.checked;
+            persistChartSettings();
+
+            if (deviceData != null) {
+                drawCharts();
+                refreshAllTemperatureReadouts();
+            }
+        });
+    }
+
+    const smoothToggle = document.getElementById('smooth-toggle');
+    if (smoothToggle != null) {
+        smoothToggle.addEventListener('change', () => {
+            smoothCharts = smoothToggle.checked;
             persistChartSettings();
 
             if (deviceData != null) {
