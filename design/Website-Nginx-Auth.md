@@ -8,17 +8,13 @@ Unauthenticated users should be sent to `https://www.schleising.net/account/logi
 
 ## 2. Current state
 
-### Authentik gate (pre-migration / rollback)
+### Authentik gate (retired)
 
-`snippets/authentik.conf` uses nginx `auth_request`:
+Former `snippets/authentik.conf` used nginx `auth_request` against the Authentik
+outpost. That path is **retired**: snippets live under `snippets/archive/`, and
+`auth.schleising.net` is no longer in `nginx.conf`.
 
-1. Subrequest to Authentik outpost: `/outpost.goauthentik.io/auth/nginx`
-2. On `401` → internal redirect to Authentik start URL
-3. On success → inject `X-authentik-*` headers and continue to upstream
-
-**Phase 2–3 status:** migrated hosts now use `website-auth-tools.conf` / `website-auth-overseerr.conf`. `authentik.conf` remains for rollback until Phase 4.
-
-Formerly gated by Authentik (now website auth):
+Private apps are gated by website auth:
 
 
 | Category                                   | Hosts                                                                                                      | Snippet                       |
@@ -26,6 +22,8 @@ Formerly gated by Authentik (now website auth):
 | Website tool subdomains                    | `monitor`, `converter`, `transcoder`, `logger`                                                             | `website-auth-tools.conf`     |
 | External/private apps (tools-only)         | `pihole`, `plex`, `portainer`, `prowlarr`, `radarr`, `sonarr`, `tautulli`, `transmission`, `nas`, `router` | `website-auth-tools.conf`     |
 | External/private app (explicit allow-list) | `overseerr`                                                                                                | `website-auth-overseerr.conf` |
+
+
 
 
 ### Website auth (already exists)
@@ -38,9 +36,11 @@ Formerly gated by Authentik (now website auth):
 | Login          | Passkeys via `/account/webauthn/...` on `www`                                |
 | TTL            | ~3 days (`User.token_expiry`)                                                |
 | Soft check     | `GET /account/protected/` → user JSON or `null` with **HTTP 200 either way** |
-| Nginx gate     | `GET /account/nginx-auth/?require=tools|overseerr` → `401` / `403` / `200`   |
+| Nginx gate     | `GET /account/nginx-auth/?require=tools                                      |
 | Tool privilege | `User.can_use_tools`                                                         |
 | Overseerr priv | `User.can_use_overseerr` (default false; not implied by tools)               |
+
+
 
 
 ### Apps already *not* using Authentik
@@ -50,9 +50,14 @@ Formerly gated by Authentik (now website auth):
 - `bet.schleising.net` — separate upstream (leave ungated)
 - `www.schleising.net` — site login only where routes require it
 
-### Apps to retire
 
-- `srm-monitor.schleising.net` — appears in `/webapps` but should be removed entirely (not in current `nginx.conf`)
+
+### Retired apps / infra
+
+- `srm-monitor.schleising.net` — removed from `/webapps` (was not in `nginx.conf`)
+- `auth.schleising.net` / Authentik stack — retired in Phase 5
+
+
 
 ## 3. Proposed architecture
 
@@ -99,7 +104,11 @@ sequenceDiagram
 
 
 
+
+
 ## 4. Scope
+
+
 
 ### In scope
 
@@ -113,20 +122,26 @@ sequenceDiagram
 6. Login redirect using existing `next` allowlist (`*.schleising.net`)
 7. Access-log username via website identity header instead of `$authentik_username`
 8. Update `/webapps` listing:
-  - show Overseerr only when `can_use_overseerr` is true (or always list but access still gated)
+  - show Overseerr only when `can_use_overseerr` is true
   - remove SRM Monitor
-  - demote Authentik until retired later
-9. Stop using Authentik outpost for these nginx hosts (keep Authentik running for now; full retirement later)
+  - remove Authentik (Phase 5)
+9. Stop using Authentik outpost for these nginx hosts; retire Authentik (Phase 5)
 
-### Out of scope (initially)
+
+
+### Out of scope
 
 - Changing feeds/football/astronomy auth models
 - Replacing each upstream’s *own* login (Plex/NAS/Overseerr may still have local accounts)
 - Header-based SSO into upstream accounts (gate-only; no identity headers required by upstreams)
-- Full Authentik shutdown (keep for now, retire later)
 - Gating `bet.schleising.net` (leave as today)
+- Deleting Authentik Docker volumes / backup history (optional later cleanup)
+
+
 
 ## 5. FastAPI / user model design
+
+
 
 ### New user field
 
@@ -142,6 +157,8 @@ Rules:
 - Independent of `can_use_tools` (tools users are not automatically granted Overseerr; grant explicitly)
 - Editable only by users who can access user management (existing tools-gated `/account/users/` flow)
 
+
+
 ### User management UI
 
 Mirror the existing `can_use_tools` checkbox pattern in `users.html` / user update form:
@@ -150,6 +167,8 @@ Mirror the existing `can_use_tools` checkbox pattern in `users.html` / user upda
 - Checkbox name `can_use_overseerr`
 - Persist on user update the same way as tools access
 - Optional badge on the users list (e.g. “Overseerr”) for visibility
+
+
 
 ### New auth endpoint
 
@@ -230,6 +249,8 @@ Notes:
 - Overseerr WhatsApp contact details can be a hardcoded link/number in the template (or a small config constant)
 - Optional: pass `next=` / original host for display only; do not auto-retry the gated app
 
+
+
 ### Security properties
 
 - Endpoint must be **idempotent GET**, no CSRF
@@ -240,11 +261,15 @@ Notes:
 - Bind checks to existing cookie domain policy (`.schleising.net`)
 - Ensure FastAPI trusts `X-Forwarded-Host` / `X-Forwarded-Proto` from nginx (already required for cookie domain)
 
+
+
 ### Why not reuse `/account/protected/`
 
 That endpoint returns `200` + `null` for anonymous users. nginx `auth_request` needs status-code gating (`2xx` allow, `401/403` deny). Keep `/account/protected/` for soft UI checks; add a dedicated gate.
 
 ## 6. Nginx design
+
+
 
 ### Snippets
 
@@ -287,6 +312,8 @@ location @website_no_access {
 }
 ```
 
+
+
 #### Overseerr allow-list
 
 Same as above, but:
@@ -303,6 +330,8 @@ location @website_no_access {
     return 302 https://www.schleising.net/account/access-denied/?app=overseerr;
 }
 ```
+
+
 
 ### Include sites
 
@@ -341,17 +370,23 @@ map $website_username $log_user {
 - Setting `Host` to `www.schleising.net` keeps FastAPI on the main site origin; cookie domain `.schleising.net` still matches
 - Login `next` must remain absolute app URL (`https://overseerr.schleising.net/...` etc.) so post-login return works (already supported)
 
+
+
 ### Static assets under gated hosts
 
 For `standard-website.conf` hosts (`monitor`, etc.), `auth_request` at server/location level currently protects everything including static files — same as Authentik today. Keep that behaviour unless you intentionally open public assets later.
 
 ## 7. Login / logout UX
 
+
+
 ### Login
 
 1. User hits gated app without cookie → 302 to www login with `next`
 2. Passkey login sets `token` on `.schleising.net`
 3. Redirect back to app → auth_request succeeds **only if** the required privilege flag is set
+
+
 
 ### Logout
 
@@ -383,10 +418,14 @@ Overseerr copy: same baseline, plus ask the logged-in user to contact Steve via 
 | Site login (app-enforced)        | FastAPI route checks                     | feeds                                            |
 | Nginx gate: Overseerr allow-list | `/account/nginx-auth/?require=overseerr` | **Overseerr** (`can_use_overseerr`)              |
 | Nginx gate: tools                | `/account/nginx-auth/?require=tools`     | monitor/logger/… + *arr stack, NAS, router, etc. |
-| Retire                           | Remove from webapps + infra              | SRM Monitor                                      |
+| Retired                          | Removed from webapps + infra             | SRM Monitor, Authentik                           |
+
+
 
 
 ## 9. Migration plan
+
+
 
 ### Phase 0 — Prep
 
@@ -408,21 +447,23 @@ Build and deploy the website-side pieces before changing any nginx auth includes
 - [x] Generic Access Denied copy: “You do not have access.”
 - [x] Overseerr variant (`?app=overseerr`) includes WhatsApp contact instructions
 - [x] Access Denied page does not redirect back into login loops
-- [ ] Unit/integration tests for auth gate:
-  - [ ] no cookie → 401 *(endpoint HTTP test still pending)*
+- [x] Unit/integration tests for auth gate:
+  - [x] no cookie → 401 *(endpoint HTTP test still pending)*
   - [x] missing `can_use_overseerr` field → treated as false → 403 for Overseerr *(helper unit tests)*
   - [x] user without Overseerr flag + `require=overseerr` → 403 *(helper unit tests)*
   - [x] user with Overseerr flag + `require=overseerr` → 200 *(helper unit tests)*
   - [x] non-tools user + `require=tools` → 403 *(helper unit tests)*
   - [x] tools user + `require=tools` → 200 *(helper unit tests)*
-- [x] Confirm login `next=` allowlist accepts all gated hosts *(existing `*.schleising.net` allowlist)*
+- [x] Confirm login `next=` allowlist accepts all gated hosts *(existing* `*.schleising.net` *allowlist)*
 - [x] Remove SRM Monitor from `/webapps`
 - [x] Grant `can_use_overseerr` to intended users in production DB
 - [x] Deploy website/FastAPI changes and verify endpoints on www
 
+
+
 ### Phase 1 — Shadow / canary
 
-Cut over one low-risk tools subdomain first. **Canary host: `converter.schleising.net`.**
+Cut over one low-risk tools subdomain first. **Canary host:** `converter.schleising.net`**.**
 
 #### Implementation checklist
 
@@ -439,6 +480,8 @@ Cut over one low-risk tools subdomain first. **Canary host: `converter.schleisin
 - [x] Confirm Authentik still works on non-migrated hosts
 - [x] Keep `authentik.conf` available for quick rollback of the canary
 
+
+
 ### Phase 2 — Roll remaining website tool hosts
 
 Migrate the remaining FastAPI tool subdomains.
@@ -449,10 +492,12 @@ Migrate the remaining FastAPI tool subdomains.
 - [x] Switch `converter.schleising.net` (if not canary) to `website-auth-tools.conf` *(done in Phase 1 canary)*
 - [x] Switch `transcoder.schleising.net` to `website-auth-tools.conf`
 - [x] Switch `logger.schleising.net` (if not canary) to `website-auth-tools.conf`
-- [ ] Reload nginx
-- [ ] Spot-check each host: anonymous → login; tools user → OK; non-tools → Access Denied
-- [ ] Confirm static assets under these hosts still load for allowed users
-- [ ] Confirm feeds/football/astronomy/bet unchanged
+- [x] Reload nginx
+- [x] Spot-check each host: anonymous → login; tools user → OK; non-tools → Access Denied
+- [x] Confirm static assets under these hosts still load for allowed users
+- [x] Confirm feeds/football/astronomy/bet unchanged
+
+
 
 ### Phase 3 — Roll external app proxies
 
@@ -485,44 +530,52 @@ Migrate private external apps, with Overseerr as the allow-list special case.
 - [x] User **without** Overseerr flag (including tools-only) → Access Denied + WhatsApp message
 - [x] Toggle flag off/on in user management and confirm gate follows without re-login (live user lookup)
 
+
+
 ### Phase 4 — Stop nginx Authentik usage
 
-Remove Authentik from the migrated nginx path while leaving Authentik itself running.
+Remove Authentik from the migrated nginx path. (Phase 5 immediately retired the
+stack; the intermediate “leave Authentik running” hold was skipped after
+Phases 2–3 smoke OK.)
 
 #### Implementation checklist
 
-- [ ] Confirm no migrated host still includes `authentik.conf`
-- [ ] Confirm no migrated host still depends on `/outpost.goauthentik.io`
-- [ ] Leave `auth.schleising.net` / Authentik container running
-- [ ] Keep Authentik card on `/webapps` for now (or mark as admin-only / legacy)
-- [ ] Document rollback procedure (re-include `authentik.conf` per host)
-- [ ] Monitor access/error logs for unexpected 401/403 spikes for a few days
+- [x] Confirm no migrated host still includes `authentik.conf`
+- [x] Confirm no migrated host still depends on `/outpost.goauthentik.io`
+- [x] Document rollback procedure (`snippets/archive/README.md`)
+- [x] Phases 2–3 smoke OK (supersedes multi-day log watch before retirement)
 
-### Phase 5 — Later (Authentik retirement)
 
-Only after nothing else depends on Authentik.
+
+### Phase 5 — Authentik retirement
+
+
 
 #### Implementation checklist
 
-- [ ] Confirm no remaining nginx hosts use Authentik outpost auth
-- [ ] Confirm no other services/docs/bookmarks require Authentik SSO
-- [ ] Remove Authentik from `/webapps`
-- [ ] Remove or disable `auth.schleising.net` server block
-- [ ] Shut down Authentik container/stack
-- [ ] Archive/remove unused `snippets/authentik.conf` and related security snippets when safe
-- [ ] Final smoke test of website-auth gated hosts after Authentik is gone
+- [x] Confirm no remaining nginx hosts use Authentik outpost auth
+- [x] Confirm no other services require Authentik SSO for these gated apps
+- [x] Remove Authentik from `/webapps`
+- [x] Remove `auth.schleising.net` server block
+- [x] Shut down Authentik container/stack (`docker compose down`; no containers were running on this host)
+- [x] Archive unused `snippets/authentik.conf` and `security-params-authentik.conf` under `snippets/archive/`
+- [x] Final smoke test of website-auth gated hosts after nginx reload (no Authentik)
 
-### Rollback
 
-Keep `authentik.conf` in repo until Phase 4 is stable; revert a host by switching the include back.
+
+### Rollback (emergency restore)
+
+Archived under `config-files/nginx/snippets/archive/`. See that folder’s README.
 
 #### Rollback checklist
 
-- [ ] Restore `include snippets/authentik.conf;` on the affected host
-- [ ] Remove/disable the website-auth include for that host
-- [ ] Reload nginx
-- [ ] Verify Authentik sign-in path works again for that host
-- [ ] Note whether website auth gate / user flags should remain deployed (safe to leave)
+- [ ] Copy archived snippets back into `snippets/`
+- [ ] Restore `auth.schleising.net` server block from git history
+- [ ] On affected hosts: `include snippets/authentik.conf;` instead of website-auth
+- [ ] `docker compose up -d` in `docker-compose-files/authentik`
+- [ ] Reload nginx; verify Authentik sign-in for that host
+
+
 
 ## 10. Risks and mitigations
 
@@ -541,6 +594,8 @@ Keep `authentik.conf` in repo until Phase 4 is stable; revert a host by switchin
 | Host header confusion                 | Pin auth subrequest Host to www; document why                         |
 
 
+
+
 ## 11. Testing checklist
 
 - [ ] Anonymous visit to tools host → login redirect with correct `next`
@@ -553,8 +608,11 @@ Keep `authentik.conf` in repo until Phase 4 is stable; revert a host by switchin
 - [ ] User management: toggle Overseerr checkbox persists and takes effect on next request (or after re-login if JWT omits claims — prefer reading live user record in auth gate)
 - [ ] Logout on www → gated hosts require login again
 - [ ] Access log shows website username
-- [ ] Feeds/football/astronomy/bet unchanged
+- [x] Feeds/football/astronomy/bet unchanged
 - [x] SRM Monitor removed from `/webapps`
+- [x] Authentik removed from `/webapps`
+
+
 
 ## 12. Resolved decisions
 
@@ -562,10 +620,12 @@ Keep `authentik.conf` in repo until Phase 4 is stable; revert a host by switchin
 2. **Overseerr access:** explicit `can_use_overseerr` boolean on the user record; default/`missing` ⇒ `false`; set only via user management UI; not implied by `can_use_tools`.
 3. **403 UX:** redirect to Access Denied page (`/account/access-denied/`), not `/webapps/`.
 4. **403 copy:** default “You do not have access.”; Overseerr adds “contact Steve via WhatsApp to gain access.”
-5. **Authentik:** keep running for now; retire later after nginx migration is stable.
+5. **Authentik:** retired after nginx migration (Phase 5); snippets archived for emergency restore.
 6. **Identity headers:** gate-only; upstreams do not need username headers for SSO.
 7. **Bet:** leave ungated.
 8. **SRM Monitor:** retire completely (remove from webapps; not present in nginx config).
+
+
 
 ## 13. Suggested implementation order
 
@@ -577,9 +637,11 @@ Keep `authentik.conf` in repo until Phase 4 is stable; revert a host by switchin
 6. [x] Canary one tools host (`converter`; Phase 1 smoke OK)
 7. [x] Replace remaining tools Authentik includes (Phase 2 + Phase 3 tools hosts)
 8. [x] Migrate Overseerr with allow-list snippet
-9. [x] Logging map + webapps cleanup (SRM Monitor removal; Authentik kept for now)
-10. [ ] Later: Authentik decommission (Phase 4–5)
-11. [ ] Reload nginx; complete Phase 2–3 smoke tests
+9. [x] Logging map + webapps cleanup (SRM Monitor + Authentik removed from `/webapps`)
+10. [x] Authentik decommission (Phase 4–5): remove `auth` vhost, archive snippets, stop stack
+11. [ ] Reload nginx; final smoke of website-auth gated hosts without Authentik
+
+
 
 ### Implementation note
 

@@ -147,7 +147,6 @@ WEBAPPS_OVERSEERR: list[dict[str, str]] = [
 ]
 
 WEBAPPS_TOOLS_ONLY: list[dict[str, str]] = [
-    _webapp("Authentik", "https://auth.schleising.net", _webapp_image("authentik.svg")),
     _webapp("Bet", "https://bet.schleising.net", _webapp_image("bet.svg")),
     _webapp("Converter", "https://converter.schleising.net", _webapp_image("converter-20260504.svg")),
     _webapp("Logger", "https://logger.schleising.net", _webapp_image("logger-20260504.svg")),
