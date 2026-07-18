@@ -10,7 +10,7 @@
   <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#182230">
   <link type="text/css" rel="stylesheet" href="/css/tools/fonts.css?v1.1.0" />
   <link type="text/css" rel="stylesheet" href="/css/tools/monitor/reset.css?v1.1.0" />
-  <link type="text/css" rel="stylesheet" href="/css/tools/monitor/monitor.css?v1.4.4" />
+  <link type="text/css" rel="stylesheet" href="/css/tools/monitor/monitor.css?v1.4.5" />
   <script defer src="/js/tools/monitor/scope.js?v1.1.0"></script>
   <script defer src="/js/tools/monitor/monitor.js?v1.4.3"></script>
   <script defer src="/js/tools/monitor/theme-toggle.js?v1.1.0"></script>
@@ -64,18 +64,20 @@
       {% for data in sensor_data.data %}
       <div class="data-container" id="data-container-{{ data.device_id }}">
         <div class="data">
-          <button type="button" class="chart-drag-handle" aria-label="Drag to reorder chart" title="Drag to reorder">
-            <svg viewBox="0 0 16 16" focusable="false" aria-hidden="true">
-              <circle cx="5" cy="3.5" r="1.2"></circle>
-              <circle cx="11" cy="3.5" r="1.2"></circle>
-              <circle cx="5" cy="8" r="1.2"></circle>
-              <circle cx="11" cy="8" r="1.2"></circle>
-              <circle cx="5" cy="12.5" r="1.2"></circle>
-              <circle cx="11" cy="12.5" r="1.2"></circle>
-            </svg>
-          </button>
           <p class="monitor-title">Device:</p>
-          <p class="monitor-data" id="device-{{ data.device_id }}"></p>
+          <div class="device-row">
+            <p class="monitor-data" id="device-{{ data.device_id }}"></p>
+            <button type="button" class="chart-drag-handle" aria-label="Drag to reorder chart" title="Drag to reorder">
+              <svg viewBox="0 0 16 16" focusable="false" aria-hidden="true">
+                <circle cx="5" cy="3.5" r="1.2"></circle>
+                <circle cx="11" cy="3.5" r="1.2"></circle>
+                <circle cx="5" cy="8" r="1.2"></circle>
+                <circle cx="11" cy="8" r="1.2"></circle>
+                <circle cx="5" cy="12.5" r="1.2"></circle>
+                <circle cx="11" cy="12.5" r="1.2"></circle>
+              </svg>
+            </button>
+          </div>
           <p class="monitor-title">Time:</p>
           <p class="monitor-data" id="time-{{ data.device_id }}"></p>
           <p class="monitor-title">Status:</p>
