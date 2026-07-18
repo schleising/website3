@@ -25,6 +25,7 @@ class User(BaseModel):
     last_name: str
     disabled: bool
     can_use_tools: bool = False
+    can_use_overseerr: bool = False
     token_expiry: Optional[int] = 60 * 60 * 24 * 3
     user_handle_b64url: Optional[str] = None
     passkey_credentials: list[PasskeyCredential] = Field(default_factory=list)

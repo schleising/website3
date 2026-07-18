@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block title %}<title>Access Denied</title>{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="/css/error-pages.css?v1.0.0">
+{% endblock %}
+
+{% set render_right_sidebar = false %}
+
+{% block header %}
+<h3 class="header-text no-margin">Access Denied</h3>
+{% endblock %}
+
+{% block content %}
+<section class="error-page" aria-label="Access denied page">
+  <article class="site-card error-hero-card">
+    <p class="error-code-label">403</p>
+    <h1 class="error-title">You do not have access.</h1>
+    {% if is_overseerr %}
+    <p class="error-message">
+      Overseerr is limited to accounts that have been explicitly granted access.
+      {% if whatsapp_url %}
+      To request access, contact Steve on
+      <a href="{{ whatsapp_url }}" target="_blank" rel="noopener noreferrer">WhatsApp</a>.
+      {% else %}
+      To request access, contact Steve via WhatsApp.
+      {% endif %}
+    </p>
+    {% else %}
+    <p class="error-message">
+      Your account is signed in, but it does not have permission to open this application.
+    </p>
+    {% endif %}
+    <div class="error-actions">
+      <a class="btn btn-primary" href="/">Return Home</a>
+      {% if request.state.user != None %}
+      <a class="btn btn-outline-primary error-secondary-action" href="/webapps/">Browse Webapps</a>
+      {% else %}
+      <a class="btn btn-outline-primary error-secondary-action" href="/account/login/">Login</a>
+      {% endif %}
+    </div>
+  </article>
+</section>
+{% endblock %}
+
+{% block footer %}
+&copy; 2026 Steve's Website. All rights reserved.
+{% endblock %}

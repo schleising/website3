@@ -4,6 +4,7 @@ import logging
 from collections import deque
 from datetime import UTC, datetime, timedelta
 from hashlib import sha256
+import os
 from secrets import token_bytes, token_urlsafe
 from time import time
 from urllib.parse import urlencode, urlparse
@@ -39,6 +40,12 @@ from .passkeys import (
     webauthn_context_for_request,
 )
 from .user_model import PasskeyCredential, User, UserInDB
+from .nginx_auth import (
+    NGINX_AUTH_REQUIRE_VALUES,
+    nginx_auth_requirement_allowed,
+    user_can_use_overseerr,
+    user_can_use_tools,
+)
 from ..utils.user_management_access import require_user_management_access
 from ..utils.cookie_policy import cookie_domain_for_request
 
@@ -48,6 +55,8 @@ TEMPLATES = Jinja2Templates("/app/templates")
 # Create an account router
 account_router = APIRouter(prefix="/account")
 logger = logging.getLogger(__name__)
+
+OVERSEERR_WHATSAPP_URL = os.getenv("OVERSEERR_WHATSAPP_URL", "").strip()
 
 SIGNUP_WINDOW_SECONDS = 15 * 60
 SIGNUP_MAX_ATTEMPTS_PER_WINDOW = 6
@@ -276,6 +285,7 @@ def _build_user_management_row(
         "full_name": full_name,
         "disabled": user.disabled,
         "can_use_tools": user.can_use_tools,
+        "can_use_overseerr": user_can_use_overseerr(user),
         "token_expiry_label": _format_user_management_token_expiry(user.token_expiry),
         "auth_mode_label": _build_user_management_auth_label(user),
         "passkey_count": len(active_passkeys),
@@ -289,7 +299,8 @@ def _build_user_management_row(
 def _build_user_management_summary(users: list[UserInDB]) -> dict[str, int]:
     return {
         "total_users": len(users),
-        "tools_users": len([user for user in users if user.can_use_tools]),
+        "tools_users": len([user for user in users if user_can_use_tools(user)]),
+        "overseerr_users": len([user for user in users if user_can_use_overseerr(user)]),
         "disabled_users": len([user for user in users if user.disabled]),
         "legacy_password_users": len(
             [user for user in users if _user_has_legacy_password(user)]
@@ -1848,6 +1859,7 @@ async def update_managed_user(
     first_name: str = Form(...),
     last_name: str = Form(...),
     can_use_tools: str | None = Form(default=None),
+    can_use_overseerr: str | None = Form(default=None),
     disabled: str | None = Form(default=None),
     _: None = Depends(validate_csrf),
 ):
@@ -1882,6 +1894,7 @@ async def update_managed_user(
                 "first_name": first_name_value,
                 "last_name": last_name_value,
                 "can_use_tools": can_use_tools is not None,
+                "can_use_overseerr": can_use_overseerr is not None,
                 "disabled": disabled is not None,
             }
         },
@@ -1955,6 +1968,62 @@ async def create_success(request: Request):
     # Render the login success page
     return TEMPLATES.TemplateResponse(
         request, "account/create_success.html", {"request": request}
+    )
+
+
+@account_router.get("/nginx-auth")
+@account_router.get("/nginx-auth/")
+async def nginx_auth_gate(
+    request: Request,
+    require: str = "tools",
+) -> Response:
+    """Authorize nginx auth_request subrequests for gated webapps."""
+
+    session_user = getattr(request.state, "user", None)
+    if not isinstance(session_user, User):
+        return Response(status_code=status.HTTP_401_UNAUTHORIZED)
+
+    live_user = await get_user(session_user.username)
+    if live_user is None or live_user.disabled:
+        return Response(status_code=status.HTTP_401_UNAUTHORIZED)
+
+    normalized_require = str(require or "").strip().lower()
+    if normalized_require not in NGINX_AUTH_REQUIRE_VALUES:
+        return Response(status_code=status.HTTP_403_FORBIDDEN)
+
+    if not nginx_auth_requirement_allowed(live_user, normalized_require):
+        return Response(status_code=status.HTTP_403_FORBIDDEN)
+
+    headers = {
+        "X-Website-Username": live_user.username,
+        "X-Website-Can-Use-Tools": "true" if user_can_use_tools(live_user) else "false",
+        "X-Website-Can-Use-Overseerr": (
+            "true" if user_can_use_overseerr(live_user) else "false"
+        ),
+    }
+    return Response(status_code=status.HTTP_200_OK, headers=headers)
+
+
+@account_router.get("/access-denied", response_class=HTMLResponse)
+@account_router.get("/access-denied/", response_class=HTMLResponse)
+async def access_denied_page(
+    request: Request,
+    app: str | None = None,
+) -> HTMLResponse:
+    """Show Access Denied for authenticated users blocked by an nginx auth gate."""
+
+    normalized_app = str(app or "").strip().lower()
+    is_overseerr = normalized_app == "overseerr"
+
+    return TEMPLATES.TemplateResponse(
+        request,
+        "account/access_denied.html",
+        {
+            "request": request,
+            "is_overseerr": is_overseerr,
+            "whatsapp_url": OVERSEERR_WHATSAPP_URL if is_overseerr else "",
+        },
+        status_code=status.HTTP_403_FORBIDDEN,
     )
 
 

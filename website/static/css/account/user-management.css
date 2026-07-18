@@ -169,6 +169,12 @@
     color: #204f84;
 }
 
+.user-badge.is-overseerr {
+    border-color: rgba(92, 64, 148, 0.24);
+    background: rgba(246, 241, 252, 0.98);
+    color: #5b3d8a;
+}
+
 .user-badge.is-standard {
     color: var(--text-soft);
 }

@@ -48,6 +48,14 @@
   ) }}
   {% endif %}
 
+  {% if can_use_overseerr %}
+  {{ render_webapp_group(
+    "Available With Overseerr Access",
+    "Requires an account explicitly granted Overseerr access.",
+    overseerr_webapps
+  ) }}
+  {% endif %}
+
   {% if can_use_tools %}
   {{ render_webapp_group(
     "Available If can_use_tools = True",

@@ -142,6 +142,10 @@ WEBAPPS_AUTHENTICATED: list[dict[str, str]] = [
     _webapp("Feeds", "https://feeds.schleising.net", _webapp_image("feeds.svg")),
 ]
 
+WEBAPPS_OVERSEERR: list[dict[str, str]] = [
+    _webapp("Overseerr", "https://overseerr.schleising.net", _webapp_image("overseerr.svg")),
+]
+
 WEBAPPS_TOOLS_ONLY: list[dict[str, str]] = [
     _webapp("Authentik", "https://auth.schleising.net", _webapp_image("authentik.svg")),
     _webapp("Bet", "https://bet.schleising.net", _webapp_image("bet.svg")),
@@ -149,8 +153,6 @@ WEBAPPS_TOOLS_ONLY: list[dict[str, str]] = [
     _webapp("Logger", "https://logger.schleising.net", _webapp_image("logger-20260504.svg")),
     _webapp("Monitor", "https://monitor.schleising.net", _webapp_image("monitor-20260504.svg")),
     _webapp("Transcoder", "https://transcoder.schleising.net", _webapp_image("transcoder-20260504.svg")),
-    _webapp("SRM Monitor", "https://srm-monitor.schleising.net", _webapp_image("srm-monitor.svg")),
-    _webapp("Overseerr", "https://overseerr.schleising.net", _webapp_image("overseerr.svg")),
     _webapp("Pi-hole", "https://pihole.schleising.net/admin/", _webapp_image("pihole.svg")),
     _webapp("Plex", "https://plex.schleising.net", _webapp_image("plex.svg")),
     _webapp("Portainer", "https://portainer.schleising.net", _webapp_image("portainer.svg")),
@@ -378,6 +380,7 @@ async def webapps_page(request: Request):
     user = getattr(request.state, "user", None)
     is_logged_in = user is not None
     can_use_tools = bool(getattr(user, "can_use_tools", False))
+    can_use_overseerr = bool(getattr(user, "can_use_overseerr", False))
 
     return TEMPLATES.TemplateResponse(
         request,
@@ -386,9 +389,11 @@ async def webapps_page(request: Request):
             "request": request,
             "public_webapps": WEBAPPS_PUBLIC,
             "authenticated_webapps": WEBAPPS_AUTHENTICATED,
+            "overseerr_webapps": WEBAPPS_OVERSEERR,
             "tools_only_webapps": WEBAPPS_TOOLS_ONLY,
             "is_logged_in": is_logged_in,
             "can_use_tools": can_use_tools,
+            "can_use_overseerr": can_use_overseerr,
         },
     )
 
