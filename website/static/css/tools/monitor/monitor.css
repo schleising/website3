@@ -275,6 +275,29 @@ body {
     border-color: hsla(191, 74%, 40%, 0.34);
 }
 
+.data-container.dragging {
+    opacity: 0.72;
+    transform: scale(0.985);
+    box-shadow: 0 1.1rem 2rem hsla(213, 46%, 16%, 0.18);
+    border-color: hsla(191, 74%, 40%, 0.5);
+    z-index: 5;
+    pointer-events: none;
+}
+
+.data-container.drag-over {
+    border-color: hsla(191, 74%, 40%, 0.62);
+    box-shadow: inset 0 0 0 0.125rem hsla(191, 74%, 40%, 0.22);
+}
+
+.charts.is-reordering {
+    user-select: none;
+    cursor: grabbing;
+}
+
+.charts.is-reordering .data-container:hover {
+    transform: none;
+}
+
 .data {
     display: grid;
     grid-template-columns: auto minmax(0, 1fr);
@@ -282,6 +305,50 @@ body {
     row-gap: 0.32rem;
     width: 100%;
     padding: 0.56rem;
+}
+
+.chart-drag-handle {
+    grid-column: 1 / -1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    justify-self: end;
+    width: 1.75rem;
+    height: 1.35rem;
+    margin: -0.1rem 0 0.1rem;
+    padding: 0;
+    border: 0.0625rem solid transparent;
+    border-radius: 0.45rem;
+    background: transparent;
+    color: var(--text-subtle);
+    cursor: grab;
+    touch-action: none;
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+.chart-drag-handle svg {
+    width: 0.9rem;
+    height: 0.9rem;
+    fill: currentColor;
+    opacity: 0.72;
+}
+
+.chart-drag-handle:hover,
+.chart-drag-handle:focus-visible {
+    color: var(--text-main);
+    background: var(--accent-soft);
+    border-color: hsla(191, 74%, 40%, 0.22);
+}
+
+.chart-drag-handle:focus-visible {
+    outline: 0.125rem solid hsla(191, 82%, 44%, 0.56);
+    outline-offset: 0.125rem;
+}
+
+.chart-drag-handle:active,
+.charts.is-reordering .chart-drag-handle {
+    cursor: grabbing;
 }
 
 p.monitor-title,

@@ -16,6 +16,19 @@ var transformationMatrices = new Map();
 let chartPeriod = 'daily';
 let showPreviousPeriod = false;
 
+/** @type {string[]} */
+let chartOrder = [];
+
+/**
+ * @type {{
+ *   container: HTMLElement,
+ *   pointerId: number,
+ *   charts: HTMLElement,
+ *   lastTarget: HTMLElement | null,
+ * } | null}
+ */
+let activeChartDrag = null;
+
 // Scale the time data by 1000 to convert from milliseconds to seconds
 const timeScale = 1000;
 const dayMs = 24 * 60 * 60 * 1000;
@@ -357,9 +370,20 @@ function loadChartSettings() {
         if (typeof settings.showPreviousPeriod === 'boolean') {
             showPreviousPeriod = settings.showPreviousPeriod;
         }
+        if (Array.isArray(settings.chartOrder)) {
+            chartOrder = settings.chartOrder.filter(deviceId => typeof deviceId === 'string');
+        }
     } catch (error) {
         // Ignore storage read errors.
     }
+}
+
+/**
+ * @returns {string[]}
+ */
+function getCurrentChartOrder() {
+    return [...document.querySelectorAll('.charts .data-container')]
+        .map(container => container.id.replace(/^data-container-/, ''));
 }
 
 function persistChartSettings() {
@@ -367,10 +391,163 @@ function persistChartSettings() {
         localStorage.setItem(chartSettingsStorageKey, JSON.stringify({
             period: chartPeriod,
             showPreviousPeriod,
+            chartOrder: getCurrentChartOrder(),
         }));
     } catch (error) {
         // Ignore storage write errors.
     }
+}
+
+function applyStoredChartOrder() {
+    const charts = document.querySelector('.charts');
+    if (charts == null || chartOrder.length === 0) {
+        return;
+    }
+
+    /** @type {Map<string, HTMLElement>} */
+    const containersById = new Map(
+        [...charts.querySelectorAll('.data-container')]
+            .map(container => [container.id.replace(/^data-container-/, ''), container])
+    );
+
+    for (const deviceId of chartOrder) {
+        const container = containersById.get(deviceId);
+        if (container != null) {
+            charts.appendChild(container);
+            containersById.delete(deviceId);
+        }
+    }
+}
+
+/**
+ * @param {HTMLElement} dragging
+ * @param {HTMLElement} target
+ */
+function reorderChartContainers(dragging, target) {
+    if (dragging === target || dragging.parentElement !== target.parentElement) {
+        return;
+    }
+
+    const charts = dragging.parentElement;
+    if (charts == null) {
+        return;
+    }
+
+    const siblings = [...charts.children];
+    const dragIndex = siblings.indexOf(dragging);
+    const targetIndex = siblings.indexOf(target);
+    if (dragIndex < 0 || targetIndex < 0) {
+        return;
+    }
+
+    if (dragIndex < targetIndex) {
+        target.after(dragging);
+    } else {
+        target.before(dragging);
+    }
+}
+
+/**
+ * @param {PointerEvent} event
+ */
+function onChartDragHandlePointerDown(event) {
+    if (event.button !== 0 || activeChartDrag != null) {
+        return;
+    }
+
+    const handle = event.currentTarget;
+    if (!(handle instanceof HTMLElement)) {
+        return;
+    }
+
+    const container = handle.closest('.data-container');
+    const charts = document.querySelector('.charts');
+    if (!(container instanceof HTMLElement) || !(charts instanceof HTMLElement)) {
+        return;
+    }
+
+    event.preventDefault();
+
+    activeChartDrag = {
+        container,
+        pointerId: event.pointerId,
+        charts,
+        lastTarget: null,
+    };
+
+    container.classList.add('dragging');
+    charts.classList.add('is-reordering');
+
+    document.addEventListener('pointermove', onChartDragHandlePointerMove);
+    document.addEventListener('pointerup', endChartDrag);
+    document.addEventListener('pointercancel', endChartDrag);
+}
+
+/**
+ * @param {PointerEvent} event
+ */
+function onChartDragHandlePointerMove(event) {
+    if (activeChartDrag == null || event.pointerId !== activeChartDrag.pointerId) {
+        return;
+    }
+
+    const elementUnderPointer = document.elementFromPoint(event.clientX, event.clientY);
+    const target = elementUnderPointer?.closest('.data-container');
+    if (!(target instanceof HTMLElement) || target === activeChartDrag.container) {
+        if (activeChartDrag.lastTarget != null) {
+            activeChartDrag.lastTarget.classList.remove('drag-over');
+            activeChartDrag.lastTarget = null;
+        }
+        return;
+    }
+
+    if (activeChartDrag.lastTarget != null && activeChartDrag.lastTarget !== target) {
+        activeChartDrag.lastTarget.classList.remove('drag-over');
+    }
+
+    target.classList.add('drag-over');
+    activeChartDrag.lastTarget = target;
+    reorderChartContainers(activeChartDrag.container, target);
+}
+
+/**
+ * @param {PointerEvent} event
+ */
+function endChartDrag(event) {
+    if (activeChartDrag == null || event.pointerId !== activeChartDrag.pointerId) {
+        return;
+    }
+
+    const { container, charts, lastTarget } = activeChartDrag;
+    activeChartDrag = null;
+
+    document.removeEventListener('pointermove', onChartDragHandlePointerMove);
+    document.removeEventListener('pointerup', endChartDrag);
+    document.removeEventListener('pointercancel', endChartDrag);
+
+    container.classList.remove('dragging');
+    charts.classList.remove('is-reordering');
+    if (lastTarget != null) {
+        lastTarget.classList.remove('drag-over');
+    }
+    charts.querySelectorAll('.data-container.drag-over').forEach(element => {
+        element.classList.remove('drag-over');
+    });
+
+    chartOrder = getCurrentChartOrder();
+    persistChartSettings();
+
+    if (deviceData != null) {
+        updateCharts();
+    }
+}
+
+function initializeChartReorder() {
+    applyStoredChartOrder();
+
+    document.querySelectorAll('.chart-drag-handle').forEach(handle => {
+        handle.addEventListener('pointerdown', onChartDragHandlePointerDown);
+    });
 }
 
 function syncChartControls() {
@@ -501,6 +678,7 @@ async function updateServiceWorkerRegistration() {
 // Add event listener for the page to be ready to use
 document.addEventListener('DOMContentLoaded', () => {
     initializeChartControls();
+    initializeChartReorder();
 
     // Check if the browser supports service workers
     if ('serviceWorker' in navigator) {
