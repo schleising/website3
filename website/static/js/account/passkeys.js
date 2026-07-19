@@ -339,6 +339,7 @@
     const username = form.querySelector("input[name='username']")?.value?.trim() || "";
     const website = form.querySelector("input[name='website']")?.value || "";
     const formLoadedAt = form.querySelector("input[name='form_loaded_at']")?.value || "";
+    const nextPath = form.querySelector("input[name='next']")?.value || "";
 
     if (firstname === "" || lastname === "" || username === "") {
       setStatus(statusElement, "Please complete all required fields.", true);
@@ -357,6 +358,7 @@
           username,
           website,
           form_loaded_at: formLoadedAt,
+          next_path: nextPath || null,
         },
         csrfToken,
       );
@@ -384,6 +386,7 @@
     const submitButton = form.querySelector("#verified-signup-submit");
     const csrfToken = form.querySelector("input[name='csrf_token']")?.value || "";
     const signupSessionToken = form.querySelector("input[name='signup_session_token']")?.value || "";
+    const nextPath = form.querySelector("input[name='next']")?.value || "";
 
     if (!requirePasskeySupport(statusElement)) {
       return;
@@ -424,6 +427,7 @@
         {
           challenge_id: begin.data.challenge_id,
           credential: credentialToJson(credential),
+          next_path: nextPath || null,
         },
         csrfToken,
       );

@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 
 {% block scripts %}
-<script defer src="/js/account/passkeys.js?v1.1.0"></script>
+<script defer src="/js/account/passkeys.js?v1.2.0"></script>
 {% endblock %}
 
 {% block head %}
@@ -21,6 +21,9 @@
       <h2 class="account-title">Email confirmed. One final step.</h2>
       <p class="account-notice is-success">Your email is verified and ready for account activation.</p>
       <p class="account-lead">Review the verified details below, then register a passkey to complete account creation and start using the site securely.</p>
+      {% if next_path %}
+      <p class="account-context">After setup you will return to <span class="account-inline-path">{{ next_path }}</span>.</p>
+      {% endif %}
       <div class="account-chip-row">
         <span class="account-chip">Verified identity</span>
         <span class="account-chip">Passkey ready</span>
@@ -47,6 +50,7 @@
     <form class="row g-3 account-form" id="verified-signup-register-form" data-passkey-flow="register-verified" novalidate>
       <input type="hidden" name="csrf_token" value="{{ request.state.csrf_token|default('') }}">
       <input type="hidden" name="signup_session_token" value="{{ signup_session_token|default('') }}">
+      <input type="hidden" name="next" value="{{ next_path|default('') }}">
 
       <div class="col-md-6">
         <label for="firstname" class="form-label">First Name</label>

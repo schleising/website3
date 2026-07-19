@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 
 {% block scripts %}
-<script defer src="/js/account/passkeys.js?v1.1.0"></script>
+<script defer src="/js/account/passkeys.js?v1.2.0"></script>
 {% endblock %}
 
 {% block head %}
@@ -40,7 +40,7 @@
     <aside class="account-panel account-panel--side">
       <p class="account-panel-kicker">Need a different route?</p>
       <div class="account-link-grid">
-        <a class="account-link-card" href="/account/create/">
+        <a class="account-link-card" href="{% if next_path %}/account/create/?next={{ next_path|urlencode }}{% else %}/account/create/{% endif %}">
           <strong>Create an account</strong>
           <span>Register a new account and verify your email before passkey setup.</span>
         </a>
@@ -65,7 +65,7 @@
         <button type="submit" class="btn btn-primary" id="passkey-login-submit">Try passkey again</button>
       </div>
       <div class="col-12">
-        <a id="passkey-migrate-link" class="btn btn-outline-secondary" href="/account/migrate/">Migrate existing account</a>
+        <a id="passkey-migrate-link" class="btn btn-outline-secondary" href="{% if next_path %}/account/migrate/?next={{ next_path|urlencode }}{% else %}/account/migrate/{% endif %}">Migrate existing account</a>
       </div>
       <div class="col-12">
         <p id="passkey-status" class="account-status" role="status" aria-live="polite"></p>

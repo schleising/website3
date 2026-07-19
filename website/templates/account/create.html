@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 
 {% block scripts %}
-<script defer src="/js/account/passkeys.js?v1.1.0"></script>
+<script defer src="/js/account/passkeys.js?v1.2.0"></script>
 {% endblock %}
 {% block head %}
 <link rel="stylesheet" href="/css/account/account.css?v1.3.0">
@@ -26,6 +26,9 @@
       <p class="account-notice is-danger">The verification link is invalid or expired. Request a new one.</p>
       {% endif %}
       <p class="account-lead">Create the account record first, then confirm ownership through a one-time email link before registering a passkey.</p>
+      {% if next_path %}
+      <p class="account-context">After account creation you will return to <span class="account-inline-path">{{ next_path }}</span>.</p>
+      {% endif %}
       <div class="account-chip-row">
         <span class="account-chip">Verified email</span>
         <span class="account-chip">Passkey protected</span>
@@ -52,6 +55,7 @@
     <form class="row g-3 account-form" id="signup-email-form" data-passkey-flow="signup-email" novalidate>
       <input type="hidden" name="csrf_token" value="{{ request.state.csrf_token|default('') }}">
       <input type="hidden" name="form_loaded_at" value="{{ form_loaded_at|default('') }}">
+      <input type="hidden" name="next" value="{{ next_path|default('') }}">
       <div style="position:absolute;left:-10000px;top:auto;width:1px;height:1px;overflow:hidden;" aria-hidden="true">
         <label for="website">Leave this field empty</label>
         <input

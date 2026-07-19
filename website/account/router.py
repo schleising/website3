@@ -46,6 +46,12 @@ from .nginx_auth import (
     user_can_use_overseerr,
     user_can_use_tools,
 )
+from .next_path import (
+    build_create_url as _build_create_url,
+    build_login_url as _build_login_url,
+    redirect_target_from_next as _redirect_target_from_next,
+    safe_next_path as _safe_next_path,
+)
 from ..utils.user_management_access import require_user_management_access
 from ..utils.cookie_policy import cookie_domain_for_request
 
@@ -121,6 +127,7 @@ class SignupEmailRequestPayload(BaseModel):
     username: str
     website: str = ""
     form_loaded_at: str = ""
+    next_path: str | None = None
 
 
 class VerifiedSignupRegisterBeginPayload(BaseModel):
@@ -306,57 +313,6 @@ def _build_user_management_summary(users: list[UserInDB]) -> dict[str, int]:
             [user for user in users if _user_has_legacy_password(user)]
         ),
     }
-
-
-def _safe_next_path(raw_next: str | None) -> str | None:
-    if raw_next is None:
-        return None
-
-    candidate = raw_next.strip()
-    if candidate == "":
-        return None
-
-    parsed = urlparse(candidate)
-
-    is_absolute = parsed.scheme != "" or parsed.netloc != ""
-    if is_absolute:
-        if parsed.scheme.lower() not in {"http", "https"}:
-            return None
-
-        host = (parsed.hostname or "").lower()
-        if host == "" or (host != "schleising.net" and not host.endswith(".schleising.net")):
-            return None
-    elif not candidate.startswith("/"):
-        return None
-
-    # Avoid protocol-relative redirects.
-    if candidate.startswith("//"):
-        return None
-
-    # Prevent redirect loops back into login/token endpoints.
-    blocked_prefixes = (
-        "/account/login",
-        "/account/token",
-        "/account/logout",
-    )
-    lower_path = parsed.path.lower()
-    if any(lower_path.startswith(prefix) for prefix in blocked_prefixes):
-        return None
-
-    return candidate
-
-
-def _build_login_url(result: str | None, next_path: str | None) -> str:
-    params: list[tuple[str, str]] = []
-    if result:
-        params.append(("result", result))
-    if next_path:
-        params.append(("next", next_path))
-
-    if len(params) == 0:
-        return "/account/login/"
-
-    return f"/account/login/?{urlencode(params)}"
 
 
 def _is_web_app_login_target(next_target: str | None) -> bool:
@@ -873,7 +829,12 @@ async def login_success(request: Request):
 
 @account_router.get("/create", response_class=HTMLResponse)
 @account_router.get("/create/", response_class=HTMLResponse)
-async def get_create_page(request: Request, result: str | None = None):
+async def get_create_page(
+    request: Request,
+    result: str | None = None,
+    next: str | None = None,
+):
+    next_path = _safe_next_path(next)
     # Render the create account page
     return TEMPLATES.TemplateResponse(
         request,
@@ -881,6 +842,7 @@ async def get_create_page(request: Request, result: str | None = None):
         {
             "request": request,
             "result": result,
+            "next_path": next_path,
             "form_loaded_at": f"{time():.6f}",
         },
     )
@@ -893,7 +855,7 @@ async def create_user(
 ):
     # Password signup is replaced by email verification + passkey ceremonies.
     return RedirectResponse(
-        "/account/create/?result=email_verification_required",
+        _build_create_url(result="email_verification_required"),
         status_code=status.HTTP_303_SEE_OTHER,
     )
 
@@ -922,6 +884,7 @@ async def verify_signup_email_link(request: Request, token: str | None = None):
             {
                 "request": request,
                 "result": "email_link_invalid",
+                "next_path": None,
                 "form_loaded_at": f"{time():.6f}",
             },
         )
@@ -934,6 +897,7 @@ async def verify_signup_email_link(request: Request, token: str | None = None):
             {
                 "request": request,
                 "result": "email_link_invalid",
+                "next_path": None,
                 "form_loaded_at": f"{time():.6f}",
             },
         )
@@ -941,6 +905,7 @@ async def verify_signup_email_link(request: Request, token: str | None = None):
     firstname = _challenge_context_value(consumed, "firstname") or ""
     lastname = _challenge_context_value(consumed, "lastname") or ""
     username = _challenge_context_value(consumed, "username")
+    next_path = _safe_next_path(_challenge_context_value(consumed, "next_path"))
 
     if username is None:
         return TEMPLATES.TemplateResponse(
@@ -949,18 +914,23 @@ async def verify_signup_email_link(request: Request, token: str | None = None):
             {
                 "request": request,
                 "result": "email_link_invalid",
+                "next_path": next_path,
                 "form_loaded_at": f"{time():.6f}",
             },
         )
 
+    signup_session_context: dict[str, str] = {
+        "firstname": firstname,
+        "lastname": lastname,
+        "username": username,
+    }
+    if next_path is not None:
+        signup_session_context["next_path"] = next_path
+
     signup_session_token = await _store_email_link_token(
         username=username,
         flow="signup_session",
-        context={
-            "firstname": firstname,
-            "lastname": lastname,
-            "username": username,
-        },
+        context=signup_session_context,
     )
 
     return TEMPLATES.TemplateResponse(
@@ -972,6 +942,7 @@ async def verify_signup_email_link(request: Request, token: str | None = None):
             "lastname": lastname,
             "username": username,
             "signup_session_token": signup_session_token,
+            "next_path": next_path,
         },
     )
 
@@ -1070,14 +1041,19 @@ async def request_signup_email_verification(
             }
         )
 
+    next_path = _safe_next_path(payload.next_path)
+    verify_context: dict[str, str] = {
+        "firstname": firstname,
+        "lastname": lastname,
+        "username": username,
+    }
+    if next_path is not None:
+        verify_context["next_path"] = next_path
+
     verify_token = await _store_email_link_token(
         username=username,
         flow="signup_verify",
-        context={
-            "firstname": firstname,
-            "lastname": lastname,
-            "username": username,
-        },
+        context=verify_context,
     )
 
     try:
@@ -1207,18 +1183,23 @@ async def webauthn_register_from_email_begin(
             detail="Registration challenge generation failed.",
         )
 
+    challenge_context: dict[str, str] = {
+        "firstname": firstname,
+        "lastname": lastname,
+        "username": username,
+        "user_handle_b64url": user_handle_b64url,
+    }
+    next_path = _safe_next_path(_challenge_context_value(consumed, "next_path"))
+    if next_path is not None:
+        challenge_context["next_path"] = next_path
+
     challenge_id = await _store_webauthn_challenge(
         username=username,
         flow="register",
         challenge=challenge,
         rp_id=rp_id,
         origin=origin,
-        context={
-            "firstname": firstname,
-            "lastname": lastname,
-            "username": username,
-            "user_handle_b64url": user_handle_b64url,
-        },
+        context=challenge_context,
     )
 
     return JSONResponse(
@@ -1313,7 +1294,12 @@ async def webauthn_register_complete(
         )
 
     next_path = _safe_next_path(payload.next_path)
-    redirect_target = next_path or "/account/create_success/"
+    challenge_next = _safe_next_path(_challenge_context_value(challenge_doc, "next_path"))
+    redirect_target = _redirect_target_from_next(
+        next_path,
+        challenge_next,
+        default="/account/create_success/",
+    )
     return get_login_json_response(user, redirect_target, request)
 
 
