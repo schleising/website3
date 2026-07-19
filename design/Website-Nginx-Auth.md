@@ -239,7 +239,7 @@ There is already a generic `403.html` (“Access Denied”); reuse its look-and-
 | Case                     | Redirect target                         | Page message                                                                               |
 | ------------------------ | --------------------------------------- | ------------------------------------------------------------------------------------------ |
 | Tools / other gated apps | `/account/access-denied/`               | “You do not have access.”                                                                  |
-| Overseerr                | `/account/access-denied/?app=overseerr` | “You do not have access.” plus instruction to contact Steve via WhatsApp to request access |
+| Overseerr                | `/account/access-denied/?app=overseerr` | Onboarding framing: account is ready; contact Steve via WhatsApp to finish access grant    |
 
 
 Notes:
@@ -407,7 +407,7 @@ Optional improvement: after logout, redirect to `/webapps/` rather than leaving 
 
 Default copy: **You do not have access.**
 
-Overseerr copy: same baseline, plus ask the logged-in user to contact Steve via WhatsApp to request access.
+Overseerr copy: frame as the final onboarding step (account created/signed in successfully; Steve still needs to grant Overseerr), with WhatsApp as the primary CTA.
 
 ## 8. Application tiers after migration
 
@@ -619,7 +619,7 @@ Archived under `config-files/nginx/snippets/archive/`. See that folder’s READM
 1. **Privilege default:** tools-only for all current Authentik hosts **except Overseerr**.
 2. **Overseerr access:** explicit `can_use_overseerr` boolean on the user record; default/`missing` ⇒ `false`; set only via user management UI; not implied by `can_use_tools`.
 3. **403 UX:** redirect to Access Denied page (`/account/access-denied/`), not `/webapps/`.
-4. **403 copy:** default “You do not have access.”; Overseerr adds “contact Steve via WhatsApp to gain access.”
+4. **403 copy:** default “You do not have access.”; Overseerr uses onboarding framing + WhatsApp CTA (not a hard-error tone).
 5. **Authentik:** retired after nginx migration (Phase 5); snippets archived for emergency restore.
 6. **Identity headers:** gate-only; upstreams do not need username headers for SSO.
 7. **Bet:** leave ungated.

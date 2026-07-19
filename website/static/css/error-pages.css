@@ -21,11 +21,21 @@
     color: var(--brand-soft);
 }
 
+.error-hero-card--onboarding .error-code-label {
+    letter-spacing: 0.08rem;
+    color: var(--brand);
+}
+
 .error-title {
     margin: 0;
     font-size: clamp(1.8rem, 4vw, 2.6rem);
     line-height: 1.05;
     color: var(--brand-strong);
+}
+
+.error-hero-card--onboarding .error-title {
+    font-size: clamp(1.55rem, 3.4vw, 2.2rem);
+    line-height: 1.2;
 }
 
 .error-message {
