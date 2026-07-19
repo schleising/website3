@@ -155,7 +155,7 @@ Greenfield sections of the site — new domains, not dashboards that stitch toge
 
 ### Utilities people actually open weekly
 
-- **Unit / timezone / colour converter** — ugly-useful pocket tools page with shareable URLs for a result.
+- ~~**Unit / timezone / colour converter**~~ — **Units** shipped at `/units/` (server-side, shareable URLs). Timezone / colour still open as separate tools.
 - **Regex & JSON playground** — private history of snippets you reuse.
 - **QR / vCard generator** — for guests on home Wi‑Fi or event check-in.
 - **Countdown / milestone pages** — public or private “days until…” with a clean full-bleed design.

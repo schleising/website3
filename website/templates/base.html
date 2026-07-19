@@ -20,6 +20,8 @@
   <meta name="description" content="Manage media items and supporting content from the website dashboard.">
   {% elif request.url.path.startswith('/account') %}
   <meta name="description" content="Sign in, manage your account, and access authenticated areas of Steve's Website.">
+  {% elif request.url.path.startswith('/units') %}
+  <meta name="description" content="Convert length, mass, speed, fuel economy, and other units with shareable result links.">
   {% elif request.url.path.startswith('/webapps') %}
   <meta name="description" content="Browse the collection of public, authenticated, and tools-only web apps linked from Steve's Website.">
   {% elif request.url.path.startswith('/tools') %}
@@ -83,6 +85,7 @@
             {% endif %}
             <a class="sub-level-nav{% if current_section == 'aircraft' %} is-current{% endif %}" href="/aircraft/"{% if current_section == 'aircraft' %} aria-current="page"{% endif %}>OpenSky Database</a>
             <a class="sub-level-nav{% if current_section == 'blog' %} is-current{% endif %}" href="/blog/"{% if current_section == 'blog' %} aria-current="page"{% endif %}>Blog</a>
+            <a class="sub-level-nav{% if current_section == 'units' %} is-current{% endif %}" href="/units/"{% if current_section == 'units' %} aria-current="page"{% endif %}>Units</a>
             {% if request.state.user != None %}
             <a class="sub-level-nav{% if current_section == 'markdown' %} is-current{% endif %}" href="/markdown/"{% if current_section == 'markdown' %} aria-current="page"{% endif %}>Markdown Editor</a>
             {% if request.state.user.can_use_tools %}

@@ -32,6 +32,7 @@ from .feeds.router import feeds_router
 from .media.router import media_router
 
 from .tools.router import tools_router
+from .units.router import units_router
 
 
 class RealIPMiddleware:
@@ -136,6 +137,7 @@ def _webapp(name: str, url: str, icon_svg: str) -> dict[str, str]:
 WEBAPPS_PUBLIC: list[dict[str, str]] = [
     _webapp("Astronomy", "https://astronomy.schleising.net", _webapp_image("astronomy.svg")),
     _webapp("Football", "https://football.schleising.net", _webapp_image("football.svg")),
+    _webapp("Units", "https://www.schleising.net/units/", _webapp_image("units.svg")),
 ]
 
 WEBAPPS_AUTHENTICATED: list[dict[str, str]] = [
@@ -315,6 +317,9 @@ app.include_router(media_router)
 
 # Include the tools router
 app.include_router(tools_router)
+
+# Include the units converter router (public)
+app.include_router(units_router)
 
 
 @app.exception_handler(RequestValidationError)

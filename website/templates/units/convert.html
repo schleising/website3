@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+
+{% block scripts %}
+<script defer src="/js/units/units-page.js?v1.0.0"></script>
+{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="/css/right-nav.css?v1.1.0">
+<link rel="stylesheet" href="/css/units/units.css?v1.0.0">
+<title>{% if has_result and from_unit and to_unit %}{{ value_raw }} {{ from_unit.symbol }} → {{ primary_display }} {{ to_unit.symbol }} · {% endif %}{{ category.label }} · Units</title>
+{% endblock %}
+
+{% block meta_description %}
+<meta name="description" content="Convert {{ category.label|lower }} units. Server-side conversions with shareable result links.">
+{% endblock %}
+
+{% block canonical %}https://www.schleising.net{% if share_path %}{{ share_path }}{% else %}/units/{{ category.slug }}/{% endif %}{% endblock %}
+
+{% block header %}
+<h3 class="header-text">Unit Conversions</h3>
+{% endblock %}
+
+{% block content %}
+<section class="units-page" aria-label="{{ category.label }} converter">
+  <h3 class="units-title">{{ category.label }}</h3>
+  {% if category.note %}
+  <p class="units-note">{{ category.note }}</p>
+  {% endif %}
+
+  <form class="units-form" method="get" action="/units/{{ category.slug }}/" aria-label="Convert {{ category.label|lower }}">
+    <div class="units-form-row">
+      <label class="units-field" for="units-value">
+        <span class="units-label">Value</span>
+        <input
+          id="units-value"
+          class="units-input"
+          type="text"
+          name="v"
+          inputmode="decimal"
+          autocomplete="off"
+          value="{{ value_raw }}"
+          required
+          {% if error %}aria-invalid="true" aria-describedby="units-error"{% endif %}
+        >
+      </label>
+
+      <label class="units-field" for="units-from">
+        <span class="units-label">From</span>
+        <select id="units-from" class="units-select" name="from">
+          {% for unit in unit_options %}
+          <option value="{{ unit.slug }}"{% if unit.slug == from_slug %} selected{% endif %}>{{ unit.label }}</option>
+          {% endfor %}
+        </select>
+      </label>
+
+      <label class="units-field" for="units-to">
+        <span class="units-label">To</span>
+        <select id="units-to" class="units-select" name="to">
+          {% for unit in unit_options %}
+          <option value="{{ unit.slug }}"{% if unit.slug == to_slug %} selected{% endif %}>{{ unit.label }}</option>
+          {% endfor %}
+        </select>
+      </label>
+    </div>
+
+    <div class="units-actions">
+      <button type="submit" class="btn btn-primary">Convert</button>
+      {% if swap_path %}
+      <a class="btn btn-outline-secondary" href="{{ swap_path }}">Swap units</a>
+      {% endif %}
+    </div>
+  </form>
+
+  {% if error %}
+  <p class="units-error" id="units-error" role="alert">{{ error }}</p>
+  {% endif %}
+
+  {% if has_result and from_unit and to_unit %}
+  <div class="units-primary" aria-label="Primary conversion result">
+    <p class="units-primary-equation">
+      <span class="units-primary-from">{{ value_raw }} {{ from_unit.symbol }}</span>
+      <span class="units-primary-arrow" aria-hidden="true">→</span>
+      <span class="units-primary-to">{{ primary_display }} {{ to_unit.symbol }}</span>
+    </p>
+  </div>
+
+  {% if share_path %}
+  <div class="units-share">
+    <label class="units-label" for="units-share-url">Shareable link</label>
+    <div class="units-share-row">
+      <input id="units-share-url" class="units-share-input" type="text" readonly value="{{ share_url }}">
+      <button type="button" class="btn btn-outline-secondary" id="units-copy-link" data-copy-target="units-share-url">Copy link</button>
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="units-results" aria-label="All {{ category.label|lower }} conversions">
+    <h4 class="units-results-title">All units</h4>
+    <table class="units-table">
+      <thead>
+        <tr>
+          <th scope="col">Unit</th>
+          <th scope="col">Value</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in result_rows %}
+        <tr class="{% if row.is_primary %}is-primary{% endif %}{% if row.is_source %} is-source{% endif %}">
+          <th scope="row">
+            <a class="units-row-link" href="{{ row.share_path }}">{{ row.unit.name }} ({{ row.unit.symbol }})</a>
+          </th>
+          <td>
+            <a class="units-row-link units-row-value" href="{{ row.share_path }}">{{ row.display }}</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p class="units-prompt">Enter a value and choose units, then convert. The result page URL can be shared.</p>
+  {% endif %}
+</section>
+{% endblock %}
+
+{% block sidebar %}
+  <p class="units-nav-heading">Basic</p>
+  {% for item in basic_nav %}
+  <a
+    href="{{ item.href }}"
+    class="sub-level-nav{% if item.is_current %} is-current{% endif %}"
+    {% if item.is_current %}aria-current="page"{% endif %}
+  >{{ item.label }}</a>
+  {% endfor %}
+  <p class="units-nav-heading">Compound</p>
+  {% for item in compound_nav %}
+  <a
+    href="{{ item.href }}"
+    class="sub-level-nav{% if item.is_current %} is-current{% endif %}"
+    {% if item.is_current %}aria-current="page"{% endif %}
+  >{{ item.label }}</a>
+  {% endfor %}
+{% endblock %}
+
+{% block footer %}
+Unit Conversions
+{% endblock %}
