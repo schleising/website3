@@ -325,7 +325,7 @@ def _is_web_app_login_target(next_target: str | None) -> bool:
 
     parsed = urlparse(candidate)
     host = (parsed.hostname or "").lower()
-    if host in {"feeds.schleising.net", "football.schleising.net"}:
+    if host in {"feeds.schleising.net", "football.schleising.net", "units.schleising.net"}:
         return True
 
     return False

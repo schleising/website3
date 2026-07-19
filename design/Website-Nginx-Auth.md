@@ -47,6 +47,7 @@ Private apps are gated by website auth:
 
 - `feeds.schleising.net` / `football.schleising.net` — app-level login / public content
 - `astronomy.schleising.net` — public tool surface
+- `units.schleising.net` — public Units PWA (no auth gate; path-prefix like feeds/football)
 - `bet.schleising.net` — separate upstream (leave ungated)
 - `www.schleising.net` — site login only where routes require it
 

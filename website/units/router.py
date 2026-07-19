@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import logging
+from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter, Query, Request
-from fastapi.responses import HTMLResponse, RedirectResponse, Response
+from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
@@ -22,17 +23,48 @@ from .conversions import (
 
 
 TEMPLATES = Jinja2Templates("/app/templates")
+WEBSITE_ROOT = Path(__file__).resolve().parents[1]
+UNITS_MANIFEST_PATH = WEBSITE_ROOT / "static" / "manifests" / "units" / "units.webmanifest"
+UNITS_SERVICE_WORKER_PATH = WEBSITE_ROOT / "static" / "units" / "sw.js"
+UNITS_WEB_APP_HOST = "units.schleising.net"
 
 units_router = APIRouter(prefix="/units")
 
 
-def _category_nav(current_slug: str) -> list[dict[str, Any]]:
+def _request_host(request: Request) -> str:
+    raw_host = request.headers.get("x-forwarded-host") or request.headers.get("host") or ""
+    host = raw_host.split(",")[0].strip().lower()
+    return host.split(":")[0]
+
+
+def _is_web_app_request(request: Request) -> bool:
+    web_app_header = request.headers.get("x-is-web-app", "").strip().lower()
+    if web_app_header in {"1", "true", "yes", "on"}:
+        return True
+    return _request_host(request) == UNITS_WEB_APP_HOST
+
+
+def _units_path_context(request: Request) -> dict[str, Any]:
+    is_web_app = _is_web_app_request(request)
+    units_base_path = "" if is_web_app else "/units"
+    units_root_path = "/" if is_web_app else "/units/"
+    path_prefix = "" if is_web_app else "/units"
+    return {
+        "is_web_app": is_web_app,
+        "render_left_sidebar": not is_web_app,
+        "units_base_path": units_base_path,
+        "units_root_path": units_root_path,
+        "path_prefix": path_prefix,
+    }
+
+
+def _category_nav(current_slug: str, *, units_root_path: str) -> list[dict[str, Any]]:
     return [
         {
             "slug": category.slug,
             "label": category.label,
             "group": category.group,
-            "href": f"/units/{category.slug}/",
+            "href": f"{units_root_path}{category.slug}/",
             "is_current": category.slug == current_slug,
         }
         for category in CATEGORIES
@@ -60,6 +92,12 @@ def _unit_options(category: CategoryDef) -> list[dict[str, str]]:
     return options
 
 
+def _absolute_url(request: Request, path: str) -> str:
+    scheme = request.headers.get("x-forwarded-proto") or request.url.scheme or "https"
+    host = _request_host(request) or (request.url.hostname or "www.schleising.net")
+    return f"{scheme}://{host}{path}"
+
+
 def _render_convert_page(
     request: Request,
     *,
@@ -74,11 +112,12 @@ def _render_convert_page(
     share_url: str | None = None,
     swap_path: str | None = None,
 ) -> HTMLResponse:
+    path_context = _units_path_context(request)
     selected_from = from_slug or category.default_from
     selected_to = to_slug or category.default_to
     from_unit = _unit_lookup(category, selected_from)
     to_unit = _unit_lookup(category, selected_to)
-    nav = _category_nav(category.slug)
+    nav = _category_nav(category.slug, units_root_path=str(path_context["units_root_path"]))
     return TEMPLATES.TemplateResponse(
         request,
         "units/convert.html",
@@ -101,14 +140,42 @@ def _render_convert_page(
             "share_url": share_url or share_path,
             "swap_path": swap_path,
             "has_result": result_rows is not None,
+            **path_context,
         },
     )
 
 
 @units_router.get("/", response_class=HTMLResponse, response_model=None)
 @units_router.get("", response_class=HTMLResponse, response_model=None)
-async def units_root() -> RedirectResponse:
-    return RedirectResponse(url=f"/units/{DEFAULT_CATEGORY_SLUG}/", status_code=302)
+async def units_root(request: Request) -> RedirectResponse:
+    path_context = _units_path_context(request)
+    return RedirectResponse(
+        url=f"{path_context['units_root_path']}{DEFAULT_CATEGORY_SLUG}/",
+        status_code=302,
+    )
+
+
+@units_router.get("/manifest.webmanifest", response_class=Response, response_model=None)
+@units_router.get("/manifest.webmanifest/", response_class=Response, response_model=None)
+async def units_manifest(request: Request) -> Response:
+    if not _is_web_app_request(request):
+        raise StarletteHTTPException(status_code=404, detail="Not Found")
+    return FileResponse(
+        UNITS_MANIFEST_PATH,
+        media_type="application/manifest+json",
+    )
+
+
+@units_router.get("/sw.js", response_class=Response, response_model=None)
+@units_router.get("/sw.js/", response_class=Response, response_model=None)
+async def units_service_worker(request: Request) -> Response:
+    if not _is_web_app_request(request):
+        raise StarletteHTTPException(status_code=404, detail="Not Found")
+    return FileResponse(
+        UNITS_SERVICE_WORKER_PATH,
+        media_type="application/javascript",
+        headers={"Cache-Control": "no-cache"},
+    )
 
 
 @units_router.get("/{category_slug}", response_class=HTMLResponse, response_model=None)
@@ -123,6 +190,9 @@ async def units_category(
     category = get_category(category_slug)
     if category is None:
         raise StarletteHTTPException(status_code=404, detail="Unknown unit category")
+
+    path_context = _units_path_context(request)
+    path_prefix = str(path_context["path_prefix"])
 
     if v is not None or from_unit is not None or to is not None:
         value_raw = (v or "").strip()
@@ -145,7 +215,13 @@ async def units_category(
             )
 
         return RedirectResponse(
-            url=result_path(category.slug, value, selected_from, selected_to),
+            url=result_path(
+                category.slug,
+                value,
+                selected_from,
+                selected_to,
+                path_prefix=path_prefix,
+            ),
             status_code=302,
         )
 
@@ -176,6 +252,9 @@ async def units_result(
     if category.unit(from_slug) is None or category.unit(to_slug) is None:
         raise StarletteHTTPException(status_code=404, detail="Unknown unit")
 
+    path_context = _units_path_context(request)
+    path_prefix = str(path_context["path_prefix"])
+
     parsed = parse_value(value)
     if parsed is None:
         return _render_convert_page(
@@ -190,16 +269,40 @@ async def units_result(
     canonical = canonical_value_string(parsed)
     if value != canonical:
         return RedirectResponse(
-            url=result_path(category.slug, parsed, from_slug, to_slug),
+            url=result_path(
+                category.slug,
+                parsed,
+                from_slug,
+                to_slug,
+                path_prefix=path_prefix,
+            ),
             status_code=302,
         )
 
-    rows = convert_all(category, parsed, from_slug, to_slug)
+    rows = convert_all(
+        category,
+        parsed,
+        from_slug,
+        to_slug,
+        path_prefix=path_prefix,
+    )
     primary = next((row for row in rows if row.is_primary), None)
     primary_display = primary.display if primary is not None else "—"
-    share = result_path(category.slug, parsed, from_slug, to_slug)
-    swap = result_path(category.slug, parsed, to_slug, from_slug)
-    share_absolute = str(request.base_url).rstrip("/") + share
+    share = result_path(
+        category.slug,
+        parsed,
+        from_slug,
+        to_slug,
+        path_prefix=path_prefix,
+    )
+    swap = result_path(
+        category.slug,
+        parsed,
+        to_slug,
+        from_slug,
+        path_prefix=path_prefix,
+    )
+    share_absolute = _absolute_url(request, share)
 
     logging.info(
         "Units conversion %s: %s %s -> %s",

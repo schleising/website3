@@ -137,7 +137,7 @@ def _webapp(name: str, url: str, icon_svg: str) -> dict[str, str]:
 WEBAPPS_PUBLIC: list[dict[str, str]] = [
     _webapp("Astronomy", "https://astronomy.schleising.net", _webapp_image("astronomy.svg")),
     _webapp("Football", "https://football.schleising.net", _webapp_image("football.svg")),
-    _webapp("Units", "https://www.schleising.net/units/", _webapp_image("units.svg")),
+    _webapp("Units", "https://units.schleising.net", _webapp_image("units.svg")),
 ]
 
 WEBAPPS_AUTHENTICATED: list[dict[str, str]] = [

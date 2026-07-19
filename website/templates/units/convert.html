@@ -1,10 +1,30 @@
 {% extends "base.html" %}
 
 {% block scripts %}
+{% if is_web_app %}
+<script defer src="/js/units/pwa.js?v1.0.0"></script>
+{% endif %}
 <script defer src="/js/units/units-page.js?v1.0.0"></script>
 {% endblock %}
 
+{% block favicons %}
+<link rel="icon" type="image/svg+xml" sizes="any" href="/icons/units/units-icon-any.svg?v1.0.0" />
+<link rel="icon" type="image/x-icon" href="/icons/units/favicon-48x48.ico?v1.0.0" />
+<link rel="shortcut icon" type="image/svg+xml" href="/icons/units/units-icon-any.svg?v1.0.0" />
+{% if is_web_app %}
+<link rel="apple-touch-icon" href="/icons/units/android-chrome-192x192.png?v1.0.0" />
+<link rel="manifest" href="{{ units_root_path }}manifest.webmanifest?v1.0.0" crossorigin="use-credentials" />
+{% endif %}
+{% endblock %}
+
 {% block head %}
+{% if is_web_app %}
+<meta name="theme-color" content="#2a5b90">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Units">
+{% endif %}
 <link rel="stylesheet" href="/css/right-nav.css?v1.1.0">
 <link rel="stylesheet" href="/css/units/units.css?v1.0.0">
 <title>{% if has_result and from_unit and to_unit %}{{ value_raw }} {{ from_unit.symbol }} → {{ primary_display }} {{ to_unit.symbol }} · {% endif %}{{ category.label }} · Units</title>
@@ -14,7 +34,7 @@
 <meta name="description" content="Convert {{ category.label|lower }} units. Server-side conversions with shareable result links.">
 {% endblock %}
 
-{% block canonical %}https://www.schleising.net{% if share_path %}{{ share_path }}{% else %}/units/{{ category.slug }}/{% endif %}{% endblock %}
+{% block canonical %}{% if is_web_app %}https://units.schleising.net{% if share_path %}{{ share_path }}{% else %}/{{ category.slug }}/{% endif %}{% else %}https://www.schleising.net{% if share_path %}{{ share_path }}{% else %}/units/{{ category.slug }}/{% endif %}{% endif %}{% endblock %}
 
 {% block header %}
 <h3 class="header-text">Unit Conversions</h3>
@@ -27,7 +47,7 @@
   <p class="units-note">{{ category.note }}</p>
   {% endif %}
 
-  <form class="units-form" method="get" action="/units/{{ category.slug }}/" aria-label="Convert {{ category.label|lower }}">
+  <form class="units-form" method="get" action="{{ units_root_path }}{{ category.slug }}/" aria-label="Convert {{ category.label|lower }}">
     <div class="units-form-row">
       <label class="units-field" for="units-value">
         <span class="units-label">Value</span>

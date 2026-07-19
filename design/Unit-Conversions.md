@@ -691,9 +691,26 @@ Keep right-nav markup in `units-base.html` so every category page highlights cor
 - No `Depends` beyond the global soft user injection.
 - Left nav: always show Units (no `{% if request.state.user %}`).
 - Do **not** add to nginx-auth tools lists.
-- Optional: add to public section of `/webapps/` and/or home page cards.
+- Home card links to `/units/` on www; Webapps card links to `https://units.schleising.net`.
 
-### 7.6 Accessibility
+### 7.6 Progressive Web App (installable)
+
+Follow the **football/feeds** shell pattern (not astronomy’s standalone HTML shell):
+
+| Piece | Detail |
+|-------|--------|
+| Host | `units.schleising.net` (public; no nginx-auth gate) |
+| Detection | Host match **or** `x-is-web-app` header |
+| Path mode | Web-app strips `/units` from public URLs (`/length/`, `/speed/60/mph/to/km-h/`); FastAPI still mounts at `/units` |
+| Left nav | Hidden (`render_left_sidebar=False`); right category nav remains |
+| Manifest | Served only in web-app mode: `GET /units/manifest.webmanifest` → `static/manifests/units/units.webmanifest` |
+| Service worker | Served only in web-app mode: `GET /units/sw.js` → `static/units/sw.js` |
+| Registration | `static/js/units/pwa.js` when `is_web_app` (reads `data-units-base-path`) |
+| Icons | `static/icons/units/` (PNG + SVG, any + maskable) |
+
+**Nginx (outside this repo):** proxy `units.schleising.net` to the website container with `/` rewritten to `/units/` (same pattern as feeds/football), optionally set `x-is-web-app: true`, and expose static `/icons`, `/css`, `/js` as usual. Do **not** attach `website-auth-tools.conf`.
+
+### 7.7 Accessibility
 
 - Associated `<label>`s for value and unit selects.
 - Results in a list/table with unit name + value; primary result is ordinary server-rendered content (no live region required for navigation-based updates).

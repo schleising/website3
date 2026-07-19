@@ -63,6 +63,10 @@ class UnitConversionsTests(unittest.TestCase):
             result_path("speed", 60.0, "mph", "km-h"),
             "/units/speed/60/mph/to/km-h/",
         )
+        self.assertEqual(
+            result_path("speed", 60.0, "mph", "km-h", path_prefix=""),
+            "/speed/60/mph/to/km-h/",
+        )
 
     def test_format_number_undefined(self) -> None:
         self.assertEqual(format_number(None), "—")

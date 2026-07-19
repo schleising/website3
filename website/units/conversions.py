@@ -462,9 +462,17 @@ def format_number(value: float | None) -> str:
     return text or "0"
 
 
-def result_path(category: str, value: float, from_slug: str, to_slug: str) -> str:
+def result_path(
+    category: str,
+    value: float,
+    from_slug: str,
+    to_slug: str,
+    *,
+    path_prefix: str = "/units",
+) -> str:
+    prefix = path_prefix.rstrip("/")
     return (
-        f"/units/{category}/{canonical_value_string(value)}/"
+        f"{prefix}/{category}/{canonical_value_string(value)}/"
         f"{from_slug}/to/{to_slug}/"
     )
 
@@ -548,6 +556,8 @@ def convert_all(
     value: float,
     from_slug: str,
     to_slug: str,
+    *,
+    path_prefix: str = "/units",
 ) -> tuple[ConversionRow, ...]:
     rows: list[ConversionRow] = []
     for unit in category.units:
@@ -557,7 +567,13 @@ def convert_all(
                 unit=unit,
                 value=converted,
                 display=format_number(converted),
-                share_path=result_path(category.slug, value, from_slug, unit.slug),
+                share_path=result_path(
+                    category.slug,
+                    value,
+                    from_slug,
+                    unit.slug,
+                    path_prefix=path_prefix,
+                ),
                 is_primary=unit.slug == to_slug,
                 is_source=unit.slug == from_slug,
             )
