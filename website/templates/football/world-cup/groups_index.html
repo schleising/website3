@@ -51,7 +51,7 @@
           <a href="{{ football_root }}world-cup/groups/{{ group.slug }}/?edition={{ selected_edition }}">{{ group.label }}</a>
         </h4>
         <div class="world-cup-overview-block-header-actions">
-          {% if is_current_edition|default(false) %}
+          {% if is_live_edition|default(false) %}
           {{ world_cup_qualification_note() }}
           {% endif %}
           {{ world_cup_standings_rules_help(selected_edition, help_id=selected_edition ~ '-' ~ group.slug) }}

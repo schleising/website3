@@ -61,7 +61,7 @@
   </nav>
   <div class="world-cup-group-layout">
   <section class="world-cup-group-standings-panel" aria-label="{{ group_label }} standings">
-    {% if is_current_edition|default(false) %}
+    {% if is_live_edition|default(false) %}
     {{ world_cup_qualification_note() }}
     {% endif %}
     {% if standings.table|length > 0 %}

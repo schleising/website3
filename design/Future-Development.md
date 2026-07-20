@@ -17,7 +17,7 @@ Loose ideas for evolving [schleising.net](https://www.schleising.net) — not a 
 
 ### Football — Premier League
 
-- Restore PL as the default football entry once World Cup 2026 ends (home link, left nav, `/football/` redirect, PWA `start_url`) — already noted as intentional post-tournament cleanup.
+- ~~Restore PL as the default football entry once World Cup 2026 ends (home link, left nav, `/football/` redirect, PWA `start_url`)~~ **Done** (2026-07-20).
 - Season archive browsing (past seasons’ tables, results, H2H) without relying only on the chatbot History API.
 - Richer stats surfaces: form streaks, goal difference trends, referee / venue filters if the API data supports them.
 - Better mobile PWA install and offline-ish recent scores cache.
@@ -26,11 +26,11 @@ Loose ideas for evolving [schleising.net](https://www.schleising.net) — not a 
 
 ### Football — World Cup
 
-- Post-tournament “museum mode”: freeze 2026 as historic, keep bracket/TV/stadium pages readable without live polling.
+- ~~Post-tournament “museum mode”: freeze 2026 as historic, keep bracket/TV/stadium pages readable without live polling.~~ **Done** (`WC_LIVE_EDITION = None`; backend WC scheduler stopped; Summary + synopsis for 2026).
 - Reusable tournament shell for future competitions (Euros, Club World Cup, etc.) instead of a one-off WC stack.
 - Compare editions (e.g. England path 1966 vs 2022 vs 2026) using the historic import data already in place.
 - Export bracket / group tables as image or PDF for sharing.
-- Reconcile `Football-API-Rate-Limiting.md` with the limiter that already ships in the backend; keep or drop the temporary request-logging flag deliberately.
+- ~~Reconcile `Football-API-Rate-Limiting.md` with the limiter that already ships in the backend; keep or drop the temporary request-logging flag deliberately.~~ **Done** — design matches shipped limiter; request logging stays at DEBUG for investigations.
 
 ### Feeds
 

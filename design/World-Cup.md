@@ -1,10 +1,10 @@
 # World Cup Section — Design Proposal
 
-Status: Implemented — **2026** live via football-data.org; **1930–2022** static in Mongo (§15); historic **Summary** page (§4.10); tie-breaker / play-off / replay rules (§16); live standings + tournament timezone (§3.6, §9).
-Date: 2026-05-27 (updated 2026-06-21 — live poll scheduling via `schedule_earlier_task`, §9.6)
+Status: Implemented — **2026** in museum mode (historic, no live API polling); **1930–2026** browseable in Mongo; **Summary** for all editions including 2026; Premier League is the Football default entry again.
+Date: 2026-05-27 (updated 2026-07-20 — post-tournament museum mode)
 Scope: World Cup area within the existing Football section
 
-**Launch scope:** edition **2026** live via football-data.org. **Historic editions** **1930–2022** imported from openfootball (§15); edition pill switches between all years in Mongo. **Summary** nav and page for every edition except **2026** (§4.10).
+**Post-tournament:** `WC_LIVE_EDITION = None`. Edition **2026** uses the same historic UX as 1930–2022 (Summary nav, no live WS). Backend no longer schedules World Cup sync/live jobs. Site defaults (home, nav, `/football/`, PWA) point at the Premier League table.
 
 ## 1. Goal
 
@@ -48,7 +48,7 @@ Do **not** reuse without adaptation:
 | `ShortName` enum (club names)                      | National teams need a separate display-name strategy                 |
 | UCL / UEL / relegation table zones                 | Not applicable to group or knockout tables                           |
 | Season picker (`2025_2026`)                        | Replace with **edition** picker (`2026` at launch; extensible later) |
-| Football PWA default route                         | Temporarily default to WC overview; revert to PL after tournament    |
+| Football PWA default route                         | Premier League (WC tournament override removed)                      |
 | `live_pl_table` flat 20-team logic                 | Group-stage live tables are per-group                                |
 
 
@@ -363,7 +363,7 @@ National-team notification preferences for the current edition. Reuses PL `subsc
 
 ### 4.10 Summary — historic editions (`GET /football/world-cup/summary/`)
 
-Context page for every **historic** edition (`edition_is_historic()` — all years except **2026**). Not shown in the sidebar for the live tournament.
+Context page for every **historic** edition (`edition_is_historic()` — all years when `WC_LIVE_EDITION` is unset, including **2026**). Not shown in the sidebar while a live tournament edition is active.
 
 **Content (top to bottom):**
 
@@ -375,7 +375,7 @@ Context page for every **historic** edition (`edition_is_historic()` — all yea
 
 **Behaviour**
 
-- Sidebar **Summary** link visible when `show_summary_nav` (`edition != WC_CURRENT_EDITION`).
+- Sidebar **Summary** link visible when `show_summary_nav` (`edition_is_historic(selected_edition)`).
 - Visiting `/summary/?edition=2026` **redirects** to the tournament overview.
 - Edition picker uses per-route `edition_switch_path` → `/summary/?edition=`.
 
@@ -435,13 +435,9 @@ Mirror the **Premier League season pill** pattern:
 
 **Premier League parallel:** season picker popup includes the same **Current Season** button pattern (`football-season-current-btn` in `football.css`); `season_switch_path` is set per route (table, all matches, month, team fixtures).
 
-### 5.3 PWA default route (temporary)
+### 5.3 PWA default route
 
-During the 2026 tournament, configure the Football PWA (`football.schleising.net` / `manifest.webmanifest`) so its `start_url` resolves to `/football/world-cup/` (overview), not the PL table.
-
-- **When:** from WC launch until the tournament ends (after the Final).
-- **Revert:** restore PL table as the PWA default once the tournament is over (manual config change).
-- **Scope:** Football PWA only — no separate WC manifest (see §13 #4).
+Football PWA `start_url` is the Premier League home (`/` on `football.schleising.net` → PL). The temporary World Cup `start_url` override used during the 2026 tournament has been removed.
 
 ### 5.4 Cross-linking
 
@@ -1207,7 +1203,7 @@ See §15. Summary:
 | 1   | Current vs past editions | **Current** (`2026`) live via football-data.org; **past** editions one-off static import (§15) — same model as PL seasons | §5.2, §8.5, §8.6, §15 |
 | 2   | Tournament format       | Per-edition config; **1934** and **1938** knockout-only (no groups nav/standings); all other editions have a group stage — §3.4 | §3.2, §3.4, §4.1, §4.2        |
 | 3   | Third-place on overview | Yes — between semi-finals and final in the knockout stack                                                          | §4.1, §10.1                   |
-| 4   | PWA                     | No separate manifest; temporarily set Football PWA `start_url` to WC overview; revert to PL after tournament       | §5.3, §12 Phase 2             |
+| 4   | PWA                     | No separate manifest; Football PWA `start_url` is PL (WC override removed post-tournament)                       | §5.3, §12 Phase 2             |
 | 5   | WC sidebar visibility   | Show World Cup nav when any `wc_matches_{edition}` collection exists                                               | §5.1                          |
 | 6   | Live updates transport  | Match scores: extend `/football/ws/` with `competition: "world-cup"`. Standings: dedicated `/football/ws/world-cup-table/` | §9                            |
 | 7   | Sidebar structure       | Collapsible **Competitions** heading grouping PL and WC                                                            | §5.1                          |
@@ -1218,7 +1214,7 @@ See §15. Summary:
 | 12  | Bracket feeder labels   | **2026:** static `WC_2026_KNOCKOUT_FIXTURES` map for R32+ slots; `bracket_team_label()` at render time             | §4.4                          |
 | 13  | Third-place on bracket  | In Final column below Final match, not a separate footer block                                                     | §4.4                          |
 | 14  | Invalid edition pages   | **302 redirect** to tournament overview — not 404                                                                    | §5.5                          |
-| 15  | Historic summary        | **Summary** nav + page for all editions except current (`2026`); synopsis in `wc_edition_summaries.json`           | §4.10                         |
+| 15  | Historic summary        | **Summary** nav + page for all historic editions (including **2026** in museum mode); synopsis in `wc_edition_summaries.json` | §4.10                         |
 | 16  | Edition picker UX       | Shared partial; **Apply** keeps page type; **Current Edition** jumps to same route with current year                 | §5.2, §10.8                   |
 | 17  | Summary play-off rules  | **Group play-offs** section on Summary only when play-off data exists (**1954**, **1958**) — definite wording      | §4.10, §16.4                  |
 | 18  | Tournament “today” TZ   | `America/Los_Angeles` for standings cutoffs and live polling; UK time for display only                             | §3.6, §8.6, §9.2              |
@@ -1472,7 +1468,8 @@ When a knockout tie was drawn, some early tournaments scheduled a **replay** rat
 | `standings_rules_visitor_lines()` | `world_cup_utils.py` | Popover + Summary group-standing copy |
 | `edition_summary_rules_sections()` | `world_cup_utils.py` | Summary “Rules for this edition” blocks |
 | `edition_summary_synopsis()` | `world_cup_utils.py` | Load synopsis from `wc_edition_summaries.json` |
-| `edition_is_historic()` | `world_cup_utils.py` | `edition != WC_CURRENT_EDITION` → Summary nav |
+| `edition_is_historic()` | `world_cup_utils.py` | `not edition_is_live(edition)` → Summary nav |
+| `WC_LIVE_EDITION` | `world_cup_utils.py` | `None` in museum mode; set to a year string to re-enable live WC |
 | `sort_group_table_rows()` | `world_cup_utils.py` | Edition-aware ordering (1930–1954 play-offs; 1958 GA + play-offs; 2026 H2H) |
 | `compute_head_to_head_stats()` | `world_cup_utils.py` | Mini-league stats for tied teams (2026 tie-breakers) |
 | `prepare_group_table_for_display()` | `world_cup_db.py` | Sort + Q/P/C labels |

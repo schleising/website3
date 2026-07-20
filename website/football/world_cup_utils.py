@@ -14,7 +14,10 @@ from zoneinfo import ZoneInfo
 if TYPE_CHECKING:
     from .models import Match, Score, TableItem, Team
 
-WC_CURRENT_EDITION = "2026"
+WC_LIVE_EDITION: str | None = None  # None = museum mode (no live tournament)
+WC_DEFAULT_EDITION = "2026"
+WC_CURRENT_EDITION = WC_DEFAULT_EDITION  # default browse edition (latest completed)
+WC_FORMAT_EDITION_2026 = "2026"
 WC_TV_FILES: dict[str, Path] = {
     "GROUP_STAGE": Path(__file__).resolve().parent / "wc_group_tv.csv",
     "LAST_32": Path(__file__).resolve().parent / "wc_last_32_knockout_tv.csv",
@@ -199,23 +202,21 @@ def standings_rules_visitor_lines(edition: str) -> list[str]:
         else "Teams earned 2 points for a win and 1 for a draw."
     )
 
-    if edition == WC_CURRENT_EDITION:
+    if edition == WC_FORMAT_EDITION_2026:
         return [
             points_rule,
-            "The top two teams in each group qualify for the Round of 32.",
-            "The eight best third-placed teams across all groups also advance.",
-            "Third-placed teams are ranked on points, then goal difference, then goals scored "
-            "(fair play and the FIFA World Ranking follow if still tied).",
-            "For live Q labels among third-placed teams, only points count until every group "
-            "has finished; goal difference and goals scored apply after that.",
-            "Within a group, teams level on points are ranked by:",
+            "The top two teams in each group qualified for the Round of 32.",
+            "The eight best third-placed teams across all groups also advanced.",
+            "Third-placed teams were ranked on points, then goal difference, then goals scored "
+            "(fair play and the FIFA World Ranking followed if still tied).",
+            "Within a group, teams level on points were ranked by:",
             "1) most points in head-to-head matches among the tied teams;",
             "2) superior goal difference in those head-to-head matches;",
             "3) most goals scored in those head-to-head matches;",
             "4) superior goal difference in all group matches;",
             "5) most goals scored in all group matches.",
-            "Q marks teams who have already secured a top-two place in the group, "
-            "or a guaranteed place among the eight best third-placed teams.",
+            "Q marks teams that finished in a qualifying place (top two in the group, "
+            "or among the eight best third-placed teams).",
         ]
 
     if not edition_has_knockout_stage(edition):
@@ -304,8 +305,12 @@ def edition_had_group_playoffs(edition: str) -> bool:
     return edition in _GROUP_PLAYOFF_SUMMARY
 
 
+def edition_is_live(edition: str) -> bool:
+    return WC_LIVE_EDITION is not None and edition == WC_LIVE_EDITION
+
+
 def edition_is_historic(edition: str) -> bool:
-    return edition != WC_CURRENT_EDITION
+    return not edition_is_live(edition)
 
 
 def edition_summary_rules_sections(edition: str) -> list[dict[str, str | list[str]]]:
@@ -344,7 +349,7 @@ def edition_summary_rules_sections(edition: str) -> list[dict[str, str | list[st
         format_lines.append(
             f"Group stage ({group_count} groups), then a knockout bracket."
         )
-        if edition == WC_CURRENT_EDITION:
+        if edition == WC_FORMAT_EDITION_2026:
             format_lines.append(
                 "Top two from each group and the eight best third-placed teams "
                 "advanced to the Round of 32."
@@ -1110,7 +1115,7 @@ def sort_group_table_rows(
             playoff_match,
         )
     elif (
-        edition == WC_CURRENT_EDITION
+        edition == WC_FORMAT_EDITION_2026
         and edition_matches is not None
         and group_slug is not None
     ):

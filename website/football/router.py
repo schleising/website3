@@ -20,7 +20,7 @@ from fastapi import (
     Response,
     status,
 )
-from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 
 from .football_db import (
@@ -722,14 +722,6 @@ async def get_live_matches(
 ):
     logging.debug(f"/football/: {request}")
 
-    # TODO: Remove World Cup root redirect after the competition ends.
-    if await world_cup_nav_available():
-        football_root_path = str(_build_football_mode_context(request)["football_root_path"])
-        return RedirectResponse(
-            url=f"{football_root_path}world-cup/",
-            status_code=302,
-        )
-
     season_context = await _build_football_season_context(
         request,
         None,
@@ -1416,19 +1408,6 @@ async def get_football_wc_versioned_asset(asset_path: str) -> FileResponse:
 async def get_football_manifest(request: Request):
     if not _is_football_web_app_request(request):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
-
-    from .world_cup_db import world_cup_nav_available
-
-    if await world_cup_nav_available():
-        manifest = json.loads(FOOTBALL_MANIFEST_PATH.read_text(encoding="utf-8"))
-        manifest["start_url"] = "/world-cup/"
-        manifest["description"] = (
-            "Premier League and World Cup fixtures, tables, and notifications"
-        )
-        return JSONResponse(
-            content=manifest,
-            media_type="application/manifest+json",
-        )
 
     return FileResponse(
         path=FOOTBALL_MANIFEST_PATH,

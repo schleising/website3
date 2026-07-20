@@ -38,6 +38,7 @@ from .world_cup_utils import (
     edition_has_knockout_stage,
     edition_hides_goal_difference_column,
     edition_is_historic,
+    edition_is_live,
     edition_summary_rules_sections,
     edition_summary_synopsis,
     edition_uses_goal_average,
@@ -134,6 +135,7 @@ async def _build_world_cup_context(
         else current_edition
     )
     is_current_edition = selected_edition == current_edition
+    is_live_edition = edition_is_live(selected_edition)
     has_group_stage = edition_has_group_stage(selected_edition)
     has_knockout_stage = edition_has_knockout_stage(selected_edition)
     has_group_playoffs = await edition_has_group_playoff_matches(selected_edition)
@@ -142,15 +144,16 @@ async def _build_world_cup_context(
     context = {
         "world_cup_section": True,
         "is_current_edition": is_current_edition,
+        "is_live_edition": is_live_edition,
         "has_group_stage": has_group_stage,
         "has_knockout_stage": has_knockout_stage,
         "show_groups_nav": has_group_stage,
         "show_playoffs_nav": has_group_playoffs,
         "show_knockout_nav": has_knockout_stage,
         "show_summary_nav": edition_is_historic(selected_edition),
-        "enable_live_updates": is_current_edition,
-        "enable_live_standings": is_current_edition and has_group_stage,
-        "auto_center_next_match": is_current_edition,
+        "enable_live_updates": is_live_edition,
+        "enable_live_standings": is_live_edition and has_group_stage,
+        "auto_center_next_match": is_live_edition,
         "show_world_cup_nav": await world_cup_nav_available(),
         "show_edition_selector": show_edition_selector and len(available_editions) > 1,
         "available_editions": [

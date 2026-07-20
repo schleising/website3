@@ -512,5 +512,31 @@
       {"name": "Semi-finals", "text": "Argentina beat Croatia 3–0 in Lusail, Messi scoring a penalty and Julián Álvarez twice. France defeated Morocco 2–0 in Al Khor, Theo Hernández and Randal Kolo Muani scoring. Argentina and France would meet in Lusail."},
       {"name": "Final", "text": "Messi put Argentina ahead from the penalty spot; Mbappé equalised from the spot and scored twice more for a hat-trick, the second in stoppage time. Ángel Di María had made it 3–1 for Argentina before Mbappé's late heroics. Argentina won 4–2 on penalties after 3–3, and Messi lifted the trophy at last."}
     ]
+  },
+  "2026": {
+    "host_country": "United States, Mexico and Canada",
+    "dates": "11 June – 19 July 2026",
+    "teams": 48,
+    "winner": "Spain",
+    "runner_up": "Argentina",
+    "top_scorer": "Kylian Mbappé (France) — 10 goals",
+    "intro": "The first 48-team World Cup spanned the United States, Mexico and Canada, with twelve groups of four and a Round of 32 fed by the eight best third-placed sides. Spain won a second title sixteen years after Johannesburg, completing a European Championship–World Cup double under Luis de la Fuente. Ferran Torres' extra-time finish at MetLife Stadium denied Lionel Messi a second consecutive crown. England took third after a 6–4 thriller against France in Miami, where Mbappé's brace secured a record second Golden Boot.",
+    "highlights": [
+      "Spain beat Argentina 1–0 after extra time in East Rutherford; Torres scored in the 106th minute.",
+      "Spain conceded only one goal in eight matches — the fewest by a World Cup champion.",
+      "England finished third, beating France 6–4 in the play-off; Mbappé scored twice to win the Golden Boot with 10 goals.",
+      "Argentina beat England 2–1 in the semi-finals after coming from behind late; Spain shut out France 2–0.",
+      "The expanded format introduced a Round of 32 and twelve groups for the first time.",
+      "Messi's final World Cup appearance ended in defeat; Spain also extended a long unbeaten run across all competitions."
+    ],
+    "rounds": [
+      {"name": "Group stage", "text": "Twelve groups of four. Spain topped Group H after drawing with Cape Verde then beating Saudi Arabia and Uruguay. Argentina won Group J with three victories. The top two from each group and the eight best third-placed teams advanced to the Round of 32."},
+      {"name": "Round of 32", "text": "Spain beat Austria 3–0 at SoFi Stadium. Argentina defeated Cape Verde. The expanded knockout round mixed group winners with runners-up and best third-placed sides across North American venues."},
+      {"name": "Round of 16", "text": "Spain edged Portugal 1–0 with a stoppage-time Mikel Merino goal in Dallas. Argentina beat Egypt. Favourites continued to advance as the field narrowed to eight."},
+      {"name": "Quarter-finals", "text": "Spain beat Belgium after a 1–1 first half. Argentina defeated Switzerland 3–1 in extra time after Switzerland were reduced to ten men. France and England also reached the last four."},
+      {"name": "Semi-finals", "text": "Spain beat France 2–0 in Dallas, Oyarzabal and Porro scoring. Argentina overturned England 2–1 in Atlanta after Anthony Gordon's opener, with Enzo Fernández and Lautaro Martínez striking late."},
+      {"name": "Third-place match", "text": "England beat France 6–4 in Miami. Mbappé scored twice — enough for the Golden Boot — but England's first-half blitz and late goals from Saka and Bellingham secured bronze."},
+      {"name": "Final", "text": "At MetLife Stadium, Spain and Argentina drew 0–0 after 90 minutes. Enzo Fernández was sent off late in normal time. Ferran Torres finished in the 106th minute for a 1–0 win, Spain's second World Cup title after 2010."}
+    ]
   }
 }

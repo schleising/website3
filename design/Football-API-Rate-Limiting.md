@@ -1,8 +1,8 @@
 # Football API Rate Limiting — Design Proposal
 
-Status: **Approved** — ready for implementation  
-Date: 2026-05-27 (decisions locked 2026-05-27)  
-Scope: Global rate limiting and retry policy for all football-data.org v4 traffic in the backend football worker (Premier League + World Cup)
+Status: **Implemented** in the backend football worker (PL only while World Cup is in museum mode).  
+Date: 2026-05-27 (decisions locked 2026-05-27; status updated 2026-07-20)  
+Scope: Global rate limiting and retry policy for all football-data.org v4 traffic in the backend football worker (Premier League; World Cup sync disabled post-tournament)
 
 ## 1. Goal
 

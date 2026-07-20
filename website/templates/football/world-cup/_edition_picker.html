@@ -15,13 +15,13 @@
     <label class="football-season-label" for="world-cup-edition-select">Edition</label>
     <select id="world-cup-edition-select" name="edition" class="football-season-select site-select">
       {% for edition_option in available_editions %}
-      <option value="{{ edition_option.key }}" {% if edition_option.selected %}selected{% endif %}>{{ edition_option.label }}{% if edition_option.is_current %} (Current){% endif %}</option>
+      <option value="{{ edition_option.key }}" {% if edition_option.selected %}selected{% endif %}>{{ edition_option.label }}{% if edition_option.is_current %} (Latest){% endif %}</option>
       {% endfor %}
     </select>
     <div class="football-season-popup-actions">
       <button type="submit" class="btn btn-primary football-season-go">Apply</button>
       {% if not is_current_edition|default(false) %}
-      <a href="{{ current_edition_url }}" class="btn btn-primary football-season-current-btn" data-history-mode="football-shell">Current Edition {{ current_edition }}</a>
+      <a href="{{ current_edition_url }}" class="btn btn-primary football-season-current-btn" data-history-mode="football-shell">Latest Edition {{ current_edition }}</a>
       {% endif %}
     </div>
   </form>

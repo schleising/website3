@@ -78,8 +78,7 @@
             {% set is_logout_page = current_path.startswith('/account/logout') %}
             <a class="sub-level-nav{% if current_path == '/' %} is-current{% endif %}" href="/"{% if current_path == '/' %} aria-current="page"{% endif %}>Home</a>
             <a class="sub-level-nav{% if current_section == 'webapps' %} is-current{% endif %}" href="/webapps/"{% if current_section == 'webapps' %} aria-current="page"{% endif %}>Webapps</a>
-            {# TODO: Revert Football nav link to /football/table/ after the World Cup ends. #}
-            <a class="sub-level-nav{% if current_section == 'football' %} is-current{% endif %}" href="/football/world-cup/" data-nav-prefix="/football/"{% if current_section == 'football' %} aria-current="page"{% endif %}>Football</a>
+			<a class="sub-level-nav{% if current_section == 'football' %} is-current{% endif %}" href="/football/table/" data-nav-prefix="/football/"{% if current_section == 'football' %} aria-current="page"{% endif %}>Football</a>
             {% if request.state.user != None %}
             <a class="sub-level-nav{% if current_section == 'feeds' %} is-current{% endif %}" href="/feeds/" data-nav-prefix="/feeds/"{% if current_section == 'feeds' %} aria-current="page"{% endif %}>Feeds</a>
             {% endif %}

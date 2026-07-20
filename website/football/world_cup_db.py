@@ -14,11 +14,13 @@ from . import live_wc_standings, mongodb
 from .models import LiveTableItem, Match, MatchStatus, Table, TableItem, Team
 from .world_cup_utils import (
     WC_CURRENT_EDITION,
+    WC_FORMAT_EDITION_2026,
     WC_GROUP_STAGE,
     edition_has_group_stage,
     edition_has_knockout_stage,
     edition_hides_goal_difference_column,
     edition_in_group_playoff_era,
+    edition_is_live,
     filter_group_playoffs_from_knockout_matches,
     find_group_playoff_match,
     group_playoff_round_label,
@@ -315,13 +317,13 @@ async def retrieve_group_matches(edition: str, group_slug: str) -> list[Match]:
 
 async def get_wc_live_group_standings_db(edition: str) -> list[WorldCupGroupStandings]:
     """Read live group standings from MongoDB (mirrors get_table_db for PL)."""
-    if edition == WC_CURRENT_EDITION and live_wc_standings is not None:
+    if edition_is_live(edition) and live_wc_standings is not None:
         collection = live_wc_standings
     else:
         collection = _get_live_standings_collection(edition)
 
     standings = await _retrieve_group_standings_from_collection(collection, edition)
-    if edition == WC_CURRENT_EDITION:
+    if edition_is_live(edition):
         await apply_live_qualification_labels(edition, standings)
 
     return standings
@@ -1123,10 +1125,10 @@ async def prepare_group_table_for_display(
         prepared,
         edition,
         group_slug=group_slug,
-        edition_matches=matches if edition == WC_CURRENT_EDITION else edition_matches,
+        edition_matches=matches if edition == WC_FORMAT_EDITION_2026 else edition_matches,
     )
 
-    if edition == WC_CURRENT_EDITION:
+    if edition_is_live(edition):
         all_group_tables, group_matches = (
             await _fetch_all_sorted_group_tables_for_qualification(edition)
         )
@@ -1211,7 +1213,7 @@ async def apply_live_qualification_labels(
     edition: str,
     groups: list[WorldCupGroupStandings],
 ) -> None:
-    if edition != WC_CURRENT_EDITION:
+    if not edition_is_live(edition):
         return
 
     official_tables, group_matches_by_slug = (
@@ -1438,7 +1440,7 @@ async def build_overview_group_stage_sections(
     standings_by_slug = {group.group_slug: group for group in standings}
     all_edition_matches = (
         None
-        if edition == WC_CURRENT_EDITION
+        if edition_is_live(edition)
         else await retrieve_all_edition_matches(edition)
     )
     sections: list[WorldCupOverviewGroupStageSection] = []
@@ -1515,7 +1517,7 @@ async def list_group_stage_summary_sections(
     standings = await retrieve_all_group_standings(edition)
     all_edition_matches = (
         None
-        if edition == WC_CURRENT_EDITION
+        if edition_is_live(edition)
         else await retrieve_all_edition_matches(edition)
     )
     summaries_by_slug = {
@@ -1742,7 +1744,7 @@ async def build_knockout_bracket_diagram(
         return None
 
     fixture_maps: dict[str, dict[int, Match]] | None = None
-    if edition == WC_CURRENT_EDITION:
+    if edition == WC_FORMAT_EDITION_2026:
         group_tables, _ = await _fetch_all_sorted_group_tables_for_qualification(
             edition
         )
