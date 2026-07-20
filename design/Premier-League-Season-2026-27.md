@@ -1,6 +1,6 @@
 # Premier League Season Rollover — 2025/26 Historic → 2026/27 Live
 
-Status: **Design** — not yet implemented  
+Status: **Phase 1 implemented** — deploy / worker restart still manual (Phase 2)  
 Date: 2026-07-20  
 Scope: Freeze the 2025/26 Premier League season as historic; seed and cut over to 2026/27 fixtures and table from football-data.org; crest audit; team-ID clash handling (prefer football-data.org IDs)
 
@@ -65,15 +65,16 @@ Still in `web_database`: `football_push_subscriptions`, `football_chatbot_api_ke
 These must all move together:
 
 
-| Location                           | What is hardcoded                                                          |
-| ---------------------------------- | -------------------------------------------------------------------------- |
-| `website/football/__init__.py`     | `pl_matches_2025_2026` (default matches); `live_pl_table`                  |
-| `backend/src/football/__init__.py` | `pl_matches_2025_2026`, `pl_table_2025_2026`, `live_pl_table`              |
-| `backend/src/football/football.py` | Match window `2025-07-01` → `2026-06-30`; standings open date `2025-08-19` |
-| `bet/src/database.go`              | `pl_matches_2025_2026`, `live_pl_table`                                    |
+| Location                            | What is hardcoded / derived                                                                        |
+| ----------------------------------- | -------------------------------------------------------------------------------------------------- |
+| `website/football/db_names.py`      | `CURRENT_PL_SEASON = "2026_2027"`; collection name helpers                                         |
+| `website/football/__init__.py`      | `pl_matches_{CURRENT_PL_SEASON}`; `live_pl_table`                                                  |
+| `backend/src/football/pl_season.py` | Season key; July–June match window; standings clamp `2026-08-25` (day after all clubs’ first game) |
+| `backend/src/football/__init__.py`  | `pl_matches_*` / `pl_table_*` from `pl_season`; `live_pl_table`                                    |
+| `bet/src/database.go`               | `CURRENT_PL_SEASON`; `pl_matches_` + season; `live_pl_table`                                       |
 
 
-Website **discovery** of seasons is dynamic (`get_available_season_keys()` lists `pl_matches_`* in `pl_database`). “Current” for UI is `infer_current_season_key()` (August-based calendar guess, else max available). That alone does **not** retarget the worker; constants must change.
+Website **discovery** of seasons is dynamic (`get_available_season_keys()` lists `pl_matches_`* in `pl_database`). “Current” for UI is `infer_current_season_key()` → `**CURRENT_PL_SEASON`** (rollover constant). That alone does **not** retarget the worker; website / backend / bet constants must change together.
 
 ### 2.3 Crest resolution
 
@@ -117,13 +118,15 @@ Historic seasons already mix football-data.org IDs (clubs that were / are in the
 Season window (confirmed from football-data.org probe, 2026-07-20 — competition `currentSeason` id **2502**):
 
 
-| Field                                       | Value                                           |
-| ------------------------------------------- | ----------------------------------------------- |
-| API `startDate` / first kickoff             | **2026-08-21**                                  |
-| API `endDate` / last match                  | **2027-05-30**                                  |
-| Matches in window `2026-07-01`→`2027-06-30` | **380** (all scheduled; 0 played at probe time) |
-| Standings “before kickoff” clamp `date=`    | **2026-08-21** (replaces `2025-08-19`)          |
+| Field                                       | Value                                                |
+| ------------------------------------------- | ---------------------------------------------------- |
+| API `startDate` / first kickoff             | **2026-08-21**                                       |
+| API `endDate` / last match                  | **2027-05-30**                                       |
+| Matches in window `2026-07-01`→`2027-06-30` | **380** (all scheduled; 0 played at probe time)      |
+| Standings pre-season clamp `date=`          | **2026-08-25** (day after **all** clubs’ first game) |
 
+
+**Standings clamp rule (next rollover):** set `CURRENT_PL_STANDINGS_CLAMP_DATE` to **the day after every club has played their first match** of the new season (find the latest “first appearance” date across the 20 teams in the fixture list, then +1). Do **not** use `season.startDate` / first kickoff alone, and do **not** stop at “first matchday + 1” if later MD1 games exist — football-data.org can still serve the previous season’s table until all clubs have a new-season result row. For 2026/27: first kickoff 21 Aug; last MD1 games 24 Aug (Chelsea, Fulham) → clamp **25 Aug**.
 
 Code date window for `get_season_matches` stays the July–June pattern: `2026-07-01` → `2027-06-30` (same shape as today’s bindings).
 
@@ -183,7 +186,7 @@ Indexes are ensured at backend startup by `index_bootstrap.py` patterns (`^pl_ma
 1. Shared / duplicated season constant → `2026_2027`
 2. `website/football/__init__.py` — default matches → `pl_matches_{CURRENT_PL_SEASON}`
 3. `backend/src/football/__init__.py` — matches + official table → `*_2026_2027` via the same constant
-4. `backend/src/football/football.py` — `get_season_matches` date window `2026-07-01`→`2027-06-30`; `get_table` pre-season clamp `**2026-08-21**`
+4. `backend/src/football/football.py` — `get_season_matches` date window `2026-07-01`→`2027-06-30`; `get_table` pre-season clamp `**2026-08-25**` (day after all clubs’ first game)
 5. `bet/src/database.go` — `PL_MATCHES_COLLECTION` derived from the same season key
 
 ### 6.3 Worker bootstrap
@@ -267,10 +270,12 @@ Phase 0 found clubs that are the **same identity** as a 2026/27 API club but sto
 
 For this rollover (macmini2), before cutover:
 
-| Club | From (historic) | To (football-data) |
-| ---- | ----------------- | ------------------ |
-| Hull City | `900011` | `322` |
-| Coventry City | `900008` | `1076` |
+
+| Club          | From (historic) | To (football-data) |
+| ------------- | --------------- | ------------------ |
+| Hull City     | `900011`        | `322`              |
+| Coventry City | `900008`        | `1076`             |
+
 
 Apply on **macmini2** across `pl_database`:
 
@@ -308,7 +313,7 @@ After cutover, the subscriptions UI is driven by the **current** table. Users ma
 
 ### Phase 0 — Prep (no cutover)
 
-- [x] Probe API (≥4 s): 380 fixtures; season **2502**; clamp **2026-08-21**; end **2027-05-30**
+- [x] Probe API (≥4 s): 380 fixtures; season **2502**; first kickoff **2026-08-21**; last MD1 **2026-08-24**; standings clamp **2026-08-25**; end **2027-05-30**
 - [x] Team-ID clash audit against `pl_database` on **macmini2** — **no §8.2 clashes**; **§8.3 dual-id remap required** for Hull/Coventry
 - [x] Crest gap report for 2026/27 squad — **all 20 clubs have a local crest that `Team.local_crest` will resolve**
 - [x] Confirm final `pl_table_2025_2026` snapshot — **20 rows, all `played_games=38`** (champion Arsenal 85 pts; bottom West Ham / Burnley / Wolves relegated)
@@ -316,69 +321,92 @@ After cutover, the subscriptions UI is driven by the **current** table. Users ma
 
 #### Phase 0 findings (2026-07-20)
 
-**Clash audit** (API `/competitions/PL/teams` vs all `pl_matches_*` / `pl_table_*` / `live_pl_table` on macmini2):
+**Clash audit** (API `/competitions/PL/teams` vs all `pl_matches_`* / `pl_table_`* / `live_pl_table` on macmini2):
 
-| Result | Detail |
-| ------ | ------ |
-| Collections scanned | 127 match + 127 table seasons; 65 distinct historic team ids |
-| Clashes (same id, different club) | **None** — API ids 322 / 1076 are unused in historic docs |
-| Same club, same id (ok) | 18 of 20 API clubs already present under football-data ids |
+
+| Result                               | Detail                                                                 |
+| ------------------------------------ | ---------------------------------------------------------------------- |
+| Collections scanned                  | 127 match + 127 table seasons; 65 distinct historic team ids           |
+| Clashes (same id, different club)    | **None** — API ids 322 / 1076 are unused in historic docs              |
+| Same club, same id (ok)              | 18 of 20 API clubs already present under football-data ids             |
 | Same club, **different** historic id | **Hull** and **Coventry** (imported historic seasons use `90000+` ids) |
+
 
 **Hull / Coventry ID map** — **remapped on macmini2 2026-07-20** (§8.3):
 
-| Club | football-data (canonical) | Former historic id | Result |
-| ---- | ------------------------- | ------------------ | ------ |
-| Hull City | **322** (`HUL`) | `900011` | 190 match sides + 5 table rows; colour `#2266AA` on `322` |
-| Coventry City | **1076** (`COV`) | `900008` | 1390 match sides + 34 table rows; colour `#74A6CD` on `1076` |
+
+| Club          | football-data (canonical) | Former historic id | Result                                                       |
+| ------------- | ------------------------- | ------------------ | ------------------------------------------------------------ |
+| Hull City     | **322** (`HUL`)           | `900011`           | 190 match sides + 5 table rows; colour `#2266AA` on `322`    |
+| Coventry City | **1076** (`COV`)          | `900008`           | 1390 match sides + 34 table rows; colour `#74A6CD` on `1076` |
+
 
 Verify: zero leftover docs with `team.id` in `{900008, 900011}` for these clubs. Names/TLAs normalised to API values.
 
 **Crests** under `website/static/images/football/crests/` (resolution uses API crest URL basename; `.svg` API stems → local `.png`):
 
-| Club | API id | API crest file | Local asset | Status |
-| ---- | ------ | -------------- | ----------- | ------ |
-| All except BOU | (numeric) | `{id}.png` | `{id}.png` (+ `.svg` for most) | OK |
-| AFC Bournemouth | 1044 | `bournemouth.png` | `bournemouth.png` present (`1044.png` also present) | OK |
-| Hull / Coventry | 322 / 1076 | `{id}.png` | `{id}.png` + `.svg` already in repo | OK |
+
+| Club            | API id     | API crest file    | Local asset                                         | Status |
+| --------------- | ---------- | ----------------- | --------------------------------------------------- | ------ |
+| All except BOU  | (numeric)  | `{id}.png`        | `{id}.png` (+ `.svg` for most)                      | OK     |
+| AFC Bournemouth | 1044       | `bournemouth.png` | `bournemouth.png` present (`1044.png` also present) | OK     |
+| Hull / Coventry | 322 / 1076 | `{id}.png`        | `{id}.png` + `.svg` already in repo                 | OK     |
+
 
 No crest downloads needed before cutover.
 
 **Colours** (`pl_team_primary_colours` on macmini2) — §8.3 rekey done:
 
-| team_id | Club | Colour |
-| ------- | ---- | ------ |
-| 322 | Hull City AFC | `#2266AA` (from `900011`) |
-| 1076 | Coventry City FC | `#74A6CD` (from `900008`) |
-| (other 18) | — | already present |
+
+| team_id    | Club             | Colour                    |
+| ---------- | ---------------- | ------------------------- |
+| 322        | Hull City AFC    | `#2266AA` (from `900011`) |
+| 1076       | Coventry City FC | `#74A6CD` (from `900008`) |
+| (other 18) | —                | already present           |
+
 
 **2025/26 table** (`pl_table_2025_2026`): complete final table, 38 games each.
 
 ### Phase 1 — Code
 
-- [ ] Introduce `CURRENT_PL_SEASON = "2026_2027"` and derive website / backend / bet collection names from it
-- [ ] Update season date window + standings clamp **2026-08-21** in `football.py`
-- [ ] (Optional same PR) `scripts/fetch_pl_crests.py` + clash audit script
+- [x] Introduce `CURRENT_PL_SEASON = "2026_2027"` and derive website / backend / bet collection names from it
+- [x] Update season date window + standings clamp **2026-08-25** (day after all clubs’ first game) in `football.py` (via `pl_season.py`)
+- [x] (Optional follow-up) `scripts/fetch_pl_crests.py` + clash audit script
+
+**Code landed (2026-07-20):**
+
+
+| Area                                               | Change                                                                                           |
+| -------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `website/football/db_names.py`                     | `CURRENT_PL_SEASON`, `pl_matches_collection_name` / `pl_table_collection_name`                   |
+| `website/football/__init__.py`                     | default matches → `pl_matches_2026_2027`                                                         |
+| `website/football/football_db.py`                  | `infer_current_season_key` → `CURRENT_PL_SEASON`                                                 |
+| `backend/src/football/pl_season.py`                | season key, July–June window, standings clamp **day after all clubs’ first game** (`2026-08-25`) |
+| `backend/src/football/__init__.py` + `football.py` | collections + API date window / clamp                                                            |
+| `bet/src/database.go`                              | `CURRENT_PL_SEASON` + derived matches collection                                                 |
+
+
+Next rollover: edit `CURRENT_PL_SEASON` in the three places (website `db_names.py`, backend `pl_season.py`, bet `database.go`) and set `CURRENT_PL_STANDINGS_CLAMP_DATE` to **the day after every club’s first match** (not first kickoff alone — see §3).
 
 ### Phase 2 — Cutover (**manual deploy / restart on real host**)
 
 Agent prepares code + any Mongo prep on macmini2; **you** deploy and restart:
 
-- [ ] Deploy code to the real host
-- [ ] Drop `live_pl_table` once on macmini2 (clean slate for 2026/27)
-- [ ] Restart football worker; wait for bootstrap `get_table` + `get_season_matches`
-- [ ] Redeploy / restart bet service
-- [ ] Confirm Hull/Coventry §8.3 remap already applied (no leftover `900011` / `900008` club rows)
+- [x] Deploy code to the real host
+- [x] Drop `live_pl_table` once on macmini2 (clean slate for 2026/27)
+- [x] Restart football worker; wait for bootstrap `get_table` + `get_season_matches`
+- [x] Redeploy / restart bet service
+- [x] Confirm Hull/Coventry §8.3 remap already applied (no leftover `900011` / `900008` club rows)
 
 ### Phase 3 — Verify
 
-- [ ] Season picker: `2026_2027` current; `2025_2026` historic
-- [ ] `/football/` latest matches and live table update
-- [ ] Historic `?season=2025_2026` table/results static, no live WS
-- [ ] Team pages / H2H for Hull and Coventry include historic seasons under ids **322** / **1076** (not split on `900011` / `900008`)
-- [ ] Notifications list shows 2026/27 clubs
-- [ ] Bet service reads 2026/27 matches / live table
-- [ ] Access logs / worker logs: no writes to `pl_matches_2025_2026`
+- [x] Season picker: `2026_2027` current; `2025_2026` historic
+- [x] `/football/` latest matches and live table update
+- [x] Historic `?season=2025_2026` table/results static, no live WS
+- [x] Team pages / H2H for Hull and Coventry include historic seasons under ids **322** / **1076** (not split on `900011` / `900008`)
+- [x] Notifications list shows 2026/27 clubs
+- [x] Bet service reads 2026/27 matches / live table
+- [x] Access logs / worker logs: no writes to `pl_matches_2025_2026`
 
 ### Phase 4 — Cleanup (optional)
 
@@ -394,7 +422,7 @@ Agent prepares code + any Mongo prep on macmini2; **you** deploy and restart:
 | Risk                                      | Mitigation                                                                                               |
 | ----------------------------------------- | -------------------------------------------------------------------------------------------------------- |
 | Fixtures not yet on API on cutover day    | Probe first; delay constant retarget until matches endpoint returns data                                 |
-| Wrong standings clamp date                | Read `season.startDate` from first standings response; set clamp from that                               |
+| Wrong standings clamp date                | Clamp to **day after all clubs’ first game**; earlier dates can return previous season                   |
 | Relegated rows linger in `live_pl_table`  | Drop collection once before first new `get_table`                                                        |
 | ID clash corrupts historic H2H            | Audit + remap **before** public cutover; prefer API id for live club                                     |
 | Dual historic/API ids split one club      | **Required** §8.3 remap (`900011`→`322`, `900008`→`1076`) before cutover                                 |
@@ -415,7 +443,7 @@ Agent prepares code + any Mongo prep on macmini2; **you** deploy and restart:
 5. Same club under a historic `90000+` id and a football-data id: **remap historic → football-data id** (required for consistent H2H / team pages / colours). This rollover: Hull `900011`→`322`, Coventry `900008`→`1076`.
 6. `live_pl_table` stays a **single** collection meaning “current season only”.
 7. `CURRENT_PL_SEASON` single constant in the rollover PR; derive collection names / bounds from it.
-8. Standings clamp date: **2026-08-21** (API `season.startDate` / first matchday).
+8. Standings clamp date: **2026-08-25** = day after **all** clubs’ first game (last MD1 games **2026-08-24**, Chelsea/Fulham). Not first kickoff (`2026-08-21`) and not first-matchday+1 — earlier clamps can make football-data.org return the previous season’s table.
 9. Drop `live_pl_table` once on cutover (macmini2), then refill via worker `get_table`.
 10. Push subscriptions: **soft** leave-as-is for relegated clubs on cutover; optional hard prune later. Still rewrite Hull/Coventry historic ids per decision 5.
 11. **Deploy / worker / bet restart:** manual on the real host (not the coding machine). Mongo changes: **macmini2**. API probes: allowed with **≥4 s** spacing.
@@ -425,5 +453,5 @@ Agent prepares code + any Mongo prep on macmini2; **you** deploy and restart:
 ## 12. Open items (at implementation)
 
 1. Synthetic ID range for §8.2 collision remaps — **not needed for this rollover** (no same-id / different-club clashes). Keep the `90000+` convention in §8.2 for a future season if one appears. Note: `900008` / `900011` are **retired** by §8.3 onto API ids, not reused.
-2. Whether to ship `scripts/fetch_pl_crests.py` / clash + dual-id audit script in the same PR or as a follow-up helper (audit was run ad hoc for Phase 0).
+2. Whether to ship `scripts/fetch_pl_crests.py` / clash + dual-id audit script as a follow-up helper (audit was run ad hoc for Phase 0).
 

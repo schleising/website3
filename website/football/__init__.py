@@ -1,12 +1,20 @@
 from ..database.database import Database
-from .db_names import PL_DATABASE, WC_DATABASE, WEB_DATABASE
+from .db_names import (
+    LIVE_PL_TABLE_COLLECTION,
+    PL_DATABASE,
+    WC_DATABASE,
+    WEB_DATABASE,
+    pl_matches_collection_name,
+)
 
 # Get an instance of the Database class
 mongodb = Database()
 
-# Premier League collections
-pl_matches = mongodb.get_collection("pl_matches_2025_2026", db_name=PL_DATABASE)
-pl_table = mongodb.get_collection("live_pl_table", db_name=PL_DATABASE)
+# Premier League collections (live season from CURRENT_PL_SEASON)
+pl_matches = mongodb.get_collection(
+    pl_matches_collection_name(), db_name=PL_DATABASE
+)
+pl_table = mongodb.get_collection(LIVE_PL_TABLE_COLLECTION, db_name=PL_DATABASE)
 team_primary_colours = mongodb.get_collection(
     "pl_team_primary_colours", db_name=PL_DATABASE
 )

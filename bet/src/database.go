@@ -19,7 +19,10 @@ type Database struct {
 const MONGO_CONNECTION_STRING = "mongodb://host.docker.internal:27017"
 const WEB_DATABASE = "web_database"
 const PL_DATABASE = "pl_database"
-const PL_MATCHES_COLLECTION = "pl_matches_2025_2026"
+
+// Keep in sync with website/football/db_names.py and backend/src/football/pl_season.py
+const CURRENT_PL_SEASON = "2026_2027"
+const PL_MATCHES_COLLECTION = "pl_matches_" + CURRENT_PL_SEASON
 const PL_TABLE_COLLECTION = "live_pl_table"
 const USER_LOCATION_COLLECTION = "user_locations"
 

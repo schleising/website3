@@ -9,7 +9,12 @@ from motor.motor_asyncio import AsyncIOMotorCollection
 from ..database.database import get_data_by_date
 
 from . import pl_matches, pl_table, football_push, team_primary_colours, mongodb
-from .db_names import PL_DATABASE
+from .db_names import (
+    CURRENT_PL_SEASON,
+    PL_DATABASE,
+    pl_matches_collection_name,
+    pl_table_collection_name,
+)
 from .models import (
     FormItem,
     Match,
@@ -35,11 +40,11 @@ SUBSCRIPTION_DOCUMENT_SORT = [("updated_at", DESCENDING), ("created_at", DESCEND
 
 
 def _season_matches_collection_name(season_key: str) -> str:
-    return f"pl_matches_{season_key}"
+    return pl_matches_collection_name(season_key)
 
 
 def _season_table_collection_name(season_key: str) -> str:
-    return f"pl_table_{season_key}"
+    return pl_table_collection_name(season_key)
 
 
 def _season_sort_value(season_key: str) -> int:
@@ -193,17 +198,14 @@ def _clear_position_outcome_labels(table_list: list[LiveTableItem]) -> None:
 
 
 def infer_current_season_key(available_season_keys: list[str]) -> str:
-    now = datetime.now(tz=UTC)
-    season_start_year = now.year if now.month >= 8 else now.year - 1
-    guessed_current = f"{season_start_year}_{season_start_year + 1}"
+    """Return the configured live PL season (``CURRENT_PL_SEASON``).
 
-    if guessed_current in available_season_keys:
-        return guessed_current
-
-    if len(available_season_keys) > 0:
-        return max(available_season_keys, key=_season_sort_value)
-
-    return guessed_current
+    Season discovery remains dynamic via ``get_available_season_keys``; which
+    season is *current* is the rollover constant, not an August calendar guess.
+    ``available_season_keys`` is unused but kept for call-site compatibility.
+    """
+    _ = available_season_keys
+    return CURRENT_PL_SEASON
 
 
 async def get_available_season_keys() -> list[str]:
