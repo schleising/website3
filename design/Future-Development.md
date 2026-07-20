@@ -18,6 +18,7 @@ Loose ideas for evolving [schleising.net](https://www.schleising.net) — not a 
 ### Football — Premier League
 
 - ~~Restore PL as the default football entry once World Cup 2026 ends (home link, left nav, `/football/` redirect, PWA `start_url`)~~ **Done** (2026-07-20).
+- Season rollover 2025/26 → 2026/27 (historic freeze, API fixtures/table, crests, team-ID clashes) — see `design/Premier-League-Season-2026-27.md`.
 - Season archive browsing (past seasons’ tables, results, H2H) without relying only on the chatbot History API.
 - Richer stats surfaces: form streaks, goal difference trends, referee / venue filters if the API data supports them.
 - Better mobile PWA install and offline-ish recent scores cache.
