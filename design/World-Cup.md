@@ -6,6 +6,8 @@ Scope: World Cup area within the existing Football section
 
 **Post-tournament:** `WC_LIVE_EDITION = None`. Edition **2026** uses the same historic UX as 1930–2022 (Summary nav, no live WS). Backend no longer schedules World Cup sync/live jobs. Site defaults (home, nav, `/football/`, PWA) point at the Premier League table.
 
+**Databases:** World Cup collections live in MongoDB ``wc_database``; Premier League collections in ``pl_database``. Push subscriptions and chatbot API keys remain in ``web_database``. Migrate with ``scripts/migrate_football_databases.py``.
+
 ## 1. Goal
 
 Add a World Cup section to the Football area of the website, using the same upstream data source as the Premier League (football-data.org) and the same general response shapes already modelled in `website/football/models.py` (`Match`, `Standing`, `Table`, `Team`, `Score`).
@@ -59,15 +61,15 @@ Do **not** reuse without adaptation:
 A World Cup edition is identified by the **calendar year of the tournament** (e.g. `2026`), not `YYYY_YYYY`.
 
 
-| Concept              | PL convention          | WC convention                                                   |
-| -------------------- | ---------------------- | --------------------------------------------------------------- |
-| Edition key          | `2025_2026`            | `2026`                                                          |
-| Match collection     | `pl_matches_2025_2026` | `wc_matches_2026`                                               |
-| Standings collection | `pl_table_2026`        | `wc_standings_2026`                                             |
-| Live standings       | `live_pl_table`        | `live_wc_standings_2026` (per edition)                          |
-| Date window          | Aug–May                | Tournament window only (e.g. 2026: `2026-06-11` → `2026-07-19`) |
-| API `season` filter  | N/A (uses `YYYY_YYYY`) | Calendar year, e.g. `?season=2026`                              |
-| API season `id`      | N/A                    | Internal id per edition (2026 → `2398`)                         |
+| Concept              | PL convention (`pl_database`) | WC convention (`wc_database`)                                     |
+| -------------------- | ----------------------------- | ----------------------------------------------------------------- |
+| Edition key          | `2025_2026`                   | `2026`                                                            |
+| Match collection     | `pl_matches_2025_2026`        | `wc_matches_2026`                                                 |
+| Standings collection | `pl_table_2025_2026`          | `wc_standings_2026`                                               |
+| Live standings       | `live_pl_table`               | `live_wc_standings_2026` (per edition)                            |
+| Date window          | Aug–May                       | Tournament window only (e.g. 2026: `2026-06-11` → `2026-07-19`)   |
+| API `season` filter  | N/A (uses `YYYY_YYYY`)        | Calendar year, e.g. `?season=2026`                                |
+| API season `id`      | N/A                           | Internal id per edition (2026 → `2398`)                           |
 
 
 ### 3.2 Stages

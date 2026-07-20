@@ -14,7 +14,7 @@ from pymongo import MongoClient
 
 DEFAULT_SOURCE_HOST = "macmini2"
 DEFAULT_TARGET_URI = "mongodb://127.0.0.1:27018"
-DEFAULT_DB = "web_database"
+DEFAULT_DB = "wc_database"
 DEFAULT_EDITION = "2026"
 
 

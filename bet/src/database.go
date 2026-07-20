@@ -18,6 +18,7 @@ type Database struct {
 
 const MONGO_CONNECTION_STRING = "mongodb://host.docker.internal:27017"
 const WEB_DATABASE = "web_database"
+const PL_DATABASE = "pl_database"
 const PL_MATCHES_COLLECTION = "pl_matches_2025_2026"
 const PL_TABLE_COLLECTION = "live_pl_table"
 const USER_LOCATION_COLLECTION = "user_locations"
@@ -69,7 +70,7 @@ func (db *Database) GetTableDb() ([]LiveTableItem, error) {
 	defer cancel()
 
 	// Query the database
-	cursor, err := db.client.Database(WEB_DATABASE).Collection(PL_TABLE_COLLECTION).Find(ctx, bson.M{})
+	cursor, err := db.client.Database(PL_DATABASE).Collection(PL_TABLE_COLLECTION).Find(ctx, bson.M{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to find documents: %w", err)
 	}
@@ -99,7 +100,7 @@ func (db *Database) GetTeamLeagueDataDb(team string) (*LiveTableItem, error) {
 	defer cancel()
 
 	// Query the database
-	err := db.client.Database(WEB_DATABASE).Collection(PL_TABLE_COLLECTION).FindOne(ctx, bson.M{
+	err := db.client.Database(PL_DATABASE).Collection(PL_TABLE_COLLECTION).FindOne(ctx, bson.M{
 		"team.short_name": team,
 	}).Decode(&teamData)
 	if err != nil {
@@ -117,7 +118,7 @@ func (db *Database) GetHeadToHeadMatchesDb(team_a_short_name, team_b_short_name 
 	defer cancel()
 
 	// Query the database
-	cursor, err := db.client.Database(WEB_DATABASE).Collection(PL_MATCHES_COLLECTION).Find(ctx, bson.M{
+	cursor, err := db.client.Database(PL_DATABASE).Collection(PL_MATCHES_COLLECTION).Find(ctx, bson.M{
 		"$or": []bson.M{
 			{
 				"home_team.short_name": team_a_short_name,
@@ -159,7 +160,7 @@ func (db *Database) GetLatestTeamMatchDb(team string) (*Match, error) {
 	defer cancel()
 
 	// Query the database
-	err := db.client.Database(WEB_DATABASE).Collection(PL_MATCHES_COLLECTION).FindOne(ctx, bson.M{
+	err := db.client.Database(PL_DATABASE).Collection(PL_MATCHES_COLLECTION).FindOne(ctx, bson.M{
 		"$or": []bson.M{
 			{"home_team.short_name": team},
 			{"away_team.short_name": team},

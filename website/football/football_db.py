@@ -9,6 +9,7 @@ from motor.motor_asyncio import AsyncIOMotorCollection
 from ..database.database import get_data_by_date
 
 from . import pl_matches, pl_table, football_push, team_primary_colours, mongodb
+from .db_names import PL_DATABASE
 from .models import (
     FormItem,
     Match,
@@ -206,20 +207,19 @@ def infer_current_season_key(available_season_keys: list[str]) -> str:
 
 
 async def get_available_season_keys() -> list[str]:
-    if mongodb.current_db is None:
-        if pl_matches is None:
-            return []
-
-        matched = SEASON_MATCH_COLLECTION_PATTERN.match(pl_matches.name)
-        return [matched.group(1)] if matched else []
-
-    collection_names = await mongodb.current_db.list_collection_names()
+    pl_db = mongodb.get_database(PL_DATABASE)
+    collection_names = await pl_db.list_collection_names()
     season_keys: list[str] = []
 
     for collection_name in collection_names:
         matched = SEASON_MATCH_COLLECTION_PATTERN.match(collection_name)
         if matched is not None:
             season_keys.append(matched.group(1))
+
+    if len(season_keys) == 0 and pl_matches is not None:
+        matched = SEASON_MATCH_COLLECTION_PATTERN.match(pl_matches.name)
+        if matched is not None:
+            return [matched.group(1)]
 
     return sorted(set(season_keys), key=_season_sort_value, reverse=True)
 
@@ -228,7 +228,10 @@ def _get_match_collection_for_season(
     season_key: str | None = None,
 ) -> AsyncIOMotorCollection | None:
     if season_key is not None and SEASON_KEY_PATTERN.match(season_key) is not None:
-        return mongodb.get_collection(_season_matches_collection_name(season_key))
+        return mongodb.get_collection(
+            _season_matches_collection_name(season_key),
+            db_name=PL_DATABASE,
+        )
 
     return pl_matches
 
@@ -237,7 +240,10 @@ def _get_table_collection_for_season(
     season_key: str | None = None,
 ) -> AsyncIOMotorCollection | None:
     if season_key is not None and SEASON_KEY_PATTERN.match(season_key) is not None:
-        return mongodb.get_collection(_season_table_collection_name(season_key))
+        return mongodb.get_collection(
+            _season_table_collection_name(season_key),
+            db_name=PL_DATABASE,
+        )
 
     return pl_table
 
@@ -249,7 +255,10 @@ async def _get_match_collections(include_all_seasons: bool = False) -> list[Asyn
     collections: list[AsyncIOMotorCollection] = []
 
     for season_key in await get_available_season_keys():
-        collection = mongodb.get_collection(_season_matches_collection_name(season_key))
+        collection = mongodb.get_collection(
+            _season_matches_collection_name(season_key),
+            db_name=PL_DATABASE,
+        )
         if collection is not None:
             collections.append(collection)
 
@@ -266,7 +275,10 @@ async def _get_table_collections(include_all_seasons: bool = False) -> list[Asyn
     collections: list[AsyncIOMotorCollection] = []
 
     for season_key in await get_available_season_keys():
-        collection = mongodb.get_collection(_season_table_collection_name(season_key))
+        collection = mongodb.get_collection(
+            _season_table_collection_name(season_key),
+            db_name=PL_DATABASE,
+        )
         if collection is not None:
             collections.append(collection)
 

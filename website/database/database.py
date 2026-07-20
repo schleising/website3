@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Callable, TypeVar
+from typing import TypeVar
 import logging
 
 from motor.motor_asyncio import (
@@ -36,6 +36,10 @@ class Database:
 
         return self.current_db
 
+    def get_database(self, db_name: str) -> AsyncIOMotorDatabase:
+        """Return a database handle without changing ``current_db``."""
+        return self.client[db_name]
+
     def get_collection(
         self, collection_name: str, db_name: str | None = None, tz_aware: bool = False
     ) -> AsyncIOMotorCollection | None:
@@ -44,35 +48,23 @@ class Database:
         Args:
             collection_name (str): The name of the collection
             db_name (str | None, optional): Optional database name. Defaults to None.
+                When provided, ``current_db`` is left unchanged.
 
         Returns:
             The collection or None if it does not exist
         """
         if db_name is not None:
-            self.current_db = self.client[db_name]
-            if tz_aware:
-                return (
-                    self.current_db.get_collection(
-                        collection_name, codec_options=CodecOptions(tz_aware=True)
-                    )
-                    if self.current_db is not None
-                    else None
-                )
-            else:
-                return (
-                    self.current_db.get_collection(collection_name)
-                    if self.current_db is not None
-                    else None
-                )
+            database = self.client[db_name]
         elif self.current_db is not None:
-            if tz_aware:
-                return self.current_db.get_collection(
-                    collection_name, codec_options=CodecOptions(tz_aware=True)
-                )
-            else:
-                return self.current_db.get_collection(collection_name)
+            database = self.current_db
         else:
             return None
+
+        if tz_aware:
+            return database.get_collection(
+                collection_name, codec_options=CodecOptions(tz_aware=True)
+            )
+        return database.get_collection(collection_name)
 
 
 async def get_data_by_date(

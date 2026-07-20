@@ -15,7 +15,7 @@ ROOT = Path(__file__).resolve().parents[1]
 WEBSITE_DIR = ROOT / "website"
 FOOTBALL_DIR = WEBSITE_DIR / "football"
 DEFAULT_HOST = "macmini2"
-DEFAULT_DB = "web_database"
+DEFAULT_DB = "wc_database"
 LIVE_EDITION = "2026"
 
 

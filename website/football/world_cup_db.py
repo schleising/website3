@@ -11,6 +11,7 @@ from pymongo import ASCENDING
 
 from ..database.database import get_data_by_date
 from . import live_wc_standings, mongodb
+from .db_names import WC_DATABASE
 from .models import LiveTableItem, Match, MatchStatus, Table, TableItem, Team
 from .world_cup_utils import (
     WC_CURRENT_EDITION,
@@ -202,10 +203,7 @@ def _live_standings_collection_name(edition: str) -> str:
 
 
 async def _list_collection_names() -> list[str]:
-    if mongodb.current_db is None:
-        return []
-
-    return await mongodb.current_db.list_collection_names()
+    return await mongodb.get_database(WC_DATABASE).list_collection_names()
 
 
 async def get_available_wc_editions() -> list[str]:
@@ -233,15 +231,24 @@ async def infer_current_wc_edition() -> str:
 
 
 def _get_matches_collection(edition: str):
-    return mongodb.get_collection(_matches_collection_name(edition))
+    return mongodb.get_collection(
+        _matches_collection_name(edition),
+        db_name=WC_DATABASE,
+    )
 
 
 def _get_standings_collection(edition: str):
-    return mongodb.get_collection(_standings_collection_name(edition))
+    return mongodb.get_collection(
+        _standings_collection_name(edition),
+        db_name=WC_DATABASE,
+    )
 
 
 def _get_live_standings_collection(edition: str):
-    return mongodb.get_collection(_live_standings_collection_name(edition))
+    return mongodb.get_collection(
+        _live_standings_collection_name(edition),
+        db_name=WC_DATABASE,
+    )
 
 
 async def _retrieve_group_standings_from_collection(
