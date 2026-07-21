@@ -7,6 +7,44 @@ from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator
 
 from .world_cup_utils import WC_CREST_UNKNOWN_URL, resolve_world_cup_crest_url
 
+_PL_CREST_STATIC_DIR = (
+    Path(__file__).resolve().parent.parent / "static" / "images" / "football" / "crests"
+)
+_PL_CREST_FALLBACK = "/images/football/crests/unknown_team.svg"
+_PL_CREST_RASTER_SUFFIXES = frozenset({".png", ".gif", ".jpg", ".jpeg", ".webp"})
+
+
+def resolve_pl_local_crest(crest: str | None) -> str:
+    """Map a football-data.org crest URL to a local static path, preferring SVG."""
+    crest_value = (crest or "").strip()
+    if crest_value == "":
+        return _PL_CREST_FALLBACK
+
+    filename = crest_value.split("/")[-1].strip()
+    if filename == "":
+        return _PL_CREST_FALLBACK
+
+    stem = Path(filename).stem
+    suffix = Path(filename).suffix.lower()
+    svg_name = f"{stem}.svg"
+    svg_url = f"/images/football/crests/{svg_name}"
+
+    if suffix == ".svg":
+        return svg_url
+
+    # Raster API URL (or odd basename): prefer a local SVG with the same stem.
+    if (_PL_CREST_STATIC_DIR / svg_name).is_file():
+        return svg_url
+
+    if suffix in _PL_CREST_RASTER_SUFFIXES:
+        return f"/images/football/crests/{filename}"
+
+    # Unknown / extensionless — try SVG then leave as-is if present.
+    if (_PL_CREST_STATIC_DIR / filename).is_file():
+        return f"/images/football/crests/{filename}"
+
+    return _PL_CREST_FALLBACK
+
 
 def football_api_field(snake_name: str, api_alias: str, **kwargs: Any) -> Any:
     return Field(
@@ -242,20 +280,7 @@ class Team(BaseModel):
 
     @property
     def local_crest(self) -> str:
-        fallback_path = "/images/football/crests/unknown_team.svg"
-        crest_value = (self.crest or "").strip()
-        if crest_value == "":
-            return fallback_path
-
-        filename = crest_value.split("/")[-1].strip()
-        if filename == "":
-            return fallback_path
-
-        suffix = Path(filename).suffix.lower()
-        if suffix == ".svg":
-            return f"/images/football/crests/{Path(filename).stem}.png"
-
-        return f"/images/football/crests/{filename}"
+        return resolve_pl_local_crest(self.crest)
 
 
 class Season(BaseModel):

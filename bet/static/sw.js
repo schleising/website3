@@ -5,7 +5,7 @@
  */
 
 
-const VERSION = "v0.0.35";
+const VERSION = "v0.0.36";
 const CACHE_NAME = `football-bet-tracker-${VERSION}`;
 
 
@@ -14,9 +14,9 @@ const APP_STATIC_RESOURCES = [
     "/css/reset.css",
     "/css/locations.css",
     "/css/football/bet.css",
-    "/images/football/crests/64.png",
-    "/images/football/crests/61.png",
-    "/images/football/crests/73.png",
+    "/images/football/crests/64.svg",
+    "/images/football/crests/61.svg",
+    "/images/football/crests/73.svg",
     "/icons/football/bet/favicon-48x48.ico",
     "/manifests/football/bet.webmanifest",
     "/js/football/bet.js",

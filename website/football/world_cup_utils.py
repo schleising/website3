@@ -3114,8 +3114,8 @@ def bump_wc_flag_cache_version() -> int:
 
 def resolve_world_cup_crest_url(team_id: int) -> str:
     cache_suffix = f"?v={wc_flag_cache_version()}"
-    if (WC_CREST_STATIC_DIR / f"{team_id}.png").is_file():
-        return f"/images/football/crests/wc/{team_id}.png{cache_suffix}"
     if (WC_CREST_STATIC_DIR / f"{team_id}.svg").is_file():
         return f"/images/football/crests/wc/{team_id}.svg{cache_suffix}"
+    if (WC_CREST_STATIC_DIR / f"{team_id}.png").is_file():
+        return f"/images/football/crests/wc/{team_id}.png{cache_suffix}"
     return WC_CREST_UNKNOWN_URL

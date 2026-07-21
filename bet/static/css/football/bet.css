@@ -80,15 +80,15 @@ body {
 }
 
 .bet-widget-liverpool::before {
-    background-image: url(/images/football/crests/64.png);
+    background-image: url(/images/football/crests/64.svg);
 }
 
 .bet-widget-chelsea::before {
-    background-image: url(/images/football/crests/61.png);
+    background-image: url(/images/football/crests/61.svg);
 }
 
 .bet-widget-tottenham::before {
-    background-image: url(/images/football/crests/73.png);
+    background-image: url(/images/football/crests/73.svg);
 }
 
 .bet-widget:hover {

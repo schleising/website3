@@ -78,13 +78,13 @@ Website **discovery** of seasons is dynamic (`get_available_season_keys()` lists
 
 ### 2.3 Crest resolution
 
-`Team.local_crest` maps the football-data.org crest URL basename to a local file:
+`Team.local_crest` maps the football-data.org crest URL basename to a local file, **preferring SVG**:
 
-- API crest `…/64.svg` → serve `/images/football/crests/64.png` (SVG stem → PNG)
-- Other filenames → `/images/football/crests/{filename}`
+- API crest `…/64.svg` → serve `/images/football/crests/64.svg`
+- API crest raster (`…/bournemouth.png`, gif/jpg/…) → serve `/images/football/crests/{stem}.svg` when that file exists, otherwise the raster filename
 - Missing → `unknown_team.svg`
 
-Assets live under `website/static/images/football/crests/`. The live worker must **not** download crests (`Football-API-Rate-Limiting.md`).
+Assets live under `website/static/images/football/crests/`. Store **SVG where possible**; keep PNG/GIF/JPG only when no SVG exists. The live worker must **not** download crests (`Football-API-Rate-Limiting.md`).
 
 ### 2.4 Team ID surfaces that clash can break
 
@@ -92,7 +92,7 @@ Assets live under `website/static/images/football/crests/`. The live worker must
 | Surface                       | Risk if the same `team.id` means two different clubs   |
 | ----------------------------- | ------------------------------------------------------ |
 | Team cache / H2H / team pages | Last write wins across all seasons                     |
-| Crest filename `{id}.png`     | Wrong badge                                            |
+| Crest filename `{id}.svg` / `{id}.png` | Wrong badge |
 | `pl_team_primary_colours`     | Wrong colour                                           |
 | Push `team_ids`               | Wrong club’s alerts                                    |
 | Bet service                   | Reads embedded team objects from current matches/table |
@@ -223,13 +223,13 @@ Re-probe before cutover day if anything looks stale. Token: `backend/src/secrets
 ### 7.1 Policy
 
 - **Offline / one-shot only** — never download crests inside the live football worker.
-- Store PNGs named to match `Team.local_crest` (typically `{apiId}.png` when the API crest is `{apiId}.svg`).
+- Store **SVG** named to match `Team.local_crest` (typically `{apiId}.svg` when the API crest is `{apiId}.svg`). Keep raster only when no SVG is available.
 
 ### 7.2 Audit + download workflow
 
 1. After (or from a dry-run of) the first 2026/27 matches or `GET /competitions/PL/teams`, collect distinct `team.id` + crest URL.
-2. For each team, check `website/static/images/football/crests/{id}.png` (and any non-numeric legacy names only if still referenced).
-3. Missing: download from the API crest URL / `crests.football-data.org`, convert SVG → PNG if needed, commit assets to the repo.
+2. For each team, check `website/static/images/football/crests/{id}.svg` first (then `.png` / other raster only if still referenced).
+3. Missing: download from the API crest URL / `crests.football-data.org`, prefer SVG (convert only if the source has no SVG), commit assets to the repo.
 4. Add or update `pl_team_primary_colours` for promoted clubs (manual or small helper — colours are not on the matches API).
 
 ### 7.3 Suggested script (implementation phase)
@@ -255,7 +255,7 @@ Add `scripts/fetch_pl_crests.py` (mirror spirit of `scripts/fetch_wc_flags.py`):
 
 **Prefer the football-data.org ID.**
 
-1. Live 2026/27 club keeps the API `team.id` unchanged in new-season data and crest filename `{id}.png`.
+1. Live 2026/27 club keeps the API `team.id` unchanged in new-season data and crest filename `{id}.svg` (PNG only if no SVG).
 2. Historic documents that wrongly used that id for a **different** club are remapped to a **new stable project-owned id** (allocate from a reserved high range unused by football-data.org PL clubs, e.g. `90000+`, documented in the rollover notes).
 3. Rename/move historic crest files if they were stored as `{oldId}.png` and now collide; update `pl_team_primary_colours` keys for remapped ids.
 4. Do **not** change the live club’s API id to protect historic data.
@@ -283,7 +283,7 @@ Apply on **macmini2** across `pl_database`:
 2. In all `pl_table_*`: same for `team.id` (and name/tla fields).
 3. `pl_team_primary_colours`: rekey `900011`→`322` and `900008`→`1076` (or copy colour then delete old row). Hex already known: Hull `#2266AA`, Coventry `#74A6CD`.
 4. `web_database.football_push_subscriptions`: rewrite any `team_ids` entries `900011`→`322`, `900008`→`1076` if present.
-5. Crest files: live assets are already `{322,1076}.png`; historic named/legacy crests for these clubs need no id rename if unused after remap. Confirm team pages resolve via API crest basename.
+5. Crest files: live assets are already `{322,1076}.svg`; historic named/legacy crests for these clubs need no id rename if unused after remap. Confirm team pages resolve via API crest basename (SVG preferred).
 6. Re-scan: no remaining docs with `team.id` in `{900008, 900011}` for these clubs; team cache / H2H treats historic + live as one club.
 
 This is **required for site consistency**, not optional. It is distinct from §8.2 (collision with a *different* club on the same id).
@@ -343,14 +343,13 @@ After cutover, the subscriptions UI is driven by the **current** table. Users ma
 
 Verify: zero leftover docs with `team.id` in `{900008, 900011}` for these clubs. Names/TLAs normalised to API values.
 
-**Crests** under `website/static/images/football/crests/` (resolution uses API crest URL basename; `.svg` API stems → local `.png`):
+**Crests** under `website/static/images/football/crests/` (resolution prefers SVG; raster only when no SVG exists):
 
-
-| Club            | API id     | API crest file    | Local asset                                         | Status |
-| --------------- | ---------- | ----------------- | --------------------------------------------------- | ------ |
-| All except BOU  | (numeric)  | `{id}.png`        | `{id}.png` (+ `.svg` for most)                      | OK     |
-| AFC Bournemouth | 1044       | `bournemouth.png` | `bournemouth.png` present (`1044.png` also present) | OK     |
-| Hull / Coventry | 322 / 1076 | `{id}.png`        | `{id}.png` + `.svg` already in repo                 | OK     |
+| Club | API id | API crest file | Local asset | Status |
+| ---- | ------ | -------------- | ----------- | ------ |
+| All except BOU | (numeric) | `{id}.png` / `{id}.svg` | `{id}.svg` served | OK |
+| AFC Bournemouth | 1044 | `bournemouth.png` | `bournemouth.png` (no SVG yet) | OK (raster fallback) |
+| Hull / Coventry | 322 / 1076 | `{id}.png` | `{id}.svg` | OK |
 
 
 No crest downloads needed before cutover.
@@ -438,7 +437,7 @@ Agent prepares code + any Mongo prep on macmini2; **you** deploy and restart:
 
 1. **2025/26** remains in Mongo as a normal historic season (no deletion / rename).
 2. **2026/27** becomes current via retargeted code + worker ingest from football-data.org (not a one-shot full fixture import).
-3. Crests are filled **offline**; worker never downloads crests.
+3. Crests are filled **offline** as **SVG where possible** (raster only if no SVG); worker never downloads crests. `Team.local_crest` prefers `.svg`.
 4. On team-ID clash (same id, different club), **prefer football-data.org ID** for the live club; remap conflicting historic data to a new project-owned id.
 5. Same club under a historic `90000+` id and a football-data id: **remap historic → football-data id** (required for consistent H2H / team pages / colours). This rollover: Hull `900011`→`322`, Coventry `900008`→`1076`.
 6. `live_pl_table` stays a **single** collection meaning “current season only”.
