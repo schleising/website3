@@ -348,7 +348,7 @@ Verify: zero leftover docs with `team.id` in `{900008, 900011}` for these clubs.
 | Club | API id | API crest file | Local asset | Status |
 | ---- | ------ | -------------- | ----------- | ------ |
 | All except BOU | (numeric) | `{id}.png` / `{id}.svg` | `{id}.svg` served | OK |
-| AFC Bournemouth | 1044 | `bournemouth.png` | `bournemouth.png` (no SVG yet) | OK (raster fallback) |
+| AFC Bournemouth | 1044 | `bournemouth.png` (API); SVG also at `1044.svg` | `bournemouth.svg` + `1044.svg` (from football-data) | OK |
 | Hull / Coventry | 322 / 1076 | `{id}.png` | `{id}.svg` | OK |
 
 
