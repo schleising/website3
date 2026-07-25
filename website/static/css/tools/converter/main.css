@@ -46,15 +46,14 @@ html {
 body {
     display: flex;
     flex-direction: column;
-    align-items: center;
+    align-items: stretch;
     font-family: var(--font-body);
     color: var(--ink);
     background:
         radial-gradient(90% 70% at 8% -10%, rgba(15, 143, 122, 0.18), transparent 55%),
         radial-gradient(70% 60% at 100% 0%, rgba(181, 106, 18, 0.1), transparent 45%),
         linear-gradient(165deg, var(--paper), var(--paper-deep));
-    overflow-x: hidden;
-    overflow-y: auto;
+    overflow: hidden;
     -webkit-user-select: none;
     user-select: none;
 }
@@ -71,13 +70,16 @@ body::after {
 .shell {
     display: flex;
     flex-direction: column;
+    flex-grow: 1;
+    flex-shrink: 1;
+    flex-basis: 0;
     gap: 1rem;
     width: min(100%, 72rem);
     margin: 0 auto;
-    padding: 1rem 1rem 1.5rem;
-    flex: 1 0 auto;
-    min-height: 100%;
+    padding: 1rem 1rem calc(1.5rem + env(safe-area-inset-bottom, 0));
+    min-height: 0;
     box-sizing: border-box;
+    overflow: hidden;
 }
 
 /* —— Top bar —— */
@@ -246,7 +248,8 @@ body::after {
 .topbar,
 .live-stage,
 .kpi-band {
-    flex: 0 0 auto;
+    flex-grow: 0;
+    flex-shrink: 0;
 }
 
 /* —— Live stage —— */
@@ -496,15 +499,20 @@ body::after {
 
 /* —— Activity / file list —— */
 .activity {
-    flex: 1 0 auto;
     display: flex;
     flex-direction: column;
+    flex-grow: 1;
+    flex-shrink: 1;
+    flex-basis: 0;
     min-height: 0;
     padding: 0.95rem 0.35rem 0.55rem;
+    overflow: hidden;
 }
 
 .activity-toolbar {
     display: flex;
+    flex-grow: 0;
+    flex-shrink: 0;
     align-items: flex-end;
     justify-content: space-between;
     gap: 0.85rem;
@@ -565,9 +573,16 @@ body::after {
 .converted-files-grid {
     display: flex;
     flex-direction: column;
-    flex: 1 0 auto;
+    flex-grow: 1;
+    flex-shrink: 1;
+    flex-basis: 0;
     gap: 0;
+    min-height: 0;
     border-top: 0.0625rem solid var(--line);
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
 }
 
 .file-row,
@@ -936,7 +951,7 @@ body.dark-mode #file-progress {
 
 @media screen and (max-width: 44rem) {
     .shell {
-        padding: 0.7rem 0.65rem 1.1rem;
+        padding: 0.7rem 0.65rem calc(1.1rem + env(safe-area-inset-bottom, 0));
         gap: 0.75rem;
     }
 
