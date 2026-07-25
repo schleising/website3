@@ -112,11 +112,22 @@ function setProgressBarVisible(isVisible) {
     progressWrapperElement.style.display = isVisible ? "flex" : "none";
 }
 
+function setLiveStageVisible(isVisible) {
+    const liveStageElement = document.querySelector(".live-stage");
+
+    if (liveStageElement == null) {
+        return;
+    }
+
+    liveStageElement.hidden = !isVisible;
+}
+
 function initializeConverterScaffold() {
     initializeCurrentConversionScaffold();
     initializeStatisticsScaffold();
     initializeFilesScaffold();
     setProgressBarVisible(false);
+    setLiveStageVisible(false);
 }
 
 function initializeCurrentConversionScaffold() {
@@ -370,7 +381,8 @@ function openWebSocket() {
 
                 // Only show the conversion data if numFiles is greater than 0
                 if (numFiles > 0) {
-                        setProgressBarVisible(true);
+                    setLiveStageVisible(true);
+                    setProgressBarVisible(true);
 
                     // Set the active tab to the conversion number
                     document.getElementById("conversion-" + conversionNumber).className = "conversion-button active";
@@ -433,8 +445,8 @@ function openWebSocket() {
                     // Set the value of the file-progress element to the progress
                     document.getElementById("file-progress").value = conversionStatus.converting_files[conversionNumber].progress;
                 } else {
-                        setProgressBarVisible(false);
-
+                    setProgressBarVisible(false);
+                    setLiveStageVisible(false);
                     renderNoFileBeingConverted(progressElement);
 
                     // Set the value of the file-progress element to 0

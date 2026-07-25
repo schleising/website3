@@ -45,8 +45,8 @@ html {
 
 body {
     display: flex;
-    align-items: flex-start;
-    justify-content: center;
+    flex-direction: column;
+    align-items: center;
     font-family: var(--font-body);
     color: var(--ink);
     background:
@@ -75,10 +75,9 @@ body::after {
     width: min(100%, 72rem);
     margin: 0 auto;
     padding: 1rem 1rem 1.5rem;
-    flex: 0 1 auto;
-    height: fit-content;
-    min-height: 0;
-    align-self: flex-start;
+    flex: 1 0 auto;
+    min-height: 100%;
+    box-sizing: border-box;
 }
 
 /* —— Top bar —— */
@@ -238,6 +237,16 @@ body::after {
     background: var(--surface);
     box-shadow: var(--shadow);
     backdrop-filter: blur(10px);
+}
+
+.live-stage[hidden] {
+    display: none !important;
+}
+
+.topbar,
+.live-stage,
+.kpi-band {
+    flex: 0 0 auto;
 }
 
 /* —— Live stage —— */
@@ -475,8 +484,9 @@ body::after {
 
 /* —— Activity / file list —— */
 .activity {
-    flex: 0 0 auto;
-    height: fit-content;
+    flex: 1 0 auto;
+    display: flex;
+    flex-direction: column;
     min-height: 0;
     padding: 0.95rem 0.35rem 0.55rem;
 }
@@ -543,6 +553,7 @@ body::after {
 .converted-files-grid {
     display: flex;
     flex-direction: column;
+    flex: 1 0 auto;
     gap: 0;
     border-top: 0.0625rem solid var(--line);
 }
