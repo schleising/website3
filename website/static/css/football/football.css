@@ -767,6 +767,10 @@ h3.header-text.football-header-text--season {
     flex: 1 1 auto;
 }
 
+.score-widget > .team + .team {
+    margin-top: 0.4rem;
+}
+
 .date-and-time {
     display: flex;
     flex-direction: row;
