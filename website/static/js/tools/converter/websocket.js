@@ -37,14 +37,14 @@ var cachedConvertedFiles = null;
 var cachedFilesToConvert = null;
 
 const statisticsScaffoldFields = [
-    { key: 'total_files', label: 'Total Files: ', type: 'number' },
-    { key: 'total_converted', label: 'Total Files Converted: ', type: 'number' },
-    { key: 'total_to_convert', label: 'Total Files to Convert: ', type: 'number' },
-    { key: 'gigabytes_before_conversion', label: 'Size Before Conversion: ', type: 'size' },
-    { key: 'gigabytes_after_conversion', label: 'Size After Conversion: ', type: 'size' },
-    { key: 'gigabytes_saved', label: 'Space Saved: ', type: 'size' },
-    { key: 'percentage_saved', label: 'Percentage Saved: ', type: 'percentage' },
-    { key: 'total_conversion_time', label: 'Total Conversion Time: ', type: 'text' }
+    { key: 'total_files', label: 'Total files', type: 'number', wrapperClass: [] },
+    { key: 'total_converted', label: 'Converted', type: 'number', wrapperClass: ['kpi-live'] },
+    { key: 'total_to_convert', label: 'In queue', type: 'number', wrapperClass: ['kpi-queue'] },
+    { key: 'gigabytes_before_conversion', label: 'Size before', type: 'size', wrapperClass: [] },
+    { key: 'gigabytes_after_conversion', label: 'Size after', type: 'size', wrapperClass: [] },
+    { key: 'gigabytes_saved', label: 'Space saved', type: 'size', wrapperClass: ['kpi-emphasis'] },
+    { key: 'percentage_saved', label: 'Saved', type: 'percentage', wrapperClass: ['kpi-emphasis'] },
+    { key: 'total_conversion_time', label: 'Total time', type: 'text', wrapperClass: [] }
 ];
 
 // Add a callback for state changes
@@ -103,7 +103,7 @@ document.addEventListener("visibilitychange", () => {
 });
 
 function setProgressBarVisible(isVisible) {
-    const progressWrapperElement = document.querySelector(".conversion-progress");
+    const progressWrapperElement = document.querySelector(".live-progress");
 
     if (progressWrapperElement == null) {
         return;
@@ -143,7 +143,15 @@ function initializeStatisticsScaffold() {
     statisticsElement.innerHTML = "";
 
     for (const field of statisticsScaffoldFields) {
-        appendKeyValueElement(statisticsElement, field.label, "--", [], [], field.key);
+        appendKeyValueElement(
+            statisticsElement,
+            field.label,
+            "--",
+            [],
+            [],
+            field.key,
+            field.wrapperClass || []
+        );
     }
 }
 
@@ -722,19 +730,15 @@ function ensureCurrentConversionLayout(progressElement) {
     filenameRowElement.appendChild(filenameValueElement);
     layoutElement.appendChild(filenameRowElement);
 
-    const completeSpeedRowElement = document.createElement("div");
-    completeSpeedRowElement.classList.add("current-stats-row", "current-stats-row-three");
-    completeSpeedRowElement.appendChild(createCurrentMetricBlock("complete", "Complete"));
-    completeSpeedRowElement.appendChild(createCurrentMetricBlock("speed", "Speed"));
-    completeSpeedRowElement.appendChild(createCurrentMetricBlock("predicted_ratio", "Predicted Ratio"));
-    layoutElement.appendChild(completeSpeedRowElement);
-
-    const timeRowElement = document.createElement("div");
-    timeRowElement.classList.add("current-stats-row", "current-stats-row-three");
-    timeRowElement.appendChild(createCurrentMetricBlock("time_since_start", "Since Start"));
-    timeRowElement.appendChild(createCurrentMetricBlock("time_remaining", "Remaining"));
-    timeRowElement.appendChild(createCurrentMetricBlock("completion_time", "Completion"));
-    layoutElement.appendChild(timeRowElement);
+    const metricsElement = document.createElement("div");
+    metricsElement.classList.add("live-metrics");
+    metricsElement.appendChild(createCurrentMetricBlock("complete", "Complete"));
+    metricsElement.appendChild(createCurrentMetricBlock("speed", "Speed"));
+    metricsElement.appendChild(createCurrentMetricBlock("predicted_ratio", "Est. save"));
+    metricsElement.appendChild(createCurrentMetricBlock("time_since_start", "Elapsed"));
+    metricsElement.appendChild(createCurrentMetricBlock("time_remaining", "Remaining"));
+    metricsElement.appendChild(createCurrentMetricBlock("completion_time", "Done by"));
+    layoutElement.appendChild(metricsElement);
 
     progressElement.appendChild(layoutElement);
     enableFilenamePopup(filenameRowElement, "No file being converted");
@@ -822,9 +826,9 @@ function setFilesViewMode(viewMode, forceUpdate = false) {
 
     if (filesViewTitle != null) {
         if (viewMode === 'files_to_convert') {
-            filesViewTitle.innerText = "Files To Be Converted";
+            filesViewTitle.innerText = "Waiting in queue";
         } else {
-            filesViewTitle.innerText = "Files Converted in Last Week";
+            filesViewTitle.innerText = "Converted this week";
         }
     }
 

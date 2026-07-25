@@ -1,7 +1,7 @@
 const themeStorageKey = "converter.theme";
 const browserThemeColors = {
-    light: "#d7edf7",
-    dark: "#182230"
+    light: "#e8efe9",
+    dark: "#0d1512"
 };
 
 function applyBrowserThemeColor(theme) {

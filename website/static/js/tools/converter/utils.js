@@ -1,9 +1,10 @@
-function appendKeyValueElement(element, key, value, additionalKeyClass = [], additionalValueClass = [], id = "") {
-    // Create wrapper element
+function appendKeyValueElement(element, key, value, additionalKeyClass = [], additionalValueClass = [], id = "", wrapperClass = []) {
     var wrapperElement = document.createElement("div");
     wrapperElement.classList.add("key-value-wrapper");
+    if (wrapperClass.length > 0) {
+        wrapperElement.classList.add(...wrapperClass);
+    }
 
-    // Create key element
     var keyElement = document.createElement("div");
     keyElement.classList.add("data-key");
 
@@ -11,7 +12,6 @@ function appendKeyValueElement(element, key, value, additionalKeyClass = [], add
         keyElement.classList.add(...additionalKeyClass);
     }
 
-    // Create value element
     var valueElement = document.createElement("div");
     valueElement.classList.add("data-value");
 
@@ -24,123 +24,178 @@ function appendKeyValueElement(element, key, value, additionalKeyClass = [], add
         valueElement.classList.add(...additionalValueClass);
     }
 
-    // Set key and value text
     keyElement.innerText = key;
     valueElement.innerText = value;
 
-    // Append key and value elements as children of the wrapper
     wrapperElement.appendChild(keyElement);
     wrapperElement.appendChild(valueElement);
-
-    // Append wrapper element as a child of the input element
     element.appendChild(wrapperElement);
 
     return wrapperElement;
 }
 
 function appendConvertedFileCard(element, data) {
-    var cardElement = document.createElement("article");
-    cardElement.classList.add("converted-file-card");
-
-    var headerElement = document.createElement("div");
-    headerElement.classList.add("converted-file-header");
-    cardElement.appendChild(headerElement);
-
-    var titleElement = document.createElement("h4");
-    titleElement.classList.add("converted-file-name");
-    titleElement.innerText = data.filename;
-    headerElement.appendChild(titleElement);
-
-    var badgeElement = document.createElement("span");
-    badgeElement.classList.add("converted-file-badge");
-    badgeElement.innerText = data.percentage_saved.toFixed(0) + "%";
-    headerElement.appendChild(badgeElement);
-
-    var detailsElement = document.createElement("div");
-    detailsElement.classList.add("converted-file-details");
-    cardElement.appendChild(detailsElement);
-
-    appendCardStat(detailsElement, "Original", getCardValue(data.pre_conversion_size, "--", false, false, true));
-    appendCardStat(detailsElement, "New", getCardValue(data.current_size, "--", false, false, true));
-    convertedRatioValue = getCardValue(data.percentage_saved, "--");
-    if (convertedRatioValue !== "--") {
-        convertedRatioValue = Math.round(Number(convertedRatioValue)).toFixed(0) + "%";
+    var ratioNumber = null;
+    if (data.percentage_saved != null && data.percentage_saved !== "") {
+        ratioNumber = Math.round(Number(data.percentage_saved));
     }
-    appendCardStat(detailsElement, "Ratio", convertedRatioValue);
-    appendCardStat(detailsElement, "Start", getCardValue(data.start_conversion_time, "--", false, true));
-    appendCardStat(detailsElement, "End", getCardValue(data.end_conversion_time, "--", false, true));
-    appendCardStat(detailsElement, "Total", getCardValue(data.total_conversion_time));
 
-    element.appendChild(cardElement);
+    var originalSize = getCardValue(data.pre_conversion_size, "--", false, false, true);
+    var newSize = getCardValue(data.current_size, "--", false, false, true);
 
-    return cardElement;
+    var row = createFileRow({
+        kind: "converted",
+        status: "Converted",
+        filename: data.filename,
+        heroValue: ratioNumber == null || Number.isNaN(ratioNumber) ? "--" : ratioNumber + "%",
+        heroLabel: "saved",
+        fromSize: originalSize,
+        toSize: newSize,
+        fillPercent: ratioNumber == null || Number.isNaN(ratioNumber) ? 100 : Math.max(8, Math.min(100, 100 - ratioNumber)),
+        facts: [
+            { label: "Original", value: originalSize },
+            { label: "New", value: newSize },
+            { label: "Took", value: getCardValue(data.total_conversion_time) },
+            { label: "Ended", value: getCardValue(data.end_conversion_time, "--", false, true) }
+        ]
+    });
+
+    element.appendChild(row);
+    return row;
 }
 
 function appendToConvertFileCard(element, data) {
-    var cardElement = document.createElement("article");
-    cardElement.classList.add("converted-file-card");
-
-    var headerElement = document.createElement("div");
-    headerElement.classList.add("converted-file-header");
-    cardElement.appendChild(headerElement);
-
-    var titleElement = document.createElement("h4");
-    titleElement.classList.add("converted-file-name");
-    titleElement.innerText = data.filename;
-    headerElement.appendChild(titleElement);
-
-    var predictionMetaElement = document.createElement("div");
-    predictionMetaElement.classList.add("prediction-meta");
-
-    var confidenceElement = document.createElement("span");
-    confidenceElement.classList.add("prediction-confidence-badge");
-
-    confidenceText = getCardValue(data.prediction_confidence, "Low");
-    confidenceClass = String(confidenceText).trim().toLowerCase();
-    confidenceElement.classList.add("prediction-confidence-" + confidenceClass);
-    confidenceElement.innerText = confidenceText;
-    predictionMetaElement.appendChild(confidenceElement);
-
-    headerElement.appendChild(predictionMetaElement);
-
-    var detailsElement = document.createElement("div");
-    detailsElement.classList.add("converted-file-details");
-    detailsElement.classList.add("to-convert-file-details");
-    cardElement.appendChild(detailsElement);
-
-    codecValue = formatCodecValue(data.video_codec) + " / " + formatCodecValue(data.audio_codec);
-    predictedRatioValue = getCardValue(data.estimated_percentage_saved, "--");
-    if (predictedRatioValue !== "--") {
-        predictedRatioValue = Math.round(Number(predictedRatioValue)).toFixed(0) + "%";
+    var predictedRatioNumber = null;
+    if (data.estimated_percentage_saved != null && data.estimated_percentage_saved !== "") {
+        predictedRatioNumber = Math.round(Number(data.estimated_percentage_saved));
     }
 
-    appendCardStat(detailsElement, "Current Size", getCardValue(data.current_size, "--", false, false, true));
-    appendCardStat(detailsElement, "Predicted Size", getCardValue(data.estimated_size_after_conversion, "--", false, false, true));
-    appendCardStat(detailsElement, "Predicted Ratio", predictedRatioValue);
-    appendCardStat(detailsElement, "Duration", getCardValue(data.video_duration));
-    appendCardStat(detailsElement, "Bit Rate", getCardValue(data.bit_rate));
-    appendCardStat(detailsElement, "Codecs", getCardValue(codecValue));
+    var currentSize = getCardValue(data.current_size, "--", false, false, true);
+    var predictedSize = getCardValue(data.estimated_size_after_conversion, "--", false, false, true);
+    var codecValue = formatCodecValue(data.video_codec) + " / " + formatCodecValue(data.audio_codec);
+    var confidenceText = getCardValue(data.prediction_confidence, "Low");
 
-    element.appendChild(cardElement);
+    var row = createFileRow({
+        kind: "pending",
+        status: "Queued",
+        filename: data.filename,
+        confidence: confidenceText,
+        heroValue: predictedRatioNumber == null || Number.isNaN(predictedRatioNumber)
+            ? "--"
+            : predictedRatioNumber + "%",
+        heroLabel: "est. save",
+        fromSize: currentSize,
+        toSize: predictedSize,
+        fillPercent: predictedRatioNumber == null || Number.isNaN(predictedRatioNumber)
+            ? 100
+            : Math.max(8, Math.min(100, 100 - predictedRatioNumber)),
+        facts: [
+            { label: "Current", value: currentSize },
+            { label: "Predicted", value: predictedSize },
+            { label: "Duration", value: getCardValue(data.video_duration) },
+            { label: "Codecs", value: getCardValue(codecValue) }
+        ]
+    });
 
-    return cardElement;
+    element.appendChild(row);
+    return row;
 }
 
-function appendCardStat(element, label, value) {
-    var statElement = document.createElement("div");
-    statElement.classList.add("converted-file-stat");
+function createFileRow(options) {
+    var row = document.createElement("article");
+    row.classList.add("file-row", "file-row--" + options.kind, "converted-file-card");
+
+    var main = document.createElement("div");
+    main.classList.add("file-row-main");
+    row.appendChild(main);
+
+    var meta = document.createElement("div");
+    meta.classList.add("file-row-meta");
+    main.appendChild(meta);
+
+    var status = document.createElement("span");
+    status.classList.add("file-status");
+    status.innerText = options.status;
+    meta.appendChild(status);
+
+    if (options.confidence) {
+        var confidence = document.createElement("span");
+        confidence.classList.add(
+            "prediction-confidence-badge",
+            "prediction-confidence-" + String(options.confidence).trim().toLowerCase()
+        );
+        confidence.innerText = options.confidence;
+        meta.appendChild(confidence);
+    }
+
+    var name = document.createElement("h4");
+    name.classList.add("file-row-name", "converted-file-name");
+    name.innerText = options.filename;
+    main.appendChild(name);
+
+    var facts = document.createElement("div");
+    facts.classList.add("file-row-facts");
+    main.appendChild(facts);
+
+    for (var i = 0; i < options.facts.length; i++) {
+        appendFileFact(facts, options.facts[i].label, options.facts[i].value);
+    }
+
+    var hero = document.createElement("div");
+    hero.classList.add("file-row-hero");
+    row.appendChild(hero);
+
+    var heroValue = document.createElement("span");
+    heroValue.classList.add("file-row-hero-value");
+    heroValue.innerText = options.heroValue;
+    hero.appendChild(heroValue);
+
+    var heroLabel = document.createElement("span");
+    heroLabel.classList.add("file-row-hero-label");
+    heroLabel.innerText = options.heroLabel;
+    hero.appendChild(heroLabel);
+
+    var sizeBar = document.createElement("div");
+    sizeBar.classList.add("file-row-sizebar");
+    row.appendChild(sizeBar);
+
+    var fromLabel = document.createElement("span");
+    fromLabel.classList.add("file-row-sizebar-label");
+    fromLabel.innerText = options.fromSize;
+    sizeBar.appendChild(fromLabel);
+
+    var track = document.createElement("div");
+    track.classList.add("file-row-sizebar-track");
+    sizeBar.appendChild(track);
+
+    var fill = document.createElement("div");
+    fill.classList.add("file-row-sizebar-fill");
+    fill.style.width = options.fillPercent + "%";
+    track.appendChild(fill);
+
+    var toLabel = document.createElement("span");
+    toLabel.classList.add("file-row-sizebar-label");
+    toLabel.innerText = options.toSize;
+    sizeBar.appendChild(toLabel);
+
+    return row;
+}
+
+function appendFileFact(element, label, value) {
+    var fact = document.createElement("span");
+    fact.classList.add("file-fact");
 
     var labelElement = document.createElement("span");
-    labelElement.classList.add("converted-file-stat-label");
+    labelElement.classList.add("file-fact-label");
     labelElement.innerText = label;
-    statElement.appendChild(labelElement);
+    fact.appendChild(labelElement);
 
     var valueElement = document.createElement("span");
-    valueElement.classList.add("converted-file-stat-value");
+    valueElement.classList.add("file-fact-value");
     valueElement.innerText = value;
-    statElement.appendChild(valueElement);
+    fact.appendChild(valueElement);
 
-    element.appendChild(statElement);
+    element.appendChild(fact);
 }
 
 function getCardValue(value, fallback = "--", percentage = false, isDateTime = false, isSize = false) {
@@ -191,7 +246,6 @@ function parseSizeToGigabytes(value, sourceUnit = "") {
             return value / 1024;
         }
 
-        // Default numeric values from backend stats are gigabytes.
         return value;
     }
 

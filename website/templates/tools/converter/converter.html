@@ -1,34 +1,35 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <meta name="description" content="Monitor file conversions, progress, and recent activity from the converter dashboard.">
-    <meta name="theme-color" content="#d7edf7">
-    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#d7edf7">
-    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#182230">
+    <meta name="theme-color" content="#e6ebe8">
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#e6ebe8">
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0b1210">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <link type="text/css" rel="stylesheet" href="/css/tools/fonts.css?v1.1.0" />
-    <link type="text/css" rel="stylesheet" href="/css/tools/converter/reset.css?v3.13.0" />
-    <link type="text/css" rel="stylesheet" href="/css/tools/converter/main.css?v3.13.5" />
-    <link rel="icon" type="image/svg+xml" sizes="any" href="/icons/tools/converter/converter-icon-any-20260504.svg" />
-    <link rel="manifest" href="/manifests/tools/converter/converter-20260504.webmanifest" crossorigin="use-credentials" />
-    <script defer src="/js/tools/converter/utils.js?v3.13.0"></script>
-    <script defer src="/js/tools/converter/websocket.js?v3.13.1"></script>
-    <script defer src="/js/tools/converter/scope.js?v3.13.0"></script>
-    <script defer src="/js/tools/converter/theme-toggle.js?v1.1.0"></script>
-    <script defer src="/js/utils/subscribe.js?v3.13.1"></script>
+    <link type="text/css" rel="stylesheet" href="/css/tools/fonts.css?v2.2.0" />
+    <link type="text/css" rel="stylesheet" href="/css/tools/converter/reset.css?v4.0.0" />
+    <link type="text/css" rel="stylesheet" href="/css/tools/converter/main.css?v5.0.1" />
+    <link rel="icon" type="image/svg+xml" sizes="any" href="/icons/tools/converter/converter-icon-any-20260725.svg" />
+    <link rel="manifest" href="/manifests/tools/converter/converter-20260725.webmanifest" crossorigin="use-credentials" />
+    <script defer src="/js/tools/converter/utils.js?v5.0.0"></script>
+    <script defer src="/js/tools/converter/websocket.js?v5.0.0"></script>
+    <script defer src="/js/tools/converter/scope.js?v4.0.0"></script>
+    <script defer src="/js/tools/converter/theme-toggle.js?v2.0.0"></script>
+    <script defer src="/js/utils/subscribe.js?v4.0.0"></script>
     <title>Converter</title>
   </head>
   <body>
-    <div class="outer">
-      <header class="header">
-        <div>
-          <h1>Converter Dashboard</h1>
+    <div class="shell">
+      <header class="topbar">
+        <div class="brand">
+          <p class="brand-kicker">Media pipeline</p>
+          <h1 class="brand-title">Converter</h1>
         </div>
-        <div class="header-actions">
+        <div class="topbar-actions">
           <button id="theme-toggle-button" class="theme-switch" type="button" aria-label="Toggle dark mode" aria-pressed="false" title="Toggle dark mode">
             <span class="theme-switch-track" aria-hidden="true">
               <svg class="theme-switch-track-icon theme-switch-track-icon-sun" viewBox="0 0 24 24" focusable="false" aria-hidden="true">
@@ -53,41 +54,47 @@
               </span>
             </span>
           </button>
-          <button id="subscribe-button">Subscribe</button>
+          <button id="subscribe-button" type="button">Subscribe</button>
         </div>
       </header>
-      <div class="progress-area container-border">
-        <div class="data-header" id="conversion-header">
+
+      <section class="live-stage" aria-label="Current conversion">
+        <div class="live-stage-head">
+          <div class="live-stage-title-block">
+            <p class="section-kicker">Now converting</p>
+            <div class="job-tabs" id="conversion-header" role="tablist" aria-label="Active conversions"></div>
+          </div>
         </div>
-        <div class="details-container" id="progress-details">
-        </div>
-        <div class="conversion-progress">
+        <div class="live-stage-body" id="progress-details"></div>
+        <div class="live-progress">
           <progress id="file-progress" value="0" max="100"></progress>
         </div>
-      </div>
-      <main class="main">
-        <div class="stats-container container-border">
-          <div class="data-header">
-            <h3>Statistics</h3>
+      </section>
+
+      <section class="kpi-band" aria-label="Statistics">
+        <div class="section-head">
+          <p class="section-kicker">Overview</p>
+          <h2 class="section-title">Statistics</h2>
+        </div>
+        <div class="kpi-grid" id="statistics"></div>
+      </section>
+
+      <section class="activity" aria-label="File activity">
+        <div class="activity-toolbar">
+          <div class="section-head">
+            <p class="section-kicker">Activity</p>
+            <h2 class="section-title" id="files-view-title">Converted this week</h2>
           </div>
-          <div class="details-container" id="statistics">
+          <div class="activity-controls">
+            <div class="segmented" role="tablist" aria-label="File list mode">
+              <button class="segmented-btn active" id="show-converted-files" type="button">Converted</button>
+              <button class="segmented-btn" id="show-to-convert-files" type="button">Queue</button>
+            </div>
+            <div class="count-pill" id="last-day-count">0</div>
           </div>
         </div>
-        <div class="files-panel">
-          <div class="files-view-tabs" role="tablist" aria-label="Card View Mode">
-              <button class="files-view-button active" id="show-converted-files" type="button">Converted</button>
-              <button class="files-view-button" id="show-to-convert-files" type="button">To Convert</button>
-          </div>
-          <div class="data-container container-border">
-            <div class="data-header">
-              <h3 id="files-view-title">Files Converted in Last Week</h3>
-              <div class="data-header-right" id="last-day-count">0</div>
-            </div>
-            <div class="converted-files-grid" id="converted-files">
-            </div>
-          </div>
-        </div>
-      </main>
+        <div class="file-list" id="converted-files"></div>
+      </section>
     </div>
   </body>
 </html>
