@@ -1,6 +1,6 @@
 # Design: Cover Art for Converter Films & TV Shows
 
-**Status: Implemented** (website3 Converter UI + art package). This document is the design record and as-built notes.
+**Status: Implemented** (website3 Converter UI + art package + Overview/dashboard polish). This document is the design record and as-built notes.
 
 ## 1. Goal
 
@@ -40,7 +40,7 @@ Websocket payloads send **basename** (`filename`), plus `display_title`, `media_
 | --------------------------------- | ---------------------------------------- | ------------------------------------- |
 | Activity rows (converted / queue) | `display_title`, facts, % / est. save    | Fixed 2:3 slot, `object-fit: contain` |
 | Now converting                    | Poster + title + per-line stats + % hero | Same card-like grid as activity rows  |
-| Statistics                        | Aggregates only                          | N/A                                   |
+| Overview dialog                   | Aggregate KPIs (lazy-mounted on open)    | N/A                                   |
 
 
 Queue rows also include the **active converting/copying** file(s) at the top with `queue_status` of `converting` / `copying` / `queued`.
@@ -401,14 +401,34 @@ For a full path:
 | ------------------ | ----------------------------------------------------------- |
 | `filename`         | Basename only                                               |
 | `display_title`    | Primary UI label (no path)                                  |
-| `media_kind`       | `film` | `tv` | `unknown`                                   |
+| `media_kind`       | `film` / `tv` / `unknown`                                   |
 | `cover_art_url`    | Relative `art/...` or placeholder                           |
 | `cover_art_status` | `ready` / `pending` / `missing` / `error…` (debug-friendly) |
 | `cover_art_key`    | Cache key (for logging / correlation)                       |
-| `queue_status`     | Queue rows only: `queued` | `converting` | `copying`        |
+| `queue_status`     | Queue rows only: `queued` / `converting` / `copying`        |
 
 
 Applied to `ConvertingFileData`, `ConvertedFileData`, and `FileToConvertData`.
+
+### Statistics message (Overview)
+
+`StatisticsMessage` drives the Overview dialog. Fields shown in the UI:
+
+| Field | UI label |
+| ----- | -------- |
+| `total_files` | Total files |
+| `total_converted` | Converted |
+| `total_to_convert` | In queue |
+| `total_conversion_time` | Total time |
+| `films_converted` / `films_to_convert` | Films converted / Films in queue |
+| `tv_converted` / `tv_to_convert` | TV converted / TV in queue |
+| `converted_media_mix` / `queue_media_mix` | Converted mix / Queue mix (e.g. `62% films · 38% TV`) |
+| `gigabytes_before_conversion` / `gigabytes_after_conversion` | Size before / Size after |
+| `gigabytes_saved` / `percentage_saved` | Space saved / Saved |
+
+Also computed but **not** shown yet: `total_size_before_conversion_tb`, `total_size_after_conversion_tb`, `conversions_by_backend`. `conversion_errors` still appears only when `> 0` (retry row).
+
+Mix strings are films vs TV share of those two buckets only (`films + tv`), not of all library files.
 
 ### Web push
 
@@ -429,14 +449,21 @@ As built:
 
 ## 9. UI design (as built)
 
-
-
 ### Layout chrome
 
-- Desktop: header + Now Converting fixed; Activity scrolls in `.main-scroll`. Overview opens from an Activity toolbar button.
-- Mobile: document scroll (pull-to-refresh); header + Now Converting in sticky/fixed `.page-chrome` with height synced via `page-layout.js`.
+- Desktop: header + Now Converting fixed in `.page-chrome`; Activity scrolls in `.main-scroll`.
+- Mobile: document scroll (pull-to-refresh); header + Now Converting in fixed `.page-chrome` with height synced via `page-layout.js`.
+- **Overview** is a `<dialog>` opened from a right-aligned button on the Activity kicker row (same row as the “Activity” label). The old inline Overview / KPI card is gone.
 
+### Activity toolbar
 
+```text
+Activity                                        [Overview]
+Converted this week          [Converted|Queue]   (count)
+```
+
+- Converted / Queue segmented control toggles the list; title switches between “Converted this week” and “Waiting in queue”.
+- Count pill shows the current list length (`--` while connecting).
 
 ### Activity rows
 
@@ -453,8 +480,6 @@ As built:
 - Queue: active jobs first with status **Converting** / **Copying**; remainder **Queued**
 - `loading="lazy"`; decorative `alt=""`
 
-
-
 ### Now converting
 
 Same grid language as activity cards:
@@ -462,70 +487,45 @@ Same grid language as activity cards:
 - Poster left; title + **one-stat-per-line** facts; hero shows phase (**Copying** / **Converting**) above percentage, then “complete”
 - Progress bar full width under the row
 - Job tabs share a row with the “Now converting” kicker
-
-
+- Stage stays `hidden` until there is a live job
 
 ### Display title
 
 Prefer `display_title` as the heading. Basename available via filename popup when useful.
 
-### Overview dialog — extra stats (pick list)
+### Overview dialog
 
-Overview is now a popup, so there is room for more KPIs. **Already shown:** total files, converted, in queue, size before/after, space saved, % saved, total conversion time. Errors appear only when `conversion_errors > 0`.
+- Opened from Activity; closed via Close, backdrop click, or Escape.
+- KPI grid is **lazy-mounted** the first time the dialog needs content (open with cached/live stats, or when stats arrive while open). Not built on page load.
+- If opened before stats are available: short **Connecting…** status (no `--` placeholder tiles).
+- Mix tiles span two columns (`kpi-mix`).
 
-**Chosen and implemented:**
+### Opening / empty / session restore (as built)
 
-- [x] Films converted (`films_converted`)
-- [x] Films in queue (`films_to_convert`)
-- [x] TV converted (`tv_converted`)
-- [x] TV in queue (`tv_to_convert`)
-- [x] Films vs TV share of converted library (`converted_media_mix`)
-- [x] Films vs TV share of remaining queue (`queue_media_mix`)
+Chose **lightweight status** (option B) plus empty states, lazy Overview mount, and session restore:
 
-**Already computed in** `StatisticsMessage` **but not shown in the UI:**
+| Situation | Behaviour |
+| --------- | --------- |
+| Cold load, no session cache | Activity shows **Connecting…** (no fake cards); count `--` |
+| Session cache present | Paint last Activity list (+ remember stats for Overview) from `sessionStorage`, then refresh when WS catches up |
+| Live payload with zero rows | **No conversions this week** or **Queue is empty** |
+| Overview open before stats | **Connecting…** until `statistics` arrives or session stats exist |
+| Now converting | Remains hidden until a live job (unchanged) |
 
-- [ ] Remaining library size before conversion (TB) (`total_size_before_conversion_tb`)
-- [ ] Remaining library size after conversion (TB) (`total_size_after_conversion_tb`)
-- [ ] Conversions by backend (`conversions_by_backend` — e.g. Mac mini vs others)
-- [ ] Always show conversion errors (including `0`)
+Session keys: `converter.session.convertedFiles`, `converter.session.filesToConvert`, `converter.session.statistics`. Files-view mode preference stays in `localStorage` (`converter.filesViewMode`).
 
-**Library split (remaining unchecked):**
+### Overview stats backlog (unchecked)
 
-- [ ] *(none — films/TV counts and mixes shipped above)*
+Not implemented; leave for a later pass if wanted:
 
-**Pace & forecasts:**
-
-- [ ] Converted today
-- [ ] Converted this week
-- [ ] Converted this month
-- [ ] Space saved this week
-- [ ] Space saved this month
-- [ ] Average conversion time per file
-- [ ] Median conversion time per file
-- [ ] Estimated time to clear the queue (from recent average / median)
-- [ ] Average encode speed (from `speed` when present)
-
-**Compression quality:**
-
-- [ ] Average % saved (mean across converted files, not just total-bytes %)
-- [ ] Best single-file % saved
-- [ ] Worst single-file % saved (among successful converts)
-- [ ] Estimated space still to save (from queue estimates)
-
-**Queue / library character:**
-
-- [ ] Currently converting / copying count (explicit, separate from “in queue”)
-- [ ] Queue size in GB (sum of current / pre sizes)
-- [ ] Largest N files still queued (names + sizes — compact list, not a KPI tile)
-- [ ] Resolution mix in queue (e.g. 1080p / 2160p counts)
-- [ ] Source codec mix still queued (e.g. h264 vs other)
-
-**Cover art / identity (optional):**
-
-- [ ] Ready cover-art cache entries
-- [ ] Missing / failed cover-art lookups
-
-Check the items to add; leave the rest unchecked.
+- Remaining library size before/after conversion (TB)
+- Conversions by backend
+- Always show conversion errors (including `0`)
+- Pace: converted / space saved today·week·month; avg/median time; queue ETA; avg encode speed
+- Compression: mean / best / worst % saved; estimated space still to save
+- Queue character: explicit converting/copying count; queue GB; largest N queued; resolution / codec mix
+- Cover-art cache ready / missing counts
+- Compact reconnect banner if socket down > ~2s
 
 ---
 
@@ -609,6 +609,16 @@ Check the items to add; leave the rest unchecked.
 - [ ] Share art service with Media Manager
 - [x] Art in web push notification images for completed converts
 - [ ] Background sweeper over all distinct paths in `media_collection` (lazy WS resolve is sufficient for v1)
+- [ ] Remaining Overview backlog (pace, backends, TB remaining, etc. — see §9)
+
+### Phase 5 — Converter dashboard UI polish (shipped)
+
+- [x] Overview as Activity-toolbar dialog (no inline KPI card)
+- [x] Films / TV counts + converted/queue mix KPIs
+- [x] Remove opening “Waiting for data…” card scaffold
+- [x] Lightweight Connecting… / empty-list status lines
+- [x] Lazy Overview KPI mount on first open
+- [x] `sessionStorage` restore for Activity lists + Overview stats
 
 ---
 
@@ -621,8 +631,10 @@ Check the items to add; leave the rest unchecked.
 - [x] Resolver: Arr hit, Arr miss → TMDB hit, total miss → placeholder
 - [x] WS: payloads include art URL without remote calls when cache warm; UI upgrades when resolve completes
 - [x] UI: contain sizing, placeholder, dark/light, mobile scroll / PTR, live + activity layouts
+- [x] UI: Overview dialog, films/TV/mix stats, Connecting… / empty states, session restore, lazy Overview mount
 - [x] Auth: art endpoint behind tools auth with Converter
 - [x] Failure: Arr/cache issues → short error TTL / placeholder; dashboard still usable
+- [x] Web push: public HTTPS `remote_url` for notification image when available
 
 ---
 
@@ -645,6 +657,11 @@ Check the items to add; leave the rest unchecked.
 | Push notification art   | Prefer public **HTTPS** `remote_url` from cache; never tools-auth art paths                                       |
 | Cache retention         | **14 days** unused (`last_accessed_at` / `updated_at`)                                                            |
 | Queue list              | Include **converting/copying** rows with appropriate status                                                       |
+| Overview UI             | **Dialog** from Activity kicker row; not an inline card                                                           |
+| Overview KPIs           | Totals + sizes/saved/time + films/TV counts + films/TV mix strings                                                |
+| Opening empty state     | **Connecting…** status (no fake cards); real empty copy when lists are zero                                       |
+| Overview mount          | **Lazy** — KPI DOM on first open / when stats available while open                                                |
+| Session restore         | Last Activity + Overview payloads in **`sessionStorage`**, then WS refresh                                        |
 
 
 ---
@@ -659,4 +676,6 @@ Check the items to add; leave the rest unchecked.
 - Unknown/non-library paths never spam external APIs (negative cache)
 - Dashboard remains usable when Arr/TMDB are down
 - Unused posters do not accumulate indefinitely (14-day purge)
+- Opening the app does not flash fake Activity cards; Connecting… / session restore / empty states cover the wait
+- Overview is available on demand without occupying main-scroll space
 

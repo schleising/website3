@@ -28,6 +28,9 @@ var conversionNumber = 0;
 var currentTabNames = [];
 
 const filesViewStorageKey = 'converter.filesViewMode';
+const sessionConvertedStorageKey = 'converter.session.convertedFiles';
+const sessionQueueStorageKey = 'converter.session.filesToConvert';
+const sessionStatisticsStorageKey = 'converter.session.statistics';
 
 // Track which cards are shown in the lower panel.
 var filesViewMode = getStoredFilesViewMode();
@@ -35,6 +38,8 @@ var filesViewMode = getStoredFilesViewMode();
 // Cache the latest payload for each lower-card view to avoid flicker on toggle.
 var cachedConvertedFiles = null;
 var cachedFilesToConvert = null;
+var cachedStatistics = null;
+var statisticsMounted = false;
 
 const statisticsScaffoldFields = [
     { key: 'total_files', label: 'Total files', type: 'number', wrapperClass: [] },
@@ -72,8 +77,8 @@ document.addEventListener('readystatechange', event => {
 
         console.log("URL: " + url)
 
-        initializeFilesViewButtons();
         initializeConverterScaffold();
+        initializeFilesViewButtons();
         initializeOverviewDialog();
         setupNetworkListeners();
         startConnectionWatchdog();
@@ -131,10 +136,10 @@ function setLiveStageVisible(isVisible) {
 
 function initializeConverterScaffold() {
     initializeCurrentConversionScaffold();
-    initializeStatisticsScaffold();
-    initializeFilesScaffold();
     setProgressBarVisible(false);
     setLiveStageVisible(false);
+    restoreSessionCaches();
+    paintActivityFromCacheOrStatus();
 }
 
 function initializeOverviewDialog() {
@@ -157,6 +162,7 @@ function initializeOverviewDialog() {
     }
 
     openButton.addEventListener("click", function() {
+        ensureOverviewContent();
         if (typeof dialog.showModal === "function") {
             dialog.showModal();
         } else {
@@ -182,6 +188,17 @@ function initializeOverviewDialog() {
     });
 }
 
+function ensureOverviewContent() {
+    if (cachedStatistics != null) {
+        mountStatisticsScaffold();
+        fillStatisticsValues(cachedStatistics);
+        setOverviewStatus(null);
+        return;
+    }
+
+    setOverviewStatus("Connecting…");
+}
+
 function initializeCurrentConversionScaffold() {
     const progressElement = document.getElementById("progress-details");
 
@@ -192,14 +209,14 @@ function initializeCurrentConversionScaffold() {
     renderNoFileBeingConverted(progressElement);
 }
 
-function initializeStatisticsScaffold() {
+function mountStatisticsScaffold() {
     const statisticsElement = document.getElementById("statistics");
 
     if (statisticsElement == null) {
         return;
     }
 
-    if (document.getElementById("total_files-value") != null) {
+    if (statisticsMounted && document.getElementById("total_files-value") != null) {
         return;
     }
 
@@ -216,48 +233,105 @@ function initializeStatisticsScaffold() {
             field.wrapperClass || []
         );
     }
+
+    statisticsMounted = true;
 }
 
-function initializeFilesScaffold() {
+function setActivityStatus(message) {
+    const statusElement = document.getElementById("activity-status");
     const filesContainer = document.getElementById("converted-files");
-    const lastDayCount = document.getElementById("last-day-count");
 
-    if (filesContainer == null || lastDayCount == null) {
+    if (statusElement == null) {
         return;
     }
 
-    if (filesContainer.childElementCount > 0) {
+    if (message == null || message.length === 0) {
+        statusElement.hidden = true;
+        statusElement.textContent = "";
         return;
     }
 
-    filesContainer.innerHTML = "";
-    lastDayCount.innerText = "--";
+    if (filesContainer != null) {
+        filesContainer.innerHTML = "";
+    }
 
-    const placeholderCount = 3;
-    for (let i = 0; i < placeholderCount; i++) {
-        if (filesViewMode === 'files_to_convert') {
-            appendToConvertFileCard(filesContainer, {
-                filename: "Waiting for data...",
-                prediction_confidence: "Low",
-                current_size: "--",
-                estimated_size_after_conversion: "--",
-                estimated_percentage_saved: null,
-                video_duration: "--",
-                bit_rate: "--",
-                video_codec: "--",
-                audio_codec: "--"
-            });
-        } else {
-            appendConvertedFileCard(filesContainer, {
-                filename: "Waiting for data...",
-                percentage_saved: 0,
-                pre_conversion_size: "--",
-                current_size: "--",
-                start_conversion_time: "--",
-                end_conversion_time: "--",
-                total_conversion_time: "--"
-            });
+    statusElement.textContent = message;
+    statusElement.hidden = false;
+}
+
+function setOverviewStatus(message) {
+    const statusElement = document.getElementById("overview-status");
+    const statisticsElement = document.getElementById("statistics");
+
+    if (statusElement == null) {
+        return;
+    }
+
+    if (message == null || message.length === 0) {
+        statusElement.hidden = true;
+        statusElement.textContent = "";
+        if (statisticsElement != null) {
+            statisticsElement.hidden = !statisticsMounted;
         }
+        return;
+    }
+
+    statusElement.textContent = message;
+    statusElement.hidden = false;
+    if (statisticsElement != null) {
+        statisticsElement.hidden = true;
+    }
+}
+
+function setCountPill(value) {
+    const lastDayCount = document.getElementById("last-day-count");
+    if (lastDayCount != null) {
+        lastDayCount.innerText = String(value);
+    }
+}
+
+function paintActivityFromCacheOrStatus() {
+    if (filesViewMode === 'files_to_convert') {
+        if (cachedFilesToConvert != null) {
+            renderFilesToConvert(cachedFilesToConvert, false);
+            return;
+        }
+    } else if (cachedConvertedFiles != null) {
+        renderConvertedFiles(cachedConvertedFiles, false);
+        return;
+    }
+
+    setCountPill("--");
+    setActivityStatus("Connecting…");
+}
+
+function restoreSessionCaches() {
+    cachedConvertedFiles = readSessionJson(sessionConvertedStorageKey);
+    cachedFilesToConvert = readSessionJson(sessionQueueStorageKey);
+    cachedStatistics = readSessionJson(sessionStatisticsStorageKey);
+}
+
+function readSessionJson(storageKey) {
+    try {
+        const raw = sessionStorage.getItem(storageKey);
+        if (raw == null || raw.length === 0) {
+            return null;
+        }
+        return JSON.parse(raw);
+    } catch (error) {
+        return null;
+    }
+}
+
+function writeSessionJson(storageKey, value) {
+    try {
+        if (value == null) {
+            sessionStorage.removeItem(storageKey);
+            return;
+        }
+        sessionStorage.setItem(storageKey, JSON.stringify(value));
+    } catch (error) {
+        // Ignore quota / private-mode write failures.
     }
 }
 
@@ -279,9 +353,7 @@ function formatStatisticsValue(field, statistics) {
     return value;
 }
 
-function updateStatisticsValues(statistics) {
-    initializeStatisticsScaffold();
-
+function fillStatisticsValues(statistics) {
     for (const field of statisticsScaffoldFields) {
         setValueIfChanged(field.key + "-value", String(formatStatisticsValue(field, statistics)));
     }
@@ -296,6 +368,22 @@ function updateStatisticsValues(statistics) {
     } else if (existingErrorsRow != null) {
         existingErrorsRow.remove();
     }
+}
+
+function updateStatisticsValues(statistics) {
+    cachedStatistics = statistics;
+    writeSessionJson(sessionStatisticsStorageKey, statistics);
+
+    const dialog = document.getElementById("overview-dialog");
+    const overviewIsOpen = dialog != null && dialog.open === true;
+
+    if (!statisticsMounted && !overviewIsOpen) {
+        return;
+    }
+
+    mountStatisticsScaffold();
+    fillStatisticsValues(statistics);
+    setOverviewStatus(null);
 }
 
 // Function to open a web socket
@@ -968,10 +1056,18 @@ function setFilesViewMode(viewMode, forceUpdate = false) {
         }
     }
 
-    if (viewMode === 'files_to_convert' && cachedFilesToConvert != null) {
-        renderFilesToConvert(cachedFilesToConvert);
-    } else if (viewMode === 'converted_files' && cachedConvertedFiles != null) {
-        renderConvertedFiles(cachedConvertedFiles);
+    if (viewMode === 'files_to_convert') {
+        if (cachedFilesToConvert != null) {
+            renderFilesToConvert(cachedFilesToConvert, false);
+        } else {
+            setCountPill("--");
+            setActivityStatus("Connecting…");
+        }
+    } else if (cachedConvertedFiles != null) {
+        renderConvertedFiles(cachedConvertedFiles, false);
+    } else {
+        setCountPill("--");
+        setActivityStatus("Connecting…");
     }
 
     if (ws != null && ws.readyState == WebSocket.OPEN) {
@@ -1006,44 +1102,68 @@ function persistFilesViewMode(viewMode) {
     }
 }
 
-function renderConvertedFiles(filesConverted) {
+function renderConvertedFiles(filesConverted, persist = true) {
     const filesContainer = document.getElementById("converted-files");
-    const lastDayCount = document.getElementById("last-day-count");
 
-    if (filesContainer == null || lastDayCount == null) {
+    if (filesContainer == null) {
         return;
     }
 
     if (filesConverted == null) {
-        initializeFilesScaffold();
+        setCountPill("--");
+        setActivityStatus("Connecting…");
         return;
     }
 
-    filesContainer.innerText = "";
-    lastDayCount.innerText = filesConverted.converted_files.length;
+    if (persist) {
+        writeSessionJson(sessionConvertedStorageKey, filesConverted);
+    }
 
-    for (let i = 0; i < filesConverted.converted_files.length; i++) {
-        appendConvertedFileCard(filesContainer, filesConverted.converted_files[i]);
+    const convertedFiles = filesConverted.converted_files || [];
+    setCountPill(convertedFiles.length);
+
+    if (convertedFiles.length === 0) {
+        setActivityStatus("No conversions this week");
+        return;
+    }
+
+    setActivityStatus(null);
+    filesContainer.innerHTML = "";
+
+    for (let i = 0; i < convertedFiles.length; i++) {
+        appendConvertedFileCard(filesContainer, convertedFiles[i]);
     }
 }
 
-function renderFilesToConvert(filesToConvert) {
+function renderFilesToConvert(filesToConvert, persist = true) {
     const filesContainer = document.getElementById("converted-files");
-    const lastDayCount = document.getElementById("last-day-count");
 
-    if (filesContainer == null || lastDayCount == null) {
+    if (filesContainer == null) {
         return;
     }
 
     if (filesToConvert == null) {
-        initializeFilesScaffold();
+        setCountPill("--");
+        setActivityStatus("Connecting…");
         return;
     }
 
-    filesContainer.innerText = "";
-    lastDayCount.innerText = filesToConvert.files_to_convert.length;
+    if (persist) {
+        writeSessionJson(sessionQueueStorageKey, filesToConvert);
+    }
 
-    for (let i = 0; i < filesToConvert.files_to_convert.length; i++) {
-        appendToConvertFileCard(filesContainer, filesToConvert.files_to_convert[i]);
+    const queueFiles = filesToConvert.files_to_convert || [];
+    setCountPill(queueFiles.length);
+
+    if (queueFiles.length === 0) {
+        setActivityStatus("Queue is empty");
+        return;
+    }
+
+    setActivityStatus(null);
+    filesContainer.innerHTML = "";
+
+    for (let i = 0; i < queueFiles.length; i++) {
+        appendToConvertFileCard(filesContainer, queueFiles[i]);
     }
 }
