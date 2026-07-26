@@ -8,7 +8,7 @@ const CONVERTER_SHELL_URLS = [
     "/css/tools/converter/reset.css?v4.0.0",
     "/css/tools/converter/main.css?v5.2.25",
     "/js/tools/converter/utils.js?v5.1.4",
-    "/js/tools/converter/websocket.js?v5.1.13",
+    "/js/tools/converter/websocket.js?v5.1.14",
     "/js/tools/converter/page-layout.js?v1.0.0",
     "/js/tools/converter/scope.js?v4.0.0",
     "/js/tools/converter/theme-toggle.js?v2.0.0",

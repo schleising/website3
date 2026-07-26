@@ -43,6 +43,8 @@ var cachedConvertedFiles = null;
 var cachedFilesToConvert = null;
 var cachedStatistics = null;
 var statisticsMounted = false;
+var renderedActivityKey = null;
+var renderedActivityStableKey = null;
 
 const statisticsScaffoldFields = [
     { key: 'total_files', label: 'Total files', type: 'number', wrapperClass: [] },
@@ -262,9 +264,15 @@ function setActivityStatus(message) {
         return;
     }
 
+    if (!statusElement.hidden && statusElement.textContent === message) {
+        return;
+    }
+
     if (filesContainer != null) {
         filesContainer.innerHTML = "";
     }
+    renderedActivityKey = null;
+    renderedActivityStableKey = null;
 
     statusElement.textContent = message;
     statusElement.hidden = false;
@@ -296,9 +304,16 @@ function setOverviewStatus(message) {
 
 function setCountPill(value) {
     const lastDayCount = document.getElementById("last-day-count");
-    if (lastDayCount != null) {
-        lastDayCount.innerText = String(value);
+    if (lastDayCount == null) {
+        return;
     }
+
+    const nextValue = String(value);
+    if (lastDayCount.innerText === nextValue) {
+        return;
+    }
+
+    lastDayCount.innerText = nextValue;
 }
 
 function paintActivityFromCacheOrStatus() {
@@ -1157,6 +1172,53 @@ function persistFilesViewMode(viewMode) {
     }
 }
 
+function activityFileStableCopy(file) {
+    if (file == null || typeof file !== "object") {
+        return file;
+    }
+
+    var copy = {};
+    for (var key in file) {
+        if (!Object.prototype.hasOwnProperty.call(file, key)) {
+            continue;
+        }
+        if (
+            key === "cover_art_url"
+            || key === "cover_art_status"
+            || key === "cover_art_key"
+        ) {
+            continue;
+        }
+        copy[key] = file[key];
+    }
+    return copy;
+}
+
+function activityRenderKeys(viewMode, files) {
+    return {
+        full: viewMode + ":" + JSON.stringify(files),
+        stable: viewMode + ":" + JSON.stringify(files.map(activityFileStableCopy))
+    };
+}
+
+function patchActivityCoverArt(filesContainer, files) {
+    if (filesContainer == null) {
+        return;
+    }
+
+    var posters = filesContainer.querySelectorAll(".file-row-poster");
+    for (var i = 0; i < files.length && i < posters.length; i++) {
+        var poster = posters[i];
+        var file = files[i];
+        var nextSrc = file.cover_art_url || "/icons/tools/converter/art-placeholder.svg";
+        poster.dataset.artStatus = file.cover_art_status || "pending";
+        poster.dataset.artKey = file.cover_art_key || "";
+        if (poster.getAttribute("src") !== nextSrc) {
+            poster.setAttribute("src", nextSrc);
+        }
+    }
+}
+
 function renderConvertedFiles(filesConverted, persist = true) {
     const filesContainer = document.getElementById("converted-files");
 
@@ -1175,13 +1237,35 @@ function renderConvertedFiles(filesConverted, persist = true) {
     }
 
     const convertedFiles = filesConverted.converted_files || [];
-    setCountPill(convertedFiles.length);
-
     if (convertedFiles.length === 0) {
+        const emptyKey = "converted_files:empty";
+        if (renderedActivityKey === emptyKey) {
+            return;
+        }
+        renderedActivityKey = emptyKey;
+        renderedActivityStableKey = emptyKey;
+        setCountPill(0);
         setActivityStatus("No conversions this week");
         return;
     }
 
+    const keys = activityRenderKeys("converted_files", convertedFiles);
+    if (keys.full === renderedActivityKey) {
+        return;
+    }
+
+    if (
+        keys.stable === renderedActivityStableKey
+        && filesContainer.childElementCount === convertedFiles.length
+    ) {
+        patchActivityCoverArt(filesContainer, convertedFiles);
+        renderedActivityKey = keys.full;
+        return;
+    }
+
+    renderedActivityKey = keys.full;
+    renderedActivityStableKey = keys.stable;
+    setCountPill(convertedFiles.length);
     setActivityStatus(null);
     filesContainer.innerHTML = "";
 
@@ -1208,13 +1292,35 @@ function renderFilesToConvert(filesToConvert, persist = true) {
     }
 
     const queueFiles = filesToConvert.files_to_convert || [];
-    setCountPill(queueFiles.length);
-
     if (queueFiles.length === 0) {
+        const emptyKey = "files_to_convert:empty";
+        if (renderedActivityKey === emptyKey) {
+            return;
+        }
+        renderedActivityKey = emptyKey;
+        renderedActivityStableKey = emptyKey;
+        setCountPill(0);
         setActivityStatus("Queue is empty");
         return;
     }
 
+    const keys = activityRenderKeys("files_to_convert", queueFiles);
+    if (keys.full === renderedActivityKey) {
+        return;
+    }
+
+    if (
+        keys.stable === renderedActivityStableKey
+        && filesContainer.childElementCount === queueFiles.length
+    ) {
+        patchActivityCoverArt(filesContainer, queueFiles);
+        renderedActivityKey = keys.full;
+        return;
+    }
+
+    renderedActivityKey = keys.full;
+    renderedActivityStableKey = keys.stable;
+    setCountPill(queueFiles.length);
     setActivityStatus(null);
     filesContainer.innerHTML = "";
 
