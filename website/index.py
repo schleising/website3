@@ -1,6 +1,7 @@
 import logging
 import os
 from contextlib import asynccontextmanager
+from pathlib import Path
 from urllib.parse import urlencode
 
 from starlette.types import ASGIApp, Receive, Scope, Send
@@ -34,6 +35,8 @@ from .media.router import media_router
 from .tools.router import tools_router
 from .units.router import units_router
 
+WEBSITE_ROOT = Path(__file__).resolve().parents[1]
+TOOLS_SERVICE_WORKER_PATH = WEBSITE_ROOT / "static" / "sw.js"
 
 class RealIPMiddleware:
     """
@@ -320,6 +323,17 @@ app.include_router(tools_router)
 
 # Include the units converter router (public)
 app.include_router(units_router)
+
+
+@app.get("/sw.js", response_class=FileResponse, response_model=None)
+@app.get("/sw.js/", response_class=FileResponse, response_model=None)
+async def tools_service_worker() -> FileResponse:
+    """Serve the shared tools service worker with no-cache so updates install promptly."""
+    return FileResponse(
+        TOOLS_SERVICE_WORKER_PATH,
+        media_type="application/javascript",
+        headers={"Cache-Control": "no-cache"},
+    )
 
 
 @app.exception_handler(RequestValidationError)

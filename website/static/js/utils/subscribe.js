@@ -1,6 +1,7 @@
 subscribeButton = document.getElementById('subscribe-button');
 
-const serviceWorkerPath = '/sw.js';
+// Query string forces browsers/proxies to fetch a new worker script when we ship SW changes.
+const serviceWorkerPath = '/sw.js?v=tools-webapp-v2';
 let isReloadingForUpdate = false;
 
 function promptForWaitingWorker(registration) {
@@ -78,20 +79,13 @@ function setButtonState() {
 
 // Function to update the registration of the service worker or register it if it does not exist
 async function updateServiceWorkerRegistration() {
-    // Get the active service worker
-    registration = await navigator.serviceWorker.getRegistration(serviceWorkerScope);
-
-    if (registration != null) {
-        console.log('Service Worker already registered, updating...');
-        await registration.update();
-        attachUpdateFlow(registration);
-        return registration;
-    } else {
-        console.log('Service Worker not registered, registering...');
-        const newRegistration = await navigator.serviceWorker.register(serviceWorkerPath, {scope: serviceWorkerScope});
-        attachUpdateFlow(newRegistration);
-        return newRegistration;
-    }
+    console.log('Registering Service Worker:', serviceWorkerPath);
+    const newRegistration = await navigator.serviceWorker.register(serviceWorkerPath, {
+        scope: serviceWorkerScope,
+        updateViaCache: 'none'
+    });
+    attachUpdateFlow(newRegistration);
+    return newRegistration;
 }
 
 // Add event listener for the page to be ready to use

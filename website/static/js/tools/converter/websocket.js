@@ -28,9 +28,12 @@ var conversionNumber = 0;
 var currentTabNames = [];
 
 const filesViewStorageKey = 'converter.filesViewMode';
-const sessionConvertedStorageKey = 'converter.session.convertedFiles';
-const sessionQueueStorageKey = 'converter.session.filesToConvert';
-const sessionStatisticsStorageKey = 'converter.session.statistics';
+const sessionConvertedStorageKey = 'converter.cache.convertedFiles';
+const sessionQueueStorageKey = 'converter.cache.filesToConvert';
+const sessionStatisticsStorageKey = 'converter.cache.statistics';
+const legacySessionConvertedStorageKey = 'converter.session.convertedFiles';
+const legacySessionQueueStorageKey = 'converter.session.filesToConvert';
+const legacySessionStatisticsStorageKey = 'converter.session.statistics';
 
 // Track which cards are shown in the lower panel.
 var filesViewMode = getStoredFilesViewMode();
@@ -188,6 +191,13 @@ function initializeOverviewDialog() {
     });
 }
 
+function waitingStatusMessage() {
+    if (navigator.onLine === false) {
+        return "Offline — no cached data yet";
+    }
+    return "Connecting…";
+}
+
 function ensureOverviewContent() {
     if (cachedStatistics != null) {
         mountStatisticsScaffold();
@@ -196,7 +206,7 @@ function ensureOverviewContent() {
         return;
     }
 
-    setOverviewStatus("Connecting…");
+    setOverviewStatus(waitingStatusMessage());
 }
 
 function initializeCurrentConversionScaffold() {
@@ -302,18 +312,34 @@ function paintActivityFromCacheOrStatus() {
     }
 
     setCountPill("--");
-    setActivityStatus("Connecting…");
+    setActivityStatus(waitingStatusMessage());
 }
 
 function restoreSessionCaches() {
-    cachedConvertedFiles = readSessionJson(sessionConvertedStorageKey);
-    cachedFilesToConvert = readSessionJson(sessionQueueStorageKey);
-    cachedStatistics = readSessionJson(sessionStatisticsStorageKey);
+    cachedConvertedFiles = readPersistedJson(
+        sessionConvertedStorageKey,
+        legacySessionConvertedStorageKey
+    );
+    cachedFilesToConvert = readPersistedJson(
+        sessionQueueStorageKey,
+        legacySessionQueueStorageKey
+    );
+    cachedStatistics = readPersistedJson(
+        sessionStatisticsStorageKey,
+        legacySessionStatisticsStorageKey
+    );
 }
 
-function readSessionJson(storageKey) {
+function readPersistedJson(storageKey, legacySessionKey) {
     try {
-        const raw = sessionStorage.getItem(storageKey);
+        var raw = localStorage.getItem(storageKey);
+        if ((raw == null || raw.length === 0) && legacySessionKey != null) {
+            raw = sessionStorage.getItem(legacySessionKey);
+            if (raw != null && raw.length > 0) {
+                localStorage.setItem(storageKey, raw);
+                sessionStorage.removeItem(legacySessionKey);
+            }
+        }
         if (raw == null || raw.length === 0) {
             return null;
         }
@@ -326,10 +352,10 @@ function readSessionJson(storageKey) {
 function writeSessionJson(storageKey, value) {
     try {
         if (value == null) {
-            sessionStorage.removeItem(storageKey);
+            localStorage.removeItem(storageKey);
             return;
         }
-        sessionStorage.setItem(storageKey, JSON.stringify(value));
+        localStorage.setItem(storageKey, JSON.stringify(value));
     } catch (error) {
         // Ignore quota / private-mode write failures.
     }
@@ -1061,13 +1087,13 @@ function setFilesViewMode(viewMode, forceUpdate = false) {
             renderFilesToConvert(cachedFilesToConvert, false);
         } else {
             setCountPill("--");
-            setActivityStatus("Connecting…");
+            setActivityStatus(waitingStatusMessage());
         }
     } else if (cachedConvertedFiles != null) {
         renderConvertedFiles(cachedConvertedFiles, false);
     } else {
         setCountPill("--");
-        setActivityStatus("Connecting…");
+        setActivityStatus(waitingStatusMessage());
     }
 
     if (ws != null && ws.readyState == WebSocket.OPEN) {
@@ -1111,7 +1137,7 @@ function renderConvertedFiles(filesConverted, persist = true) {
 
     if (filesConverted == null) {
         setCountPill("--");
-        setActivityStatus("Connecting…");
+        setActivityStatus(waitingStatusMessage());
         return;
     }
 
@@ -1144,7 +1170,7 @@ function renderFilesToConvert(filesToConvert, persist = true) {
 
     if (filesToConvert == null) {
         setCountPill("--");
-        setActivityStatus("Connecting…");
+        setActivityStatus(waitingStatusMessage());
         return;
     }
 

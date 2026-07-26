@@ -506,13 +506,14 @@ Chose **lightweight status** (option B) plus empty states, lazy Overview mount, 
 
 | Situation | Behaviour |
 | --------- | --------- |
-| Cold load, no session cache | Activity shows **Connecting…** (no fake cards); count `--` |
-| Session cache present | Paint last Activity list (+ remember stats for Overview) from `sessionStorage`, then refresh when WS catches up |
+| Cold load, no persisted cache | Activity shows **Connecting…** (or **Offline — no cached data yet** if offline); count `--` |
+| Persisted cache present | Paint last Activity list (+ remember stats for Overview) from `localStorage`, then refresh when WS catches up |
 | Live payload with zero rows | **No conversions this week** or **Queue is empty** |
-| Overview open before stats | **Connecting…** until `statistics` arrives or session stats exist |
+| Overview open before stats | **Connecting…** / offline message until `statistics` arrives or persisted stats exist |
 | Now converting | Remains hidden until a live job (unchanged) |
+| Offline app shell | Service worker (`/sw.js`) precaches Converter shell + serves last navigated page when offline |
 
-Session keys: `converter.session.convertedFiles`, `converter.session.filesToConvert`, `converter.session.statistics`. Files-view mode preference stays in `localStorage` (`converter.filesViewMode`).
+Persistence keys (localStorage): `converter.cache.convertedFiles`, `converter.cache.filesToConvert`, `converter.cache.statistics`. Files-view mode preference stays in `localStorage` (`converter.filesViewMode`).
 
 ### Overview stats backlog (unchecked)
 
@@ -619,6 +620,7 @@ Not implemented; leave for a later pass if wanted:
 - [x] Lightweight Connecting… / empty-list status lines
 - [x] Lazy Overview KPI mount on first open
 - [x] `sessionStorage` restore for Activity lists + Overview stats
+- [x] Offline app shell via service worker cache; last-run data in `localStorage`
 
 ---
 
@@ -661,8 +663,7 @@ Not implemented; leave for a later pass if wanted:
 | Overview KPIs           | Totals + sizes/saved/time + films/TV counts + films/TV mix strings                                                |
 | Opening empty state     | **Connecting…** status (no fake cards); real empty copy when lists are zero                                       |
 | Overview mount          | **Lazy** — KPI DOM on first open / when stats available while open                                                |
-| Session restore         | Last Activity + Overview payloads in **`sessionStorage`**, then WS refresh                                        |
-
+| Last-run / offline      | App shell cached by **service worker**; Activity + Overview payloads in **`localStorage`**                        |
 
 ---
 
