@@ -19,7 +19,11 @@ Non-goals for v1:
 
 ---
 
+
+
 ## 2. Current state
+
+
 
 ### Converter role
 
@@ -29,11 +33,13 @@ Converter is a **read-mostly dashboard** over MongoDB `media.media_collection`. 
 
 Websocket payloads send **basename only** (`Path(filename).name`). Full POSIX paths exist in Mongo (`FileData.filename`) but are stripped before the client sees them.
 
-| Surface | Shown today | Art slot |
-|---|---|---|
-| Activity rows (converted / queue) | Basename, sizes, codecs, % saved | None |
-| Now converting | Basename + live metrics | None |
-| Statistics | Aggregates only | N/A |
+
+| Surface                           | Shown today                      | Art slot |
+| --------------------------------- | -------------------------------- | -------- |
+| Activity rows (converted / queue) | Basename, sizes, codecs, % saved | None     |
+| Now converting                    | Basename + live metrics          | None     |
+| Statistics                        | Aggregates only                  | N/A      |
+
 
 Relevant code:
 
@@ -41,6 +47,8 @@ Relevant code:
 - WS messages: `website/tools/converter/messages/messages.py`
 - UI rows: `website/static/js/tools/converter/utils.js`
 - WS loop: `website/static/js/tools/converter/websocket.js`
+
+
 
 ### Path conventions (already reliable)
 
@@ -66,25 +74,33 @@ Closest loose patterns elsewhere: feed image URL extraction, football crest loca
 
 ### Related surface
 
-Media Manager (`/media`) already exposes full `filename`, `display_name`, and `parent_directory`. Useful reference for path-aware APIs; out of scope for Converter v1 UI unless we share the art service.
+Media Manager (`/media`) already exposes full `filename`, `display_name`, and `parent_directory`. Useful reference for path-aware APIs. **Sharing the art service with Media Manager is deferred to a later project** (Converter-only for this work).
 
 ---
+
+
 
 ## 3. Options for art source
 
-| Option | Pros | Cons |
-|---|---|---|
-| **A. Radarr + Sonarr APIs** | Already indexed against this library; posters match what you manage; no second metadata DB | Couples Converter to Arr availability; needs API keys; TV episode vs series poster choice |
-| **B. Plex API** | Same library, rich art, already running | Heavier API; auth token; library section IDs; more moving parts |
-| **C. TMDB (direct)** | Clean posters, well documented | Needs parsing + matching; rate limits; API key; may disagree with Arr naming |
-| **D. Filesystem sidecars** | Simple if present | Often absent today; website has no media disk mount for serving; walker would need to copy/index |
-| **E. Hybrid: Arr first, TMDB fallback** | Best hit rate | More code paths |
 
-**Recommendation: Option E (Radarr/Sonarr first, TMDB fallback).**
+| Option                                  | Pros                                                                                       | Cons                                                                                             |
+| --------------------------------------- | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------ |
+| **A. Radarr + Sonarr APIs**             | Already indexed against this library; posters match what you manage; no second metadata DB | Couples Converter to Arr availability; needs API keys; TV episode vs series poster choice        |
+| **B. Plex API**                         | Same library, rich art, already running                                                    | Heavier API; auth token; library section IDs; more moving parts                                  |
+| **C. TMDB (direct)**                    | Clean posters, well documented                                                             | Needs parsing + matching; rate limits; API key; may disagree with Arr naming                     |
+| **D. Filesystem sidecars**              | Simple if present                                                                          | Often absent today; website has no media disk mount for serving; walker would need to copy/index |
+| **E. Hybrid: Arr first, TMDB fallback** | Best hit rate                                                                              | More code paths                                                                                  |
+
+
+**Decision: Option E (Radarr/Sonarr first, TMDB fallback).** Confirmed.
 
 Rationale: the library is already curated in Arr. Path → Arr item is usually a direct match. TMDB covers items not yet in Arr or lookup misses. Avoid serving from NAS video mounts in the website container.
 
+**TV art (v1):** use the **series poster only** (not season or episode stills).
+
 ---
+
+
 
 ## 4. Proposed architecture
 
@@ -138,6 +154,10 @@ sequenceDiagram
     U->>U: render thumbnail (lazy load)
 ```
 
+
+
+
+
 ### Design principles
 
 1. **Parse once, cache forever (until invalidated)** — art lookup is not on the hot ping path after warm-up.
@@ -147,7 +167,11 @@ sequenceDiagram
 
 ---
 
+
+
 ## 5. Media identity
+
+
 
 ### Parsed shape
 
@@ -164,25 +188,31 @@ class MediaIdentity(BaseModel):
     cache_key: str                # stable key for art cache
 ```
 
+
+
 ### Parsing rules (v1)
 
-| Path signal | Result |
-|---|---|
-| Contains `/Films/` (or `\Films\`) | `kind=film` |
-| Contains `/TV/` | `kind=tv` |
-| Else | `kind=unknown` → no remote lookup |
+
+| Path signal                       | Result                            |
+| --------------------------------- | --------------------------------- |
+| Contains `/Films/` (or `\Films\`) | `kind=film`                       |
+| Contains `/TV/`                   | `kind=tv`                         |
+| Else                              | `kind=unknown` → no remote lookup |
+
 
 **Film**
 
-1. Prefer parent folder name: `Title (Year)` → title + year  
+1. Prefer parent folder name: `Title (Year)` → title + year
 2. Else basename: strip extension, quality tokens (`Bluray-1080p`, `WEBDL-1080p`, …), then `Title (Year)` / `Title Year`
 
 **TV**
 
-1. Show = folder under `/TV/` (or parent of `Season N`)  
-2. Season from `Season N` folder or `Sxx` in basename  
-3. Episode from `SxxExx` in basename  
-4. Episode title = text between `SxxExx - ` and quality token when present  
+1. Show = folder under `/TV/` (or parent of `Season N`)
+2. Season from `Season N` folder or `Sxx` in basename
+3. Episode from `SxxExx` in basename
+4. Episode title = text between `SxxExx -`  and quality token when present
+
+
 
 ### Cache key
 
@@ -196,33 +226,41 @@ Normalize with lowercase, trimmed punctuation, collapsed whitespace.
 
 ---
 
+
+
 ## 6. Art cache & serving
+
+
 
 ### Mongo collection (proposed)
 
 DB: `media`  
 Collection: `cover_art_cache`
 
-| Field | Purpose |
-|---|---|
-| `cache_key` | Unique |
-| `kind` | `film` / `tv` |
-| `provider` | `radarr` / `sonarr` / `tmdb` / `none` |
-| `provider_id` | Arr/TMDB id |
-| `remote_url` | Original poster URL |
-| `local_path` | Path under website static/cache dir, if downloaded |
-| `status` | `ready` / `missing` / `error` |
-| `last_attempt_at` | For backoff |
-| `updated_at` | |
+
+| Field             | Purpose                                            |
+| ----------------- | -------------------------------------------------- |
+| `cache_key`       | Unique                                             |
+| `kind`            | `film` / `tv`                                      |
+| `provider`        | `radarr` / `sonarr` / `tmdb` / `none`              |
+| `provider_id`     | Arr/TMDB id                                        |
+| `remote_url`      | Original poster URL                                |
+| `local_path`      | Path under website static/cache dir, if downloaded |
+| `status`          | `ready` / `missing` / `error`                      |
+| `last_attempt_at` | For backoff                                        |
+| `updated_at`      |                                                    |
+
 
 Negative cache (`status=missing`) with TTL (e.g. 7 days) avoids hammering APIs for unmatchable paths.
 
 ### HTTP surface
 
-| Endpoint | Purpose |
-|---|---|
-| `GET /tools/converter/art/{cache_key}` | Serve cached image (or 302 to placeholder) |
-| (optional) `POST /tools/converter/art/refresh?path=` | Admin/debug re-resolve |
+
+| Endpoint                                             | Purpose                                    |
+| ---------------------------------------------------- | ------------------------------------------ |
+| `GET /tools/converter/art/{cache_key}`               | Serve cached image (or 302 to placeholder) |
+| (optional) `POST /tools/converter/art/refresh?path=` | Admin/debug re-resolve                     |
+
 
 Websocket field for clients:
 
@@ -248,9 +286,86 @@ radarr_key=...
 ```
 
 - `TMDB_API_KEY` (optional fallback; may remain env/secret later)
-- `CONVERTER_ART_CACHE_DIR`
+- `CONVERTER_ART_CACHE_DIR` — inside the FastAPI container, default `/var/cache/converter-art` (see Docker volume below)
 
 Public Arr UIs remain useful for humans (`sonarr.schleising.net` / `radarr.schleising.net` after tools login). Converter art resolution and probe scripts must call the LAN ports above so only the Arr `X-Api-Key` is required.
+
+### Docker Compose: persistent writable art cache
+
+Today `fastapi` mounts the website tree **read-only**:
+
+```yaml
+# docker-compose.yaml (current)
+fastapi:
+  volumes:
+    - ./website:/app:ro
+```
+
+Downloaded posters cannot be written under `/app` without changing that mount. Follow the same idea as the football crests **rw** overlay on `backend`, but use a **named Docker volume** so art survives image rebuilds and stays out of git.
+
+#### Proposed `docker-compose.yaml` changes
+
+```yaml
+services:
+  fastapi:
+    build: fastapi
+    depends_on:
+      - mongodb
+    env_file:
+      - .env
+    environment:
+      - CONVERTER_ART_CACHE_DIR=/var/cache/converter-art
+      # Arr API hosts are on another machine on the LAN (not this Docker host)
+      - SONARR_URL=http://steveds920:8989
+      - RADARR_URL=http://steveds920:7878
+    volumes:
+      - ./website:/app:ro
+      - converter_art_cache:/var/cache/converter-art:rw
+      # Optional: mount keys without baking into the image
+      - ./website/secrets/arr-keys.txt:/run/secrets/arr-keys.txt:ro
+    ports:
+      - "8081:8080"
+    restart: always
+    # ... logging unchanged ...
+
+volumes:
+  db_volume:
+  db_conf:
+  converter_art_cache:
+```
+
+Apply the same `converter_art_cache` volume + `CONVERTER_ART_CACHE_DIR` to `docker-compose-test.yaml`’s `fastapi` service so local/test runs persist art the same way.
+
+#### Why a named volume (not a bind under `./website`)
+
+
+| Approach                                                 | Notes                                                                                                                                                |
+| -------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Named volume** `converter_art_cache` **(recommended)** | Writable, persistent across `docker compose up --build`, not in git, no conflict with `./website:/app:ro`                                            |
+| Bind mount `./website/static/.../art:rw`                 | Possible as an rw overlay on a ro parent (like crests), but puts binary cache next to source and risks accidental commit unless gitignored carefully |
+| Writable `./website:/app:rw`                             | Avoid — weakens the intentional read-only app mount                                                                                                  |
+
+
+
+
+#### Runtime expectations
+
+- App writes posters as files under `$CONVERTER_ART_CACHE_DIR/{cache_key}.jpg` (or similar); Mongo `cover_art_cache.local_path` stores the container path.
+- `GET /tools/converter/art/{cache_key}` reads from that directory (not from `/app/static`).
+- Volume is owned by the container user that runs uvicorn; first deploy may need `makedirs` on startup.
+- Disk growth: hundreds–thousands of images; monitor volume size; LRU/eviction can come later.
+- Arr URLs from **inside** Docker must use `http://steveds920:8989` and `http://steveds920:7878` (Arr runs on that machine, not on the compose host). Ensure the FastAPI container can resolve/route to `steveds920` on the LAN. Do **not** use `host.docker.internal` for Arr.
+
+
+
+#### Secrets in compose
+
+Keep API keys out of the image:
+
+- Prefer mounting `website/secrets/arr-keys.txt` read-only (as above), **or**
+- Put `SONARR_API_KEY` / `RADARR_API_KEY` in `.env` (already referenced by `env_file`) and stop reading the plaintext file in production if desired.
+
+Do not copy `arr-keys.txt` into the FastAPI build context.
 
 ### Obtaining Sonarr and Radarr API keys
 
@@ -266,6 +381,8 @@ Both apps expose a long-lived API key under **Settings → General**. You need t
 6. Optional: click **Regenerate** only if you intend to rotate the key — that invalidates any existing integrations using the old key.
 7. Click **Save** only if you changed other settings; copying the key does not require a save.
 
+
+
 #### Radarr
 
 1. Open [https://radarr.schleising.net](https://radarr.schleising.net) and sign in (tools auth).
@@ -276,6 +393,8 @@ Both apps expose a long-lived API key under **Settings → General**. You need t
 6. Avoid **Regenerate** unless you are rotating credentials on purpose.
 7. **Save** only if you edited settings.
 
+
+
 #### Store keys locally
 
 Write both keys to `website/secrets/arr-keys.txt` (directory is gitignored via `website/secrets/`):
@@ -284,6 +403,8 @@ Write both keys to `website/secrets/arr-keys.txt` (directory is gitignored via `
 sonarr_key=paste_sonarr_api_key_here
 radarr_key=paste_radarr_api_key_here
 ```
+
+
 
 #### Notes
 
@@ -304,6 +425,8 @@ The probe defaults to LAN hosts (`http://steveds920:8989` / `http://steveds920:7
 
 ---
 
+
+
 ## 7. Resolver algorithm
 
 For a full path:
@@ -313,19 +436,23 @@ For a full path:
 3. If `ready` → return local URL.
 4. If `missing`/`error` and within backoff TTL → placeholder.
 5. Else resolve:
-   - **Film:** Radarr movie list/lookup by title+year (or path match if Arr exposes it) → poster  
-   - **TV:** Sonarr series by title → series poster (v1)  
-   - On Arr miss: TMDB search → poster  
+  - **Film:** Radarr movie list/lookup by title+year (or path match if Arr exposes it) → poster  
+  - **TV:** Sonarr series by title → series poster (v1)  
+  - On Arr miss: TMDB search → poster
 6. Persist cache row; download image bytes when URL found.
 7. Return `/tools/converter/art/{cache_key}`.
 
+
+
 ### Warm-up strategies
 
-| Strategy | When |
-|---|---|
-| **Lazy on WS build** | First time a row is included in a payload; async queue so ping stays fast |
-| **Background sweeper** | Periodic job over distinct cache keys from `media_collection` |
-| **On walker upsert** (convert-to-h265) | Best eventual consistency; cross-repo |
+
+| Strategy               | When                                                                      |
+| ---------------------- | ------------------------------------------------------------------------- |
+| **Lazy on WS build**   | First time a row is included in a payload; async queue so ping stays fast |
+| **Background sweeper** | Periodic job over distinct cache keys from `media_collection`             |
+
+**Decision:** keep all art logic in **website3**. Do **not** add walker/prefetch hooks in `convert-to-h265`.
 
 **v1 recommendation:** lazy resolve from Converter when building list payloads, with an in-process/async queue and short timeout. Never await remote HTTP inside the WS send path — use cache only on the hot path; enqueue miss.
 
@@ -344,19 +471,28 @@ Subsequent pings pick up art as cache fills (UI can update in place when URL cha
 
 ---
 
+
+
 ## 8. Websocket / API contract changes
 
-### Keep full path server-side; add display fields
 
-Today payloads overwrite usefulness by sending basename as `filename`. Proposed fields:
 
-| Field | Meaning |
-|---|---|
-| `filename` | **Unchanged for UI label:** basename (or switch to `display_name`) |
-| `source_path` | Full Mongo path (optional; useful for debug / Media Manager parity) |
-| `media_kind` | `film` \| `tv` \| `unknown` |
-| `display_title` | e.g. `1917 (2019)` or `100 Foot Wave · S01E01` |
-| `cover_art_url` | Same-origin art URL or placeholder |
+### Keep path server-side; send clean display fields to the client
+
+There is a single Converter client (owned here), so the WS contract can change freely. The UI must **not** show filesystem paths.
+
+Proposed fields:
+
+
+| Field           | Meaning                                                                          |
+| --------------- | -------------------------------------------------------------------------------- |
+| `filename`      | Basename only (no directories) — for popup / secondary detail if needed           |
+| `display_title` | Primary UI label, e.g. `1917 (2019)` or `100 Foot Wave · S01E01` (no path)       |
+| `media_kind`    | `film` \| `tv` \| `unknown`                                                      |
+| `cover_art_url` | Same-origin art URL or placeholder                                               |
+
+Full Mongo path stays on the server for identity parse / art resolve only; it need not be sent to the browser unless useful for debug later.
+
 
 Apply to:
 
@@ -370,11 +506,15 @@ Update:
 - Converter DB query → message mapping (where `Path(...).name` is applied)
 - `utils.js` row builder + live stage markup/CSS
 
+
+
 ### Placeholder
 
 Single SVG/WebP asset, e.g. `/icons/tools/converter/art-placeholder.svg`, distinct for film vs TV if cheap (clapper vs screen), otherwise one neutral tile.
 
 ---
+
+
 
 ## 9. UI design
 
@@ -395,15 +535,19 @@ Fit the current Converter visual language (file rows, live stage), not a new car
 - `loading="lazy"`; `alt=""` if title is adjacent text (decorative), or `alt={display_title}`
 - Missing art: placeholder with same box size (no layout shift)
 
+
+
 ### Now converting
 
 Larger poster beside the filename (e.g. 64–80px) so the live job is instantly recognizable. Locked live stage stays put; art loads with the rest of the stage content.
 
 ### Display title
 
-Prefer `display_title` over raw basename in the row heading when identity parse succeeds; keep basename available via existing filename popup / secondary fact if useful.
+Prefer `display_title` as the row heading (never a full path). Basename may remain available via the existing filename popup if useful.
 
 ---
+
+
 
 ## 10. Security & ops
 
@@ -416,36 +560,48 @@ Prefer `display_title` over raw basename in the row heading when identity parse 
 
 ---
 
+
+
 ## 11. Alternatives considered
 
-| Idea | Why not (for v1) |
-|---|---|
-| Hotlink Arr/TMDB URLs in `img src` | Fragile URLs, possible auth/CORS, no offline dashboard cache |
+
+| Idea                                      | Why not (for v1)                                                                 |
+| ----------------------------------------- | -------------------------------------------------------------------------------- |
+| Hotlink Arr/TMDB URLs in `img src`        | Fragile URLs, possible auth/CORS, no offline dashboard cache                     |
 | Serve posters from `/Media/...` via nginx | Website/Converter hosts don’t consistently mount library; sidecars often missing |
-| Only basename fuzzy match to TMDB | High false positives without year/show folder context |
-| Episode stills from TMDB | Extra lookups; series poster is enough for queue scanning |
+| Only basename fuzzy match to TMDB         | High false positives without year/show folder context                            |
+| Episode stills from TMDB                  | Extra lookups; series poster is enough for queue scanning                        |
+
 
 ---
 
+
+
 ## 12. Implementation phases
+
+
 
 ### Phase 0 — Identity without art
 
 - [ ] Shared path parser module (unit tests for Films/TV fixtures)
-- [ ] Add `media_kind`, `display_title` (and optional `source_path`) to WS payloads
+- [ ] Add `media_kind`, `display_title` to WS payloads; keep `filename` as basename (no path in UI)
 - [ ] UI shows `display_title` when present
 
 ### Phase 1 — Cache + placeholder UI
 
 - [ ] `cover_art_cache` collection + local cache dir
+- [ ] Add named volume `converter_art_cache` to `docker-compose.yaml` and `docker-compose-test.yaml` (`/var/cache/converter-art:rw`)
+- [ ] Set `CONVERTER_ART_CACHE_DIR=/var/cache/converter-art` for `fastapi`
+- [ ] Set `SONARR_URL` / `RADARR_URL` to `http://steveds920:8989` / `http://steveds920:7878` for `fastapi`
 - [ ] `GET /tools/converter/art/{cache_key}`
 - [ ] WS `cover_art_url` (placeholder until resolver exists)
 - [ ] Row + live-stage thumbnail layout (no layout shift)
 
 ### Phase 2 — Arr resolver
 
-- [ ] Radarr/Sonarr client config
+- [ ] Radarr/Sonarr client config (keys from secrets file; LAN `steveds920` hosts)
 - [ ] Async resolve queue; hot path cache-only
+- [ ] TV: series poster only
 - [ ] Download posters; mark `ready` / `missing`
 - [ ] Verify against real `/Media/Films` and `/Media/TV` samples
 
@@ -453,21 +609,22 @@ Prefer `display_title` over raw basename in the row heading when identity parse 
 
 - [ ] TMDB search fallback
 - [ ] Negative-cache TTL / manual refresh
-- [ ] Optional sweeper for uncached keys
-- [ ] (Optional) share resolver with Media Manager cards
+- [ ] Optional sweeper for uncached keys (website3 only)
 
-### Phase 4 — Optional enhancements
+### Phase 4 — Optional enhancements (out of scope unless revisited)
 
 - [ ] Season posters or episode stills
-- [ ] Walker-triggered prefetch in `convert-to-h265`
+- [ ] Share art service with Media Manager
 - [ ] Art in web push notification images for completed converts
 
 ---
 
+
+
 ## 13. Test plan
 
 - Parser fixtures: film folder year, film basename-only year, TV `SxxExx`, multi-season paths, VR/excluded paths, unknown paths
-- Obtain Arr API keys (see §6) and run `scripts/probe_sonarr_cover_art.py` (and a Radarr equivalent when available)
+- Obtain Arr API keys (see §6) and run `scripts/probe_sonarr_cover_art.py` (covers Sonarr + Radarr)
 - Resolver: Arr hit, Arr miss → TMDB hit, total miss → placeholder
 - WS: payloads include art URL without slowing ping when cache warm
 - UI: lazy images, placeholder sizing, dark/light, mobile row density
@@ -476,16 +633,23 @@ Prefer `display_title` over raw basename in the row heading when identity parse 
 
 ---
 
-## 14. Open questions
 
-1. **Confirm Arr as primary source?** (Recommended yes given existing Radarr/Sonarr deploy.)
-2. **TV art granularity for v1:** series poster only, or season poster when `Season N` is known?
-3. **Should `filename` in WS remain basename**, with `display_title` separate, to avoid breaking any clients?
-4. **Cache storage location:** website container volume vs shared NAS cache path?
-5. **Cross-repo prefetch:** worth Phase 4 walker hooks, or keep all art logic in website3?
-6. **Media Manager:** same art service in the same project or later?
+
+## 14. Decisions
+
+| Topic | Decision |
+|---|---|
+| Primary art source | **Arr first (Radarr/Sonarr), TMDB fallback** |
+| TV art granularity (v1) | **Series poster only** |
+| WS / UI filenames | Single client — contract may change. Show **`display_title`** (and basename if needed); **never show full paths** |
+| Cache storage | **Named Docker volume** `converter_art_cache` → `/var/cache/converter-art` on `fastapi`; keep `./website:/app:ro` |
+| Cross-repo prefetch | **No** — all art logic stays in **website3** |
+| Media Manager | **Later** — not part of this project |
+| Arr URL from Docker | **`http://steveds920:8989`** and **`http://steveds920:7878`** (Arr is on that machine, not `host.docker.internal`) |
 
 ---
+
+
 
 ## 15. Success criteria
 
@@ -494,3 +658,4 @@ Prefer `display_title` over raw basename in the row heading when identity parse 
 - Zero layout shift when images load
 - Unknown/non-library paths never spam external APIs (negative cache)
 - Dashboard remains usable when Arr/TMDB are down
+
