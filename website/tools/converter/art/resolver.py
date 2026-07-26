@@ -84,6 +84,9 @@ async def resolve_art_for_display(source_path: str) -> ArtDisplayFields:
 
 
 async def resolve_art_for_display_many(source_paths: list[str]) -> list[ArtDisplayFields]:
+    if not source_paths:
+        return []
+
     await _ensure_runtime()
     identities = [parse_media_identity(path) for path in source_paths]
     records = await get_cache_records([identity.cache_key for identity in identities])
@@ -102,7 +105,7 @@ async def resolve_art_for_display_many(source_paths: list[str]) -> list[ArtDispl
         )
         results.append(fields)
 
-    logger.info(
+    logger.debug(
         "Art display batch size=%s enqueue=%s pending_keys=%s queue=%s statuses=%s",
         len(source_paths),
         enqueue_count,
@@ -110,17 +113,6 @@ async def resolve_art_for_display_many(source_paths: list[str]) -> list[ArtDispl
         None if _queue is None else _queue.qsize(),
         status_counts,
     )
-    if results:
-        sample = results[0]
-        logger.info(
-            "Art sample: kind=%s key=%s status=%s url=%s title=%s path=%s",
-            sample.media_kind,
-            sample.cache_key,
-            sample.cover_art_status,
-            sample.cover_art_url,
-            sample.display_title,
-            identities[0].source_path if identities else "",
-        )
     return results
 
 
@@ -174,7 +166,7 @@ async def _ensure_runtime() -> None:
         if not _indexes_ready:
             try:
                 await ensure_indexes()
-                logger.info("Cover art Mongo index ensured")
+                logger.debug("Cover art Mongo index ensured")
             except Exception as exc:  # noqa: BLE001
                 logger.warning("Cover art index setup failed: %s", exc)
             _indexes_ready = True
@@ -200,7 +192,7 @@ async def _ensure_runtime() -> None:
             _worker_task = asyncio.create_task(
                 _worker_loop(), name="converter-cover-art-worker"
             )
-            logger.info("Cover art worker task created")
+            logger.debug("Cover art worker task created")
 
 
 async def _worker_loop() -> None:
@@ -209,7 +201,7 @@ async def _worker_loop() -> None:
     async with aiohttp.ClientSession() as session:
         while True:
             identity = await _queue.get()
-            logger.info(
+            logger.debug(
                 "Worker picked key=%s kind=%s title=%s remaining_queue=%s",
                 identity.cache_key,
                 identity.kind,
@@ -240,7 +232,7 @@ async def _worker_loop() -> None:
 
 async def _resolve_one(session: aiohttp.ClientSession, identity: MediaIdentity) -> None:
     existing = await get_cache_record(identity.cache_key)
-    logger.info(
+    logger.debug(
         "Resolve start key=%s existing=%s",
         identity.cache_key,
         None
@@ -253,10 +245,10 @@ async def _resolve_one(session: aiohttp.ClientSession, identity: MediaIdentity) 
         and existing.local_path
         and Path(existing.local_path).is_file()
     ):
-        logger.info("Resolve skip already ready key=%s", identity.cache_key)
+        logger.debug("Resolve skip already ready key=%s", identity.cache_key)
         return
     if existing is not None and not should_enqueue(identity, existing):
-        logger.info(
+        logger.debug(
             "Resolve skip fresh negative key=%s status=%s",
             identity.cache_key,
             existing.status,
@@ -265,7 +257,7 @@ async def _resolve_one(session: aiohttp.ClientSession, identity: MediaIdentity) 
 
     arr_result = await lookup_arr_poster(session, identity)
     if arr_result is not None:
-        logger.info(
+        logger.debug(
             "Arr hit key=%s provider=%s url=%s",
             identity.cache_key,
             arr_result.provider,
@@ -276,7 +268,7 @@ async def _resolve_one(session: aiohttp.ClientSession, identity: MediaIdentity) 
             arr_result.remote_url,
             api_key=arr_result.api_key,
         )
-        logger.info(
+        logger.debug(
             "Arr download ok key=%s bytes=%s content_type=%s",
             identity.cache_key,
             len(data),
@@ -301,10 +293,10 @@ async def _resolve_one(session: aiohttp.ClientSession, identity: MediaIdentity) 
         )
         return
 
-    logger.info("Arr miss key=%s; trying TMDB", identity.cache_key)
+    logger.debug("Arr miss key=%s; trying TMDB", identity.cache_key)
     tmdb_result = await lookup_tmdb_poster(session, identity)
     if tmdb_result is not None:
-        logger.info(
+        logger.debug(
             "TMDB hit key=%s id=%s url=%s",
             identity.cache_key,
             tmdb_result.provider_id,

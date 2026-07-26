@@ -165,7 +165,7 @@ async def upsert_cache_record(record: CoverArtCacheRecord) -> None:
         {"$set": payload},
         upsert=True,
     )
-    logger.info(
+    logger.debug(
         "upsert %s status=%s provider=%s matched=%s modified=%s upserted=%s local=%s",
         record.cache_key,
         record.status,
@@ -209,7 +209,7 @@ def write_poster_bytes(
             exc,
         )
         raise
-    logger.info(
+    logger.debug(
         "Wrote poster %s (%s bytes, %s) writable_dir=%s",
         path,
         len(data),

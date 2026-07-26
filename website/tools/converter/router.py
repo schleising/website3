@@ -67,7 +67,7 @@ async def converter_cover_art(cache_key: str) -> Response:
                 )
             else:
                 media_type = record.content_type or "image/jpeg"
-                art_logger.info(
+                art_logger.debug(
                     "Art serve hit key=%s path=%s type=%s",
                     decoded_key,
                     local_path,
@@ -86,7 +86,7 @@ async def converter_cover_art(cache_key: str) -> Response:
             bool(local_path),
         )
     else:
-        art_logger.info("Art serve miss key=%s no cache record", decoded_key)
+        art_logger.debug("Art serve miss key=%s no cache record", decoded_key)
 
     return Response(
         status_code=status.HTTP_302_FOUND,
