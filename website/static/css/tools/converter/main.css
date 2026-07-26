@@ -592,6 +592,19 @@ body::after {
     color: var(--live-deep);
 }
 
+.kpi-mix {
+    grid-column: span 2;
+}
+
+.kpi-mix .data-value {
+    font-size: clamp(0.82rem, 1.2vw, 0.98rem);
+    white-space: normal;
+}
+
+.kpi-mix.kpi-queue {
+    border-right: 0;
+}
+
 .conversion-errors-card {
     grid-column: 1 / -1;
     display: flex;
@@ -1138,6 +1151,10 @@ body.dark-mode #overview-button[aria-expanded="true"] {
     }
 
     .key-value-wrapper:nth-child(2n) {
+        border-right: 0;
+    }
+
+    .kpi-mix {
         border-right: 0;
     }
 }

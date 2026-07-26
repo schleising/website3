@@ -78,6 +78,10 @@ class StatisticsMessage(BaseModel):
     total_size_after_conversion_tb: float
     films_converted: int
     films_to_convert: int
+    tv_converted: int
+    tv_to_convert: int
+    converted_media_mix: str
+    queue_media_mix: str
     conversion_errors: int
     conversions_by_backend: dict[str, int]
 

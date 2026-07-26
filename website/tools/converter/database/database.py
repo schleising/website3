@@ -23,6 +23,15 @@ class DatabaseTools:
         self._prediction_size_bucket_ratios: dict[int, float] = {}
         self._prediction_global_ratio: float = 0.25
 
+    @staticmethod
+    def _media_mix_label(films: int, tv: int) -> str:
+        total = films + tv
+        if total <= 0:
+            return "--"
+        films_pct = round((films / total) * 100)
+        tv_pct = 100 - films_pct
+        return f"{films_pct}% films · {tv_pct}% TV"
+
     def _human_readable_file_size(self, size: float) -> str:
         # Convert the file size to a human-readable format
         for unit in ["B", "KB", "MB", "GB", "TB"]:
@@ -745,6 +754,10 @@ class DatabaseTools:
                 total_size_after_conversion_tb=0,
                 films_converted=0,
                 films_to_convert=0,
+                tv_converted=0,
+                tv_to_convert=0,
+                converted_media_mix="--",
+                queue_media_mix="--",
                 conversion_errors=0,
                 conversions_by_backend={},
             )
@@ -911,6 +924,33 @@ class DatabaseTools:
             }
         )
 
+        films_to_convert = total_films_to_convert + total_films_converting
+
+        # TV counts use the same path convention as Films (/Media/TV/...)
+        total_tv_converted = await media_collection.count_documents(
+            {"converted": True, "deleted": False, "filename": {"$regex": r"/TV/"}}
+        )
+
+        total_tv_to_convert = await media_collection.count_documents(
+            {
+                "conversion_required": True,
+                "converted": False,
+                "conversion_error": False,
+                "deleted": False,
+                "filename": {"$regex": r"/TV/"},
+            }
+        )
+
+        total_tv_converting = await media_collection.count_documents(
+            {
+                "conversion_in_progress": True,
+                "deleted": False,
+                "filename": {"$regex": r"/TV/"},
+            }
+        )
+
+        tv_to_convert = total_tv_to_convert + total_tv_converting
+
         # Get the count of conversion errors
         total_conversion_errors = await media_collection.count_documents(
             {"conversion_error": True, "deleted": False}
@@ -960,7 +1000,13 @@ class DatabaseTools:
             total_size_before_conversion_tb=round(total_size_before_conversion, 3),
             total_size_after_conversion_tb=round(total_size_after_conversion, 3),
             films_converted=total_films_converted,
-            films_to_convert=total_films_to_convert + total_films_converting,
+            films_to_convert=films_to_convert,
+            tv_converted=total_tv_converted,
+            tv_to_convert=tv_to_convert,
+            converted_media_mix=self._media_mix_label(
+                total_films_converted, total_tv_converted
+            ),
+            queue_media_mix=self._media_mix_label(films_to_convert, tv_to_convert),
             conversion_errors=total_conversion_errors,
             conversions_by_backend=conversions_by_backend,
         )

@@ -40,11 +40,17 @@ const statisticsScaffoldFields = [
     { key: 'total_files', label: 'Total files', type: 'number', wrapperClass: [] },
     { key: 'total_converted', label: 'Converted', type: 'number', wrapperClass: ['kpi-live'] },
     { key: 'total_to_convert', label: 'In queue', type: 'number', wrapperClass: ['kpi-queue'] },
+    { key: 'total_conversion_time', label: 'Total time', type: 'text', wrapperClass: [] },
+    { key: 'films_converted', label: 'Films converted', type: 'number', wrapperClass: [] },
+    { key: 'films_to_convert', label: 'Films in queue', type: 'number', wrapperClass: ['kpi-queue'] },
+    { key: 'tv_converted', label: 'TV converted', type: 'number', wrapperClass: [] },
+    { key: 'tv_to_convert', label: 'TV in queue', type: 'number', wrapperClass: ['kpi-queue'] },
+    { key: 'converted_media_mix', label: 'Converted mix', type: 'text', wrapperClass: ['kpi-mix'] },
+    { key: 'queue_media_mix', label: 'Queue mix', type: 'text', wrapperClass: ['kpi-mix', 'kpi-queue'] },
     { key: 'gigabytes_before_conversion', label: 'Size before', type: 'size', wrapperClass: [] },
     { key: 'gigabytes_after_conversion', label: 'Size after', type: 'size', wrapperClass: [] },
     { key: 'gigabytes_saved', label: 'Space saved', type: 'size', wrapperClass: ['kpi-emphasis'] },
-    { key: 'percentage_saved', label: 'Saved', type: 'percentage', wrapperClass: ['kpi-emphasis'] },
-    { key: 'total_conversion_time', label: 'Total time', type: 'text', wrapperClass: [] }
+    { key: 'percentage_saved', label: 'Saved', type: 'percentage', wrapperClass: ['kpi-emphasis'] }
 ];
 
 // Add a callback for state changes
