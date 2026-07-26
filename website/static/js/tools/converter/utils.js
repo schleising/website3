@@ -47,6 +47,8 @@ function appendConvertedFileCard(element, data) {
         kind: "converted",
         status: "Converted",
         filename: data.filename,
+        displayTitle: data.display_title || data.filename,
+        coverArtUrl: data.cover_art_url,
         heroValue: ratioNumber == null || Number.isNaN(ratioNumber) ? "--" : ratioNumber + "%",
         heroLabel: "saved",
         fromSize: originalSize,
@@ -79,6 +81,8 @@ function appendToConvertFileCard(element, data) {
         kind: "pending",
         status: "Queued",
         filename: data.filename,
+        displayTitle: data.display_title || data.filename,
+        coverArtUrl: data.cover_art_url,
         confidence: confidenceText,
         heroValue: predictedRatioNumber == null || Number.isNaN(predictedRatioNumber)
             ? "--"
@@ -105,6 +109,23 @@ function createFileRow(options) {
     var row = document.createElement("article");
     row.classList.add("file-row", "file-row--" + options.kind, "converted-file-card");
 
+    var art = document.createElement("div");
+    art.classList.add("file-row-art");
+    row.appendChild(art);
+
+    var poster = document.createElement("img");
+    poster.classList.add("file-row-poster");
+    poster.alt = "";
+    poster.loading = "lazy";
+    poster.decoding = "async";
+    poster.width = 48;
+    poster.height = 72;
+    poster.src = options.coverArtUrl || "/icons/tools/converter/art-placeholder.svg";
+    poster.addEventListener("error", function() {
+        poster.src = "/icons/tools/converter/art-placeholder.svg";
+    });
+    art.appendChild(poster);
+
     var main = document.createElement("div");
     main.classList.add("file-row-main");
     row.appendChild(main);
@@ -130,7 +151,10 @@ function createFileRow(options) {
 
     var name = document.createElement("h4");
     name.classList.add("file-row-name", "converted-file-name");
-    name.innerText = options.filename;
+    name.innerText = options.displayTitle || options.filename;
+    if (options.filename && options.displayTitle && options.filename !== options.displayTitle) {
+        name.title = options.filename;
+    }
     main.appendChild(name);
 
     var facts = document.createElement("div");

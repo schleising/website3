@@ -711,7 +711,19 @@ function updateCurrentConversionDetails(progressElement, fileData, completeStrin
 
     const filenameElement = document.getElementById("filename-value");
     if (filenameElement != null) {
-        updateFilenamePopupText(filenameElement, fileData.filename);
+        const displayTitle = fileData.display_title || fileData.filename;
+        updateFilenamePopupText(filenameElement, displayTitle);
+        if (fileData.filename && fileData.filename !== displayTitle) {
+            filenameElement.dataset.fullFilename = fileData.filename;
+        }
+    }
+
+    const posterElement = document.getElementById("live-poster-value");
+    if (posterElement != null) {
+        const nextSrc = fileData.cover_art_url || "/icons/tools/converter/art-placeholder.svg";
+        if (posterElement.getAttribute("src") !== nextSrc) {
+            posterElement.setAttribute("src", nextSrc);
+        }
     }
 
     setValueIfChanged("complete-value", completeString);
@@ -736,6 +748,20 @@ function ensureCurrentConversionLayout(progressElement) {
 
     const filenameRowElement = document.createElement("div");
     filenameRowElement.classList.add("current-filename-row");
+
+    const posterElement = document.createElement("img");
+    posterElement.id = "live-poster-value";
+    posterElement.classList.add("live-poster");
+    posterElement.alt = "";
+    posterElement.width = 72;
+    posterElement.height = 108;
+    posterElement.decoding = "async";
+    posterElement.src = "/icons/tools/converter/art-placeholder.svg";
+    posterElement.addEventListener("error", function() {
+        posterElement.src = "/icons/tools/converter/art-placeholder.svg";
+    });
+    filenameRowElement.appendChild(posterElement);
+
     const filenameValueElement = document.createElement("div");
     filenameValueElement.id = "filename-value";
     filenameValueElement.classList.add("filename");

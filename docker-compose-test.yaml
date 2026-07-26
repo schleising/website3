@@ -18,8 +18,13 @@ services:
     volumes:
       - ./website:/app:ro
       - ./test/config/website_db_server.txt:/app/database/db_server.txt:ro
+      - converter_art_cache_test:/var/cache/converter-art:rw
+      - ./website/secrets/arr-keys.txt:/run/secrets/arr-keys.txt:ro
     environment:
       - PYTHONUNBUFFERED=1
+      - CONVERTER_ART_CACHE_DIR=/var/cache/converter-art
+      - SONARR_URL=http://steveds920:8989
+      - RADARR_URL=http://steveds920:7878
     restart: unless-stopped
     extra_hosts:
       - "host.docker.internal:host-gateway"
@@ -65,3 +70,4 @@ services:
 volumes:
   db_volume_test:
   db_conf_test:
+  converter_art_cache_test:

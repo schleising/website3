@@ -1,5 +1,4 @@
 from datetime import datetime, timedelta
-from pathlib import Path
 from bisect import bisect_left
 from statistics import median
 from typing import Any, Mapping
@@ -8,6 +7,8 @@ from pymongo import DESCENDING, UpdateOne
 
 from .models import FileData, ConvertedFileDataFromDb
 from ..messages.messages import StatisticsMessage, ConvertedFileData, FileToConvertData
+from ..art.models import ArtDisplayFields
+from ..art.resolver import resolve_art_for_display_many
 from . import media_collection
 
 
@@ -32,7 +33,10 @@ class DatabaseTools:
         return f"{size:.2f} PB"
 
     def _create_converted_data(
-        self, count: int, file_data: ConvertedFileDataFromDb
+        self,
+        count: int,
+        file_data: ConvertedFileDataFromDb,
+        art: ArtDisplayFields,
     ) -> ConvertedFileData:
         # Calculate the compression percentage
         compression_percentage = (
@@ -70,7 +74,10 @@ class DatabaseTools:
         # Create a ConvertedFileData object
         return ConvertedFileData(
             file_data_id=f"file-{count}",
-            filename=Path(file_data.filename).name,
+            filename=art.filename,
+            display_title=art.display_title,
+            media_kind=art.media_kind,
+            cover_art_url=art.cover_art_url,
             start_conversion_time=start_time,
             end_conversion_time=end_time,
             total_conversion_time=total_conversion_time_string,
@@ -504,6 +511,7 @@ class DatabaseTools:
         codec_ratios: Mapping[str, float],
         size_bucket_ratios: Mapping[int, float],
         global_ratio: float,
+        art: ArtDisplayFields,
     ) -> FileToConvertData:
         current_size = db_file.get("current_size") or db_file.get("pre_conversion_size") or 0
 
@@ -555,7 +563,10 @@ class DatabaseTools:
 
         return FileToConvertData(
             file_data_id=f"file-to-convert-{count}",
-            filename=Path(db_file.get("filename", "Unknown")).name,
+            filename=art.filename,
+            display_title=art.display_title,
+            media_kind=art.media_kind,
+            cover_art_url=art.cover_art_url,
             current_size=self._human_readable_file_size(float(current_size)),
             estimated_size_after_conversion=estimated_size_after_conversion,
             estimated_percentage_saved=estimated_percentage_saved,
@@ -593,10 +604,16 @@ class DatabaseTools:
 
         db_file_list = await db_file_cursor.to_list(length=None)
 
+        art_fields = await resolve_art_for_display_many(
+            [str(data.get("filename", "")) for data in db_file_list]
+        )
+
         # Convert the list of FileData objects to a list of file paths
         file_list = [
             self._create_converted_data(
-                count, ConvertedFileDataFromDb.model_validate(data)
+                count,
+                ConvertedFileDataFromDb.model_validate(data),
+                art_fields[count],
             )
             for count, data in enumerate(db_file_list)
         ]
@@ -638,6 +655,10 @@ class DatabaseTools:
 
         db_file_list = await db_file_cursor.to_list(length=None)
 
+        art_fields = await resolve_art_for_display_many(
+            [str(db_file.get("filename", "")) for db_file in db_file_list]
+        )
+
         return [
             self._create_file_to_convert_data(
                 count,
@@ -648,6 +669,7 @@ class DatabaseTools:
                 codec_ratios,
                 size_bucket_ratios,
                 global_ratio,
+                art_fields[count],
             )
             for count, db_file in enumerate(db_file_list)
         ]

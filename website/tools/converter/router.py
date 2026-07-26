@@ -1,10 +1,10 @@
 from datetime import UTC, datetime, timedelta
 import logging
 import json
-from pathlib import Path
+from urllib.parse import unquote
 
 from fastapi import APIRouter, Request, Response, WebSocket, WebSocketDisconnect, status
-from fastapi.responses import HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.templating import Jinja2Templates
 
 from pymongo.errors import DuplicateKeyError
@@ -20,6 +20,9 @@ from .messages.messages import (
     Message,
 )
 from ..utils import calculate_time_remaining
+from .art.config import PLACEHOLDER_ART_URL, art_cache_dir
+from .art.cache import get_cache_record, resolve_local_path
+from .art.resolver import resolve_art_for_display_many
 
 from .database import push_collection
 
@@ -39,6 +42,36 @@ async def converter(request: Request):
     logging.info("Converter page requested")
     return TEMPLATES.TemplateResponse(
         request, "tools/converter/converter.html", {"request": request}
+    )
+
+
+@converter_router.get("/art/{cache_key:path}", response_model=None)
+async def converter_cover_art(cache_key: str) -> Response:
+    """Serve a cached poster, or redirect to the placeholder."""
+    decoded_key = unquote(cache_key).strip()
+    if not decoded_key or ".." in decoded_key or decoded_key.startswith("/"):
+        return Response(status_code=status.HTTP_404_NOT_FOUND)
+
+    record = await get_cache_record(decoded_key)
+    if record is not None:
+        local_path = resolve_local_path(record)
+        if local_path is not None:
+            # Ensure the file is inside the configured cache directory.
+            try:
+                local_path.resolve().relative_to(art_cache_dir().resolve())
+            except ValueError:
+                logging.warning("Rejected cover art path outside cache dir: %s", local_path)
+            else:
+                media_type = record.content_type or "image/jpeg"
+                return FileResponse(
+                    local_path,
+                    media_type=media_type,
+                    headers={"Cache-Control": "public, max-age=86400"},
+                )
+
+    return Response(
+        status_code=status.HTTP_302_FOUND,
+        headers={"Location": PLACEHOLDER_ART_URL},
     )
 
 
@@ -86,10 +119,18 @@ async def converter_websocket(websocket: WebSocket):
                         # Create a ConvertingFilesMessage list
                         current_conversion_status_list: list[ConvertingFileData] = []
                         prediction_context = await database_tools.get_prediction_context()
+                        art_fields = await resolve_art_for_display_many(
+                            [
+                                current_conversion_status_db.filename
+                                for current_conversion_status_db
+                                in current_conversion_status_db_list
+                            ]
+                        )
 
-                        for (
-                            current_conversion_status_db
-                        ) in current_conversion_status_db_list:
+                        for index, current_conversion_status_db in enumerate(
+                            current_conversion_status_db_list
+                        ):
+                            art = art_fields[index]
                             active_start_time = (
                                 current_conversion_status_db.start_copy_time
                                 if current_conversion_status_db.copying
@@ -125,9 +166,10 @@ async def converter_websocket(websocket: WebSocket):
                             )
 
                             current_conversion_status = ConvertingFileData(
-                                filename=Path(
-                                    current_conversion_status_db.filename
-                                ).name,
+                                filename=art.filename,
+                                display_title=art.display_title,
+                                media_kind=art.media_kind,
+                                cover_art_url=art.cover_art_url,
                                 progress=current_conversion_status_db.percentage_complete,
                                 time_since_start=time_since_start_str,
                                 time_remaining=time_remaining,

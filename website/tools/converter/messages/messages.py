@@ -10,6 +10,9 @@ class MessageTypes(str, Enum):
 
 class ConvertingFileData(BaseModel):
     filename: str
+    display_title: str
+    media_kind: str
+    cover_art_url: str
     progress: float
     time_since_start: str
     time_remaining: str
@@ -24,6 +27,9 @@ class ConvertingFilesMessage(BaseModel):
 class ConvertedFileData(BaseModel):
     file_data_id: str
     filename: str
+    display_title: str
+    media_kind: str
+    cover_art_url: str
     start_conversion_time: str
     end_conversion_time: str
     total_conversion_time: str
@@ -37,6 +43,9 @@ class ConvertedFilesMessage(BaseModel):
 class FileToConvertData(BaseModel):
     file_data_id: str
     filename: str
+    display_title: str
+    media_kind: str
+    cover_art_url: str
     current_size: str
     estimated_size_after_conversion: str
     estimated_percentage_saved: int

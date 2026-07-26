@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 120" role="img" aria-label="Cover art placeholder">
+  <rect width="80" height="120" fill="#d5ddd7"/>
+  <rect x="8" y="8" width="64" height="104" fill="#e6ebe8" stroke="#8a968d" stroke-width="1.5"/>
+  <rect x="18" y="28" width="44" height="28" rx="2" fill="#b7c2ba"/>
+  <rect x="22" y="70" width="36" height="4" rx="2" fill="#9aa69e"/>
+  <rect x="26" y="80" width="28" height="4" rx="2" fill="#9aa69e"/>
+</svg>

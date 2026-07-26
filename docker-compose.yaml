@@ -5,8 +5,14 @@ services:
       - mongodb
     env_file:
       - .env
+    environment:
+      - CONVERTER_ART_CACHE_DIR=/var/cache/converter-art
+      - SONARR_URL=http://steveds920:8989
+      - RADARR_URL=http://steveds920:7878
     volumes:
       - ./website:/app:ro
+      - converter_art_cache:/var/cache/converter-art:rw
+      - ./website/secrets/arr-keys.txt:/run/secrets/arr-keys.txt:ro
     ports:
       - "8081:8080"
     restart: always
@@ -70,3 +76,4 @@ services:
 volumes:
   db_volume:
   db_conf:
+  converter_art_cache:
