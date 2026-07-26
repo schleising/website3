@@ -35,8 +35,17 @@
 html,
 body {
     height: 100%;
+    max-height: 100%;
     margin: 0;
     padding: 0;
+}
+
+@supports (height: 100dvh) {
+    html,
+    body {
+        height: 100dvh;
+        max-height: 100dvh;
+    }
 }
 
 html {
@@ -75,6 +84,8 @@ body::after {
     flex-basis: 0;
     gap: 1rem;
     width: min(100%, 72rem);
+    height: 100%;
+    max-height: 100%;
     margin: 0 auto;
     padding: 1rem 1rem calc(1.5rem + env(safe-area-inset-bottom, 0));
     min-height: 0;
@@ -245,6 +256,15 @@ body::after {
     display: none !important;
 }
 
+.page-chrome {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 0;
+    flex-shrink: 0;
+    gap: 1rem;
+    min-width: 0;
+}
+
 .topbar,
 .live-stage {
     flex-grow: 0;
@@ -259,7 +279,10 @@ body::after {
     flex-basis: 0;
     gap: 1rem;
     min-height: 0;
-    overflow: hidden;
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
 }
 
 .main-scroll > .kpi-band {
@@ -513,8 +536,8 @@ body::after {
     display: flex;
     flex-direction: column;
     flex-grow: 1;
-    flex-shrink: 1;
-    flex-basis: 0;
+    flex-shrink: 0;
+    flex-basis: auto;
     min-height: 0;
     padding: 0.95rem 0.35rem 0.55rem;
 }
@@ -584,14 +607,12 @@ body::after {
     display: flex;
     flex-direction: column;
     flex-grow: 1;
-    flex-shrink: 1;
-    flex-basis: 0;
+    flex-shrink: 0;
+    flex-basis: auto;
     gap: 0;
     min-height: 0;
     border-top: 0.0625rem solid var(--line);
-    overflow-x: hidden;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
+    overflow: visible;
 }
 
 .file-row,
@@ -993,12 +1014,17 @@ body.dark-mode #file-progress {
 }
 
 @media screen and (max-width: 44rem) {
-    /* Document scroll so mobile pull-to-refresh works (nested overflow blocks it). */
+    /*
+      Document scroll preserves pull-to-refresh.
+      Fixed chrome (not sticky) keeps header + Now Converting locked —
+      overflow-x on html/body breaks position:sticky in WebKit/Blink.
+    */
     html,
     body {
         height: auto;
+        max-height: none;
         min-height: 100%;
-        overflow-x: hidden;
+        overflow-x: clip;
         overflow-y: auto;
         -webkit-overflow-scrolling: touch;
     }
@@ -1010,8 +1036,33 @@ body.dark-mode #file-progress {
         flex-basis: auto;
         min-height: 100dvh;
         height: auto;
-        padding: 0.7rem 0.65rem calc(1.1rem + env(safe-area-inset-bottom, 0));
+        max-height: none;
+        padding: var(--page-chrome-height, 5.5rem) 0.65rem calc(1.1rem + env(safe-area-inset-bottom, 0));
         gap: 0.75rem;
+    }
+
+    .page-chrome {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 40;
+        width: min(100%, 72rem);
+        margin: 0 auto;
+        gap: 0.75rem;
+        padding: calc(0.7rem + env(safe-area-inset-top, 0)) 0.65rem 0.75rem;
+        box-sizing: border-box;
+        background:
+            radial-gradient(90% 70% at 8% -10%, rgba(15, 143, 122, 0.18), transparent 55%),
+            radial-gradient(70% 60% at 100% 0%, rgba(181, 106, 18, 0.1), transparent 45%),
+            linear-gradient(165deg, var(--paper), var(--paper-deep));
+    }
+
+    body.dark-mode .page-chrome {
+        background:
+            radial-gradient(90% 70% at 8% -10%, rgba(45, 206, 178, 0.12), transparent 55%),
+            radial-gradient(70% 60% at 100% 0%, rgba(224, 162, 74, 0.08), transparent 45%),
+            linear-gradient(165deg, var(--paper), var(--paper-deep));
     }
 
     .main-scroll {
@@ -1026,7 +1077,7 @@ body.dark-mode #file-progress {
 
     .activity {
         flex-grow: 1;
-        flex-shrink: 1;
+        flex-shrink: 0;
         flex-basis: auto;
         min-height: 0;
     }
