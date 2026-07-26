@@ -85,6 +85,7 @@ document.addEventListener('readystatechange', event => {
         initializeOverviewDialog();
         setupNetworkListeners();
         startConnectionWatchdog();
+        updateConnectionStatus();
 
         // Check whether the websocket is open, if not open it
         openWebSocket();
@@ -430,6 +431,7 @@ function openWebSocket() {
     console.log("Opening Websocket")
     // Create a new WebSocket
     ws = new WebSocket(url);
+    updateConnectionStatus();
 
     // Setup callback for close/error events
     ws.onclose = event => {
@@ -441,6 +443,7 @@ function openWebSocket() {
         }
 
         ws = null;
+        updateConnectionStatus();
 
         if (visible) {
             scheduleReconnect("socket-closed");
@@ -663,6 +666,7 @@ function openWebSocket() {
     ws.addEventListener('open', () => {
         reconnectAttempt = 0;
         lastMessageTimestamp = Date.now();
+        updateConnectionStatus();
 
         ws.send(JSON.stringify({
             messageType: 'set_files_view',
@@ -782,17 +786,42 @@ function startConnectionWatchdog() {
 function setupNetworkListeners() {
     window.addEventListener("online", () => {
         console.log("Network online");
+        updateConnectionStatus();
         scheduleReconnect("browser-online", true);
     });
 
     window.addEventListener("offline", () => {
         console.log("Network offline");
+        updateConnectionStatus();
 
         if (timer != 0) {
             clearTimeout(timer);
             timer = 0;
         }
     });
+}
+
+function updateConnectionStatus() {
+    const statusElement = document.getElementById("connection-status");
+    if (statusElement == null) {
+        return;
+    }
+
+    let label = "Online";
+    let stateClass = "is-online";
+
+    if (navigator.onLine === false) {
+        label = "Offline";
+        stateClass = "is-offline";
+    } else if (ws == null || ws.readyState !== WebSocket.OPEN) {
+        label = "Connecting";
+        stateClass = "is-connecting";
+    }
+
+    statusElement.setAttribute("aria-label", label);
+    statusElement.setAttribute("title", label);
+    statusElement.classList.remove("is-online", "is-offline", "is-connecting");
+    statusElement.classList.add(stateClass);
 }
 
 function setValueIfChanged(elementId, value) {
