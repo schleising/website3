@@ -68,6 +68,7 @@ document.addEventListener('readystatechange', event => {
 
         initializeFilesViewButtons();
         initializeConverterScaffold();
+        initializeOverviewDialog();
         setupNetworkListeners();
         startConnectionWatchdog();
 
@@ -128,6 +129,51 @@ function initializeConverterScaffold() {
     initializeFilesScaffold();
     setProgressBarVisible(false);
     setLiveStageVisible(false);
+}
+
+function initializeOverviewDialog() {
+    const dialog = document.getElementById("overview-dialog");
+    const openButton = document.getElementById("overview-button");
+    const closeButton = document.getElementById("overview-dialog-close");
+
+    if (dialog == null || openButton == null) {
+        return;
+    }
+
+    if (openButton.dataset.overviewBound === "true") {
+        return;
+    }
+
+    openButton.dataset.overviewBound = "true";
+
+    function setExpanded(isOpen) {
+        openButton.setAttribute("aria-expanded", isOpen ? "true" : "false");
+    }
+
+    openButton.addEventListener("click", function() {
+        if (typeof dialog.showModal === "function") {
+            dialog.showModal();
+        } else {
+            dialog.setAttribute("open", "");
+        }
+        setExpanded(true);
+    });
+
+    if (closeButton != null) {
+        closeButton.addEventListener("click", function() {
+            dialog.close();
+        });
+    }
+
+    dialog.addEventListener("click", function(event) {
+        if (event.target === dialog) {
+            dialog.close();
+        }
+    });
+
+    dialog.addEventListener("close", function() {
+        setExpanded(false);
+    });
 }
 
 function initializeCurrentConversionScaffold() {

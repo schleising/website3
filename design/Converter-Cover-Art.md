@@ -389,7 +389,7 @@ As built:
 
 ### Layout chrome
 
-- Desktop: header + Now Converting fixed; Overview + Activity scroll together in `.main-scroll`.
+- Desktop: header + Now Converting fixed; Activity scrolls in `.main-scroll`. Overview opens from an Activity toolbar button.
 - Mobile: document scroll (pull-to-refresh); header + Now Converting in sticky/fixed `.page-chrome` with height synced via `page-layout.js`.
 
 ### Activity rows

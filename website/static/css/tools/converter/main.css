@@ -243,7 +243,6 @@ body::after {
 }
 
 .live-stage,
-.kpi-band,
 .activity {
     border: 0.0625rem solid var(--line);
     border-radius: var(--radius-lg);
@@ -283,11 +282,6 @@ body::after {
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
     overscroll-behavior: contain;
-}
-
-.main-scroll > .kpi-band {
-    flex-grow: 0;
-    flex-shrink: 0;
 }
 
 /* —— Live stage —— */
@@ -478,28 +472,74 @@ body::after {
     border-radius: 999px;
 }
 
-/* —— KPI band —— */
-.kpi-band {
-    padding: 0.55rem 0.85rem 0;
+/* —— Overview dialog —— */
+.overview-dialog {
+    margin: auto;
+    padding: 0;
+    border: 0;
+    border-radius: var(--radius-lg);
+    background: transparent;
+    max-width: min(36rem, calc(100vw - 1.5rem));
+    max-height: min(90vh, 40rem);
+    width: 100%;
 }
 
-.kpi-band .section-head {
-    flex-direction: row;
-    align-items: baseline;
+.overview-dialog::backdrop {
+    background: rgba(12, 22, 19, 0.48);
+    backdrop-filter: blur(0.2rem);
+}
+
+.overview-dialog-panel {
+    display: flex;
+    flex-direction: column;
     gap: 0.55rem;
+    max-height: min(90vh, 40rem);
+    overflow: auto;
+    padding: 0.95rem 0.95rem 0.35rem;
+    border: 0.0625rem solid var(--line);
+    border-radius: var(--radius-lg);
+    background:
+        linear-gradient(135deg, rgba(15, 143, 122, 0.08), transparent 42%),
+        var(--surface-strong);
+    box-shadow: var(--shadow);
+    color: var(--ink);
 }
 
-.kpi-band .section-title {
-    font-size: 0.95rem;
+.overview-dialog-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0 0.1rem;
+}
+
+.overview-dialog-head .section-title {
+    font-size: 1.15rem;
+}
+
+#overview-dialog-close {
+    border: 0.0625rem solid var(--line-strong);
+    border-radius: 999px;
+    background: var(--surface);
+    color: var(--ink);
+    padding: 0.35rem 0.8rem;
+    font-family: var(--font-display);
+    font-size: 0.78rem;
     font-weight: 700;
-    letter-spacing: -0.02em;
+    cursor: pointer;
+    transition: border-color 160ms ease, background 160ms ease;
+}
+
+#overview-dialog-close:hover {
+    border-color: var(--live);
+    background: #fff;
 }
 
 .kpi-grid {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 0;
-    margin-top: 0.4rem;
+    margin-top: 0.15rem;
     border-top: 0.0625rem solid var(--line);
 }
 
@@ -588,13 +628,54 @@ body::after {
 
 .activity-toolbar {
     display: flex;
+    flex-direction: column;
     flex-grow: 0;
     flex-shrink: 0;
-    align-items: flex-end;
+    gap: 0.35rem;
+    padding: 0 0.7rem 0.75rem;
+}
+
+.activity-toolbar-top {
+    display: flex;
+    align-items: center;
     justify-content: space-between;
     gap: 0.85rem;
+}
+
+.activity-title-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.65rem;
     flex-wrap: wrap;
-    padding: 0 0.7rem 0.75rem;
+    width: 100%;
+    min-width: 0;
+}
+
+.activity-title-row .section-title {
+    min-width: 0;
+}
+
+#overview-button {
+    flex-shrink: 0;
+    margin-left: auto;
+    border: 0.0625rem solid var(--line-strong);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--ink-muted);
+    padding: 0.28rem 0.7rem;
+    font-family: var(--font-display);
+    font-size: 0.75rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: color 150ms ease, border-color 150ms ease, background 150ms ease;
+}
+
+#overview-button:hover,
+#overview-button[aria-expanded="true"] {
+    color: var(--ink);
+    border-color: var(--live);
+    background: var(--live-soft);
 }
 
 .activity-controls {
@@ -1036,6 +1117,16 @@ body.dark-mode #file-progress {
     background: rgba(232, 242, 236, 0.1);
 }
 
+body.dark-mode .overview-dialog::backdrop {
+    background: rgba(0, 0, 0, 0.62);
+}
+
+body.dark-mode #overview-dialog-close:hover,
+body.dark-mode #overview-button:hover,
+body.dark-mode #overview-button[aria-expanded="true"] {
+    background: rgba(45, 206, 178, 0.14);
+}
+
 /* —— Responsive —— */
 @media screen and (max-width: 64rem) {
     .kpi-grid {
@@ -1148,8 +1239,7 @@ body.dark-mode #file-progress {
         transform: translateX(1.4rem);
     }
 
-    .live-stage,
-    .kpi-band {
+    .live-stage {
         padding-left: 0.8rem;
         padding-right: 0.8rem;
     }
@@ -1164,7 +1254,7 @@ body.dark-mode #file-progress {
         min-height: 4.75rem;
     }
 
-    .activity-toolbar {
+    .activity-title-row {
         align-items: stretch;
         flex-direction: column;
     }
