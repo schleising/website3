@@ -17,6 +17,10 @@ self.addEventListener('push', function (event) {
         requireInteraction: data.requireInteraction || false
     };
 
+    if (data.image) {
+        options.image = data.image;
+    }
+
     event.waitUntil(
         self.registration.showNotification(title, options)
     );

@@ -370,9 +370,18 @@ For a full path:
 
 Applied to `ConvertingFileData`, `ConvertedFileData`, and `FileToConvertData`.
 
-### Placeholder
+### Web push
 
-`/icons/tools/converter/art-placeholder.svg` — single neutral tile.
+Conversion success/failure pushes are sent by **convert-to-h265** (`cover_art.py` + `send_notification`).
+
+Notification image fetches usually have **no tools-auth cookies**, so pushes must **not** use `/tools/converter/art/{cache_key}`.
+
+As built:
+
+1. Look up `cover_art_cache` by the same cache key rules as website3.
+2. If `status=ready` and `remote_url` is public **`https://`** (typical Arr `remoteUrl` / TMDB CDN), use that for `icon` and `image`.
+3. Otherwise fall back to absolute Converter PWA icon/badge URLs on `https://converter.schleising.net`.
+4. Converter service workers (`static/tools/converter/sw.js` and `static/sw.js`) pass `image` through to `showNotification`.
 
 ---
 
@@ -474,7 +483,7 @@ Prefer `display_title` as the heading. Basename available via filename popup whe
 
 - [ ] Season posters or episode stills
 - [ ] Share art service with Media Manager
-- [ ] Art in web push notification images for completed converts
+- [x] Art in web push notification images for completed converts
 - [ ] Background sweeper over all distinct paths in `media_collection` (lazy WS resolve is sufficient for v1)
 
 ---
@@ -504,6 +513,7 @@ Prefer `display_title` as the heading. Basename available via filename popup whe
 | Arr URL from Docker | **`http://steveds920:8989`** and **`http://steveds920:7878`** |
 | Poster fit | **`object-fit: contain`** in a fixed slot (no crop; no art-only background) |
 | Art URL shape | **Relative** `art/{key}` from Converter page |
+| Push notification art | Prefer public **HTTPS** `remote_url` from cache; never tools-auth art paths |
 | Cache retention | **14 days** unused (`last_accessed_at` / `updated_at`) |
 | Queue list | Include **converting/copying** rows with appropriate status |
 
