@@ -756,15 +756,14 @@ function ensureCurrentConversionLayout(progressElement) {
     layoutElement.id = "current-conversion-layout";
     layoutElement.classList.add("current-conversion-layout");
 
-    const filenameRowElement = document.createElement("div");
-    filenameRowElement.classList.add("current-filename-row");
+    const artElement = document.createElement("div");
+    artElement.classList.add("live-art");
+    layoutElement.appendChild(artElement);
 
     const posterElement = document.createElement("img");
     posterElement.id = "live-poster-value";
     posterElement.classList.add("live-poster");
     posterElement.alt = "";
-    posterElement.width = 88;
-    posterElement.height = 132;
     posterElement.decoding = "async";
     posterElement.src = "/icons/tools/converter/art-placeholder.svg";
     posterElement.addEventListener("error", function() {
@@ -776,45 +775,63 @@ function ensureCurrentConversionLayout(progressElement) {
         posterElement.dataset.artStatus = "img_error";
         posterElement.src = "/icons/tools/converter/art-placeholder.svg";
     });
-    filenameRowElement.appendChild(posterElement);
+    artElement.appendChild(posterElement);
+
+    const mainElement = document.createElement("div");
+    mainElement.classList.add("live-main");
+    layoutElement.appendChild(mainElement);
 
     const filenameValueElement = document.createElement("div");
     filenameValueElement.id = "filename-value";
-    filenameValueElement.classList.add("filename");
-    filenameRowElement.appendChild(filenameValueElement);
-    layoutElement.appendChild(filenameRowElement);
+    filenameValueElement.classList.add("filename", "live-filename");
+    mainElement.appendChild(filenameValueElement);
 
-    const metricsElement = document.createElement("div");
-    metricsElement.classList.add("live-metrics");
-    metricsElement.appendChild(createCurrentMetricBlock("complete", "Complete"));
-    metricsElement.appendChild(createCurrentMetricBlock("speed", "Speed"));
-    metricsElement.appendChild(createCurrentMetricBlock("predicted_ratio", "Est. save"));
-    metricsElement.appendChild(createCurrentMetricBlock("time_since_start", "Elapsed"));
-    metricsElement.appendChild(createCurrentMetricBlock("time_remaining", "Remaining"));
-    metricsElement.appendChild(createCurrentMetricBlock("completion_time", "Done by"));
-    layoutElement.appendChild(metricsElement);
+    const factsElement = document.createElement("div");
+    factsElement.classList.add("file-row-facts", "live-facts");
+    factsElement.appendChild(createLiveFact("speed", "Speed"));
+    factsElement.appendChild(createLiveFact("predicted_ratio", "Est. save"));
+    factsElement.appendChild(createLiveFact("time_since_start", "Elapsed"));
+    factsElement.appendChild(createLiveFact("time_remaining", "Remaining"));
+    factsElement.appendChild(createLiveFact("completion_time", "Done by"));
+    mainElement.appendChild(factsElement);
+
+    const heroElement = document.createElement("div");
+    heroElement.classList.add("file-row-hero", "live-hero");
+    layoutElement.appendChild(heroElement);
+
+    const heroValueElement = document.createElement("span");
+    heroValueElement.id = "complete-value";
+    heroValueElement.classList.add("file-row-hero-value");
+    heroValueElement.innerText = "--";
+    heroElement.appendChild(heroValueElement);
+
+    const heroLabelElement = document.createElement("span");
+    heroLabelElement.id = "complete-key";
+    heroLabelElement.classList.add("file-row-hero-label");
+    heroLabelElement.innerText = "complete";
+    heroElement.appendChild(heroLabelElement);
 
     progressElement.appendChild(layoutElement);
-    enableFilenamePopup(filenameRowElement, "No file being converted");
+    enableFilenamePopup(mainElement, "No file being converted");
 }
 
-function createCurrentMetricBlock(idPrefix, label) {
-    const metricElement = document.createElement("div");
-    metricElement.classList.add("key-value-wrapper");
+function createLiveFact(idPrefix, label) {
+    const factElement = document.createElement("span");
+    factElement.classList.add("file-fact");
 
-    const labelElement = document.createElement("div");
+    const labelElement = document.createElement("span");
     labelElement.id = idPrefix + "-key";
-    labelElement.classList.add("data-key");
+    labelElement.classList.add("file-fact-label");
     labelElement.innerText = label;
-    metricElement.appendChild(labelElement);
+    factElement.appendChild(labelElement);
 
-    const valueElement = document.createElement("div");
+    const valueElement = document.createElement("span");
     valueElement.id = idPrefix + "-value";
-    valueElement.classList.add("data-value");
+    valueElement.classList.add("file-fact-value");
     valueElement.innerText = "--";
-    metricElement.appendChild(valueElement);
+    factElement.appendChild(valueElement);
 
-    return metricElement;
+    return factElement;
 }
 
 function appendConversionErrorsRow(element, errorCount) {
