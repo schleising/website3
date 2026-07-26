@@ -359,35 +359,18 @@ body::after {
     border-top: 0.0625rem solid var(--line);
 }
 
-.current-metric-card {
-    min-width: 0;
-    padding: 0.7rem 0.65rem 0.15rem;
+.live-metrics .key-value-wrapper {
+    border-bottom: 0;
+    padding: 0.42rem 0.55rem 0.48rem;
+}
+
+.live-metrics .key-value-wrapper:nth-child(4n) {
     border-right: 0.0625rem solid var(--line);
 }
 
-.current-metric-card:last-child {
+.live-metrics .key-value-wrapper:nth-child(6n),
+.live-metrics .key-value-wrapper:last-child {
     border-right: 0;
-}
-
-.current-metric-label {
-    font-size: 0.62rem;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--ink-muted);
-}
-
-.current-metric-value {
-    margin-top: 0.28rem;
-    font-family: var(--font-display);
-    font-size: 1.05rem;
-    font-weight: 750;
-    letter-spacing: -0.03em;
-    line-height: 1.15;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    font-variant-numeric: tabular-nums;
 }
 
 .current-empty-state {
@@ -984,11 +967,15 @@ body.dark-mode #file-progress {
         grid-template-columns: repeat(3, minmax(0, 1fr));
     }
 
-    .current-metric-card:nth-child(3n) {
+    .live-metrics .key-value-wrapper:nth-child(3n) {
         border-right: 0;
     }
 
-    .current-metric-card:nth-child(n+4) {
+    .live-metrics .key-value-wrapper:nth-child(4n) {
+        border-right: 0.0625rem solid var(--line);
+    }
+
+    .live-metrics .key-value-wrapper:nth-child(n+4) {
         border-top: 0.0625rem solid var(--line);
     }
 
@@ -1082,15 +1069,15 @@ body.dark-mode #file-progress {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
-    .current-metric-card:nth-child(3n) {
+    .live-metrics .key-value-wrapper:nth-child(3n) {
         border-right: 0.0625rem solid var(--line);
     }
 
-    .current-metric-card:nth-child(2n) {
+    .live-metrics .key-value-wrapper:nth-child(2n) {
         border-right: 0;
     }
 
-    .current-metric-card:nth-child(n+3) {
+    .live-metrics .key-value-wrapper:nth-child(n+3) {
         border-top: 0.0625rem solid var(--line);
     }
 

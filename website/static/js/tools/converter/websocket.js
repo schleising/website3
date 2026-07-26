@@ -800,17 +800,17 @@ function ensureCurrentConversionLayout(progressElement) {
 
 function createCurrentMetricBlock(idPrefix, label) {
     const metricElement = document.createElement("div");
-    metricElement.classList.add("current-metric-card");
+    metricElement.classList.add("key-value-wrapper");
 
     const labelElement = document.createElement("div");
     labelElement.id = idPrefix + "-key";
-    labelElement.classList.add("current-metric-label");
+    labelElement.classList.add("data-key");
     labelElement.innerText = label;
     metricElement.appendChild(labelElement);
 
     const valueElement = document.createElement("div");
     valueElement.id = idPrefix + "-value";
-    valueElement.classList.add("current-metric-value");
+    valueElement.classList.add("data-value");
     valueElement.innerText = "--";
     metricElement.appendChild(valueElement);
 
