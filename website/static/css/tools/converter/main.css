@@ -708,6 +708,10 @@ body::after {
     border-left: 0.2rem solid var(--queue);
 }
 
+.file-row--converting {
+    border-left: 0.2rem solid var(--live);
+}
+
 .file-row-meta {
     display: flex;
     flex-wrap: wrap;
@@ -727,6 +731,7 @@ body::after {
 
 .file-row--converted .file-status { color: var(--saved); }
 .file-row--pending .file-status { color: var(--queue); }
+.file-row--converting .file-status { color: var(--live-deep); }
 
 .prediction-confidence-badge {
     padding: 0.08rem 0.4rem;
@@ -821,6 +826,7 @@ body::after {
 
 .file-row--converted .file-row-hero-value { color: var(--saved); }
 .file-row--pending .file-row-hero-value { color: var(--queue); }
+.file-row--converting .file-row-hero-value { color: var(--live-deep); }
 
 .file-row-hero-label {
     font-size: 0.58rem;
@@ -855,6 +861,10 @@ body::after {
 
 .file-row--pending .file-row-sizebar-fill {
     background: linear-gradient(90deg, var(--queue), #e0a24a);
+}
+
+.file-row--converting .file-row-sizebar-fill {
+    background: linear-gradient(90deg, var(--live), var(--live-deep));
 }
 
 .file-row-sizebar-label {

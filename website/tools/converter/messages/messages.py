@@ -52,6 +52,7 @@ class FileToConvertData(BaseModel):
     cover_art_url: str
     cover_art_status: str = "pending"
     cover_art_key: str = ""
+    queue_status: str = "queued"
     current_size: str
     estimated_size_after_conversion: str
     estimated_percentage_saved: int

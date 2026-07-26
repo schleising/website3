@@ -78,10 +78,20 @@ function appendToConvertFileCard(element, data) {
     var predictedSize = getCardValue(data.estimated_size_after_conversion, "--", false, false, true);
     var codecValue = formatCodecValue(data.video_codec) + " / " + formatCodecValue(data.audio_codec);
     var confidenceText = getCardValue(data.prediction_confidence, "Low");
+    var queueStatus = String(data.queue_status || "queued").toLowerCase();
+    var statusLabel = "Queued";
+    var rowKind = "pending";
+    if (queueStatus === "converting") {
+        statusLabel = "Converting";
+        rowKind = "converting";
+    } else if (queueStatus === "copying") {
+        statusLabel = "Copying";
+        rowKind = "converting";
+    }
 
     var row = createFileRow({
-        kind: "pending",
-        status: "Queued",
+        kind: rowKind,
+        status: statusLabel,
         filename: data.filename,
         displayTitle: data.display_title || data.filename,
         coverArtUrl: data.cover_art_url,

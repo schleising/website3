@@ -3,7 +3,7 @@ from bisect import bisect_left
 from statistics import median
 from typing import Any, Mapping
 
-from pymongo import DESCENDING, UpdateOne
+from pymongo import ASCENDING, DESCENDING, UpdateOne
 
 from .models import FileData, ConvertedFileDataFromDb
 from ..messages.messages import StatisticsMessage, ConvertedFileData, FileToConvertData
@@ -514,6 +514,7 @@ class DatabaseTools:
         size_bucket_ratios: Mapping[int, float],
         global_ratio: float,
         art: ArtDisplayFields,
+        queue_status: str = "queued",
     ) -> FileToConvertData:
         current_size = db_file.get("current_size") or db_file.get("pre_conversion_size") or 0
 
@@ -571,6 +572,7 @@ class DatabaseTools:
             cover_art_url=art.cover_art_url,
             cover_art_status=art.cover_art_status,
             cover_art_key=art.cache_key,
+            queue_status=queue_status,
             current_size=self._human_readable_file_size(float(current_size)),
             estimated_size_after_conversion=estimated_size_after_conversion,
             estimated_percentage_saved=estimated_percentage_saved,
@@ -637,28 +639,47 @@ class DatabaseTools:
             global_ratio,
         ) = await self._get_prediction_models()
 
-        db_file_cursor = media_collection.find(
+        queue_projection = [
+            "filename",
+            "current_size",
+            "pre_conversion_size",
+            "converting",
+            "copying",
+            "backend_name",
+            "video_information.streams.codec_type",
+            "video_information.streams.codec_name",
+            "video_information.format.duration",
+            "video_information.format.bit_rate",
+        ]
+
+        active_cursor = media_collection.find(
+            {
+                "deleted": False,
+                "$or": [
+                    {"converting": True},
+                    {"copying": True},
+                ],
+            },
+            sort=[("backend_name", ASCENDING)],
+            projection=queue_projection,
+        )
+        active_files = await active_cursor.to_list(length=None)
+
+        queued_cursor = media_collection.find(
             {
                 "conversion_required": True,
                 "converted": False,
                 "converting": False,
+                "copying": {"$ne": True},
                 "conversion_error": False,
                 "deleted": False,
             },
             sort=[("video_information.format.bit_rate", DESCENDING)],
-            projection=[
-                "filename",
-                "current_size",
-                "pre_conversion_size",
-                "video_information.streams.codec_type",
-                "video_information.streams.codec_name",
-                "video_information.format.duration",
-                "video_information.format.bit_rate",
-            ],
+            projection=queue_projection,
         )
+        queued_files = await queued_cursor.to_list(length=None)
 
-        db_file_list = await db_file_cursor.to_list(length=None)
-
+        db_file_list = [*active_files, *queued_files]
         art_fields = await resolve_art_for_display_many(
             [str(db_file.get("filename", "")) for db_file in db_file_list]
         )
@@ -674,9 +695,18 @@ class DatabaseTools:
                 size_bucket_ratios,
                 global_ratio,
                 art_fields[count],
+                queue_status=self._queue_status_for_file(db_file),
             )
             for count, db_file in enumerate(db_file_list)
         ]
+
+    @staticmethod
+    def _queue_status_for_file(db_file: Mapping[str, Any]) -> str:
+        if db_file.get("copying") is True:
+            return "copying"
+        if db_file.get("converting") is True:
+            return "converting"
+        return "queued"
 
     async def get_converting_files(self) -> list[FileData] | None:
         if media_collection is None:
