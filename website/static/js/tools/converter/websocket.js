@@ -763,8 +763,8 @@ function ensureCurrentConversionLayout(progressElement) {
     posterElement.id = "live-poster-value";
     posterElement.classList.add("live-poster");
     posterElement.alt = "";
-    posterElement.width = 72;
-    posterElement.height = 108;
+    posterElement.width = 88;
+    posterElement.height = 132;
     posterElement.decoding = "async";
     posterElement.src = "/icons/tools/converter/art-placeholder.svg";
     posterElement.addEventListener("error", function() {

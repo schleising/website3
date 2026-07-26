@@ -122,8 +122,6 @@ function createFileRow(options) {
     poster.alt = "";
     poster.loading = "lazy";
     poster.decoding = "async";
-    poster.width = 48;
-    poster.height = 72;
     poster.dataset.artStatus = options.coverArtStatus || "pending";
     poster.dataset.artKey = options.coverArtKey || "";
     poster.src = options.coverArtUrl || "/icons/tools/converter/art-placeholder.svg";

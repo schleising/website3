@@ -337,9 +337,10 @@ body::after {
 
 .live-poster {
     flex: 0 0 auto;
-    width: 4.5rem;
-    height: 6.75rem;
-    object-fit: cover;
+    width: 5.5rem;
+    height: 8.25rem;
+    object-fit: contain;
+    object-position: center center;
     border-radius: 0.35rem;
     background: var(--panel-soft, rgba(0, 0, 0, 0.04));
     box-shadow: inset 0 0 0 0.0625rem var(--line);
@@ -615,9 +616,10 @@ body::after {
 .file-row,
 .converted-file-card {
     display: grid;
-    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-columns: 5rem minmax(0, 1fr) auto;
+    grid-template-rows: minmax(5.5rem, auto) auto;
     gap: 0.75rem 1rem;
-    align-items: start;
+    align-items: stretch;
     padding: 0.85rem 0.95rem;
     border-bottom: 0.0625rem solid var(--line);
     background: transparent;
@@ -626,25 +628,39 @@ body::after {
 }
 
 .file-row-art {
-    grid-row: 1 / span 2;
-    width: 3rem;
-}
-
-.file-row-poster {
-    display: block;
-    width: 3rem;
-    height: 4.5rem;
-    object-fit: cover;
+    grid-column: 1;
+    grid-row: 1;
+    align-self: stretch;
+    position: relative;
+    box-sizing: border-box;
+    width: 5rem;
+    min-height: 5.5rem;
     border-radius: 0.3rem;
     background: var(--panel-soft, rgba(0, 0, 0, 0.04));
     box-shadow: inset 0 0 0 0.0625rem var(--line);
+    overflow: hidden;
+}
+
+.file-row-poster {
+    position: absolute;
+    inset: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    object-position: center center;
 }
 
 .file-row-main {
+    grid-column: 2;
+    grid-row: 1;
     min-width: 0;
     display: flex;
     flex-direction: column;
     gap: 0.35rem;
+    justify-content: center;
 }
 
 .file-row:hover,
@@ -750,6 +766,9 @@ body::after {
 }
 
 .file-row-hero {
+    grid-column: 3;
+    grid-row: 1;
+    align-self: center;
     display: flex;
     flex-direction: column;
     align-items: flex-end;
@@ -780,12 +799,13 @@ body::after {
 }
 
 .file-row-sizebar {
-    grid-column: 2 / -1;
+    grid-column: 1 / -1;
+    grid-row: 2;
     display: grid;
     grid-template-columns: auto 1fr auto;
     align-items: center;
     gap: 0.55rem;
-    margin-top: -0.15rem;
+    margin-top: 0;
 }
 
 .file-row-sizebar-track {
@@ -951,7 +971,7 @@ body.dark-mode .files-view-button.active {
     color: var(--ink);
 }
 
-body.dark-mode .file-row-poster,
+body.dark-mode .file-row-art,
 body.dark-mode .live-poster {
     background: rgba(255, 255, 255, 0.04);
     box-shadow: inset 0 0 0 0.0625rem rgba(255, 255, 255, 0.08);
@@ -997,13 +1017,39 @@ body.dark-mode #file-progress {
 }
 
 @media screen and (max-width: 44rem) {
+    /* Document scroll so mobile pull-to-refresh works (nested overflow blocks it). */
+    html,
+    body {
+        height: auto;
+        min-height: 100%;
+        overflow-x: hidden;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
     .shell {
+        overflow: visible;
+        flex-grow: 0;
+        flex-shrink: 0;
+        flex-basis: auto;
+        min-height: 100dvh;
+        height: auto;
         padding: 0.7rem 0.65rem calc(1.1rem + env(safe-area-inset-bottom, 0));
         gap: 0.75rem;
     }
 
     .main-scroll {
+        overflow: visible;
+        flex-grow: 0;
+        flex-shrink: 0;
+        flex-basis: auto;
+        min-height: 0;
+        overscroll-behavior: auto;
         gap: 0.75rem;
+    }
+
+    .activity {
+        flex-grow: 0;
     }
 
     .topbar {
@@ -1061,22 +1107,20 @@ body.dark-mode #file-progress {
 
     .file-row,
     .converted-file-card {
-        grid-template-columns: auto minmax(0, 1fr) auto;
+        grid-template-columns: 4.25rem minmax(0, 1fr) auto;
+        grid-template-rows: minmax(4.75rem, auto) auto;
         padding: 0.75rem 0.7rem;
+        gap: 0.65rem 0.75rem;
     }
 
     .file-row-art {
-        width: 2.5rem;
-    }
-
-    .file-row-poster {
-        width: 2.5rem;
-        height: 3.75rem;
+        width: 4.25rem;
+        min-height: 4.75rem;
     }
 
     .live-poster {
-        width: 3.75rem;
-        height: 5.625rem;
+        width: 4.5rem;
+        height: 6.75rem;
     }
 
     .file-row-hero-value {
