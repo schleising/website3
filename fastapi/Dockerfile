@@ -9,17 +9,24 @@ RUN apk update && \
 COPY ./requirements.txt /requirements.txt
 RUN pip install --no-cache-dir --prefix=/install -r /requirements.txt
 
-# Start witha fresh image after installing the necessary Python packages
+# Start with a fresh image after installing the necessary Python packages
 FROM python:3-alpine
 
 # Copy the python packages only from the build stage
 COPY --from=build /install /usr/local
 
-# Create an unprivileged runtime user
-RUN addgroup -S app && adduser -S -G app app
+# Create an unprivileged runtime user and tools needed by the entrypoint
+RUN apk add --no-cache su-exec \
+    && addgroup -S app \
+    && adduser -S -G app app \
+    && mkdir -p /var/cache/converter-art \
+    && chown app:app /var/cache/converter-art
 
-# Run as non-root
-USER app
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
 
-# Set the entrypoint to run uvicorn with a socket connection
+# Entrypoint runs as root to fix volume ownership, then drops to app
+ENTRYPOINT ["/entrypoint.sh"]
+
+# Set the default command to run uvicorn with a socket connection
 CMD [ "uvicorn", "app.index:app", "--host", "0.0.0.0", "--port", "8080", "--proxy-headers" ]

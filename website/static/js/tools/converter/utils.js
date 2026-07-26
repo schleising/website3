@@ -49,6 +49,8 @@ function appendConvertedFileCard(element, data) {
         filename: data.filename,
         displayTitle: data.display_title || data.filename,
         coverArtUrl: data.cover_art_url,
+        coverArtStatus: data.cover_art_status || "pending",
+        coverArtKey: data.cover_art_key || "",
         heroValue: ratioNumber == null || Number.isNaN(ratioNumber) ? "--" : ratioNumber + "%",
         heroLabel: "saved",
         fromSize: originalSize,
@@ -83,6 +85,8 @@ function appendToConvertFileCard(element, data) {
         filename: data.filename,
         displayTitle: data.display_title || data.filename,
         coverArtUrl: data.cover_art_url,
+        coverArtStatus: data.cover_art_status || "pending",
+        coverArtKey: data.cover_art_key || "",
         confidence: confidenceText,
         heroValue: predictedRatioNumber == null || Number.isNaN(predictedRatioNumber)
             ? "--"
@@ -120,11 +124,27 @@ function createFileRow(options) {
     poster.decoding = "async";
     poster.width = 48;
     poster.height = 72;
+    poster.dataset.artStatus = options.coverArtStatus || "pending";
+    poster.dataset.artKey = options.coverArtKey || "";
     poster.src = options.coverArtUrl || "/icons/tools/converter/art-placeholder.svg";
     poster.addEventListener("error", function() {
+        console.warn("[converter-art] poster error", {
+            key: poster.dataset.artKey,
+            status: poster.dataset.artStatus,
+            src: poster.getAttribute("src")
+        });
+        poster.dataset.artStatus = "img_error";
         poster.src = "/icons/tools/converter/art-placeholder.svg";
     });
     art.appendChild(poster);
+    if (window.console && console.debug) {
+        console.debug("[converter-art] row", {
+            title: options.displayTitle || options.filename,
+            key: options.coverArtKey,
+            status: options.coverArtStatus,
+            url: options.coverArtUrl
+        });
+    }
 
     var main = document.createElement("div");
     main.classList.add("file-row-main");

@@ -13,6 +13,8 @@ class ConvertingFileData(BaseModel):
     display_title: str
     media_kind: str
     cover_art_url: str
+    cover_art_status: str = "pending"
+    cover_art_key: str = ""
     progress: float
     time_since_start: str
     time_remaining: str
@@ -30,6 +32,8 @@ class ConvertedFileData(BaseModel):
     display_title: str
     media_kind: str
     cover_art_url: str
+    cover_art_status: str = "pending"
+    cover_art_key: str = ""
     start_conversion_time: str
     end_conversion_time: str
     total_conversion_time: str
@@ -46,6 +50,8 @@ class FileToConvertData(BaseModel):
     display_title: str
     media_kind: str
     cover_art_url: str
+    cover_art_status: str = "pending"
+    cover_art_key: str = ""
     current_size: str
     estimated_size_after_conversion: str
     estimated_percentage_saved: int

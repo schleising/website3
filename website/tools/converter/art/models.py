@@ -22,6 +22,7 @@ class CoverArtCacheRecord(BaseModel):
     last_attempt_at: datetime | None = None
     updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     content_type: str | None = None
+    error_detail: str | None = None
 
 
 class ArtDisplayFields(BaseModel):
@@ -30,3 +31,4 @@ class ArtDisplayFields(BaseModel):
     media_kind: Literal["film", "tv", "unknown"]
     cover_art_url: str
     cache_key: str
+    cover_art_status: str = "pending"

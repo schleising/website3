@@ -6,6 +6,7 @@ import logging
 from collections.abc import Mapping
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+import os
 from typing import cast
 
 from .config import (
@@ -29,6 +30,18 @@ def ensure_cache_dir() -> Path:
     except OSError as exc:
         logging.error("Cannot create cover art cache dir %s: %s", directory, exc)
     return directory
+
+
+async def clear_error_cache_records() -> int:
+    """Clear error rows so resolution can retry after a fix/redeploy."""
+    logger = logging.getLogger("converter.cover_art")
+    if cover_art_cache_collection is None:
+        return 0
+    result = await cover_art_cache_collection.delete_many({"status": "error"})
+    deleted = int(result.deleted_count)
+    if deleted:
+        logger.info("Cleared %s cover art error cache records for retry", deleted)
+    return deleted
 
 
 async def ensure_indexes() -> None:
@@ -104,14 +117,27 @@ def display_fields_for(
     record: CoverArtCacheRecord | None,
 ) -> ArtDisplayFields:
     basename = Path(identity.source_path).name
-    if (
+    if identity.kind == "unknown":
+        status = "unknown"
+        cover_art_url = PLACEHOLDER_ART_URL
+    elif (
         record is not None
         and record.status == "ready"
         and record.local_path
         and Path(record.local_path).is_file()
     ):
+        status = "ready"
         cover_art_url = art_url_for_cache_key(identity.cache_key)
+    elif record is not None and record.status == "ready" and record.local_path:
+        status = "ready_missing_file"
+        cover_art_url = PLACEHOLDER_ART_URL
+    elif record is not None:
+        status = record.status
+        cover_art_url = PLACEHOLDER_ART_URL
+        if record.error_detail:
+            status = f"{record.status}:{record.error_detail[:80]}"
     else:
+        status = "pending"
         cover_art_url = PLACEHOLDER_ART_URL
 
     return ArtDisplayFields(
@@ -120,17 +146,34 @@ def display_fields_for(
         media_kind=identity.kind,
         cover_art_url=cover_art_url,
         cache_key=identity.cache_key,
+        cover_art_status=status,
     )
 
 
 async def upsert_cache_record(record: CoverArtCacheRecord) -> None:
+    logger = logging.getLogger("converter.cover_art")
     if cover_art_cache_collection is None:
+        logger.error(
+            "cover_art_cache collection is None; cannot persist %s status=%s",
+            record.cache_key,
+            record.status,
+        )
         return
     payload = record.model_dump()
-    _ = await cover_art_cache_collection.update_one(
+    result = await cover_art_cache_collection.update_one(
         {"cache_key": record.cache_key},
         {"$set": payload},
         upsert=True,
+    )
+    logger.info(
+        "upsert %s status=%s provider=%s matched=%s modified=%s upserted=%s local=%s",
+        record.cache_key,
+        record.status,
+        record.provider,
+        result.matched_count,
+        result.modified_count,
+        result.upserted_id is not None,
+        record.local_path,
     )
 
 
@@ -140,7 +183,8 @@ def write_poster_bytes(
     content_type: str | None,
 ) -> tuple[str, str]:
     """Write poster bytes to the cache dir. Returns (local_path, content_type)."""
-    _ = ensure_cache_dir()
+    logger = logging.getLogger("converter.cover_art")
+    cache_dir = ensure_cache_dir()
     extension = ".jpg"
     resolved_type = (content_type or "image/jpeg").split(";")[0].strip().lower()
     if resolved_type == "image/png":
@@ -153,8 +197,25 @@ def write_poster_bytes(
         extension = ".jpg"
 
     filename = local_filename_for_cache_key(cache_key, extension)
-    path = art_cache_dir() / filename
-    _ = path.write_bytes(data)
+    path = cache_dir / filename
+    try:
+        _ = path.write_bytes(data)
+    except OSError as exc:
+        logger.exception(
+            "Failed writing poster for %s to %s (%s bytes): %s",
+            cache_key,
+            path,
+            len(data),
+            exc,
+        )
+        raise
+    logger.info(
+        "Wrote poster %s (%s bytes, %s) writable_dir=%s",
+        path,
+        len(data),
+        resolved_type,
+        os.access(cache_dir, os.W_OK),
+    )
     return str(path), resolved_type
 
 
@@ -176,6 +237,7 @@ def mark_status(
     remote_url: str | None = None,
     local_path: str | None = None,
     content_type: str | None = None,
+    error_detail: str | None = None,
 ) -> CoverArtCacheRecord:
     return CoverArtCacheRecord(
         cache_key=identity.cache_key,
@@ -188,4 +250,5 @@ def mark_status(
         last_attempt_at=datetime.now(UTC),
         updated_at=datetime.now(UTC),
         content_type=content_type,
+        error_detail=error_detail,
     )

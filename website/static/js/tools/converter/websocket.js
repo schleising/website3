@@ -721,8 +721,18 @@ function updateCurrentConversionDetails(progressElement, fileData, completeStrin
     const posterElement = document.getElementById("live-poster-value");
     if (posterElement != null) {
         const nextSrc = fileData.cover_art_url || "/icons/tools/converter/art-placeholder.svg";
+        posterElement.dataset.artStatus = fileData.cover_art_status || "pending";
+        posterElement.dataset.artKey = fileData.cover_art_key || "";
         if (posterElement.getAttribute("src") !== nextSrc) {
             posterElement.setAttribute("src", nextSrc);
+        }
+        if (window.console && console.debug) {
+            console.debug("[converter-art] live", {
+                title: fileData.display_title || fileData.filename,
+                key: fileData.cover_art_key,
+                status: fileData.cover_art_status,
+                url: fileData.cover_art_url
+            });
         }
     }
 
@@ -758,6 +768,12 @@ function ensureCurrentConversionLayout(progressElement) {
     posterElement.decoding = "async";
     posterElement.src = "/icons/tools/converter/art-placeholder.svg";
     posterElement.addEventListener("error", function() {
+        console.warn("[converter-art] live poster error", {
+            key: posterElement.dataset.artKey,
+            status: posterElement.dataset.artStatus,
+            src: posterElement.getAttribute("src")
+        });
+        posterElement.dataset.artStatus = "img_error";
         posterElement.src = "/icons/tools/converter/art-placeholder.svg";
     });
     filenameRowElement.appendChild(posterElement);

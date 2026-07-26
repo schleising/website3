@@ -182,7 +182,10 @@ async def _lookup_radarr(
 ) -> ArrPosterResult | None:
     api_key = radarr_api_key()
     if not api_key:
-        logging.debug("Radarr API key not configured")
+        logging.getLogger("converter.cover_art").warning(
+            "Radarr API key not configured; film lookup skipped for %s",
+            identity.cache_key,
+        )
         return None
     base_url = radarr_url()
     library = await _get_library(
@@ -238,7 +241,10 @@ async def _lookup_sonarr(
 ) -> ArrPosterResult | None:
     api_key = sonarr_api_key()
     if not api_key:
-        logging.debug("Sonarr API key not configured")
+        logging.getLogger("converter.cover_art").warning(
+            "Sonarr API key not configured; TV lookup skipped for %s",
+            identity.cache_key,
+        )
         return None
     base_url = sonarr_url()
     library = await _get_library(

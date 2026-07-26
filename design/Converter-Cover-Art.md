@@ -265,7 +265,7 @@ Negative cache (`status=missing`) with TTL (e.g. 7 days) avoids hammering APIs f
 Websocket field for clients:
 
 ```json
-"cover_art_url": "/tools/converter/art/film:1917:2019"
+"cover_art_url": "art/film%3A1917%3A2019"
 ```
 
 Use a content-hash or `updated_at` query param only when refreshing; default URL stays stable for browser cache.

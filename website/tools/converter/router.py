@@ -48,8 +48,10 @@ async def converter(request: Request):
 @converter_router.get("/art/{cache_key:path}", response_model=None)
 async def converter_cover_art(cache_key: str) -> Response:
     """Serve a cached poster, or redirect to the placeholder."""
+    art_logger = logging.getLogger("converter.cover_art")
     decoded_key = unquote(cache_key).strip()
     if not decoded_key or ".." in decoded_key or decoded_key.startswith("/"):
+        art_logger.warning("Art request rejected bad key=%r", cache_key)
         return Response(status_code=status.HTTP_404_NOT_FOUND)
 
     record = await get_cache_record(decoded_key)
@@ -60,14 +62,31 @@ async def converter_cover_art(cache_key: str) -> Response:
             try:
                 local_path.resolve().relative_to(art_cache_dir().resolve())
             except ValueError:
-                logging.warning("Rejected cover art path outside cache dir: %s", local_path)
+                art_logger.warning(
+                    "Rejected cover art path outside cache dir: %s", local_path
+                )
             else:
                 media_type = record.content_type or "image/jpeg"
+                art_logger.info(
+                    "Art serve hit key=%s path=%s type=%s",
+                    decoded_key,
+                    local_path,
+                    media_type,
+                )
                 return FileResponse(
                     local_path,
                     media_type=media_type,
                     headers={"Cache-Control": "public, max-age=86400"},
                 )
+        art_logger.warning(
+            "Art serve miss key=%s status=%s local=%s exists=%s",
+            decoded_key,
+            record.status,
+            record.local_path,
+            bool(local_path),
+        )
+    else:
+        art_logger.info("Art serve miss key=%s no cache record", decoded_key)
 
     return Response(
         status_code=status.HTTP_302_FOUND,
@@ -170,6 +189,8 @@ async def converter_websocket(websocket: WebSocket):
                                 display_title=art.display_title,
                                 media_kind=art.media_kind,
                                 cover_art_url=art.cover_art_url,
+                                cover_art_status=art.cover_art_status,
+                                cover_art_key=art.cache_key,
                                 progress=current_conversion_status_db.percentage_complete,
                                 time_since_start=time_since_start_str,
                                 time_remaining=time_remaining,
