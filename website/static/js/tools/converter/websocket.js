@@ -431,10 +431,6 @@ function openWebSocket() {
 
                     let completeString = conversionStatus.converting_files[conversionNumber].progress.toFixed(2) + "%";
 
-                    if (conversionStatus.converting_files[conversionNumber].copying) {
-                        completeString = completeString + " (Copying)";
-                    }
-
                     updateCurrentConversionDetails(
                         progressElement,
                         conversionStatus.converting_files[conversionNumber],
@@ -737,6 +733,16 @@ function updateCurrentConversionDetails(progressElement, fileData, completeStrin
     }
 
     setValueIfChanged("complete-value", completeString);
+
+    const copyingElement = document.getElementById("complete-copying");
+    if (copyingElement != null) {
+        const isCopying = Boolean(fileData.copying);
+        copyingElement.hidden = !isCopying;
+        if (isCopying && copyingElement.innerText !== "(Copying)") {
+            copyingElement.innerText = "(Copying)";
+        }
+    }
+
     setValueIfChanged("speed-value", formatSpeedMultiplier(fileData.speed));
     setValueIfChanged("predicted_ratio-value", formatPredictedRatio(getLivePredictedRatioValue(fileData)));
     setValueIfChanged("time_since_start-value", fileData.time_since_start);
@@ -746,7 +752,8 @@ function updateCurrentConversionDetails(progressElement, fileData, completeStrin
 
 function ensureCurrentConversionLayout(progressElement) {
     // Build the modern panel layout once, then update values in place.
-    if (document.getElementById("current-conversion-layout") != null) {
+    const existingLayout = document.getElementById("current-conversion-layout");
+    if (existingLayout != null && document.getElementById("complete-copying") != null) {
         return;
     }
 
@@ -798,6 +805,13 @@ function ensureCurrentConversionLayout(progressElement) {
     const heroElement = document.createElement("div");
     heroElement.classList.add("file-row-hero", "live-hero");
     layoutElement.appendChild(heroElement);
+
+    const copyingElement = document.createElement("span");
+    copyingElement.id = "complete-copying";
+    copyingElement.classList.add("live-copying-note");
+    copyingElement.hidden = true;
+    copyingElement.innerText = "(Copying)";
+    heroElement.appendChild(copyingElement);
 
     const heroValueElement = document.createElement("span");
     heroValueElement.id = "complete-value";
