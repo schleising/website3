@@ -259,10 +259,7 @@ body::after {
     flex-basis: 0;
     gap: 1rem;
     min-height: 0;
-    overflow-x: hidden;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
-    overscroll-behavior: contain;
+    overflow: hidden;
 }
 
 .main-scroll > .kpi-band {
@@ -533,8 +530,8 @@ body::after {
     display: flex;
     flex-direction: column;
     flex-grow: 1;
-    flex-shrink: 0;
-    flex-basis: auto;
+    flex-shrink: 1;
+    flex-basis: 0;
     min-height: 0;
     padding: 0.95rem 0.35rem 0.55rem;
 }
@@ -604,11 +601,14 @@ body::after {
     display: flex;
     flex-direction: column;
     flex-grow: 1;
-    flex-shrink: 0;
-    flex-basis: auto;
+    flex-shrink: 1;
+    flex-basis: 0;
     gap: 0;
     min-height: 0;
     border-top: 0.0625rem solid var(--line);
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
 }
 
 .file-row,
@@ -1029,8 +1029,8 @@ body.dark-mode #file-progress {
 
     .main-scroll {
         overflow: visible;
-        flex-grow: 0;
-        flex-shrink: 0;
+        flex-grow: 1;
+        flex-shrink: 1;
         flex-basis: auto;
         min-height: 0;
         overscroll-behavior: auto;
@@ -1038,7 +1038,16 @@ body.dark-mode #file-progress {
     }
 
     .activity {
-        flex-grow: 0;
+        flex-grow: 1;
+        flex-shrink: 1;
+        flex-basis: auto;
+        min-height: 0;
+    }
+
+    .file-list,
+    .converted-files-grid {
+        overflow: visible;
+        flex-basis: auto;
     }
 
     .topbar {
