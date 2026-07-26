@@ -406,7 +406,7 @@ body::after {
     color: var(--live-deep);
 }
 
-.live-copying-note {
+.live-phase-note {
     display: block;
     margin-bottom: 0.12rem;
     font-family: var(--font-display);
@@ -415,10 +415,6 @@ body::after {
     letter-spacing: 0.02em;
     line-height: 1.1;
     color: var(--ink-muted);
-}
-
-.live-copying-note[hidden] {
-    display: none;
 }
 
 .live-facts {

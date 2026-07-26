@@ -734,12 +734,12 @@ function updateCurrentConversionDetails(progressElement, fileData, completeStrin
 
     setValueIfChanged("complete-value", completeString);
 
-    const copyingElement = document.getElementById("complete-copying");
-    if (copyingElement != null) {
-        const isCopying = Boolean(fileData.copying);
-        copyingElement.hidden = !isCopying;
-        if (isCopying && copyingElement.innerText !== "(Copying)") {
-            copyingElement.innerText = "(Copying)";
+    const phaseElement = document.getElementById("complete-phase");
+    if (phaseElement != null) {
+        const phaseText = Boolean(fileData.copying) ? "Copying" : "Converting";
+        phaseElement.hidden = false;
+        if (phaseElement.innerText !== phaseText) {
+            phaseElement.innerText = phaseText;
         }
     }
 
@@ -753,7 +753,7 @@ function updateCurrentConversionDetails(progressElement, fileData, completeStrin
 function ensureCurrentConversionLayout(progressElement) {
     // Build the modern panel layout once, then update values in place.
     const existingLayout = document.getElementById("current-conversion-layout");
-    if (existingLayout != null && document.getElementById("complete-copying") != null) {
+    if (existingLayout != null && document.getElementById("complete-phase") != null) {
         return;
     }
 
@@ -806,12 +806,11 @@ function ensureCurrentConversionLayout(progressElement) {
     heroElement.classList.add("file-row-hero", "live-hero");
     layoutElement.appendChild(heroElement);
 
-    const copyingElement = document.createElement("span");
-    copyingElement.id = "complete-copying";
-    copyingElement.classList.add("live-copying-note");
-    copyingElement.hidden = true;
-    copyingElement.innerText = "(Copying)";
-    heroElement.appendChild(copyingElement);
+    const phaseElement = document.createElement("span");
+    phaseElement.id = "complete-phase";
+    phaseElement.classList.add("live-phase-note");
+    phaseElement.innerText = "Converting";
+    heroElement.appendChild(phaseElement);
 
     const heroValueElement = document.createElement("span");
     heroValueElement.id = "complete-value";
