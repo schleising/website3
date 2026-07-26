@@ -12,7 +12,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <link type="text/css" rel="stylesheet" href="/css/tools/fonts.css?v2.2.0" />
     <link type="text/css" rel="stylesheet" href="/css/tools/converter/reset.css?v4.0.0" />
-    <link type="text/css" rel="stylesheet" href="/css/tools/converter/main.css?v5.0.4" />
+    <link type="text/css" rel="stylesheet" href="/css/tools/converter/main.css?v5.0.5" />
     <link rel="icon" type="image/svg+xml" sizes="any" href="/icons/tools/converter/converter-icon-any-20260725.svg" />
     <link rel="manifest" href="/manifests/tools/converter/converter-20260725.webmanifest" crossorigin="use-credentials" />
     <script defer src="/js/tools/converter/utils.js?v5.0.0"></script>
@@ -70,29 +70,31 @@
         </div>
       </section>
 
-      <section class="kpi-band" aria-label="Statistics">
-        <div class="section-head">
-          <p class="section-kicker">Overview</p>
-        </div>
-        <div class="kpi-grid" id="statistics"></div>
-      </section>
-
-      <section class="activity" aria-label="File activity">
-        <div class="activity-toolbar">
+      <div class="main-scroll">
+        <section class="kpi-band" aria-label="Statistics">
           <div class="section-head">
-            <p class="section-kicker">Activity</p>
-            <h2 class="section-title" id="files-view-title">Converted this week</h2>
+            <p class="section-kicker">Overview</p>
           </div>
-          <div class="activity-controls">
-            <div class="segmented" role="tablist" aria-label="File list mode">
-              <button class="segmented-btn active" id="show-converted-files" type="button">Converted</button>
-              <button class="segmented-btn" id="show-to-convert-files" type="button">Queue</button>
+          <div class="kpi-grid" id="statistics"></div>
+        </section>
+
+        <section class="activity" aria-label="File activity">
+          <div class="activity-toolbar">
+            <div class="section-head">
+              <p class="section-kicker">Activity</p>
+              <h2 class="section-title" id="files-view-title">Converted this week</h2>
             </div>
-            <div class="count-pill" id="last-day-count">0</div>
+            <div class="activity-controls">
+              <div class="segmented" role="tablist" aria-label="File list mode">
+                <button class="segmented-btn active" id="show-converted-files" type="button">Converted</button>
+                <button class="segmented-btn" id="show-to-convert-files" type="button">Queue</button>
+              </div>
+              <div class="count-pill" id="last-day-count">0</div>
+            </div>
           </div>
-        </div>
-        <div class="file-list" id="converted-files"></div>
-      </section>
+          <div class="file-list" id="converted-files"></div>
+        </section>
+      </div>
     </div>
   </body>
 </html>

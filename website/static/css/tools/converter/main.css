@@ -246,8 +246,26 @@ body::after {
 }
 
 .topbar,
-.live-stage,
-.kpi-band {
+.live-stage {
+    flex-grow: 0;
+    flex-shrink: 0;
+}
+
+.main-scroll {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    flex-shrink: 1;
+    flex-basis: 0;
+    gap: 1rem;
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+}
+
+.main-scroll > .kpi-band {
     flex-grow: 0;
     flex-shrink: 0;
 }
@@ -502,11 +520,10 @@ body::after {
     display: flex;
     flex-direction: column;
     flex-grow: 1;
-    flex-shrink: 1;
-    flex-basis: 0;
+    flex-shrink: 0;
+    flex-basis: auto;
     min-height: 0;
     padding: 0.95rem 0.35rem 0.55rem;
-    overflow: hidden;
 }
 
 .activity-toolbar {
@@ -574,15 +591,11 @@ body::after {
     display: flex;
     flex-direction: column;
     flex-grow: 1;
-    flex-shrink: 1;
-    flex-basis: 0;
+    flex-shrink: 0;
+    flex-basis: auto;
     gap: 0;
     min-height: 0;
     border-top: 0.0625rem solid var(--line);
-    overflow-x: hidden;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
-    overscroll-behavior: contain;
 }
 
 .file-row,
@@ -952,6 +965,10 @@ body.dark-mode #file-progress {
 @media screen and (max-width: 44rem) {
     .shell {
         padding: 0.7rem 0.65rem calc(1.1rem + env(safe-area-inset-bottom, 0));
+        gap: 0.75rem;
+    }
+
+    .main-scroll {
         gap: 0.75rem;
     }
 
