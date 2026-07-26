@@ -55,7 +55,7 @@ function appendConvertedFileCard(element, data) {
         heroLabel: "saved",
         fromSize: originalSize,
         toSize: newSize,
-        fillPercent: ratioNumber == null || Number.isNaN(ratioNumber) ? 100 : Math.max(8, Math.min(100, 100 - ratioNumber)),
+        fillPercent: ratioNumber == null || Number.isNaN(ratioNumber) ? 0 : Math.max(8, Math.min(100, ratioNumber)),
         facts: [
             { label: "Original", value: originalSize },
             { label: "New", value: newSize },
@@ -95,8 +95,8 @@ function appendToConvertFileCard(element, data) {
         fromSize: currentSize,
         toSize: predictedSize,
         fillPercent: predictedRatioNumber == null || Number.isNaN(predictedRatioNumber)
-            ? 100
-            : Math.max(8, Math.min(100, 100 - predictedRatioNumber)),
+            ? 0
+            : Math.max(8, Math.min(100, predictedRatioNumber)),
         facts: [
             { label: "Current", value: currentSize },
             { label: "Predicted", value: predictedSize },
