@@ -21,7 +21,7 @@ from .messages.messages import (
 )
 from ..utils import calculate_time_remaining
 from .art.config import PLACEHOLDER_ART_URL, art_cache_dir
-from .art.cache import get_cache_record, resolve_local_path
+from .art.cache import get_cache_record, resolve_local_path, touch_cache_access
 from .art.resolver import resolve_art_for_display_many
 
 from .database import push_collection
@@ -73,6 +73,10 @@ async def converter_cover_art(cache_key: str) -> Response:
                     local_path,
                     media_type,
                 )
+                try:
+                    await touch_cache_access(decoded_key)
+                except Exception as exc:  # noqa: BLE001
+                    art_logger.debug("Failed touching art access for %s: %s", decoded_key, exc)
                 return FileResponse(
                     local_path,
                     media_type=media_type,

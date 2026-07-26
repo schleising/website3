@@ -13,6 +13,7 @@ from .config import (
     ERROR_TTL_SECONDS,
     MISSING_TTL_SECONDS,
     PLACEHOLDER_ART_URL,
+    READY_RETENTION_SECONDS,
     art_cache_dir,
     art_url_for_cache_key,
     local_filename_for_cache_key,
@@ -48,6 +49,117 @@ async def ensure_indexes() -> None:
     if cover_art_cache_collection is None:
         return
     _ = await cover_art_cache_collection.create_index("cache_key", unique=True)
+    _ = await cover_art_cache_collection.create_index("updated_at")
+    _ = await cover_art_cache_collection.create_index("last_accessed_at")
+
+
+async def touch_cache_access(cache_key: str) -> None:
+    """Refresh last_accessed_at so actively shown posters survive retention."""
+    if cover_art_cache_collection is None or not cache_key:
+        return
+    _ = await cover_art_cache_collection.update_one(
+        {"cache_key": cache_key},
+        {"$set": {"last_accessed_at": datetime.now(UTC)}},
+    )
+
+
+def _delete_local_poster(local_path: str | None) -> bool:
+    if not local_path:
+        return False
+    path = Path(local_path)
+    try:
+        if path.is_file():
+            path.unlink()
+            return True
+    except OSError as exc:
+        logging.warning("Failed deleting cover art file %s: %s", path, exc)
+    return False
+
+
+async def purge_expired_cache_records(
+    retention_seconds: int = READY_RETENTION_SECONDS,
+) -> dict[str, int]:
+    """Delete cache rows and poster files unused longer than retention."""
+    logger = logging.getLogger("converter.cover_art")
+    deleted_records = 0
+    deleted_files = 0
+    orphan_files = 0
+    cutoff = datetime.now(UTC) - timedelta(seconds=retention_seconds)
+
+    if cover_art_cache_collection is not None:
+        query = {
+            "$or": [
+                {"last_accessed_at": {"$lt": cutoff}},
+                {
+                    "last_accessed_at": {"$in": [None]},
+                    "updated_at": {"$lt": cutoff},
+                },
+                {
+                    "last_accessed_at": {"$exists": False},
+                    "updated_at": {"$lt": cutoff},
+                },
+            ]
+        }
+        cursor = cover_art_cache_collection.find(query)
+        documents = await cursor.to_list(length=10_000)
+        for document in documents:
+            record = _as_record(cast(Mapping[str, object], document))
+            if record is None:
+                continue
+            if _delete_local_poster(record.local_path):
+                deleted_files += 1
+            result = await cover_art_cache_collection.delete_one(
+                {"cache_key": record.cache_key}
+            )
+            deleted_records += int(result.deleted_count)
+
+        kept_paths: set[str] = set()
+        kept_cursor = cover_art_cache_collection.find(
+            {"local_path": {"$type": "string"}},
+            {"local_path": 1},
+        )
+        for document in await kept_cursor.to_list(length=50_000):
+            local_path = document.get("local_path")
+            if isinstance(local_path, str) and local_path:
+                kept_paths.add(local_path)
+    else:
+        kept_paths = set()
+
+    cache_dir = art_cache_dir()
+    if cache_dir.is_dir():
+        cutoff_mtime = cutoff.timestamp()
+        for path in cache_dir.iterdir():
+            if not path.is_file():
+                continue
+            try:
+                if path.stat().st_mtime >= cutoff_mtime:
+                    continue
+            except OSError:
+                continue
+            if str(path) in kept_paths:
+                continue
+            if _delete_local_poster(str(path)):
+                orphan_files += 1
+
+    if deleted_records or deleted_files or orphan_files:
+        logger.info(
+            "Purged cover art older than %s days: records=%s files=%s orphans=%s",
+            retention_seconds // (24 * 60 * 60),
+            deleted_records,
+            deleted_files,
+            orphan_files,
+        )
+    else:
+        logger.debug(
+            "Cover art purge found nothing older than %s days",
+            retention_seconds // (24 * 60 * 60),
+        )
+
+    return {
+        "deleted_records": deleted_records,
+        "deleted_files": deleted_files,
+        "orphan_files": orphan_files,
+    }
 
 
 def _as_record(document: Mapping[str, object] | None) -> CoverArtCacheRecord | None:
@@ -239,6 +351,7 @@ def mark_status(
     content_type: str | None = None,
     error_detail: str | None = None,
 ) -> CoverArtCacheRecord:
+    now = datetime.now(UTC)
     return CoverArtCacheRecord(
         cache_key=identity.cache_key,
         kind=identity.kind if identity.kind != "unknown" else "unknown",
@@ -247,8 +360,9 @@ def mark_status(
         remote_url=remote_url,
         local_path=local_path,
         status=status,
-        last_attempt_at=datetime.now(UTC),
-        updated_at=datetime.now(UTC),
+        last_attempt_at=now,
+        last_accessed_at=now if status == "ready" else None,
+        updated_at=now,
         content_type=content_type,
         error_detail=error_detail,
     )

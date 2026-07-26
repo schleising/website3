@@ -18,11 +18,14 @@ from .cache import (
     get_cache_record,
     get_cache_records,
     mark_status,
+    purge_expired_cache_records,
     should_enqueue,
     upsert_cache_record,
     write_poster_bytes,
 )
 from .config import (
+    PURGE_INTERVAL_SECONDS,
+    READY_RETENTION_SECONDS,
     art_cache_dir,
     radarr_api_key,
     radarr_url,
@@ -39,6 +42,7 @@ logger = logging.getLogger("converter.cover_art")
 
 _queue: asyncio.Queue[MediaIdentity] | None = None
 _worker_task: asyncio.Task[None] | None = None
+_purge_task: asyncio.Task[None] | None = None
 _pending_keys: set[str] = set()
 _indexes_ready = False
 _config_logged = False
@@ -152,7 +156,7 @@ async def _enqueue_async(identity: MediaIdentity) -> None:
 
 
 async def _ensure_runtime() -> None:
-    global _queue, _worker_task, _indexes_ready, _errors_cleared
+    global _queue, _worker_task, _purge_task, _indexes_ready, _errors_cleared
 
     async with _worker_lock:
         _log_runtime_config()
@@ -193,6 +197,26 @@ async def _ensure_runtime() -> None:
                 _worker_loop(), name="converter-cover-art-worker"
             )
             logger.debug("Cover art worker task created")
+
+        if _purge_task is None or _purge_task.done():
+            _purge_task = asyncio.create_task(
+                _purge_loop(), name="converter-cover-art-purge"
+            )
+            logger.debug("Cover art purge task created")
+
+
+async def _purge_loop() -> None:
+    logger.info(
+        "Converter cover-art purge loop started (every %sh, retention %sd)",
+        PURGE_INTERVAL_SECONDS // 3600,
+        READY_RETENTION_SECONDS // (24 * 60 * 60),
+    )
+    while True:
+        try:
+            await purge_expired_cache_records()
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("Cover art purge failed: %s", exc)
+        await asyncio.sleep(PURGE_INTERVAL_SECONDS)
 
 
 async def _worker_loop() -> None:

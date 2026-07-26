@@ -14,6 +14,9 @@ PLACEHOLDER_ART_URL = "/icons/tools/converter/art-placeholder.svg"
 MISSING_TTL_SECONDS = 7 * 24 * 60 * 60
 ERROR_TTL_SECONDS = 2 * 60
 ARR_LIBRARY_TTL_SECONDS = 30 * 60
+# Converted list is last 7 days; keep posters a bit longer, then delete.
+READY_RETENTION_SECONDS = 14 * 24 * 60 * 60
+PURGE_INTERVAL_SECONDS = 6 * 60 * 60
 MAX_POSTER_BYTES = 5 * 1024 * 1024
 
 _KEY_FILE_CANDIDATES = (

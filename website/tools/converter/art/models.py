@@ -20,6 +20,7 @@ class CoverArtCacheRecord(BaseModel):
     local_path: str | None = None
     status: ArtStatus = "pending"
     last_attempt_at: datetime | None = None
+    last_accessed_at: datetime | None = None
     updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     content_type: str | None = None
     error_detail: str | None = None
