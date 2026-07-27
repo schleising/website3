@@ -87,7 +87,7 @@ body::after {
     height: 100%;
     max-height: 100%;
     margin: 0 auto;
-    padding: 1rem 1rem calc(1.5rem + env(safe-area-inset-bottom, 0));
+    padding: 1rem 1rem calc(1rem + env(safe-area-inset-bottom, 0));
     min-height: 0;
     box-sizing: border-box;
     overflow: hidden;
@@ -1253,7 +1253,7 @@ body.dark-mode #overview-button[aria-expanded="true"] {
         height: 100dvh;
         max-height: 100dvh;
         min-height: 0;
-        padding: var(--page-chrome-height, 5.5rem) 0.65rem calc(1.1rem + env(safe-area-inset-bottom, 0));
+        padding: var(--page-chrome-height, 5.5rem) 0.65rem calc(0.65rem + env(safe-area-inset-bottom, 0));
         gap: 0.75rem;
     }
 
