@@ -493,8 +493,8 @@ As built:
 
 ### Layout chrome
 
-- Desktop: header + Now Converting fixed in `.page-chrome`; Activity scrolls in `.main-scroll`.
-- Mobile: document scroll (pull-to-refresh); header + Now Converting in fixed `.page-chrome` with height synced via `page-layout.js`.
+- Desktop + mobile: header + Now Converting fixed in `.page-chrome`; Activity fills remaining height with pinned toolbar; cards scroll inside `.file-list`.
+- Mobile: chrome height synced via `page-layout.js`; `.file-list` uses `overscroll-behavior-y: auto` so pull-to-refresh can still chain when the list is at the top.
 - **Overview** is a `<dialog>` opened from a right-aligned button on the Activity kicker row (same row as the “Activity” label). The old inline Overview / KPI card is gone.
 
 
