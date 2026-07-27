@@ -291,12 +291,12 @@ Ready posters and cache rows unused for **14 days** (by `last_accessed_at`, else
 Client field (relative to Converter page):
 
 ```json
-"cover_art_url": "art/film%3A1917%3A2019",
+"cover_art_url": "art/film%3A1917%3A2019?v=1720000000",
 "cover_art_status": "ready",
 "cover_art_key": "film:1917:2019"
 ```
 
-Browser caching: `Cache-Control: public, max-age=86400` on successful serves. Access time is touched on serve so visible titles keep their art through retention.
+Browser caching: `Cache-Control: public, max-age=86400` on successful serves. Ready URLs include `?v={updated_at}` so a re-resolve (same `cache_key`, new poster bytes) gets a new URL and the UI refreshes instead of showing a stale cached image. Access time is touched on serve so visible titles keep their art through retention.
 
 ### Download vs proxy
 
@@ -390,6 +390,44 @@ For a full path:
 
 **All art logic stays in website3** (no walker hooks in `convert-to-h265`).
 
+### Fixed — TV spinoff / franchise title collisions
+
+**Was:** spinoff folder titles resolved to the parent franchise poster.
+
+Examples:
+
+
+| Library folder (under `/Media/TV/`) | Incorrect match (before) | Expected                        |
+| ----------------------------------- | ------------------------ | ------------------------------- |
+| `Star Trek Strange New Worlds`      | Original *Star Trek*     | *Star Trek: Strange New Worlds* |
+| `The Walking Dead Dead City`        | *The Walking Dead*       | *The Walking Dead: Dead City*   |
+
+
+**Cause:** Sonarr/TMDB selection accepted unordered partials (`needle in title` / `title in needle`) and returned the **first** hit. Parent titles are substrings of spinoff queries, so the franchise won whenever punctuation blocked exact equality (folder lacking Sonarr’s colon).
+
+**As built — policy C** in `website/tools/converter/art/title_match.py`, used by Arr + TMDB pickers:
+
+1. Punctuation-folded exact match (`:` / `-` / `'` → spaces)
+2. Prefer query⊆title (longer candidate wins)
+3. Last resort: title⊆query (parent franchise), still longest
+
+Also stores `matched_title` on cache rows. A one-shot startup reconcile for known parent-franchise mismatches was used to clear bad rows after the matcher fix and has since been removed.
+
+Unit tests: `website/tests/test_converter_title_match.py`.
+
+**Selection record (pick list — shipped as C):**
+
+- [x] Fold punctuation in title compare
+- [ ] **A — Longest wins among partials** (superseded by C)
+- [ ] **B — Prefer query⊆title over title⊆query** (superseded by C)
+- [x] **C — A + B combined** — shipped
+- [ ] **D — Exact / near-exact only for TV** (not chosen)
+- [x] Unit tests for SNW, Dead City, + `100 Foot Wave` control
+- [x] Invalidate / re-resolve parent-mismatched TV cache rows (one-shot; since removed)
+- [x] One-shot refresh for known bad keys (done; startup list since removed)
+
+**Out of scope:** episode stills; renaming library folders; Sonarr series ID from path sidecar.
+
 ---
 
 
@@ -414,17 +452,19 @@ Applied to `ConvertingFileData`, `ConvertedFileData`, and `FileToConvertData`.
 
 `StatisticsMessage` drives the Overview dialog. Fields shown in the UI:
 
-| Field | UI label |
-| ----- | -------- |
-| `total_files` | Total files |
-| `total_converted` | Converted |
-| `total_to_convert` | In queue |
-| `total_conversion_time` | Total time |
-| `films_converted` / `films_to_convert` | Films converted / Films in queue |
-| `tv_converted` / `tv_to_convert` | TV converted / TV in queue |
-| `converted_media_mix` / `queue_media_mix` | Converted mix / Queue mix (e.g. `62% films · 38% TV`) |
-| `gigabytes_before_conversion` / `gigabytes_after_conversion` | Size before / Size after |
-| `gigabytes_saved` / `percentage_saved` | Space saved / Saved |
+
+| Field                                                        | UI label                                              |
+| ------------------------------------------------------------ | ----------------------------------------------------- |
+| `total_files`                                                | Total files                                           |
+| `total_converted`                                            | Converted                                             |
+| `total_to_convert`                                           | In queue                                              |
+| `total_conversion_time`                                      | Total time                                            |
+| `films_converted` / `films_to_convert`                       | Films converted / Films in queue                      |
+| `tv_converted` / `tv_to_convert`                             | TV converted / TV in queue                            |
+| `converted_media_mix` / `queue_media_mix`                    | Converted mix / Queue mix (e.g. `62% films · 38% TV`) |
+| `gigabytes_before_conversion` / `gigabytes_after_conversion` | Size before / Size after                              |
+| `gigabytes_saved` / `percentage_saved`                       | Space saved / Saved                                   |
+
 
 Also computed but **not** shown yet: `total_size_before_conversion_tb`, `total_size_after_conversion_tb`, `conversions_by_backend`. `conversion_errors` still appears only when `> 0` (retry row).
 
@@ -449,11 +489,15 @@ As built:
 
 ## 9. UI design (as built)
 
+
+
 ### Layout chrome
 
 - Desktop: header + Now Converting fixed in `.page-chrome`; Activity scrolls in `.main-scroll`.
 - Mobile: document scroll (pull-to-refresh); header + Now Converting in fixed `.page-chrome` with height synced via `page-layout.js`.
 - **Overview** is a `<dialog>` opened from a right-aligned button on the Activity kicker row (same row as the “Activity” label). The old inline Overview / KPI card is gone.
+
+
 
 ### Activity toolbar
 
@@ -464,6 +508,8 @@ Converted this week          [Converted|Queue]   (count)
 
 - Converted / Queue segmented control toggles the list; title switches between “Converted this week” and “Waiting in queue”.
 - Count pill shows the current list length (`--` while connecting).
+
+
 
 ### Activity rows
 
@@ -480,6 +526,8 @@ Converted this week          [Converted|Queue]   (count)
 - Queue: active jobs first with status **Converting** / **Copying**; remainder **Queued**
 - `loading="lazy"`; decorative `alt=""`
 
+
+
 ### Now converting
 
 Same grid language as activity cards:
@@ -488,6 +536,8 @@ Same grid language as activity cards:
 - Progress bar full width under the row
 - Job tabs share a row with the “Now converting” kicker
 - Stage stays `hidden` until there is a live job
+
+
 
 ### Display title
 
@@ -500,18 +550,22 @@ Prefer `display_title` as the heading. Basename available via filename popup whe
 - If opened before stats are available: short **Connecting…** status (no `--` placeholder tiles).
 - Mix tiles span two columns (`kpi-mix`).
 
+
+
 ### Opening / empty / session restore (as built)
 
 Chose **lightweight status** (option B) plus empty states, lazy Overview mount, and session restore:
 
-| Situation | Behaviour |
-| --------- | --------- |
-| Cold load, no persisted cache | Activity shows **Connecting…** (or **Offline — no cached data yet** if offline); count `--` |
-| Persisted cache present | Paint last Activity list (+ remember stats for Overview) from `localStorage`, then refresh when WS catches up |
-| Live payload with zero rows | **No conversions this week** or **Queue is empty** |
-| Overview open before stats | **Connecting…** / offline message until `statistics` arrives or persisted stats exist |
-| Now converting | Remains hidden until a live job (unchanged) |
-| Offline app shell | Service worker (`/sw.js`) precaches Converter shell + serves last navigated page when offline |
+
+| Situation                     | Behaviour                                                                                                     |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| Cold load, no persisted cache | Activity shows **Connecting…** (or **Offline — no cached data yet** if offline); count `--`                   |
+| Persisted cache present       | Paint last Activity list (+ remember stats for Overview) from `localStorage`, then refresh when WS catches up |
+| Live payload with zero rows   | **No conversions this week** or **Queue is empty**                                                            |
+| Overview open before stats    | **Connecting…** / offline message until `statistics` arrives or persisted stats exist                         |
+| Now converting                | Remains hidden until a live job (unchanged)                                                                   |
+| Offline app shell             | Service worker (`/sw.js`) precaches Converter shell + serves last navigated page when offline                 |
+
 
 Persistence keys (localStorage): `converter.cache.convertedFiles`, `converter.cache.filesToConvert`, `converter.cache.statistics`. Files-view mode preference stays in `localStorage` (`converter.filesViewMode`).
 
@@ -611,6 +665,9 @@ Not implemented; leave for a later pass if wanted:
 - [x] Art in web push notification images for completed converts
 - [ ] Background sweeper over all distinct paths in `media_collection` (lazy WS resolve is sufficient for v1)
 - [ ] Remaining Overview backlog (pace, backends, TB remaining, etc. — see §9)
+- [x] **TV spinoff title matching** — policy C in `title_match.py` (see §7)
+
+
 
 ### Phase 5 — Converter dashboard UI polish (shipped)
 
@@ -629,6 +686,7 @@ Not implemented; leave for a later pass if wanted:
 ## 13. Test plan
 
 - [x] Parser fixtures: film folder year, film basename-only year, TV `SxxExx`, multi-season paths, unknown paths
+- [x] Title match: SNW / Dead City beat parents; `100 Foot Wave` control; punct-fold equality
 - [x] Obtain Arr API keys and run `scripts/probe_sonarr_cover_art.py` (covers Sonarr + Radarr)
 - [x] Resolver: Arr hit, Arr miss → TMDB hit, total miss → placeholder
 - [x] WS: payloads include art URL without remote calls when cache warm; UI upgrades when resolve completes
@@ -655,7 +713,7 @@ Not implemented; leave for a later pass if wanted:
 | Media Manager           | **Later** — not part of this project                                                                              |
 | Arr URL from Docker     | `http://steveds920:8989` and `http://steveds920:7878`                                                             |
 | Poster fit              | `object-fit: contain` in a fixed slot (no crop; no art-only background)                                           |
-| Art URL shape           | **Relative** `art/{key}` from Converter page                                                                      |
+| Art URL shape           | **Relative** `art/{key}?v={updated_at}` from Converter page (version busts browser cache on re-resolve)           |
 | Push notification art   | Prefer public **HTTPS** `remote_url` from cache; never tools-auth art paths                                       |
 | Cache retention         | **14 days** unused (`last_accessed_at` / `updated_at`)                                                            |
 | Queue list              | Include **converting/copying** rows with appropriate status                                                       |
@@ -663,7 +721,9 @@ Not implemented; leave for a later pass if wanted:
 | Overview KPIs           | Totals + sizes/saved/time + films/TV counts + films/TV mix strings                                                |
 | Opening empty state     | **Connecting…** status (no fake cards); real empty copy when lists are zero                                       |
 | Overview mount          | **Lazy** — KPI DOM on first open / when stats available while open                                                |
-| Last-run / offline      | App shell cached by **service worker**; Activity + Overview payloads in **`localStorage`**                        |
+| Last-run / offline      | App shell cached by **service worker**; Activity + Overview payloads in `localStorage`                            |
+| TV title matching       | **Policy C** — punct-folded exact, then query⊆title (longest), then title⊆query                                 |
+
 
 ---
 

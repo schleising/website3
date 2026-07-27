@@ -239,7 +239,13 @@ def display_fields_for(
         and Path(record.local_path).is_file()
     ):
         status = "ready"
-        cover_art_url = art_url_for_cache_key(identity.cache_key)
+        version: int | str | None = None
+        if record.updated_at is not None:
+            version = int(record.updated_at.timestamp())
+        cover_art_url = art_url_for_cache_key(
+            identity.cache_key,
+            version=version,
+        )
     elif record is not None and record.status == "ready" and record.local_path:
         status = "ready_missing_file"
         cover_art_url = PLACEHOLDER_ART_URL
@@ -350,6 +356,7 @@ def mark_status(
     local_path: str | None = None,
     content_type: str | None = None,
     error_detail: str | None = None,
+    matched_title: str | None = None,
 ) -> CoverArtCacheRecord:
     now = datetime.now(UTC)
     return CoverArtCacheRecord(
@@ -360,6 +367,7 @@ def mark_status(
         remote_url=remote_url,
         local_path=local_path,
         status=status,
+        matched_title=matched_title,
         last_attempt_at=now,
         last_accessed_at=now if status == "ready" else None,
         updated_at=now,

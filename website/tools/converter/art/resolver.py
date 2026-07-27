@@ -310,6 +310,7 @@ async def _resolve_one(session: aiohttp.ClientSession, identity: MediaIdentity) 
                 remote_url=arr_result.remote_url,
                 local_path=local_path,
                 content_type=stored_type,
+                matched_title=arr_result.matched_title,
             )
         )
         logger.info(
@@ -339,6 +340,7 @@ async def _resolve_one(session: aiohttp.ClientSession, identity: MediaIdentity) 
                 remote_url=tmdb_result.remote_url,
                 local_path=local_path,
                 content_type=stored_type,
+                matched_title=tmdb_result.matched_title,
             )
         )
         logger.info("Cover art ready via tmdb for %s", identity.cache_key)

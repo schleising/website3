@@ -100,13 +100,22 @@ def radarr_api_key() -> str | None:
     return load_arr_keys().get("radarr_key")
 
 
-def art_url_for_cache_key(cache_key: str) -> str:
+def art_url_for_cache_key(
+    cache_key: str,
+    *,
+    version: int | str | None = None,
+) -> str:
     # Relative to the Converter page URL. On converter.schleising.net, nginx
     # already prefixes /tools/converter/, so an absolute /tools/converter/art/...
     # would be doubled (see WS construction which appends "ws/" the same way).
+    # `version` (typically updated_at unix time) busts browser cache when the
+    # poster bytes for the same key change after a re-resolve.
     from urllib.parse import quote
 
-    return f"art/{quote(cache_key, safe='')}"
+    url = f"art/{quote(cache_key, safe='')}"
+    if version is None or version == "":
+        return url
+    return f"{url}?v={version}"
 
 
 def local_filename_for_cache_key(cache_key: str, extension: str = ".jpg") -> str:

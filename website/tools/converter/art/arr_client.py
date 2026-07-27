@@ -18,8 +18,9 @@ from .config import (
     sonarr_api_key,
     sonarr_url,
 )
-from .identity import MediaIdentity, normalize_title
+from .identity import MediaIdentity
 from .models import ArtProvider
+from .title_match import pick_best_item_by_title
 
 
 @dataclass(frozen=True)
@@ -29,6 +30,7 @@ class ArrPosterResult:
     remote_url: str
     use_api_key: bool = False
     api_key: str | None = None
+    matched_title: str | None = None
 
 
 class _LibraryCache:
@@ -65,37 +67,30 @@ def find_item_by_title(
     title: str,
     year: int | None = None,
 ) -> dict[str, Any] | None:
-    needle = normalize_title(title)
-    exact: list[dict[str, Any]] = []
-    partial: list[dict[str, Any]] = []
+    def candidate_titles(item: dict[str, Any]) -> list[str]:
+        values: list[str] = []
+        for key in ("title", "sortTitle", "cleanTitle"):
+            value = item.get(key)
+            if value:
+                values.append(str(value))
+        return values
 
-    for item in items:
-        candidates = [
-            item.get("title"),
-            item.get("sortTitle"),
-            item.get("cleanTitle"),
-        ]
-        item_year = item.get("year")
-        for candidate in candidates:
-            if not candidate:
-                continue
-            normalized = normalize_title(str(candidate))
-            year_ok = year is None or item_year is None or int(item_year) == int(year)
-            if not year_ok:
-                continue
-            if normalized == needle:
-                exact.append(item)
-                break
-            if needle in normalized or normalized in needle:
-                partial.append(item)
-                break
+    def item_year(item: dict[str, Any]) -> int | None:
+        value = item.get("year")
+        if value is None:
+            return None
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return None
 
-    if exact:
-        return exact[0]
-    if partial:
-        return partial[0]
-    return None
-
+    return pick_best_item_by_title(
+        items,
+        title,
+        year,
+        candidate_titles=candidate_titles,
+        item_year=item_year,
+    )
 
 def _absolute_arr_url(base_url: str, maybe_relative: str | None) -> str | None:
     if not maybe_relative:
@@ -226,12 +221,14 @@ async def _lookup_radarr(
         return None
     url, use_api_key = chosen
     provider_id = str(item.get("tmdbId") or item.get("id") or "")
+    matched_title = str(item.get("title") or "") or None
     return ArrPosterResult(
         provider="radarr",
         provider_id=provider_id or None,
         remote_url=url,
         use_api_key=use_api_key,
         api_key=api_key if use_api_key else None,
+        matched_title=matched_title,
     )
 
 
@@ -284,12 +281,14 @@ async def _lookup_sonarr(
         return None
     url, use_api_key = chosen
     provider_id = str(item.get("tvdbId") or item.get("id") or "")
+    matched_title = str(item.get("title") or "") or None
     return ArrPosterResult(
         provider="sonarr",
         provider_id=provider_id or None,
         remote_url=url,
         use_api_key=use_api_key,
         api_key=api_key if use_api_key else None,
+        matched_title=matched_title,
     )
 
 

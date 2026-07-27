@@ -9,17 +9,24 @@ from urllib.parse import urlencode
 import aiohttp
 
 from .config import MAX_POSTER_BYTES, tmdb_api_key
-from .identity import MediaIdentity, normalize_title
+from .identity import MediaIdentity
+from .title_match import pick_best_item_by_title
 
 TMDB_API_BASE = "https://api.themoviedb.org/3"
 TMDB_IMAGE_BASE = "https://image.tmdb.org/t/p/w500"
 
 
 class TmdbPosterResult:
-    def __init__(self, provider_id: str, remote_url: str) -> None:
+    def __init__(
+        self,
+        provider_id: str,
+        remote_url: str,
+        matched_title: str | None = None,
+    ) -> None:
         self.provider = "tmdb"
         self.provider_id = provider_id
         self.remote_url = remote_url
+        self.matched_title = matched_title
 
 
 async def lookup_tmdb_poster(
@@ -69,37 +76,27 @@ def _pick_result(
     title_keys: tuple[str, ...],
     date_key: str,
 ) -> dict[str, Any] | None:
-    needle = normalize_title(title)
-    exact: list[dict[str, Any]] = []
-    partial: list[dict[str, Any]] = []
+    def candidate_titles(item: dict[str, Any]) -> list[str]:
+        values: list[str] = []
+        for key in title_keys:
+            value = item.get(key)
+            if value:
+                values.append(str(value))
+        return values
 
-    for item in results:
-        candidates = [str(item.get(key) or "") for key in title_keys]
-        item_year: int | None = None
+    def item_year(item: dict[str, Any]) -> int | None:
         date_value = item.get(date_key)
         if isinstance(date_value, str) and len(date_value) >= 4 and date_value[:4].isdigit():
-            item_year = int(date_value[:4])
+            return int(date_value[:4])
+        return None
 
-        for candidate in candidates:
-            if not candidate:
-                continue
-            normalized = normalize_title(candidate)
-            year_ok = year is None or item_year is None or item_year == year
-            if not year_ok:
-                continue
-            if normalized == needle:
-                exact.append(item)
-                break
-            if needle in normalized or normalized in needle:
-                partial.append(item)
-                break
-
-    if exact:
-        return exact[0]
-    if partial:
-        return partial[0]
-    return None
-
+    return pick_best_item_by_title(
+        results,
+        title,
+        year,
+        candidate_titles=candidate_titles,
+        item_year=item_year,
+    )
 
 async def _search_movie(
     session: aiohttp.ClientSession,
@@ -160,9 +157,16 @@ def _poster_from_item(item: dict[str, Any] | None) -> TmdbPosterResult | None:
         return None
     if item_id is None:
         return None
+    matched_title = None
+    for key in ("name", "title", "original_name", "original_title"):
+        value = item.get(key)
+        if value:
+            matched_title = str(value)
+            break
     return TmdbPosterResult(
         provider_id=str(item_id),
         remote_url=f"{TMDB_IMAGE_BASE}{poster_path}",
+        matched_title=matched_title,
     )
 
 

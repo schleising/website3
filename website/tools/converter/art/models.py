@@ -19,6 +19,7 @@ class CoverArtCacheRecord(BaseModel):
     remote_url: str | None = None
     local_path: str | None = None
     status: ArtStatus = "pending"
+    matched_title: str | None = None
     last_attempt_at: datetime | None = None
     last_accessed_at: datetime | None = None
     updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
