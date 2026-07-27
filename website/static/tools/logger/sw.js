@@ -48,7 +48,5 @@ self.addEventListener('message', (event) => {
     }
 });
 
-// Add a fetch event listener to the service worker
-self.addEventListener('fetch', function (event) {
-    console.log('Fetch event:', event);
-});
+// No-op fetch handler required for PWA installability (esp. Chrome on Android)
+self.addEventListener('fetch', () => {});
