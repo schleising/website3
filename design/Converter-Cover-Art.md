@@ -521,10 +521,45 @@ Converted this week          [Converted|Queue]   (count)
 └──────┴──────────────────────────────────────────┴────────┘
 ```
 
-- Poster slot: fixed width (~6.875rem / ~5.84375rem mobile), stretched row height, `object-fit: contain` (no crop; no separate art background)
+- Poster slot: fixed **2:3** box (~6.875rem / ~5.84375rem wide); height from `aspect-ratio` (not stretched to row height); `object-fit: contain` so width increases actually enlarge the poster
 - Size bar fill tracks **saved %** (longer = more compression)
 - Queue: active jobs first with status **Converting** / **Copying**; remainder **Queued**
 - `loading="lazy"`; decorative `alt=""`
+
+
+
+### Future idea — faded art wash behind Activity cards
+
+Not shipped. Explore a soft poster wash behind Converted / Queue rows so each card feels more cinematic without competing with the crisp left-hand poster slot or the title/facts.
+
+**Intent**
+
+- Reuse the same `cover_art_url` already on the row (no extra network when warm).
+- Keep the primary poster slot as the readable art; the wash is atmosphere only.
+- Preserve contrast for title, facts, % hero, and size bar in light and dark modes.
+- Skip wash when art is placeholder / pending / missing so empty rows don’t look broken.
+
+**Direction options** (pick when implementing)
+
+- **A — Full-row soft cover** — `::before` / absolutely positioned `<img>` behind the whole row, `object-fit: cover`, low opacity (~~6–12% light / ~10–18% dark), heavy blur (~~20–40px). Strongest “media library” feel; most risk of text noise.
+- **B — Right-side bleed** — Wash anchored to the right half (or trailing third) with a left→transparent gradient mask so type on the left stays clean. Poster slot stays crisp; wash reads as a trailing glow.
+- **C — Underlay under facts only** — Wash clipped to the main text column (not the poster slot or % hero). Subtler; less chance of washing the hero number.
+- **D — Gradient-tinted plate** — Don’t show the photo literally; sample a dominant colour from the poster (or CSS `filter` on a tiny blurred copy) and paint a faint brand-tint gradient. Lowest detail clutter; more engineering if true colour sampling is required.
+
+**Treatment notes**
+
+- Prefer **one** decorative layer per row; do not stack wash + bordered “card chrome” + heavy shadows.
+- Mask/fade edges (especially top/bottom of the row) so adjacent rows don’t form a busy stripe stack while scrolling.
+- `pointer-events: none`; `aria-hidden="true"` if a second `<img>` is used; still `loading="lazy"` / decode async.
+- When the WS upgrades `cover_art_url` (pending → ready, or `?v=` bump), update wash `src` with the poster — same patch path as today’s art-only update.
+- Live “Now converting” stage can optionally match later; Activity list is the first surface.
+
+**Open choices**
+
+- [ ] Which layout (A–D)?
+- [ ] Opacity / blur tokens for light vs dark
+- [ ] Converted only, Queue only, or both
+- [ ] Whether placeholder rows stay flat (recommended: yes)
 
 
 
@@ -666,6 +701,7 @@ Not implemented; leave for a later pass if wanted:
 - [ ] Background sweeper over all distinct paths in `media_collection` (lazy WS resolve is sufficient for v1)
 - [ ] Remaining Overview backlog (pace, backends, TB remaining, etc. — see §9)
 - [x] **TV spinoff title matching** — policy C in `title_match.py` (see §7)
+- [ ] **Faded art wash behind Activity cards** — see §9 “Future idea — faded art wash behind Activity cards”
 
 
 
@@ -712,7 +748,7 @@ Not implemented; leave for a later pass if wanted:
 | Cross-repo prefetch     | **No** — all art logic stays in **website3**                                                                      |
 | Media Manager           | **Later** — not part of this project                                                                              |
 | Arr URL from Docker     | `http://steveds920:8989` and `http://steveds920:7878`                                                             |
-| Poster fit              | `object-fit: contain` in a fixed slot (no crop; no art-only background)                                           |
+| Poster fit              | Fixed **2:3** slot sized by width; `object-fit: contain`; do not stretch slot to row height (avoids side letterboxing) |
 | Art URL shape           | **Relative** `art/{key}?v={updated_at}` from Converter page (version busts browser cache on re-resolve)           |
 | Push notification art   | Prefer public **HTTPS** `remote_url` from cache; never tools-auth art paths                                       |
 | Cache retention         | **14 days** unused (`last_accessed_at` / `updated_at`)                                                            |
@@ -722,7 +758,7 @@ Not implemented; leave for a later pass if wanted:
 | Opening empty state     | **Connecting…** status (no fake cards); real empty copy when lists are zero                                       |
 | Overview mount          | **Lazy** — KPI DOM on first open / when stats available while open                                                |
 | Last-run / offline      | App shell cached by **service worker**; Activity + Overview payloads in `localStorage`                            |
-| TV title matching       | **Policy C** — punct-folded exact, then query⊆title (longest), then title⊆query                                 |
+| TV title matching       | **Policy C** — punct-folded exact, then query⊆title (longest), then title⊆query                                   |
 
 
 ---
