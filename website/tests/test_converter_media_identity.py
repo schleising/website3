@@ -1,20 +1,44 @@
 from __future__ import annotations
 
-from pathlib import Path
+import importlib.util
 import sys
+import types
 import unittest
+from pathlib import Path
 
 WEBSITE_ROOT = Path(__file__).resolve().parents[1]
-REPO_ROOT = WEBSITE_ROOT.parent
-if str(REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(REPO_ROOT))
-if str(WEBSITE_ROOT) not in sys.path:
-    sys.path.insert(0, str(WEBSITE_ROOT))
+ART_DIR = WEBSITE_ROOT / "tools" / "converter" / "art"
 
-try:
-    from website.tools.converter.art.identity import parse_media_identity
-except ModuleNotFoundError:
-    from tools.converter.art.identity import parse_media_identity
+
+def _ensure_pkg(name: str, path: Path | None = None) -> types.ModuleType:
+    existing = sys.modules.get(name)
+    if existing is not None:
+        return existing
+    module = types.ModuleType(name)
+    if path is not None:
+        module.__path__ = [str(path)]  # type: ignore[attr-defined]
+    sys.modules[name] = module
+    return module
+
+
+def _load_identity():
+    """Load identity without executing art/__init__.py (avoids Mongo)."""
+    _ensure_pkg("tools")
+    _ensure_pkg("tools.converter")
+    _ensure_pkg("tools.converter.art", ART_DIR)
+    full_name = "tools.converter.art.identity"
+    if full_name in sys.modules:
+        return sys.modules[full_name]
+    path = ART_DIR / "identity.py"
+    spec = importlib.util.spec_from_file_location(full_name, path)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[full_name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+parse_media_identity = _load_identity().parse_media_identity
 
 
 class ConverterMediaIdentityTests(unittest.TestCase):
@@ -49,6 +73,25 @@ class ConverterMediaIdentityTests(unittest.TestCase):
         self.assertEqual(identity.cache_key, "tvshow:100-foot-wave")
         self.assertIn("S01E01", identity.display_title)
         self.assertTrue(identity.display_title.startswith("100 Foot Wave"))
+        self.assertEqual(
+            identity.display_title,
+            "100 Foot Wave · S01E01 · Chapter I – Sea Monsters",
+        )
+
+    def test_tv_strips_proper_and_repack_from_display(self) -> None:
+        proper = parse_media_identity(
+            "/Media/TV/Some Show/Season 2/"
+            "Some Show - S02E04 - Cold Open PROPER WEBDL-1080p.mkv"
+        )
+        self.assertEqual(proper.display_title, "Some Show · S02E04 · Cold Open")
+        self.assertEqual(proper.episode_title, "Cold Open")
+
+        repack = parse_media_identity(
+            "/Media/TV/Some Show/Season 2/"
+            "Some Show - S02E05 - Finale REPACK BluRay-1080p.mkv"
+        )
+        self.assertEqual(repack.display_title, "Some Show · S02E05 · Finale")
+        self.assertEqual(repack.episode_title, "Finale")
 
     def test_unknown_path(self) -> None:
         identity = parse_media_identity("/Media/Other/clip.mkv")
