@@ -6,7 +6,7 @@ const CONVERTER_SHELL_URLS = [
     "/",
     "/css/tools/fonts.css?v2.2.0",
     "/css/tools/converter/reset.css?v4.0.0",
-    "/css/tools/converter/main.css?v5.2.30",
+    "/css/tools/converter/main.css?v5.2.31",
     "/js/tools/converter/utils.js?v5.1.5",
     "/js/tools/converter/websocket.js?v5.1.16",
     "/js/tools/converter/page-layout.js?v1.0.0",

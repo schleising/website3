@@ -521,7 +521,7 @@ Converted this week          [Converted|Queue]   (count)
 └──────┴──────────────────────────────────────────┴────────┘
 ```
 
-- Poster slot: fixed width (~6.25rem / ~5.3125rem mobile), stretched row height, `object-fit: contain` (no crop; no separate art background)
+- Poster slot: fixed width (~6.875rem / ~5.84375rem mobile), stretched row height, `object-fit: contain` (no crop; no separate art background)
 - Size bar fill tracks **saved %** (longer = more compression)
 - Queue: active jobs first with status **Converting** / **Copying**; remainder **Queued**
 - `loading="lazy"`; decorative `alt=""`
