@@ -1,7 +1,7 @@
 subscribeButton = document.getElementById('subscribe-button');
 
 // Query string forces browsers/proxies to fetch a new worker script when we ship SW changes.
-const serviceWorkerPath = '/sw.js?v=tools-webapp-v2';
+const serviceWorkerPath = '/sw.js?v=tools-webapp-v3';
 let isReloadingForUpdate = false;
 
 function promptForWaitingWorker(registration) {
@@ -79,7 +79,6 @@ function setButtonState() {
 
 // Function to update the registration of the service worker or register it if it does not exist
 async function updateServiceWorkerRegistration() {
-    console.log('Registering Service Worker:', serviceWorkerPath);
     const newRegistration = await navigator.serviceWorker.register(serviceWorkerPath, {
         scope: serviceWorkerScope,
         updateViaCache: 'none'
@@ -95,9 +94,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Create the service worker and register it
         updateServiceWorkerRegistration()
             .then(() => navigator.serviceWorker.ready)
-            .then((registration) => {
-                console.log('Service Worker DOM:', registration.active);
-
+            .then(() => {
                 // Set the button state according to the push registration
                 setButtonState();
             })
@@ -146,8 +143,6 @@ async function sendSubscriptionToServer(subscription) {
     // Add subscribe endpoint to the URL
     url.pathname += 'subscribe/';
 
-    console.log('Subscribe URL:', url.href);
-
     // Send the subscription object to the subscribe endpoint
     result = await fetch(url.href, {
         method: 'POST',
@@ -181,8 +176,6 @@ function subscribe() {
             }))
             .then((subscription) => sendSubscriptionToServer(subscription))
             .then(() => {
-                console.log('Push subscription successful');
-
                 // Set the button state according to the push registration
                 setButtonState();
             })
@@ -216,8 +209,6 @@ async function unsubscribePushNotification(subscription) {
     // Add unsubscribe endpoint to the URL
     url.pathname += 'unsubscribe/';
 
-    console.log('Unsubscribe URL:', url.href);
-
     // Send the subscription object to the unsubscribe endpoint
     result = await fetch(url.href, {
         method: 'DELETE',
@@ -247,8 +238,6 @@ function unsubscribe() {
         .then((registration) => registration.pushManager.getSubscription())
         .then((subscription) => unsubscribePushNotification(subscription))
         .then(() => {
-            console.log('Push unsubscription successful');
-
             // Set the button state according to the push registration
             setButtonState();
         })

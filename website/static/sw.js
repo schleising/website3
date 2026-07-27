@@ -1,4 +1,4 @@
-const TOOLS_CACHE_VERSION = "tools-webapp-v2";
+const TOOLS_CACHE_VERSION = "tools-webapp-v3";
 
 // Warm the Converter shell when this SW is installed on converter.schleising.net
 // (harmless no-ops on other tools hosts if a URL is missing).
@@ -8,11 +8,11 @@ const TOOLS_SHELL_URLS = [
     "/css/tools/converter/reset.css?v4.0.0",
     "/css/tools/converter/main.css?v5.2.25",
     "/js/tools/converter/utils.js?v5.1.5",
-    "/js/tools/converter/websocket.js?v5.1.15",
+    "/js/tools/converter/websocket.js?v5.1.16",
     "/js/tools/converter/page-layout.js?v1.0.0",
     "/js/tools/converter/scope.js?v4.0.0",
     "/js/tools/converter/theme-toggle.js?v2.0.0",
-    "/js/utils/subscribe.js?v4.0.1",
+    "/js/utils/subscribe.js?v4.0.2",
     "/icons/tools/converter/converter-icon-any-20260725.svg",
     "/icons/tools/converter/art-placeholder.svg"
 ];
@@ -130,8 +130,6 @@ self.addEventListener("fetch", function (event) {
 });
 
 self.addEventListener("push", function (event) {
-    console.log("Push received:", event);
-
     var data = {};
     if (event.data) {
         data = event.data.json();
@@ -158,7 +156,6 @@ self.addEventListener("push", function (event) {
 });
 
 self.onnotificationclick = (event) => {
-    console.log("On notification click: ", event.notification.tag);
     event.notification.close();
 
     event.waitUntil(

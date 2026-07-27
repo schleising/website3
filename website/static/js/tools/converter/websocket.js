@@ -66,7 +66,6 @@ const statisticsScaffoldFields = [
 // Add a callback for state changes
 document.addEventListener('readystatechange', event => {
     if (event.target.readyState === "complete") {
-        console.log("Load Event")
         // Get the page URL
         url = document.URL;
 
@@ -79,8 +78,6 @@ document.addEventListener('readystatechange', event => {
 
         // Append the ws to the URL
         url = url + "ws/";
-
-        console.log("URL: " + url)
 
         initializeConverterScaffold();
         initializeFilesViewButtons();
@@ -443,15 +440,12 @@ function openWebSocket() {
         reconnectTimer = 0;
     }
 
-    console.log("Opening Websocket")
     // Create a new WebSocket
     ws = new WebSocket(url);
     updateConnectionStatus();
 
     // Setup callback for close/error events
-    ws.onclose = event => {
-        console.log("Websocket closed", event.code, event.reason);
-
+    ws.onclose = () => {
         if (timer != 0) {
             clearTimeout(timer);
             timer = 0;
@@ -465,9 +459,7 @@ function openWebSocket() {
         }
     };
 
-    ws.onerror = event => {
-        console.log("Websocket error", event);
-
+    ws.onerror = () => {
         // Ensure broken sockets progress to onclose so reconnect logic runs.
         if (ws != null && ws.readyState == WebSocket.OPEN) {
             ws.close();
@@ -596,7 +588,7 @@ function openWebSocket() {
                         minutes = parseInt(timeArray[1], 10);
                         seconds = parseInt(timeArray[2], 10);
                     } else {
-                        console.log("Unknown time array length: " + timeArray.length);
+                        console.warn("Unknown time array length: " + timeArray.length);
                         days = 0;
                         hours = 0;
                         minutes = 0;
@@ -671,7 +663,7 @@ function openWebSocket() {
                 updateStatisticsValues(statistics);
                 break;
             default:
-                console.log("Unknown message type received: " + event.data.messageType);
+                console.warn("Unknown message type received: " + message.messageType);
 
             
         }
@@ -716,7 +708,7 @@ function sendMessage() {
             lastPingTimestamp = Date.now();
         }
     } catch (error) {
-        console.log("Websocket send failed", error);
+        console.warn("Websocket send failed", error);
         forceReconnect("send-failed");
     }
 };
@@ -739,7 +731,6 @@ function scheduleReconnect(reason, immediate = false) {
     const reconnectDelayMs = baseDelayMs + jitterMs;
 
     reconnectAttempt = reconnectAttempt + 1;
-    console.log("Scheduling websocket reconnect:", reason, reconnectDelayMs + "ms");
 
     reconnectTimer = setTimeout(() => {
         reconnectTimer = 0;
@@ -748,13 +739,11 @@ function scheduleReconnect(reason, immediate = false) {
 }
 
 function forceReconnect(reason) {
-    console.log("Force websocket reconnect:", reason);
-
     if (ws != null) {
         try {
             ws.close();
         } catch (error) {
-            console.log("Websocket close failed", error);
+            console.warn("Websocket close failed", error);
         }
     }
 
@@ -800,13 +789,11 @@ function startConnectionWatchdog() {
 
 function setupNetworkListeners() {
     window.addEventListener("online", () => {
-        console.log("Network online");
         updateConnectionStatus();
         scheduleReconnect("browser-online", true);
     });
 
     window.addEventListener("offline", () => {
-        console.log("Network offline");
         updateConnectionStatus();
 
         if (timer != 0) {
