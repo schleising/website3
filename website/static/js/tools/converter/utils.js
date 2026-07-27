@@ -145,14 +145,6 @@ function createFileRow(options) {
         poster.src = "/icons/tools/converter/art-placeholder.svg";
     });
     art.appendChild(poster);
-    if (window.console && console.debug) {
-        console.debug("[converter-art] row", {
-            title: options.displayTitle || options.filename,
-            key: options.coverArtKey,
-            status: options.coverArtStatus,
-            url: options.coverArtUrl
-        });
-    }
 
     var main = document.createElement("div");
     main.classList.add("file-row-main");

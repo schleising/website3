@@ -932,14 +932,6 @@ function updateCurrentConversionDetails(progressElement, fileData, completeStrin
         if (posterElement.getAttribute("src") !== nextSrc) {
             posterElement.setAttribute("src", nextSrc);
         }
-        if (window.console && console.debug) {
-            console.debug("[converter-art] live", {
-                title: fileData.display_title || fileData.filename,
-                key: fileData.cover_art_key,
-                status: fileData.cover_art_status,
-                url: fileData.cover_art_url
-            });
-        }
     }
 
     setValueIfChanged("complete-value", completeString);
