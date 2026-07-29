@@ -1,7 +1,7 @@
 const themeStorageKey = "monitor.theme";
 const browserThemeColors = {
-    light: "#dff3f2",
-    dark: "#182230"
+    light: "#e8efe9",
+    dark: "#0d1512"
 };
 
 function getStoredTheme() {
@@ -31,20 +31,25 @@ function persistTheme(theme) {
 
 function applyBrowserThemeColor(theme) {
     const color = browserThemeColors[theme] || browserThemeColors.light;
+    const statusBarStyle = theme === "dark" ? "black-translucent" : "default";
     const themeColorMetaElements = document.querySelectorAll('meta[name="theme-color"]');
+    const appleStatusBarMetaElement = document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]');
 
     themeColorMetaElements.forEach(metaElement => {
         metaElement.setAttribute("content", color);
     });
 
     document.documentElement.style.backgroundColor = color;
+
+    if (appleStatusBarMetaElement != null) {
+        appleStatusBarMetaElement.setAttribute("content", statusBarStyle);
+    }
 }
 
 function applyTheme(theme) {
     const isDark = theme === "dark";
 
     document.body.classList.toggle("dark-mode", isDark);
-    document.body.classList.toggle("light-mode", !isDark);
     document.documentElement.classList.toggle("dark-mode", isDark);
     document.documentElement.style.colorScheme = isDark ? "dark" : "light";
 

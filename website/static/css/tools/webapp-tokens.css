@@ -1,0 +1,52 @@
+/* Shared design-language tokens for standalone webapps.
+   Source of truth: design/Webapp-Design-Language.md (Converter). */
+
+:root {
+    --font-display: "Schibsted Grotesk", "Avenir Next", "Segoe UI", sans-serif;
+    --font-body: "Inter", "Schibsted Grotesk", "Segoe UI", sans-serif;
+
+    --ink: #12201c;
+    --ink-muted: #5a6b64;
+    --paper: #e8efe9;
+    --paper-deep: #d5e0d7;
+    --surface: rgba(255, 255, 255, 0.72);
+    --surface-strong: rgba(255, 255, 255, 0.92);
+    --line: rgba(18, 32, 28, 0.12);
+    --line-strong: rgba(18, 32, 28, 0.2);
+
+    --live: #0f8f7a;
+    --live-deep: #0a6b5c;
+    --live-soft: rgba(15, 143, 122, 0.12);
+    --saved: #1b8a4f;
+    --saved-soft: rgba(27, 138, 79, 0.12);
+    --queue: #b56a12;
+    --queue-soft: rgba(181, 106, 18, 0.14);
+    --danger: #b42318;
+    --danger-soft: rgba(180, 35, 24, 0.1);
+
+    --shadow: 0 18px 40px rgba(18, 32, 28, 0.08);
+    --radius-lg: 1.35rem;
+    --radius-md: 0.9rem;
+    --radius-sm: 0.55rem;
+}
+
+body.dark-mode {
+    --ink: #e8f2ec;
+    --ink-muted: #9bb0a5;
+    --paper: #0d1512;
+    --paper-deep: #09100d;
+    --surface: rgba(22, 34, 29, 0.88);
+    --surface-strong: rgba(30, 44, 38, 0.95);
+    --line: rgba(232, 242, 236, 0.1);
+    --line-strong: rgba(232, 242, 236, 0.18);
+    --live: #2dceb2;
+    --live-deep: #1aa991;
+    --live-soft: rgba(45, 206, 178, 0.14);
+    --saved: #4ad48a;
+    --saved-soft: rgba(74, 212, 138, 0.14);
+    --queue: #e0a24a;
+    --queue-soft: rgba(224, 162, 74, 0.14);
+    --danger: #ff7a6e;
+    --danger-soft: rgba(255, 122, 110, 0.12);
+    --shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
+}

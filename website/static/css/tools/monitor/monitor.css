@@ -1,125 +1,68 @@
+/* Monitor domain styles — on top of webapp-tokens + webapp-shell. */
+
 :root {
-    --font-body: "Roboto", "Avenir Next", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
-    --font-display: "Inter", "Roboto", "Avenir Next", "Segoe UI", sans-serif;
-    --bg-0: hsl(170, 50%, 96%);
-    --bg-1: hsl(205, 58%, 94%);
-    --panel: hsla(0, 0%, 100%, 0.86);
-    --panel-strong: hsla(0, 0%, 100%, 0.96);
-    --line: hsla(208, 26%, 28%, 0.15);
-    --text-main: hsl(214, 27%, 18%);
-    --text-subtle: hsl(214, 15%, 40%);
-    --accent: hsl(190, 70%, 42%);
-    --accent-soft: hsla(189, 66%, 92%, 0.9);
-    --ok-soft: hsla(145, 56%, 90%, 0.95);
-    --ok-text: hsl(146, 56%, 25%);
-    --warn-soft: hsla(10, 86%, 92%, 0.95);
-    --warn-text: hsl(8, 66%, 32%);
-    --chart-grid: hsla(211, 26%, 26%, 0.2);
-    --chart-text: hsla(214, 20%, 36%, 0.95);
-    --chart-overlay: hsl(24, 86%, 48%);
-    --shadow-soft: 0 0.625rem 1.75rem hsla(212, 34%, 16%, 0.1);
+    --chart-grid: rgba(18, 32, 28, 0.2);
+    --chart-text: rgba(90, 107, 100, 0.95);
+    --chart-overlay: #b56a12;
 }
 
-html,
-body {
-    margin: 0;
-    padding: 0;
-    min-height: 100%;
-}
-
-html {
-    background-color: hsl(205, 58%, 94%);
-}
-
-body {
-    font-family: var(--font-body);
-    color: var(--text-main);
-    background:
-        radial-gradient(120% 110% at 0% 0%, hsla(173, 62%, 74%, 0.28) 0%, transparent 60%),
-        radial-gradient(120% 110% at 100% 100%, hsla(205, 72%, 74%, 0.22) 0%, transparent 60%),
-        linear-gradient(170deg, var(--bg-0), var(--bg-1));
-}
-
-.outer {
-    display: flex;
-    flex-direction: column;
-    min-height: 100vh;
-    max-width: 118rem;
-    margin: 0 auto;
-    padding: 0.75rem;
-    gap: 0.6rem;
-}
-
-.header {
-    display: flex;
-    flex-direction: column;
-    gap: 0.2rem;
-    padding: 0.1rem 0.3rem;
-}
-
-.sticky-header {
-    position: sticky;
-    top: 0;
-    z-index: 20;
-    margin: -0.75rem -0.75rem 0;
-    padding: 0.75rem 1.05rem;
-    border-bottom: 0.0625rem solid var(--line);
-    background: linear-gradient(180deg, hsla(170, 50%, 96%, 0.97), hsla(205, 58%, 94%, 0.94));
-    backdrop-filter: blur(0.5rem);
-    box-shadow: 0 0.35rem 1.2rem hsla(212, 34%, 16%, 0.08);
-}
-
-.header-top {
-    display: flex;
-    align-items: center;
-    gap: 0.85rem;
+body.dark-mode {
+    --chart-grid: rgba(232, 242, 236, 0.23);
+    --chart-text: rgba(232, 242, 236, 0.85);
+    --chart-overlay: #e0a24a;
 }
 
 .chart-controls {
     display: flex;
-    flex: 1 1 auto;
     flex-wrap: wrap;
-    justify-content: center;
     align-items: center;
-    gap: 0.65rem;
+    gap: 0.55rem;
     min-width: 0;
 }
 
+/* Keep class names used by monitor.js (period-btn / overlay-toggle). */
 .period-toggle {
     display: inline-flex;
-    padding: 0.14rem;
+    padding: 0.18rem;
+    border-radius: 999px;
+    background: rgba(18, 32, 28, 0.06);
     border: 0.0625rem solid var(--line);
-    border-radius: 62.4375rem;
-    background: var(--panel-strong);
-    box-shadow: var(--shadow-soft);
+}
+
+body.dark-mode .period-toggle {
+    background: rgba(232, 242, 236, 0.06);
 }
 
 .period-btn {
     border: 0;
+    border-radius: 999px;
+    padding: 0.4rem 0.85rem;
+    font-family: var(--font-display);
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--ink-muted);
     background: transparent;
-    color: var(--text-subtle);
-    font-family: var(--font-body);
-    font-size: 0.82rem;
-    font-weight: 600;
-    line-height: 1;
-    padding: 0.42rem 0.85rem;
-    border-radius: 62.4375rem;
     cursor: pointer;
-    transition: background 160ms ease, color 160ms ease, box-shadow 160ms ease;
+    transition: background 150ms ease, color 150ms ease, box-shadow 150ms ease;
 }
 
 .period-btn:hover {
-    color: var(--text-main);
+    color: var(--ink);
 }
 
 .period-btn.active {
-    color: var(--text-main);
-    background: var(--accent-soft);
-    box-shadow: inset 0 0 0 0.0625rem hsla(191, 74%, 40%, 0.22);
+    color: var(--ink);
+    background: #fff;
+    box-shadow: 0 4px 12px rgba(18, 32, 28, 0.1);
+}
+
+body.dark-mode .period-btn.active {
+    background: #24352e;
+    color: var(--ink);
 }
 
 .period-btn:focus-visible {
-    outline: 0.125rem solid hsla(191, 82%, 44%, 0.56);
+    outline: 0.125rem solid rgba(15, 143, 122, 0.55);
     outline-offset: 0.125rem;
 }
 
@@ -128,165 +71,85 @@ body {
     align-items: center;
     gap: 0.45rem;
     padding: 0.34rem 0.7rem;
-    border: 0.0625rem solid var(--line);
-    border-radius: 62.4375rem;
-    background: var(--panel-strong);
-    box-shadow: var(--shadow-soft);
-    color: var(--text-subtle);
-    font-size: 0.82rem;
-    font-weight: 600;
+    border: 0.0625rem solid var(--line-strong);
+    border-radius: 999px;
+    background: var(--surface-strong);
+    color: var(--ink-muted);
+    font-family: var(--font-display);
+    font-size: 0.78rem;
+    font-weight: 700;
     cursor: pointer;
     user-select: none;
+    transition: color 150ms ease, border-color 150ms ease, background 150ms ease;
 }
 
 .overlay-toggle input {
     width: 0.95rem;
     height: 0.95rem;
     margin: 0;
-    accent-color: var(--accent);
+    accent-color: var(--live);
     cursor: pointer;
 }
 
 .overlay-toggle:has(input:checked) {
-    color: var(--text-main);
-    background: var(--accent-soft);
-    border-color: hsla(191, 74%, 40%, 0.28);
+    color: var(--ink);
+    background: var(--live-soft);
+    border-color: var(--live);
 }
 
 .overlay-toggle:focus-within {
-    outline: 0.125rem solid hsla(191, 82%, 44%, 0.56);
+    outline: 0.125rem solid rgba(15, 143, 122, 0.55);
     outline-offset: 0.125rem;
-}
-
-.header h1 {
-    margin: 0;
-    flex: 0 0 auto;
-    font-family: var(--font-display);
-    font-size: clamp(1.5rem, 2.6vw, 2.2rem);
-    line-height: 1.08;
-    letter-spacing: -0.02rem;
-}
-
-.theme-switch {
-    flex: 0 0 auto;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 3.3rem;
-    height: 1.86rem;
-    border: 0;
-    background: transparent;
-    border-radius: 62.4375rem;
-    cursor: pointer;
-    padding: 0;
-}
-
-.theme-switch:focus-visible {
-    outline: 0.125rem solid hsla(191, 82%, 44%, 0.56);
-    outline-offset: 0.125rem;
-}
-
-.theme-switch-track {
-    position: relative;
-    display: inline-flex;
-    width: 100%;
-    height: 100%;
-    border: 0.0625rem solid hsla(214, 28%, 34%, 0.2);
-    border-radius: 62.4375rem;
-    background: linear-gradient(180deg, hsla(0, 0%, 100%, 0.98), hsla(194, 66%, 92%, 0.9));
-    box-shadow: var(--shadow-soft);
-    overflow: hidden;
-}
-
-.theme-switch-track-icon {
-    position: absolute;
-    top: 50%;
-    width: 0.72rem;
-    height: 0.72rem;
-    stroke: hsla(209, 26%, 40%, 0.72);
-    fill: none;
-    stroke-width: 1.9;
-    transform: translateY(-50%);
-    pointer-events: none;
-}
-
-.theme-switch-track-icon-sun {
-    left: 0.34rem;
-}
-
-.theme-switch-track-icon-moon {
-    right: 0.34rem;
-    fill: hsla(209, 26%, 40%, 0.72);
-    stroke: none;
-}
-
-.theme-switch-thumb {
-    position: absolute;
-    top: 0.11rem;
-    left: 0.11rem;
-    width: 1.62rem;
-    height: 1.62rem;
-    border-radius: 62.4375rem;
-    background: linear-gradient(180deg, hsl(0, 0%, 100%), hsl(191, 64%, 92%));
-    box-shadow: 0 0.1875rem 0.5rem hsla(216, 36%, 16%, 0.22);
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    transition: transform 240ms cubic-bezier(0.22, 1, 0.36, 1), background 190ms ease;
-}
-
-.theme-switch-thumb-icon {
-    width: 0.86rem;
-    height: 0.86rem;
-}
-
-.theme-switch-thumb-sun {
-    fill: hsl(37, 95%, 52%);
-    opacity: 1;
-    transition: opacity 160ms ease;
-}
-
-.theme-switch-thumb-moon {
-    fill: hsl(202, 65%, 34%);
-    opacity: 0;
-    transition: opacity 160ms ease;
 }
 
 .charts {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(24rem, 1fr));
-    gap: 0.6rem;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr));
+    gap: 0.75rem;
+    flex: 1 1 0;
+    width: 100%;
+    min-width: 0;
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    padding: 0 0.85rem 0.85rem;
+    align-content: start;
+    box-sizing: border-box;
 }
 
 .data-container {
     display: flex;
     width: 100%;
+    min-width: 0;
     border: 0.0625rem solid var(--line);
-    border-radius: 0.92rem;
-    background: linear-gradient(165deg, var(--panel-strong), var(--panel));
-    box-shadow: var(--shadow-soft);
-    transition: transform 170ms ease, box-shadow 180ms ease, border-color 180ms ease;
-    overflow: hidden;
+    border-radius: var(--radius-md);
+    background: var(--surface-strong);
+    overflow: visible;
+    transition: border-color 160ms ease, background 160ms ease;
 }
 
 .data-container:hover {
-    transform: translateY(-0.125rem);
-    box-shadow: 0 1rem 1.875rem hsla(213, 46%, 16%, 0.13);
-    border-color: hsla(191, 74%, 40%, 0.34);
+    border-color: var(--line-strong);
+    background: rgba(255, 255, 255, 0.98);
+}
+
+body.dark-mode .data-container:hover {
+    background: rgba(255, 255, 255, 0.03);
 }
 
 .data-container.dragging {
     opacity: 0.72;
     transform: scale(0.985);
-    box-shadow: 0 1.1rem 2rem hsla(213, 46%, 16%, 0.18);
-    border-color: hsla(191, 74%, 40%, 0.5);
+    border-color: var(--live);
     z-index: 5;
     pointer-events: none;
 }
 
 .data-container.drag-over {
-    border-color: hsla(191, 74%, 40%, 0.62);
-    box-shadow: inset 0 0 0 0.125rem hsla(191, 74%, 40%, 0.22);
+    border-color: var(--live);
+    box-shadow: inset 0 0 0 0.125rem var(--live-soft);
 }
 
 .charts.is-reordering {
@@ -304,7 +167,7 @@ body {
     column-gap: 0.85rem;
     row-gap: 0.32rem;
     width: 100%;
-    padding: 0.56rem;
+    padding: 0.75rem 0.85rem;
 }
 
 .chart-drag-handle {
@@ -317,9 +180,9 @@ body {
     margin: 0;
     padding: 0;
     border: 0.0625rem solid transparent;
-    border-radius: 0.45rem;
+    border-radius: var(--radius-sm);
     background: transparent;
-    color: var(--text-subtle);
+    color: var(--ink-muted);
     cursor: grab;
     touch-action: none;
     -webkit-user-select: none;
@@ -335,13 +198,13 @@ body {
 
 .chart-drag-handle:hover,
 .chart-drag-handle:focus-visible {
-    color: var(--text-main);
-    background: var(--accent-soft);
-    border-color: hsla(191, 74%, 40%, 0.22);
+    color: var(--ink);
+    background: var(--live-soft);
+    border-color: rgba(15, 143, 122, 0.22);
 }
 
 .chart-drag-handle:focus-visible {
-    outline: 0.125rem solid hsla(191, 82%, 44%, 0.56);
+    outline: 0.125rem solid rgba(15, 143, 122, 0.55);
     outline-offset: 0.125rem;
 }
 
@@ -371,41 +234,39 @@ p.monitor-data {
 
 p.monitor-title {
     align-self: center;
-    color: var(--text-subtle);
-    font-size: 0.72rem;
+    color: var(--ink-muted);
+    font-size: 0.68rem;
     font-weight: 700;
-    letter-spacing: 0.02rem;
+    letter-spacing: 0.14em;
     text-transform: uppercase;
 }
 
 p.monitor-data {
     justify-self: end;
     text-align: right;
+    font-family: var(--font-display);
     font-size: 0.95rem;
-    font-weight: 600;
-    color: var(--text-main);
+    font-weight: 650;
+    color: var(--ink);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-}
-
-p.monitor-data.status-online,
-p.monitor-data.status-online {
-    color: var(--ok-text);
+    font-variant-numeric: tabular-nums;
 }
 
 p.monitor-data.status-online {
-    background: var(--ok-soft);
-    border: 0.0625rem solid hsla(147, 42%, 34%, 0.24);
-    border-radius: 62.4375rem;
+    color: var(--saved);
+    background: var(--saved-soft);
+    border: 0.0625rem solid rgba(27, 138, 79, 0.24);
+    border-radius: 999px;
     padding: 0.06rem 0.5rem;
 }
 
 p.monitor-data.status-offline {
-    color: var(--warn-text);
-    background: var(--warn-soft);
-    border: 0.0625rem solid hsla(8, 56%, 40%, 0.24);
-    border-radius: 62.4375rem;
+    color: var(--danger);
+    background: var(--danger-soft);
+    border: 0.0625rem solid rgba(180, 35, 24, 0.24);
+    border-radius: 999px;
     padding: 0.06rem 0.5rem;
 }
 
@@ -418,7 +279,7 @@ p.monitor-data.status-offline {
 }
 
 .temperature-current-value {
-    color: var(--accent);
+    color: var(--live);
 }
 
 .temperature-overlay-value {
@@ -427,26 +288,35 @@ p.monitor-data.status-offline {
 
 .temperature-overlay-value:not([hidden])::before {
     content: " / ";
-    color: var(--text-subtle);
+    color: var(--ink-muted);
     font-weight: 500;
 }
 
 .data-container.device-offline {
-    border-color: hsla(7, 58%, 45%, 0.35);
+    border-color: rgba(180, 35, 24, 0.35);
 }
 
 .svg-container {
     width: 100%;
+    min-width: 0;
     grid-column: 1 / -1;
     margin-top: 0.2rem;
     padding-top: 0.4rem;
-    border-top: 0.0625rem dashed hsla(211, 26%, 28%, 0.2);
+    border-top: 0.0625rem solid var(--line);
+    aspect-ratio: 16 / 9;
+    min-height: 10rem;
 }
 
 .chart-svg {
+    display: block;
     width: 100%;
-    border-radius: 0.66rem;
-    background: linear-gradient(180deg, hsla(0, 0%, 100%, 0.68), hsla(192, 66%, 96%, 0.48));
+    height: 100%;
+    border-radius: var(--radius-sm);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.68), rgba(232, 239, 233, 0.48));
+}
+
+body.dark-mode .chart-svg {
+    background: linear-gradient(180deg, rgba(30, 44, 38, 0.84), rgba(22, 34, 29, 0.72));
 }
 
 .chart-svg .axes,
@@ -461,7 +331,7 @@ p.monitor-data.status-offline {
 }
 
 .chart-svg .temperature {
-    stroke: var(--accent);
+    stroke: var(--live);
     stroke-width: 2;
     stroke-linejoin: round;
     stroke-linecap: round;
@@ -476,193 +346,42 @@ p.monitor-data.status-offline {
 }
 
 .chart-svg .temperature-circle-current {
-    fill: var(--accent);
-    stroke: hsl(0, 0%, 100%);
+    fill: var(--live);
+    stroke: #fff;
     stroke-width: 1.5;
 }
 
 .chart-svg .temperature-circle-overlay {
     fill: var(--chart-overlay);
-    stroke: hsl(0, 0%, 100%);
+    stroke: #fff;
     stroke-width: 1.5;
 }
 
-@media (prefers-color-scheme: dark) {
-    :root {
-        --bg-0: hsl(214, 24%, 12%);
-        --bg-1: hsl(206, 26%, 16%);
-        --panel: hsla(214, 24%, 20%, 0.9);
-        --panel-strong: hsla(214, 24%, 24%, 0.95);
-        --line: hsla(208, 32%, 70%, 0.2);
-        --text-main: hsl(209, 30%, 92%);
-        --text-subtle: hsl(209, 16%, 70%);
-        --accent: hsl(193, 72%, 56%);
-        --accent-soft: hsla(192, 40%, 30%, 0.72);
-        --ok-soft: hsla(149, 42%, 28%, 0.82);
-        --ok-text: hsl(145, 62%, 82%);
-        --warn-soft: hsla(7, 52%, 30%, 0.82);
-        --warn-text: hsl(8, 84%, 84%);
-        --chart-grid: hsla(211, 34%, 82%, 0.23);
-        --chart-text: hsla(209, 30%, 86%, 0.95);
-        --chart-overlay: hsl(28, 90%, 58%);
-        --shadow-soft: 0 0.625rem 1.75rem hsla(214, 40%, 5%, 0.32);
-    }
-
-    .chart-svg {
-        background: linear-gradient(180deg, hsla(214, 24%, 24%, 0.84), hsla(198, 34%, 20%, 0.72));
-    }
-}
-
-body.light-mode {
-    --bg-0: hsl(170, 50%, 96%);
-    --bg-1: hsl(205, 58%, 94%);
-    --panel: hsla(0, 0%, 100%, 0.86);
-    --panel-strong: hsla(0, 0%, 100%, 0.96);
-    --line: hsla(208, 26%, 28%, 0.15);
-    --text-main: hsl(214, 27%, 18%);
-    --text-subtle: hsl(214, 15%, 40%);
-    --accent: hsl(190, 70%, 42%);
-    --accent-soft: hsla(189, 66%, 92%, 0.9);
-    --ok-soft: hsla(145, 56%, 90%, 0.95);
-    --ok-text: hsl(146, 56%, 25%);
-    --warn-soft: hsla(10, 86%, 92%, 0.95);
-    --warn-text: hsl(8, 66%, 32%);
-    --chart-grid: hsla(211, 26%, 26%, 0.2);
-    --chart-text: hsla(214, 20%, 36%, 0.95);
-    --chart-overlay: hsl(24, 86%, 48%);
-    --shadow-soft: 0 0.625rem 1.75rem hsla(212, 34%, 16%, 0.1);
-}
-
-html.dark-mode {
-    background-color: hsl(214, 24%, 12%);
-}
-
-body.dark-mode {
-    --bg-0: hsl(214, 24%, 12%);
-    --bg-1: hsl(206, 26%, 16%);
-    --panel: hsla(214, 24%, 20%, 0.9);
-    --panel-strong: hsla(214, 24%, 24%, 0.95);
-    --line: hsla(208, 32%, 70%, 0.2);
-    --text-main: hsl(209, 30%, 92%);
-    --text-subtle: hsl(209, 16%, 70%);
-    --accent: hsl(193, 72%, 56%);
-    --accent-soft: hsla(192, 40%, 30%, 0.72);
-    --ok-soft: hsla(149, 42%, 28%, 0.82);
-    --ok-text: hsl(145, 62%, 82%);
-    --warn-soft: hsla(7, 52%, 30%, 0.82);
-    --warn-text: hsl(8, 84%, 84%);
-    --chart-grid: hsla(211, 34%, 82%, 0.23);
-    --chart-text: hsla(209, 30%, 86%, 0.95);
-    --chart-overlay: hsl(28, 90%, 58%);
-    --shadow-soft: 0 0.625rem 1.75rem hsla(214, 40%, 5%, 0.32);
-}
-
-body.dark-mode .chart-svg {
-    background: linear-gradient(180deg, hsla(214, 24%, 24%, 0.84), hsla(198, 34%, 20%, 0.72));
-}
-
-body.dark-mode .theme-switch-track {
-    border-color: hsla(206, 30%, 70%, 0.26);
-    background: linear-gradient(180deg, hsla(214, 24%, 28%, 0.96), hsla(198, 32%, 22%, 0.92));
-}
-
-body.dark-mode .theme-switch-track-icon {
-    stroke: hsla(210, 36%, 86%, 0.68);
-}
-
-body.dark-mode .theme-switch-track-icon-moon {
-    fill: hsla(210, 36%, 86%, 0.68);
-}
-
-body.dark-mode .theme-switch-thumb {
-    transform: translateX(1.45rem);
-    background: linear-gradient(180deg, hsl(208, 28%, 30%), hsl(208, 26%, 22%));
-}
-
-body.dark-mode .theme-switch-thumb-sun {
-    opacity: 0;
-}
-
-body.dark-mode .theme-switch-thumb-moon {
-    opacity: 1;
-    fill: hsl(209, 34%, 86%);
-}
-
-body.dark-mode .sticky-header {
-    background: linear-gradient(180deg, hsla(214, 24%, 12%, 0.97), hsla(206, 26%, 16%, 0.94));
-}
-
 @media screen and (max-width: 44rem) {
-    .outer {
-        padding: 0.48rem;
+    .charts {
+        grid-template-columns: 1fr;
+        gap: 0.65rem;
+        padding: 0 0.65rem 0.65rem;
+        overscroll-behavior-y: auto;
     }
 
-    .sticky-header {
-        margin: -0.48rem -0.48rem 0;
-        padding: 0.62rem 0.78rem;
-    }
-
-    .header-top {
-        display: grid;
-        grid-template-columns: 1fr auto;
-        grid-template-rows: auto auto;
-        align-items: center;
-        gap: 0.5rem 0.65rem;
-    }
-
-    .header h1 {
-        grid-row: 1;
-        grid-column: 1;
-    }
-
-    .theme-switch {
-        grid-row: 1;
-        grid-column: 2;
-        justify-self: end;
-        width: 2.92rem;
-        height: 1.64rem;
+    .panel-toolbar {
+        padding: 0.85rem 0.85rem 0.7rem;
     }
 
     .chart-controls {
-        grid-row: 2;
-        grid-column: 1 / -1;
-        flex: none;
+        width: 100%;
         justify-content: flex-start;
-        gap: 0.5rem;
-    }
-
-    .period-btn {
-        font-size: 0.78rem;
-        padding: 0.38rem 0.72rem;
-    }
-
-    .overlay-toggle {
-        font-size: 0.78rem;
-        padding: 0.3rem 0.58rem;
-    }
-
-    .charts {
-        grid-template-columns: 1fr;
-        gap: 0.5rem;
-    }
-
-    .theme-switch-thumb {
-        width: 1.4rem;
-        height: 1.4rem;
-    }
-
-    body.dark-mode .theme-switch-thumb {
-        transform: translateX(1.28rem);
     }
 
     .data {
         column-gap: 0.62rem;
         row-gap: 0.28rem;
-        padding: 0.46rem;
+        padding: 0.65rem 0.7rem;
     }
 
     p.monitor-title {
-        font-size: 0.65rem;
+        font-size: 0.62rem;
     }
 
     p.monitor-data {

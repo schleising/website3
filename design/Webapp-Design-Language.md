@@ -363,34 +363,22 @@ Canonical host: `converter.schleising.net`.
 - [ ] Align initial HTML `theme-color` / Apple meta with `--paper` (`#e8efe9` / `#0d1512`) so first paint matches JS.
 - [ ] Update `converter-*.webmanifest` `theme_color` / `background_color` away from legacy blue (`#d7edf7` / `#ebf6fc`) to paper tokens.
 - [ ] Paint light-mode `body::after` safe-area strip with paper (dark mode already does).
-- [ ] Optional: extract shared `webapp-tokens.css` / `webapp-shell.css` once another app adopts (§15).
+- [ ] Optional: switch Converter CSS to shared `webapp-tokens.css` / `webapp-shell.css` (already used by Monitor — §15).
 
 ---
 
-### 14.2 Monitor
+### 14.2 Monitor — adopted (2026-07-29)
 
-**Current feel.** Cool mint/sky sensor dashboard with sticky header and a grid of chart cards. Closer to Converter than Logger, but still a content-tall webpage with Inter/Roboto and a parallel HSL token system.
+Host: `monitor.schleising.net`. Aligned via shared `webapp-tokens.css` / `webapp-shell.css` plus monitor domain CSS.
 
-**Key paths:** `templates/tools/monitor/monitor.html`, `static/css/tools/monitor/monitor.css`, `static/js/tools/monitor/theme-toggle.js`, `monitor.js`, `fonts.css`, `manifests/tools/monitor/…`, `static/tools/monitor/sw.js`.
+| Area | Status |
+| ---- | ------ |
+| Schibsted + Inter, ink/paper tokens, wash, frosted panel | Done |
+| Hero brand + kicker; chart controls in panel toolbar (not brand row) | Done |
+| `100dvh` shell; mobile fixed chrome + `page-layout.js`; charts scroll inside panel | Done |
+| Dark mode + paper `theme-color`; quiet console; SW shell warm; dated manifest | Done |
 
-**Gaps**
-
-- Fonts: Inter display / Roboto body (Schibsted loaded, unused).
-- Tokens: `--bg-0` / `--panel` / `--accent` (HSL cyan), not `--ink` / `--paper` / `--live`; dark is blue-grey, not `#0d1512`.
-- Shell: `min-height: 100%` / `100vh`, max-width `~118rem` — not locked `100dvh` flex fill; no `.shell` / `.page-chrome` / `.main-scroll` / `--page-chrome-height`.
-- Brand: `h1` ~`1.5–2.2rem`; period + overlay controls sit in the hero row (crowds first viewport).
-- Components: chart **cards** with hover lift; period toggle is near-segmented but not Converter geometry; no section kickers / count pills as specified.
-- Dark mode: present (`monitor.theme`) but paper/`theme-color` values diverge; `prefers-color-scheme` on `:root` can fight class theme; no Apple status-bar sync.
-- Mobile: sticky header only — not fixed chrome + shell padding + PTR/list overscroll pattern.
-- PWA: standalone yes; manifest still `#edf2fd`; SW is push-only (no shell warm); SW register `console.log`s.
-
-**Changes needed**
-
-| Priority | Work |
-| -------- | ---- |
-| Must | Schibsted + Inter; map tokens to Converter semantics; viewport-locked flex shell; hero-scale brand; move period/overlays out of brand row into one working surface; quiet console; sync meta/`theme_color` to `--paper`. |
-| Should | Restyle period control → `.segmented`; frosted `--surface` panels; inner scroll for chart stack; chrome height sync (`page-layout` pattern); refresh manifesto/icons; drop redundant `prefers-color-scheme` `:root` dark once class-driven theme wins. |
-| Later | Shared tokens/shell CSS; optional SW shell precache; light-mode safe-area paint. |
+**Key paths:** `templates/tools/monitor/monitor.html`, `static/css/tools/webapp-tokens.css`, `static/css/tools/webapp-shell.css`, `static/css/tools/monitor/monitor.css`, `static/js/tools/monitor/{theme-toggle,page-layout,monitor}.js`, `manifests/tools/monitor/monitor-20260729.webmanifest`.
 
 ---
 
@@ -485,12 +473,12 @@ Do **not** force this language onto pages that stay inside the www shell.
 
 ## 15. Future extraction (optional)
 
-When two or more apps fully adopt this language, consider:
+Shared pieces now exist and are used by Monitor:
 
 - `website/static/css/tools/webapp-tokens.css` — shared `:root` / `.dark-mode` variables  
-- `website/static/css/tools/webapp-shell.css` — `.shell`, `.topbar`, kickers, theme switch, segmented, pills  
+- `website/static/css/tools/webapp-shell.css` — `.shell`, `.topbar`, kickers, theme switch, panel chrome  
 
-Keep app-specific layout and domain components local. Do not force Feeds/Units/Football onto this stack while they remain embedded in the www chrome.
+Converter still ships its tokens/shell inline in `converter/main.css`; migrate when convenient. Keep app-specific layout and domain components local. Do not force Feeds/Units/Football onto this stack while they remain embedded in the www chrome.
 
 ---
 

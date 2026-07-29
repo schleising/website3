@@ -1,7 +1,7 @@
-const TOOLS_CACHE_VERSION = "tools-webapp-v3";
+const TOOLS_CACHE_VERSION = "tools-webapp-v5";
 
-// Warm the Converter shell when this SW is installed on converter.schleising.net
-// (harmless no-ops on other tools hosts if a URL is missing).
+// Warm shell assets when this SW is installed on a tools host.
+// Missing URLs on other hosts are harmless no-ops.
 const TOOLS_SHELL_URLS = [
     "/",
     "/css/tools/fonts.css?v2.2.0",
@@ -14,7 +14,16 @@ const TOOLS_SHELL_URLS = [
     "/js/tools/converter/theme-toggle.js?v2.0.0",
     "/js/utils/subscribe.js?v4.0.2",
     "/icons/tools/converter/converter-icon-any-20260725.svg",
-    "/icons/tools/converter/art-placeholder.svg"
+    "/icons/tools/converter/art-placeholder.svg",
+    "/css/tools/monitor/reset.css?v1.1.0",
+    "/css/tools/webapp-tokens.css?v1.0.0",
+    "/css/tools/webapp-shell.css?v1.0.0",
+    "/css/tools/monitor/monitor.css?v2.0.1",
+    "/js/tools/monitor/scope.js?v1.1.0",
+    "/js/tools/monitor/monitor.js?v2.0.1",
+    "/js/tools/monitor/page-layout.js?v1.0.0",
+    "/js/tools/monitor/theme-toggle.js?v2.0.0",
+    "/icons/tools/monitor/monitor-icon-any-20260504.svg"
 ];
 
 function isCacheableRequest(request, requestUrl) {

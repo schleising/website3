@@ -1,4 +1,4 @@
-const serviceWorkerPath = '/sw.js';
+const serviceWorkerPath = '/sw.js?v=tools-webapp-v5';
 const chartSettingsStorageKey = 'monitor.chartSettings';
 
 // The chart data to be fetched from the server
@@ -743,12 +743,10 @@ async function updateServiceWorkerRegistration() {
     registration = await navigator.serviceWorker.getRegistration(serviceWorkerScope);
 
     if (registration != null) {
-        console.log('Service Worker already registered, updating...');
         await registration.update();
         attachUpdateFlow(registration);
         return registration;
     } else {
-        console.log('Service Worker not registered, registering...');
         const newRegistration = await navigator.serviceWorker.register(serviceWorkerPath, { scope: serviceWorkerScope });
         attachUpdateFlow(newRegistration);
         return newRegistration;
@@ -765,9 +763,6 @@ document.addEventListener('DOMContentLoaded', () => {
         // Create the service worker and register it
         updateServiceWorkerRegistration()
             .then(() => navigator.serviceWorker.ready)
-            .then((registration) => {
-                console.log('Service Worker DOM:', registration.active);
-            })
             .catch((error) => {
                 console.error('Service Worker registration failed:', error);
             });
@@ -794,6 +789,21 @@ document.addEventListener('DOMContentLoaded', () => {
             updateCharts();
         }
     });
+
+    // Redraw when the charts panel actually receives a non-zero size
+    // (common after the full-viewport flex shell finishes laying out).
+    const chartsRoot = document.querySelector('.charts');
+    if (chartsRoot != null && typeof ResizeObserver !== 'undefined') {
+        let lastWidth = chartsRoot.clientWidth;
+        const chartsResizeObserver = new ResizeObserver(() => {
+            const nextWidth = chartsRoot.clientWidth;
+            if (deviceData != null && Math.abs(nextWidth - lastWidth) >= 1) {
+                lastWidth = nextWidth;
+                updateCharts();
+            }
+        });
+        chartsResizeObserver.observe(chartsRoot);
+    }
 
     // Add event listenter for each mouse / touch move on each svg element
     document.querySelectorAll('svg').forEach(svg => {
@@ -951,13 +961,25 @@ function setTransformationMatrix(device_id, series) {
 
     // Get the chart svg element
     const svgContainer = document.getElementById("svg-container-" + device_id);
+    if (svgContainer == null) {
+        return false;
+    }
 
     // Get the width of the SVG container
     const width = svgContainer.clientWidth;
+    if (width < 8) {
+        // Layout not ready yet (flex/grid settled at zero); retry after paint.
+        return false;
+    }
 
-    // Set the height of the SVG container to maintain a 16:9 aspect ratio
-    const height = (width * 9 / 16);
-    svgContainer.style.height = height + "px";
+    // Prefer measured height from CSS aspect-ratio; fall back to 16:9 from width.
+    let height = svgContainer.clientHeight;
+    if (height < 8) {
+        height = (width * 9 / 16);
+        svgContainer.style.height = height + "px";
+    } else {
+        svgContainer.style.height = "";
+    }
 
     const temperatures = current.map(d => d.temp);
     if (overlay != null) {
@@ -989,6 +1011,30 @@ function setTransformationMatrix(device_id, series) {
 
     // Set the transformation matrix
     transformationMatrices.set(device_id, matrix);
+
+    const svg = document.getElementById("chart-" + device_id);
+    if (svg != null) {
+        // Pixel size is more reliable than percentage height inside flex/grid shells.
+        svg.setAttribute("width", String(width));
+        svg.setAttribute("height", String(height));
+    }
+
+    return true;
+}
+
+/** @type {number | null} */
+let chartsRedrawFrame = null;
+
+function scheduleChartsRedraw() {
+    if (chartsRedrawFrame != null) {
+        return;
+    }
+    chartsRedrawFrame = window.requestAnimationFrame(() => {
+        chartsRedrawFrame = null;
+        if (deviceData != null) {
+            drawCharts();
+        }
+    });
 }
 
 // Function to draw the chart of the temperature data
@@ -996,19 +1042,21 @@ function drawChart(device_id, data) {
     const series = getChartSeries(data);
 
     // Set the transformation matrix of the chart
-    setTransformationMatrix(device_id, series);
+    if (!setTransformationMatrix(device_id, series)) {
+        scheduleChartsRedraw();
+        return;
+    }
 
     // Get the chart svg element
     const svg = document.getElementById("chart-" + device_id);
+    if (svg == null) {
+        return;
+    }
 
     // Remove all existing children of the SVG element
     while (svg.firstChild) {
         svg.removeChild(svg.firstChild);
     }
-
-    // Set the width and height of the SVG element
-    svg.setAttribute("width", "100%");
-    svg.setAttribute("height", "100%");
 
     // Draw the grid
     drawGrid(svg, device_id, series);
@@ -1184,10 +1232,16 @@ function updateChart(device_id, data) {
     const series = getChartSeries(data);
 
     // Set the transformation matrix of the chart
-    setTransformationMatrix(device_id, series);
+    if (!setTransformationMatrix(device_id, series)) {
+        scheduleChartsRedraw();
+        return;
+    }
 
     // Get the chart svg element
     const svg = document.getElementById("chart-" + device_id);
+    if (svg == null || transformationMatrices.get(device_id) == null) {
+        return;
+    }
 
     // Draw the grid
     drawGrid(svg, device_id, series);

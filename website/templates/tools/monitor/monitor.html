@@ -1,105 +1,129 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
   <meta name="description" content="View live temperature and humidity readings with rolling charts in the home monitor dashboard.">
-  <meta name="theme-color" content="#dff3f2">
-  <meta name="theme-color" media="(prefers-color-scheme: light)" content="#dff3f2">
-  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#182230">
-  <link type="text/css" rel="stylesheet" href="/css/tools/fonts.css?v1.1.0" />
+  <meta name="theme-color" content="#e8efe9">
+  <meta name="theme-color" media="(prefers-color-scheme: light)" content="#e8efe9">
+  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0d1512">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <link type="text/css" rel="stylesheet" href="/css/tools/fonts.css?v2.2.0" />
   <link type="text/css" rel="stylesheet" href="/css/tools/monitor/reset.css?v1.1.0" />
-  <link type="text/css" rel="stylesheet" href="/css/tools/monitor/monitor.css?v1.4.5" />
+  <link type="text/css" rel="stylesheet" href="/css/tools/webapp-tokens.css?v1.0.0" />
+  <link type="text/css" rel="stylesheet" href="/css/tools/webapp-shell.css?v1.0.0" />
+  <link type="text/css" rel="stylesheet" href="/css/tools/monitor/monitor.css?v2.0.1" />
   <script defer src="/js/tools/monitor/scope.js?v1.1.0"></script>
-  <script defer src="/js/tools/monitor/monitor.js?v1.4.4"></script>
-  <script defer src="/js/tools/monitor/theme-toggle.js?v1.1.0"></script>
-  <link rel="icon" type="image/ico" sizes="48x48" href="/icons/tools/monitor/favicon-48x48-20260504.ico" />
-  <link rel="manifest" href="/manifests/tools/monitor/monitor-20260504.webmanifest" crossorigin="use-credentials" />
-  <title>Home Monitor</title>
+  <script defer src="/js/tools/monitor/monitor.js?v2.0.1"></script>
+  <script defer src="/js/tools/monitor/page-layout.js?v1.0.0"></script>
+  <script defer src="/js/tools/monitor/theme-toggle.js?v2.0.0"></script>
+  <link rel="icon" type="image/svg+xml" sizes="any" href="/icons/tools/monitor/monitor-icon-any-20260504.svg" />
+  <link rel="manifest" href="/manifests/tools/monitor/monitor-20260729.webmanifest" crossorigin="use-credentials" />
+  <title>Monitor</title>
 </head>
 
 <body>
-  <div class="outer">
-    <header class="header sticky-header">
-      <div class="header-top">
-        <h1>Home Monitor</h1>
-        <div class="chart-controls">
-          <div class="period-toggle" role="radiogroup" aria-label="Chart period">
-            <button type="button" class="period-btn active" data-period="daily" aria-checked="true" role="radio">Daily</button>
-            <button type="button" class="period-btn" data-period="weekly" aria-checked="false" role="radio">Weekly</button>
-          </div>
-          <label class="overlay-toggle">
-            <input type="checkbox" id="overlay-toggle" />
-            <span class="overlay-toggle-label">Previous period</span>
-          </label>
-          <label class="overlay-toggle">
-            <input type="checkbox" id="smooth-toggle" />
-            <span class="overlay-toggle-label">Smoothed</span>
-          </label>
+  <div class="shell">
+    <div class="page-chrome">
+      <header class="topbar">
+        <div class="brand">
+          <p class="section-kicker">Sensors</p>
+          <h1 class="brand-title">Monitor</h1>
         </div>
-        <button id="theme-toggle-button" class="theme-switch" type="button" aria-label="Toggle dark mode" aria-pressed="false" title="Toggle dark mode">
-          <span class="theme-switch-track" aria-hidden="true">
-            <svg class="theme-switch-track-icon theme-switch-track-icon-sun" viewBox="0 0 24 24" focusable="false" aria-hidden="true">
-              <circle cx="12" cy="12" r="4"></circle>
-              <line x1="12" y1="1.8" x2="12" y2="5"></line>
-              <line x1="12" y1="19" x2="12" y2="22.2"></line>
-              <line x1="1.8" y1="12" x2="5" y2="12"></line>
-              <line x1="19" y1="12" x2="22.2" y2="12"></line>
-              <line x1="4.4" y1="4.4" x2="6.7" y2="6.7"></line>
-              <line x1="17.3" y1="17.3" x2="19.6" y2="19.6"></line>
-              <line x1="17.3" y1="6.7" x2="19.6" y2="4.4"></line>
-              <line x1="4.4" y1="19.6" x2="6.7" y2="17.3"></line>
-            </svg>
-            <svg class="theme-switch-track-icon theme-switch-track-icon-moon" viewBox="0 0 24 24" focusable="false" aria-hidden="true">
-              <path d="M21 14.2A9.2 9.2 0 1 1 9.8 3a7.5 7.5 0 1 0 11.2 11.2z"></path>
-            </svg>
-            <span class="theme-switch-thumb">
-              <svg class="theme-switch-thumb-icon" viewBox="0 0 24 24" focusable="false" aria-hidden="true">
-                <path class="theme-switch-thumb-sun" d="M12 7.8a4.2 4.2 0 1 1 0 8.4 4.2 4.2 0 0 1 0-8.4zm0-4a1 1 0 0 1 1 1v1.5a1 1 0 1 1-2 0V4.8a1 1 0 0 1 1-1zm0 13.9a1 1 0 0 1 1 1v1.5a1 1 0 1 1-2 0v-1.5a1 1 0 0 1 1-1zm7.2-6.7a1 1 0 0 1 1 1 1 1 0 0 1-1 1h-1.5a1 1 0 1 1 0-2h1.5zm-12.9 0a1 1 0 0 1 1 1 1 1 0 0 1-1 1H4.8a1 1 0 1 1 0-2h1.5zm10.2-4.8a1 1 0 0 1 1.4 0l1.1 1.1a1 1 0 1 1-1.4 1.4L16.5 7.6a1 1 0 0 1 0-1.4zM6.4 16.4a1 1 0 0 1 1.4 0l1.1 1.1a1 1 0 1 1-1.4 1.4l-1.1-1.1a1 1 0 0 1 0-1.4zm11.5 2.5a1 1 0 0 1-1.4 0l-1.1-1.1a1 1 0 1 1 1.4-1.4l1.1 1.1a1 1 0 0 1 0 1.4zM7.8 7.6a1 1 0 0 1-1.4 0L5.3 6.5a1 1 0 1 1 1.4-1.4l1.1 1.1a1 1 0 0 1 0 1.4z"></path>
-                <path class="theme-switch-thumb-moon" d="M15.8 12.9A5.8 5.8 0 1 1 10.3 7a4.6 4.6 0 1 0 5.5 5.9z"></path>
+        <div class="topbar-actions">
+          <button id="theme-toggle-button" class="theme-switch" type="button" aria-label="Toggle dark mode" aria-pressed="false" title="Toggle dark mode">
+            <span class="theme-switch-track" aria-hidden="true">
+              <svg class="theme-switch-track-icon theme-switch-track-icon-sun" viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+                <circle cx="12" cy="12" r="4"></circle>
+                <line x1="12" y1="1.8" x2="12" y2="5"></line>
+                <line x1="12" y1="19" x2="12" y2="22.2"></line>
+                <line x1="1.8" y1="12" x2="5" y2="12"></line>
+                <line x1="19" y1="12" x2="22.2" y2="12"></line>
+                <line x1="4.4" y1="4.4" x2="6.7" y2="6.7"></line>
+                <line x1="17.3" y1="17.3" x2="19.6" y2="19.6"></line>
+                <line x1="17.3" y1="6.7" x2="19.6" y2="4.4"></line>
+                <line x1="4.4" y1="19.6" x2="6.7" y2="17.3"></line>
               </svg>
+              <svg class="theme-switch-track-icon theme-switch-track-icon-moon" viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+                <path d="M21 14.2A9.2 9.2 0 1 1 9.8 3a7.5 7.5 0 1 0 11.2 11.2z"></path>
+              </svg>
+              <span class="theme-switch-thumb">
+                <svg class="theme-switch-thumb-icon" viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+                  <path class="theme-switch-thumb-sun" d="M12 7.8a4.2 4.2 0 1 1 0 8.4 4.2 4.2 0 0 1 0-8.4zm0-4a1 1 0 0 1 1 1v1.5a1 1 0 1 1-2 0V4.8a1 1 0 0 1 1-1zm0 13.9a1 1 0 0 1 1 1v1.5a1 1 0 1 1-2 0v-1.5a1 1 0 0 1 1-1zm7.2-6.7a1 1 0 0 1 1 1 1 1 0 0 1-1 1h-1.5a1 1 0 1 1 0-2h1.5zm-12.9 0a1 1 0 0 1 1 1 1 1 0 0 1-1 1H4.8a1 1 0 1 1 0-2h1.5zm10.2-4.8a1 1 0 0 1 1.4 0l1.1 1.1a1 1 0 1 1-1.4 1.4L16.5 7.6a1 1 0 0 1 0-1.4zM6.4 16.4a1 1 0 0 1 1.4 0l1.1 1.1a1 1 0 1 1-1.4 1.4l-1.1-1.1a1 1 0 0 1 0-1.4zm11.5 2.5a1 1 0 0 1-1.4 0l-1.1-1.1a1 1 0 1 1 1.4-1.4l1.1 1.1a1 1 0 0 1 0 1.4zM7.8 7.6a1 1 0 0 1-1.4 0L5.3 6.5a1 1 0 1 1 1.4-1.4l1.1 1.1a1 1 0 0 1 0 1.4z"></path>
+                  <path class="theme-switch-thumb-moon" d="M15.8 12.9A5.8 5.8 0 1 1 10.3 7a4.6 4.6 0 1 0 5.5 5.9z"></path>
+                </svg>
+              </span>
             </span>
-          </span>
-        </button>
-      </div>
-    </header>
-    <main class="charts">
-      {% for data in sensor_data.data %}
-      <div class="data-container" id="data-container-{{ data.device_id }}">
-        <div class="data">
-          <p class="monitor-title">Device:</p>
-          <div class="device-row">
-            <p class="monitor-data" id="device-{{ data.device_id }}"></p>
-            <button type="button" class="chart-drag-handle" aria-label="Drag to reorder chart" title="Drag to reorder">
-              <svg viewBox="0 0 16 16" focusable="false" aria-hidden="true">
-                <circle cx="5" cy="3.5" r="1.2"></circle>
-                <circle cx="11" cy="3.5" r="1.2"></circle>
-                <circle cx="5" cy="8" r="1.2"></circle>
-                <circle cx="11" cy="8" r="1.2"></circle>
-                <circle cx="5" cy="12.5" r="1.2"></circle>
-                <circle cx="11" cy="12.5" r="1.2"></circle>
-              </svg>
-            </button>
+          </button>
+        </div>
+      </header>
+    </div>
+
+    <div class="main-scroll">
+      <section class="panel" aria-label="Sensor charts">
+        <div class="panel-toolbar">
+          <div class="panel-toolbar-top">
+            <div>
+              <p class="section-kicker">Charts</p>
+              <h2 class="section-title">Temperature &amp; humidity</h2>
+            </div>
           </div>
-          <p class="monitor-title">Time:</p>
-          <p class="monitor-data" id="time-{{ data.device_id }}"></p>
-          <p class="monitor-title">Status:</p>
-          <p class="monitor-data" id="status-{{ data.device_id }}"></p>
-          <p class="monitor-title">Temperature:</p>
-          <p class="monitor-data temperature-readout" id="temperature-{{ data.device_id }}">
-            <span class="temperature-current-value">--</span><span class="temperature-overlay-value" hidden></span>
-          </p>
-          <p class="monitor-title">Humidity:</p>
-          <p class="monitor-data" id="humidity-{{ data.device_id }}"></p>
-          <div class="svg-container" id="svg-container-{{ data.device_id }}">
-            <svg id="chart-{{ data.device_id }}" class="chart-svg" xmlns="http://www.w3.org/2000/svg" xmlns: xlink="http://www.w3.org/1999/xlink">
-            </svg>
+          <div class="chart-controls">
+            <div class="period-toggle" role="radiogroup" aria-label="Chart period">
+              <button type="button" class="period-btn active" data-period="daily" aria-checked="true" role="radio">Daily</button>
+              <button type="button" class="period-btn" data-period="weekly" aria-checked="false" role="radio">Weekly</button>
+            </div>
+            <label class="overlay-toggle">
+              <input type="checkbox" id="overlay-toggle" />
+              <span class="overlay-toggle-label">Previous period</span>
+            </label>
+            <label class="overlay-toggle">
+              <input type="checkbox" id="smooth-toggle" />
+              <span class="overlay-toggle-label">Smoothed</span>
+            </label>
           </div>
         </div>
-      </div>
-      {% endfor %}
-    </main>
+        <main class="charts">
+          {% for data in sensor_data.data %}
+          <div class="data-container" id="data-container-{{ data.device_id }}">
+            <div class="data">
+              <p class="monitor-title">Device:</p>
+              <div class="device-row">
+                <p class="monitor-data" id="device-{{ data.device_id }}"></p>
+                <button type="button" class="chart-drag-handle" aria-label="Drag to reorder chart" title="Drag to reorder">
+                  <svg viewBox="0 0 16 16" focusable="false" aria-hidden="true">
+                    <circle cx="5" cy="3.5" r="1.2"></circle>
+                    <circle cx="11" cy="3.5" r="1.2"></circle>
+                    <circle cx="5" cy="8" r="1.2"></circle>
+                    <circle cx="11" cy="8" r="1.2"></circle>
+                    <circle cx="5" cy="12.5" r="1.2"></circle>
+                    <circle cx="11" cy="12.5" r="1.2"></circle>
+                  </svg>
+                </button>
+              </div>
+              <p class="monitor-title">Time:</p>
+              <p class="monitor-data" id="time-{{ data.device_id }}"></p>
+              <p class="monitor-title">Status:</p>
+              <p class="monitor-data" id="status-{{ data.device_id }}"></p>
+              <p class="monitor-title">Temperature:</p>
+              <p class="monitor-data temperature-readout" id="temperature-{{ data.device_id }}">
+                <span class="temperature-current-value">--</span><span class="temperature-overlay-value" hidden></span>
+              </p>
+              <p class="monitor-title">Humidity:</p>
+              <p class="monitor-data" id="humidity-{{ data.device_id }}"></p>
+              <div class="svg-container" id="svg-container-{{ data.device_id }}">
+                <svg id="chart-{{ data.device_id }}" class="chart-svg" xmlns="http://www.w3.org/2000/svg" xmlns: xlink="http://www.w3.org/1999/xlink">
+                </svg>
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </main>
+      </section>
+    </div>
   </div>
 </body>
 
