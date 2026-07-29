@@ -1,5 +1,11 @@
 /* Monitor domain styles — on top of webapp-tokens + webapp-shell. */
 
+/* Charts need the full window; override shared 72rem shell cap. */
+.shell {
+    width: 100%;
+    max-width: none;
+}
+
 :root {
     --chart-grid: rgba(18, 32, 28, 0.2);
     --chart-text: rgba(90, 107, 100, 0.95);
@@ -100,6 +106,10 @@ body.dark-mode .period-btn.active {
 .overlay-toggle:focus-within {
     outline: 0.125rem solid rgba(15, 143, 122, 0.55);
     outline-offset: 0.125rem;
+}
+
+.overlay-toggle-label .label-short {
+    display: none;
 }
 
 .charts {
@@ -358,6 +368,11 @@ body.dark-mode .chart-svg {
 }
 
 @media screen and (max-width: 44rem) {
+    .page-chrome {
+        width: 100%;
+        max-width: none;
+    }
+
     .charts {
         grid-template-columns: 1fr;
         gap: 0.65rem;
@@ -366,12 +381,50 @@ body.dark-mode .chart-svg {
     }
 
     .panel-toolbar {
-        padding: 0.85rem 0.85rem 0.7rem;
+        padding: 0.75rem 0.7rem 0.6rem;
+        gap: 0.45rem;
     }
 
     .chart-controls {
         width: 100%;
-        justify-content: flex-start;
+        flex-wrap: nowrap;
+        justify-content: space-between;
+        align-items: center;
+        gap: 0.35rem;
+    }
+
+    .period-toggle {
+        flex-shrink: 0;
+        padding: 0.12rem;
+    }
+
+    .period-btn {
+        padding: 0.32rem 0.55rem;
+        font-size: 0.72rem;
+    }
+
+    .overlay-toggle {
+        flex: 1 1 0;
+        min-width: 0;
+        justify-content: center;
+        gap: 0.3rem;
+        padding: 0.28rem 0.4rem;
+        font-size: 0.7rem;
+        white-space: nowrap;
+    }
+
+    .overlay-toggle input {
+        width: 0.85rem;
+        height: 0.85rem;
+        flex-shrink: 0;
+    }
+
+    .overlay-toggle-label .label-full {
+        display: none;
+    }
+
+    .overlay-toggle-label .label-short {
+        display: inline;
     }
 
     .data {
