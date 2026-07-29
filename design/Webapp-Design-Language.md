@@ -13,7 +13,7 @@ Converter (`converter.schleising.net`) is the **canonical** expression of this l
 A webapp should feel like a **native app** installed on the device — a focused instrument that owns the whole screen — not a scrollable webpage that ends halfway down, and not a dashboard of cards.
 
 - **Full-bleed frame** — the UI always fills the viewport (`100%` / `100dvh`), even when there is little or no content. Empty space belongs *inside* the app chrome (panels, washes), never as bare document leftover below a short page.
-- **Brand first** — product name is the hero of the first viewport.
+- **Brand first** — product name is the hero of the first viewport for product/queue apps; utility/chart dashboards may use a compact topbar brand so the instrument surface dominates (§3.2).
 - **Calm density** — one job per section; one primary action group in the top bar.
 - **Atmospheric, not flat** — soft paper gradients and tinted radial washes; frosted surfaces that extend through the full height.
 - **Readable in light and dark** — theme tokens, not hard-coded greys.
@@ -44,6 +44,8 @@ When this document and Converter disagree, **update the document** after changin
 
 ## 3. First viewport & brand
 
+### 3.1 Product / queue apps (Converter reference)
+
 ```text
 ┌─────────────────────────────────────────────┐
 │  Converter                    ●  ☾  Subscribe│
@@ -61,6 +63,26 @@ Rules:
 - First viewport budget: brand, at most one short supporting line if needed, one action cluster (theme / subscribe / status), and at most **one** live/primary working surface. No KPI strips or secondary promos in the hero.
 - Prefer **hiding** empty live stages (`hidden`) over placeholder skeletons that look like content.
 - Do not overlay detached chips, promo stickers, or floating badges on hero media.
+
+### 3.2 Utility / chart dashboards (Monitor pattern)
+
+When the app’s job is **dense live content** (charts, logs, instruments) rather than a branded queue/activity surface, the first viewport may use a **compact topbar brand** so the working surface owns vertical space:
+
+```text
+┌─────────────────────────────────────────────┐
+│  Monitor ☾                    [controls…]   │  ← compact brand (~1.4–1.7rem desktop)
+│─────────────────────────────────────────────│
+│  Charts panel fills remaining height        │
+│  (plots / readouts — the point of the app)  │
+└─────────────────────────────────────────────┘
+```
+
+Rules:
+
+- Brand stays **present and identifiable** (display face, kicker, theme action) — not a generic site header — but must not starve the primary content.
+- Desktop brand scale is topbar-sized (`~1.35–1.65rem`); mobile may keep a slightly larger mark if chrome is fixed and content still scrolls inside the panel.
+- Put period/filter controls in the **panel toolbar**, not the brand row, and keep them on **one row** on mobile (tighten padding; shorten labels if needed).
+- Do **not** invent a second marketing hero under the compact brand.
 
 ---
 
@@ -131,17 +153,17 @@ Also set `document.documentElement.style.backgroundColor` and `color-scheme` so 
 
 Load faces via shared `fonts.css` (do not re-declare `@font-face` per app).
 
-### Scale (Converter reference)
+### Scale
 
-| Element | Treatment |
-| ------- | --------- |
-| Brand title | `clamp(2.4rem, 6vw, 3.4rem)`, weight 800, tracking `-0.06em`, line-height ~0.92 |
-| Section title | ~`1.35rem`, weight 750, tracking `-0.03em` |
-| Section / brand kicker | `0.68rem`, weight 700, uppercase, tracking `0.14em`, colour `--live-deep` |
-| Control labels | ~`0.8–0.84rem`, weight 700, display face |
-| Muted facts | body face, `--ink-muted`, tabular nums where values compare |
+| Element | Converter (product / queue) | Monitor (utility / charts) |
+| ------- | --------------------------- | -------------------------- |
+| Brand title | `clamp(2.4rem, 6vw, 3.4rem)`, weight 800, tracking `-0.06em`, line-height ~0.92 | Desktop: `clamp(1.35rem, 1.6vw, 1.65rem)`, weight 800; mobile may stay closer to shared shell |
+| Section title | ~`1.35rem`, weight 750, tracking `-0.03em` | Desktop may tighten to ~`1.05rem` when charts need room |
+| Section / brand kicker | `0.68rem`, weight 700, uppercase, tracking `0.14em`, colour `--live-deep` | Same; desktop brand kicker may drop slightly (~`0.62rem`) |
+| Control labels | ~`0.8–0.84rem`, weight 700, display face | Same; mobile chart toolbar ~`0.7–0.72rem` to stay single-row |
+| Muted facts | body face, `--ink-muted`, tabular nums where values compare | Same |
 
-Avoid Inter/Roboto as the **display** face for new work; older tools still on Roboto/Inter should migrate toward Schibsted + Inter when restyled.
+Choose the **Converter** column unless the primary surface is continuous data visualisation or similarly content-hungry. Avoid Inter/Roboto as the **display** face for new work; older tools still on Roboto/Inter should migrate toward Schibsted + Inter when restyled.
 
 ---
 
@@ -198,16 +220,20 @@ Manifest / meta should reinforce the illusion: `"display": "standalone"` (or `di
 
 ```text
 html/body  →  height 100% / 100dvh, overflow hidden (app canvas)
-  .shell   →  column flex, fills viewport, max-width 72rem, centred, padding 1rem
+  .shell   →  column flex, fills viewport, padding ~0.65–1rem
+                default: max-width 72rem, centred
+                chart/data apps: width 100% (full window)
     .page-chrome  →  topbar (+ optional live stage), flex-shrink 0
     .main-scroll  →  flex 1, min-height 0, overflow hidden
       primary panel flex 1 → fills remaining height even if list is empty
-      inner list scrolls only when overflow exists
+      inner list / chart grid scrolls only when overflow exists
 ```
 
-- Side and bottom padding match the **shell gutter** (`1rem` on desktop). Bottom does **not** grow when side margins appear from centering on ultra-wide viewports.
-- Prefer pinning chrome and scrolling **lists inside** panels over scrolling the whole page.
-- Wide gutters outside the centred `72rem` shell still show the **same paper wash** as the app — never a different document colour that reveals “website behind the app”.
+- **Default width:** centred `max-width: 72rem` (Converter / queue-style apps). Shared `webapp-shell.css` ships this cap.
+- **Full-width exception:** chart and other horizontally dense instruments (Monitor) override to `width: 100%` / `max-width: none` so plots are not trapped in a narrow column with wasted side gutters. Do not use full width as a default for text/queue UIs.
+- Side and bottom padding match the **shell gutter** (`1rem` on desktop; Monitor may use `0.65rem` when chrome is compact). Bottom does **not** grow when side margins appear from centering on ultra-wide viewports.
+- Prefer pinning chrome and scrolling **lists / chart grids inside** panels over scrolling the whole page.
+- When the shell is centred at `72rem`, wide gutters outside still show the **same paper wash** as the app — never a different document colour that reveals “website behind the app”.
 
 ### Mobile (≤ ~44rem)
 
@@ -227,8 +253,8 @@ Account for notch / home indicator on padding and fixed chrome. A thin `body::af
 
 ### Top bar
 
-- Brand block left: optional kicker + **large** brand title.
-- Actions right: connection/status affordance, theme switch, primary text button (e.g. Subscribe).
+- Brand block left: optional kicker + brand title (**hero-scale** for product/queue apps; **compact topbar-scale** for utility/chart dashboards — see §3.2 / §5).
+- Actions right: connection/status affordance, theme switch, primary text button (e.g. Subscribe). Chart period/filter controls belong in the panel toolbar, not crowded into the brand row.
 - Status as a **small coloured dot** (online / connecting / offline) with `aria-label` / `title`, not a verbose banner.
 
 ### Kickers & section titles
@@ -317,6 +343,8 @@ User-facing JS should log **warnings and errors only**. No “opening websocket�
 - Dense newspaper columns / zero-radius broadsheet chrome.
 - Hero built from inset media cards, collages, or floating image tiles.
 - Stats, schedules, or secondary marketing in the first viewport.
+- Hero-scale brand chrome on a chart/data instrument that leaves little room for the plots (use the compact brand variant instead).
+- Centring a full-window chart app inside `72rem` and leaving empty side gutters that could have held plots.
 - Multi-layer drop shadows and glow-as-identity.
 - Emoji as UI ornament.
 - Verbose connection banners when a status dot will do.
@@ -333,13 +361,14 @@ Use when restyling Monitor, Transcoder, Logger, Astronomy, or a new tools host:
 3. [ ] Link `fonts.css`; set `--font-display` / `--font-body` to Schibsted + Inter.
 4. [ ] Copy Converter semantic colour tokens (light + dark); retint accent only if needed.
 5. [ ] Page wash = dual radials + paper gradient; panels = frosted surface + line + radius-lg (panels stretch to fill).
-6. [ ] Brand title is hero-scale in the top bar; kickers uppercase micro-labels.
+6. [ ] Brand title in the top bar: **hero-scale** (Converter) or **compact** if the app is a utility/chart instrument (§3.2); kickers uppercase micro-labels.
 7. [ ] Theme toggle with `localStorage` + `theme-color` sync.
-8. [ ] Desktop: pinned chrome, panel fills height, list scrolls inside.
-9. [ ] Mobile: fixed chrome + `--page-chrome-height`; preserve PTR if the app relies on it.
+8. [ ] Desktop: pinned chrome, panel fills height, list/charts scroll inside; use `72rem` shell **or** full-width when plots need the window (§7).
+9. [ ] Mobile: fixed chrome + `--page-chrome-height`; preserve PTR if the app relies on it; filter toolbars stay **single-row**.
 10. [ ] Segmented controls / pills / primary buttons match Converter geometry.
 11. [ ] Quiet console; empty states inside the full-height panel (no fake cards, no collapsed shell).
 12. [ ] Manifest, icons, SW shell versioning aligned with Converter practice.
+13. [ ] Prefer shared `webapp-tokens.css` / `webapp-shell.css` for new ports; keep domain layout in the app CSS.
 
 ---
 
@@ -369,14 +398,24 @@ Canonical host: `converter.schleising.net`.
 
 ### 14.2 Monitor — adopted (2026-07-29)
 
-Host: `monitor.schleising.net`. Aligned via shared `webapp-tokens.css` / `webapp-shell.css` plus monitor domain CSS.
+Host: `monitor.schleising.net`. Aligned via shared `webapp-tokens.css` / `webapp-shell.css` plus monitor domain CSS. This is the reference for the **utility / chart dashboard** variant (§3.2), not a fork of the language.
 
 | Area | Status |
 | ---- | ------ |
 | Schibsted + Inter, ink/paper tokens, wash, frosted panel | Done |
-| Hero brand + kicker; chart controls in panel toolbar (not brand row) | Done |
-| `100dvh` shell; mobile fixed chrome + `page-layout.js`; charts scroll inside panel | Done |
+| Compact desktop brand + kicker; chart controls in panel toolbar (not brand row) | Done |
+| Full-width shell (override shared `72rem`); `100dvh`; mobile fixed chrome + `page-layout.js` | Done |
+| Charts scroll inside panel; SVG wells keep aspect ratio; redraw on resize | Done |
+| Mobile filter bar single-row (tight padding + short labels) | Done |
 | Dark mode + paper `theme-color`; quiet console; SW shell warm; dated manifest | Done |
+
+**Intentional deltas vs Converter**
+
+| Topic | Monitor choice | Why |
+| ----- | -------------- | --- |
+| Shell width | `width: 100%` | Charts waste space inside a centred `72rem` column |
+| Brand scale | Compact on desktop (~`1.35–1.65rem`) | Hero title starved the plots (“all title, no content”) |
+| Controls | Panel toolbar; one row on mobile | Brand row stays calm; filters stay reachable |
 
 **Key paths:** `templates/tools/monitor/monitor.html`, `static/css/tools/webapp-tokens.css`, `static/css/tools/webapp-shell.css`, `static/css/tools/monitor/monitor.css`, `static/js/tools/monitor/{theme-toggle,page-layout,monitor}.js`, `manifests/tools/monitor/monitor-20260729.webmanifest`.
 
