@@ -6,6 +6,44 @@
     max-width: none;
 }
 
+/* Utility dashboard: keep brand present, give charts the vertical room. */
+@media screen and (min-width: 44.01rem) {
+    .shell {
+        gap: 0.65rem;
+        padding: 0.65rem 1rem calc(0.65rem + env(safe-area-inset-bottom, 0));
+    }
+
+    .page-chrome {
+        gap: 0;
+    }
+
+    .topbar {
+        align-items: center;
+        padding: 0.1rem 0.15rem;
+    }
+
+    .brand .section-kicker {
+        font-size: 0.62rem;
+        letter-spacing: 0.12em;
+    }
+
+    .brand-title {
+        margin: 0;
+        font-size: clamp(1.35rem, 1.6vw, 1.65rem);
+        letter-spacing: -0.04em;
+        line-height: 1;
+    }
+
+    .panel-toolbar {
+        padding: 0.7rem 1rem 0.55rem;
+        gap: 0.4rem;
+    }
+
+    .section-title {
+        font-size: 1.05rem;
+    }
+}
+
 :root {
     --chart-grid: rgba(18, 32, 28, 0.2);
     --chart-text: rgba(90, 107, 100, 0.95);
