@@ -479,67 +479,67 @@ Agent checks these off as work completes. **Do not start Phase 2+ until §12 sel
 
 ### Phase 1 — Sync client + HTTP/Mongo
 
-- [ ] Port Arr client to chosen HTTP library (sync)
-- [ ] Port TMDB client to chosen HTTP library (sync)
-- [ ] Port cache layer to sync pymongo + optional disk
-- [ ] Implement `CoverArtSettings` (`from_env` / `from_keys_file`, aliases per §12)
-- [ ] Implement `CoverArtClient.ensure_posters`
-- [ ] Implement `resolve_for_display` / `resolve_for_display_many`
-- [ ] Implement `refresh`, `get_ready_record`, `purge_expired`, `ensure_indexes`
-- [ ] Add async/thread helpers if dual-surface API selected
-- [ ] Contract tests against mocked Arr/TMDB
-- [ ] Tag pre-release or `v0.1.0-rc1` usable by consumers
+- [x] Port Arr client to chosen HTTP library (sync)
+- [x] Port TMDB client to chosen HTTP library (sync)
+- [x] Port cache layer to sync pymongo + optional disk
+- [x] Implement `CoverArtSettings` (`from_env` / `from_keys_file`, aliases per §12)
+- [x] Implement `CoverArtClient.ensure_posters`
+- [x] Implement `resolve_for_display` / `resolve_for_display_many`
+- [x] Implement `refresh`, `get_ready_record`, `purge_expired`, `ensure_indexes`
+- [x] Add async/thread helpers if dual-surface API selected
+- [x] Contract tests against mocked Arr/TMDB
+- [x] Tag pre-release or `v0.1.0-rc1` usable by consumers
 
 ### Phase 1b — Documentation (MkDocs Material)
 
-- [ ] Wire `mkdocstrings[python]` into `mkdocs.yml` (Material theme, nav, search)
-- [ ] Write guide pages: install, configuration, Walker / website3 / push usage
-- [ ] Write architecture + identity / Policy C pages
-- [ ] Document all public exports with complete docstrings
-- [ ] Generate / author API reference pages from those docstrings
-- [ ] Add changelog page aligned to tags
-- [ ] README links to the docs (local `mkdocs serve` and published URL if any)
-- [ ] CI job: `mkdocs build --strict` (fail on warnings)
-- [ ] Publish docs per §12.13 (Pages / RTD / local-only)
+- [x] Wire `mkdocstrings[python]` into `mkdocs.yml` (Material theme, nav, search)
+- [x] Write guide pages: install, configuration, Walker / website3 / push usage
+- [x] Write architecture + identity / Policy C pages
+- [x] Document all public exports with complete docstrings
+- [x] Generate / author API reference pages from those docstrings
+- [x] Add changelog page aligned to tags
+- [x] README links to the docs (local `mkdocs serve` and published URL if any)
+- [x] CI job: `mkdocs build --strict` (fail on warnings)
+- [x] Publish docs per §12.13 (Pages / RTD / local-only)
 
 ### Phase 2 — Walker integration
 
-- [ ] Add package dependency to `convert-to-h265` walker requirements / image
-- [ ] Wire Arr/TMDB + Mongo settings into NAS walker compose
-- [ ] Construct `CoverArtClient` when `FOLDER_WALKER=TRUE`
-- [ ] Call `ensure_posters` after successful new-file `bulk_write` (concurrency per §12)
-- [ ] Soft-fail / log per-title errors without failing discovery
+- [x] Add package dependency to `convert-to-h265` walker requirements / image
+- [x] Wire Arr/TMDB + Mongo settings into NAS walker compose
+- [x] Construct `CoverArtClient` when `FOLDER_WALKER=TRUE`
+- [x] Call `ensure_posters` after successful new-file `bulk_write` (concurrency per §12)
+- [x] Soft-fail / log per-title errors without failing discovery
 - [ ] Smoke: new film/episode on disk → walk → `cover_art_cache` `ready` + `remote_url` without opening Converter
 - [ ] Smoke: conversion push shows poster when convert runs before UI open
 
 ### Phase 3 — website3 cutover
 
-- [ ] Add package dependency to `fastapi/requirements.txt`
-- [ ] Implement hydrate-on-miss when `ready` + `remote_url` but local file absent (if hybrid)
-- [ ] Point Converter art resolve / worker / purge at package client
-- [ ] Keep `GET /art/{cache_key}`, placeholder, WS field shaping in website3
-- [ ] Delete or shrink in-tree `website/tools/converter/art/` to a thin shim
+- [x] Add package dependency to `fastapi/requirements.txt`
+- [x] Implement hydrate-on-miss when `ready` + `remote_url` but local file absent (if hybrid)
+- [x] Point Converter art resolve / worker / purge at package client
+- [x] Keep `GET /art/{cache_key}`, placeholder, WS field shaping in website3
+- [x] Delete or shrink in-tree `website/tools/converter/art/` to a thin shim
 - [ ] Confirm purge, relative `art/{key}` URLs, and Policy C behaviour unchanged
-- [ ] Update `[Converter-Cover-Art.md](./Converter-Cover-Art.md)`: Cross-repo prefetch = Yes (via shared package)
+- [x] Update `[Converter-Cover-Art.md](./Converter-Cover-Art.md)`: Cross-repo prefetch = Yes (via shared package)
 
 ### Phase 4 — Cleanup
 
-- [ ] Replace `convert-to-h265` `cover_art.py` identity duplication with package helpers
-- [ ] Retire or wrap `scripts/probe_sonarr_cover_art.py` with package script
-- [ ] Tag `v0.1.0`; pin **same** tag in website3 and convert-to-h265
-- [ ] Final docs pass for v0.1.0 (install pins, Docker secrets, hydrate behaviour)
+- [x] Replace `convert-to-h265` `cover_art.py` identity duplication with package helpers
+- [x] Retire or wrap `scripts/probe_sonarr_cover_art.py` with package script
+- [x] Tag `v0.1.0`; pin **same** tag in website3 and convert-to-h265
+- [x] Final docs pass for v0.1.0 (install pins, Docker secrets, hydrate behaviour)
 - [ ] Final smoke: Walker prefetch → push poster → UI hydrate/serve
 
 ### Verification checklist
 
-- [ ] `pip install "…@v0.1.0"` works in Walker and FastAPI images
+- [x] `pip install "…@v0.1.0"` works in Walker and FastAPI images
 - [ ] New Walker media yields `cover_art_cache` `ready` + usable `remote_url` without Converter UI
 - [ ] Web push can show that poster before any UI session
 - [ ] website3 still serves `art/{cache_key}` with placeholders and purge
-- [ ] No duplicated path→cache-key logic remains in `convert-to-h265`
-- [ ] website3 in-tree art implementation deleted or reduced to thin shim
-- [ ] `mkdocs build --strict` passes; guides + API reference cover the public surface
-- [ ] Docs are reachable per §12.13 (published URL or documented local workflow)
+- [x] No duplicated path→cache-key logic remains in `convert-to-h265`
+- [x] website3 in-tree art implementation deleted or reduced to thin shim
+- [x] `mkdocs build --strict` passes; guides + API reference cover the public surface
+- [x] Docs are reachable per §12.13 (published URL or documented local workflow)
 
 ---
 
@@ -632,48 +632,48 @@ Success bar carries over from Converter cover-art: ≥90% correct posters, no WS
 
 ### 12.8 GitHub owner / visibility
 
-- [ ] **A — Personal account, public repo**
+- [x] **A — Personal account, public repo** — `schleising/media-cover-art`
 - [ ] **B — Personal account, private repo** (Docker needs deploy key / secret)
 - [ ] **C — Org account, public repo**
 - [ ] **D — Org account, private repo**
 - [ ] **E — Other** (note): ________________________________
 
-Owner / org name: ________________________________
+Owner / org name: schleising
 
 ### 12.9 Walker concurrency
 
 - [ ] **A — Inline batch in the walk** (timeouts + `cache_key` dedupe; simplest)
-- [ ] **B — Dedicated background thread / queue inside the walker process** *(recommended if Arr latency is a concern)*
+- [x] **B — Dedicated background thread / queue inside the walker process** *(recommended if Arr latency is a concern)*
 - [ ] **C — Separate sidecar / cron that scans Mongo for paths missing art**
 
 ### 12.10 Environment variable naming
 
 - [ ] **A — Keep `CONVERTER_ART_`* / existing Arr env names only**
-- [ ] **B — New `MEDIA_COVER_ART_`* names with aliases for `CONVERTER_ART_*` during migration** *(recommended)*
+- [x] **B — New `MEDIA_COVER_ART_*` names with aliases for `CONVERTER_ART_*` during migration** *(recommended)*
 - [ ] **C — New `MEDIA_COVER_ART_`* names only (breaking cutover)**
 
 ### 12.11 website3 in-tree `art/` after cutover
 
-- [ ] **A — Delete modules; import `media_cover_art` directly from router/database** *(recommended)*
+- [x] **A — Delete modules; import `media_cover_art` directly from router/database** *(recommended)* — plus `cover_art_runtime.py` for async queue/HTTP serve
 - [ ] **B — Keep thin shim package under `website/tools/converter/art/` that re-exports**
 
 ### 12.12 Optional: also prefetch on Walker renames (`_update_changed_files`)
 
 - [ ] **A — Yes in v1**
-- [ ] **B — No in v1; new-file upserts only** *(recommended)*
+- [x] **B — No in v1; new-file upserts only** *(recommended)*
 
 ### 12.13 Library documentation
 
 MkDocs Material is required for v1. Choose how docs are published:
 
-- [ ] **A — MkDocs Material + mkdocstrings; publish to GitHub Pages** *(recommended for a public repo)*
+- [x] **A — MkDocs Material + mkdocstrings; publish to GitHub Pages** *(recommended for a public repo)*
 - [ ] **B — MkDocs Material + mkdocstrings; publish to Read the Docs**
 - [ ] **C — MkDocs Material + mkdocstrings; in-repo only** (`mkdocs serve` / artifacts; no hosted site in v1)
 - [ ] **D — Other doc stack** (note): ________________________________
 
 ### 12.14 API docstring style (for mkdocstrings)
 
-- [ ] **A — Google style** *(recommended)*
+- [x] **A — Google style** *(recommended)*
 - [ ] **B — NumPy style**
 - [ ] **C — Sphinx/reST style**
 

@@ -1,44 +1,8 @@
 from __future__ import annotations
 
-import importlib.util
-import sys
-import types
 import unittest
-from pathlib import Path
 
-WEBSITE_ROOT = Path(__file__).resolve().parents[1]
-ART_DIR = WEBSITE_ROOT / "tools" / "converter" / "art"
-
-
-def _ensure_pkg(name: str, path: Path | None = None) -> types.ModuleType:
-    existing = sys.modules.get(name)
-    if existing is not None:
-        return existing
-    module = types.ModuleType(name)
-    if path is not None:
-        module.__path__ = [str(path)]  # type: ignore[attr-defined]
-    sys.modules[name] = module
-    return module
-
-
-def _load_identity():
-    """Load identity without executing art/__init__.py (avoids Mongo)."""
-    _ensure_pkg("tools")
-    _ensure_pkg("tools.converter")
-    _ensure_pkg("tools.converter.art", ART_DIR)
-    full_name = "tools.converter.art.identity"
-    if full_name in sys.modules:
-        return sys.modules[full_name]
-    path = ART_DIR / "identity.py"
-    spec = importlib.util.spec_from_file_location(full_name, path)
-    assert spec is not None and spec.loader is not None
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[full_name] = module
-    spec.loader.exec_module(module)
-    return module
-
-
-parse_media_identity = _load_identity().parse_media_identity
+from media_cover_art import parse_media_identity
 
 
 class ConverterMediaIdentityTests(unittest.TestCase):

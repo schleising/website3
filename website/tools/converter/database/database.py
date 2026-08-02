@@ -7,8 +7,8 @@ from pymongo import ASCENDING, DESCENDING, UpdateOne
 
 from .models import FileData, ConvertedFileDataFromDb
 from ..messages.messages import StatisticsMessage, ConvertedFileData, FileToConvertData
-from ..art.models import ArtDisplayFields
-from ..art.resolver import resolve_art_for_display_many
+from media_cover_art import ArtDisplayFields
+from ..cover_art_runtime import resolve_art_for_display_many
 from . import media_collection
 
 

@@ -20,9 +20,11 @@ from .messages.messages import (
     Message,
 )
 from ..utils import calculate_time_remaining
-from .art.config import PLACEHOLDER_ART_URL, art_cache_dir
-from .art.cache import get_cache_record, resolve_local_path, touch_cache_access
-from .art.resolver import resolve_art_for_display_many
+from .cover_art_runtime import (
+    PLACEHOLDER_ART_URL,
+    resolve_art_for_display_many,
+    serve_cached_poster,
+)
 
 from .database import push_collection
 
@@ -54,43 +56,21 @@ async def converter_cover_art(cache_key: str) -> Response:
         art_logger.warning("Art request rejected bad key=%r", cache_key)
         return Response(status_code=status.HTTP_404_NOT_FOUND)
 
-    record = await get_cache_record(decoded_key)
+    record = await serve_cached_poster(decoded_key)
     if record is not None:
-        local_path = resolve_local_path(record)
-        if local_path is not None:
-            # Ensure the file is inside the configured cache directory.
-            try:
-                local_path.resolve().relative_to(art_cache_dir().resolve())
-            except ValueError:
-                art_logger.warning(
-                    "Rejected cover art path outside cache dir: %s", local_path
-                )
-            else:
-                media_type = record.content_type or "image/jpeg"
-                art_logger.debug(
-                    "Art serve hit key=%s path=%s type=%s",
-                    decoded_key,
-                    local_path,
-                    media_type,
-                )
-                try:
-                    await touch_cache_access(decoded_key)
-                except Exception as exc:  # noqa: BLE001
-                    art_logger.debug("Failed touching art access for %s: %s", decoded_key, exc)
-                return FileResponse(
-                    local_path,
-                    media_type=media_type,
-                    headers={"Cache-Control": "public, max-age=86400"},
-                )
-        art_logger.warning(
-            "Art serve miss key=%s status=%s local=%s exists=%s",
+        local_path, media_type = record
+        art_logger.debug(
+            "Art serve hit key=%s path=%s type=%s",
             decoded_key,
-            record.status,
-            record.local_path,
-            bool(local_path),
+            local_path,
+            media_type,
         )
-    else:
-        art_logger.debug("Art serve miss key=%s no cache record", decoded_key)
+        return FileResponse(
+            local_path,
+            media_type=media_type,
+            headers={"Cache-Control": "public, max-age=86400"},
+        )
+    art_logger.debug("Art serve miss key=%s", decoded_key)
 
     return Response(
         status_code=status.HTTP_302_FOUND,

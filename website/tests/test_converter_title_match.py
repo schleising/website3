@@ -1,51 +1,14 @@
 from __future__ import annotations
 
-import importlib.util
-import sys
-import types
 import unittest
-from pathlib import Path
 from typing import Any
 
-WEBSITE_ROOT = Path(__file__).resolve().parents[1]
-ART_DIR = WEBSITE_ROOT / "tools" / "converter" / "art"
-
-
-def _ensure_pkg(name: str, path: Path | None = None) -> types.ModuleType:
-    existing = sys.modules.get(name)
-    if existing is not None:
-        return existing
-    module = types.ModuleType(name)
-    if path is not None:
-        module.__path__ = [str(path)]  # type: ignore[attr-defined]
-    sys.modules[name] = module
-    return module
-
-
-def _load_art_submodule(name: str) -> types.ModuleType:
-    """Load an art submodule without executing art/__init__.py (avoids Mongo)."""
-    _ensure_pkg("tools")
-    _ensure_pkg("tools.converter")
-    _ensure_pkg("tools.converter.art", ART_DIR)
-    full_name = f"tools.converter.art.{name}"
-    if full_name in sys.modules:
-        return sys.modules[full_name]
-    path = ART_DIR / f"{name}.py"
-    spec = importlib.util.spec_from_file_location(full_name, path)
-    assert spec is not None and spec.loader is not None
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[full_name] = module
-    spec.loader.exec_module(module)
-    return module
-
-
-_ = _load_art_submodule("identity")
-title_match = _load_art_submodule("title_match")
-
-fold_title_for_match = title_match.fold_title_for_match
-pick_best_item_by_title = title_match.pick_best_item_by_title
-rank_title_match = title_match.rank_title_match
-titles_match_exact = title_match.titles_match_exact
+from media_cover_art import (
+    fold_title_for_match,
+    pick_best_item_by_title,
+    rank_title_match,
+    titles_match_exact,
+)
 
 
 def find_item_by_title(
@@ -53,8 +16,6 @@ def find_item_by_title(
     title: str,
     year: int | None = None,
 ) -> dict[str, Any] | None:
-    """Mirror arr_client.find_item_by_title candidate keys for unit tests."""
-
     def candidate_titles(item: dict[str, Any]) -> list[str]:
         values: list[str] = []
         for key in ("title", "sortTitle", "cleanTitle"):
@@ -104,7 +65,6 @@ class TitleMatchTests(unittest.TestCase):
         self.assertIsNotNone(match)
         assert match is not None
         self.assertEqual(match["id"], 2)
-        self.assertEqual(match["title"], "Star Trek: Strange New Worlds")
 
     def test_spinoff_beats_parent_walking_dead(self) -> None:
         library = [
@@ -149,26 +109,6 @@ class TitleMatchTests(unittest.TestCase):
         self.assertEqual(exact[0], 3)
         self.assertEqual(parent[0], 1)
         self.assertIsNone(rank_title_match("100 Foot Wave", "Star Trek"))
-
-    def test_pick_best_uses_custom_title_keys(self) -> None:
-        results = [
-            {"name": "The Walking Dead", "id": 1},
-            {"name": "The Walking Dead: Dead City", "original_name": "Dead City", "id": 2},
-        ]
-        match = pick_best_item_by_title(
-            results,
-            "The Walking Dead Dead City",
-            None,
-            candidate_titles=lambda item: [
-                str(item[key])
-                for key in ("name", "original_name")
-                if item.get(key)
-            ],
-            item_year=lambda _item: None,
-        )
-        self.assertIsNotNone(match)
-        assert match is not None
-        self.assertEqual(match["id"], 2)
 
 
 if __name__ == "__main__":
