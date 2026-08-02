@@ -123,9 +123,22 @@ function normaliseHexColour(colourValue) {
     return null;
 }
 
+function isUsableCrestPath(sourcePath) {
+    if (typeof sourcePath !== "string") {
+        return false;
+    }
+
+    const trimmed = sourcePath.trim();
+    if (trimmed === "" || trimmed === "null" || trimmed === "undefined") {
+        return false;
+    }
+
+    return trimmed.startsWith("/") || trimmed.startsWith("http://") || trimmed.startsWith("https://");
+}
+
 function derivePrimaryColourFromCrest(sourcePath, fallbackColour) {
     return new Promise(resolve => {
-        if (!sourcePath) {
+        if (!isUsableCrestPath(sourcePath)) {
             resolve(fallbackColour);
             return;
         }

@@ -7,7 +7,7 @@ const UNITS_SHELL_URLS = [
     "/css/right-nav.css?v1.1.0",
     "/css/units/units.css?v1.0.0",
     "/js/base.js?v1.2.22",
-    "/js/site-select-menu.js?v1.0.6",
+    "/js/site-select-menu.js?v1.0.7",
     "/js/units/pwa.js?v1.0.0",
     "/js/units/units-page.js?v1.0.0",
     "/icons/units/android-chrome-192x192.png?v1.0.0"

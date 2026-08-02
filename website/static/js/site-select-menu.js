@@ -148,6 +148,11 @@ function createSiteSelectMenu(selectElement) {
         triggerIcon.className = "site-select-trigger-icon";
         triggerIcon.alt = "";
         triggerIcon.setAttribute("aria-hidden", "true");
+        // Set a real src before the icon enters the document. Some crawlers treat a
+        // missing src as the relative URL "null" (e.g. /head-to-head/null).
+        if (placeholderIconPath) {
+            triggerIcon.src = placeholderIconPath;
+        }
         triggerIcon.hidden = true;
         triggerContent.appendChild(triggerIcon);
     }
@@ -165,13 +170,6 @@ function createSiteSelectMenu(selectElement) {
     optionMenu.setAttribute("role", "listbox");
     optionMenu.hidden = true;
 
-    rootElement.appendChild(triggerButton);
-    if (usesBodyPortal) {
-        document.body.appendChild(optionMenu);
-    } else {
-        rootElement.appendChild(optionMenu);
-    }
-
     const menuModel = {
         root: rootElement,
         select: selectElement,
@@ -186,8 +184,16 @@ function createSiteSelectMenu(selectElement) {
         optionButtons: [],
     };
 
+    // Resolve icon src before attaching interactive nodes to the live document.
     rebuildSiteSelectOptions(menuModel);
     syncSiteSelectMenu(menuModel);
+
+    rootElement.appendChild(triggerButton);
+    if (usesBodyPortal) {
+        document.body.appendChild(optionMenu);
+    } else {
+        rootElement.appendChild(optionMenu);
+    }
 
     return menuModel;
 }
@@ -267,7 +273,7 @@ function syncSiteSelectMenu(menuModel) {
             menuModel.triggerIcon.src = triggerIconSource;
             menuModel.triggerIcon.hidden = false;
         } else {
-            menuModel.triggerIcon.removeAttribute("src");
+            // Never remove src (some crawlers treat a missing src as relative "null").
             menuModel.triggerIcon.hidden = true;
         }
     }
