@@ -4,6 +4,9 @@ Uses a dedicated sync pymongo-backed :class:`CoverArtClient` so Motor stays
 isolated to the rest of the FastAPI app. Websocket/list paths call
 :func:`resolve_art_for_display_many` which returns immediately from cache and
 enqueues hydrate/resolve on a background asyncio worker.
+
+Mongo host comes from the same ``db_server.txt`` file used by Feeds/Football
+(``website.database.Database``), not ``localhost``.
 """
 
 from __future__ import annotations
@@ -32,6 +35,12 @@ _client_lock = asyncio.Lock()
 
 _PURGE_INTERVAL_SECONDS = 6 * 60 * 60
 
+# Same path as website.database.Database (FastAPI mounts website at /app).
+_DB_SERVER_CANDIDATES = (
+    Path("/app/database/db_server.txt"),
+    Path(__file__).resolve().parents[2] / "database" / "db_server.txt",
+)
+
 
 def _keys_file_candidates() -> list[Path]:
     return [
@@ -48,6 +57,27 @@ def _first_existing_keys_file() -> Path | None:
     return None
 
 
+def _mongo_uri_from_db_server_file() -> str | None:
+    """Build a Mongo URI from ``db_server.txt`` (hostname only, port 27017)."""
+    for path in _DB_SERVER_CANDIDATES:
+        if not path.is_file():
+            continue
+        try:
+            host = path.read_text(encoding="utf-8").strip()
+        except OSError as exc:
+            logger.warning("Failed reading Mongo host from %s: %s", path, exc)
+            continue
+        if not host:
+            continue
+        if host.startswith("mongodb://") or host.startswith("mongodb+srv://"):
+            logger.info("Cover art Mongo URI from %s", path)
+            return host
+        uri = f"mongodb://{host}:27017/"
+        logger.info("Cover art Mongo host from %s: %s", path, host)
+        return uri
+    return None
+
+
 def get_cover_art_client() -> CoverArtClient:
     """Return the process-wide sync cover-art client (lazy init)."""
     global _client
@@ -56,18 +86,35 @@ def get_cover_art_client() -> CoverArtClient:
 
     keys_file = _first_existing_keys_file()
     settings = CoverArtSettings.from_env(keys_file=keys_file)
-    # Ensure cache dir default matches website Docker volume when unset.
+
+    overrides: dict[str, object] = {}
+    mongo_uri = _mongo_uri_from_db_server_file()
+    if mongo_uri is not None:
+        overrides["mongo_uri"] = mongo_uri
+    elif settings.mongo_uri.rstrip("/").endswith("localhost:27017") or (
+        "127.0.0.1:27017" in settings.mongo_uri
+    ):
+        logger.warning(
+            "Cover art Mongo URI is %s; db_server.txt not found. "
+            "Arr lookups may fail inside Docker.",
+            settings.mongo_uri,
+        )
+
     if settings.cache_dir is None:
         raw = os.getenv("CONVERTER_ART_CACHE_DIR") or os.getenv(
             "MEDIA_COVER_ART_CACHE_DIR"
         )
-        cache_dir = Path(raw) if raw else Path("/var/cache/converter-art")
-        settings = CoverArtSettings(
-            **{**settings.__dict__, "cache_dir": cache_dir}
-        )
+        overrides["cache_dir"] = Path(raw) if raw else Path("/var/cache/converter-art")
+
+    if overrides:
+        settings = CoverArtSettings(**{**settings.__dict__, **overrides})
 
     _client = CoverArtClient(settings)
-    logger.info("Cover art client ready: cache_dir=%s", settings.cache_dir)
+    logger.info(
+        "Cover art client ready: cache_dir=%s mongo_uri=%s",
+        settings.cache_dir,
+        settings.mongo_uri,
+    )
     return _client
 
 
