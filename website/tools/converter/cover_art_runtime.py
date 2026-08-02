@@ -67,13 +67,7 @@ def get_cover_art_client() -> CoverArtClient:
         )
 
     _client = CoverArtClient(settings)
-    logger.info(
-        "Cover art client ready: cache_dir=%s sonarr=%s radarr=%s tmdb=%s",
-        settings.cache_dir,
-        bool(settings.sonarr_api_key),
-        bool(settings.radarr_api_key),
-        bool(settings.tmdb_api_key),
-    )
+    logger.info("Cover art client ready: cache_dir=%s", settings.cache_dir)
     return _client
 
 
