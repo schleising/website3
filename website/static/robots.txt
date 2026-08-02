@@ -15,10 +15,28 @@ User-agent: Applebot-Extended
 User-agent: Google-Extended
 User-agent: CCBot
 User-agent: PerplexityBot
+User-agent: Bytespider
+User-agent: meta-externalagent
 Disallow: /
 
 # 2. BLOCK AGGRESSIVE/UNWANTED SEO BOTS
 User-agent: AhrefsBot
+User-agent: SemrushBot
+User-agent: SiteAuditBot
+User-agent: SemrushBot-BA
+User-agent: SemrushBot-SI
+User-agent: SemrushBot-SWA
+User-agent: SemrushBot-CT
+User-agent: SemrushBot-BM
+User-agent: SemrushBot-OCOB
+User-agent: SplitSignalBot
+User-agent: MJ12bot
+User-agent: DotBot
+User-agent: BLEXBot
+User-agent: DataForSeoBot
+User-agent: SerpstatBot
+User-agent: SEOkicks
+User-agent: SEOkicks-Robot
 User-agent: SERankingBacklinksBot
 User-agent: PetalBot
 User-agent: YandexBot
