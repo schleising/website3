@@ -468,14 +468,14 @@ Agent checks these off as work completes. **Do not start Phase 2+ until §12 sel
 
 ### Phase 0 — Repo skeleton
 
-- [ ] Create `media-cover-art` GitHub repo (owner/visibility per §12)
-- [ ] Add `pyproject.toml`, LICENSE, README, `py.typed`
-- [ ] Add CI (pytest + basedpyright)
-- [ ] Copy `identity` + `title_match` + `models` with **no** website imports
-- [ ] Port existing identity + title-match unit tests into package `tests/`
-- [ ] Prove install via `pip install git+https://…` (or editable local install)
-- [ ] Scaffold MkDocs Material (`mkdocs.yml`, `docs/index.md`, `docs` optional-extra)
-- [ ] `mkdocs build` succeeds on skeleton (even if pages are stubs)
+- [x] Create `media-cover-art` GitHub repo (owner/visibility per §12) — https://github.com/schleising/media-cover-art (public)
+- [x] Add `pyproject.toml`, LICENSE, README, `py.typed`
+- [x] Add CI (pytest + basedpyright)
+- [x] Copy `identity` + `title_match` + `models` with **no** website imports
+- [x] Port existing identity + title-match unit tests into package `tests/`
+- [x] Prove install via `pip install git+https://…` (or editable local install) — verified with `pip install -e ".[dev,docs]"`
+- [x] Scaffold MkDocs Material (`mkdocs.yml`, `docs/index.md`, `docs` optional-extra)
+- [x] `mkdocs build` succeeds on skeleton (even if pages are stubs)
 
 ### Phase 1 — Sync client + HTTP/Mongo
 
