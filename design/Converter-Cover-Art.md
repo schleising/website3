@@ -2,6 +2,8 @@
 
 **Status: Implemented** (website3 Converter UI + art package + Overview/dashboard polish). This document is the design record and as-built notes.
 
+**Follow-on proposal:** extract this art subsystem into an installable GitHub package and prefetch from the convert-to-h265 Walker — see `[Media-Cover-Art-Package.md](./Media-Cover-Art-Package.md)`. That proposal revises the “Cross-repo prefetch = No” decision below.
+
 ## 1. Goal
 
 Show poster / cover art next to Converter UI entries (queue, converted list, and the live “Now converting” stage) so each file is visually identifiable as a film or TV episode — not just a basename and stats.
@@ -739,26 +741,26 @@ Not implemented; leave for a later pass if wanted:
 ## 14. Decisions
 
 
-| Topic                   | Decision                                                                                                          |
-| ----------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| Primary art source      | **Arr first (Radarr/Sonarr), TMDB fallback**                                                                      |
-| TV art granularity (v1) | **Series poster only**                                                                                            |
-| WS / UI filenames       | Show `display_title` (and basename if needed); **never show full paths**                                          |
-| Cache storage           | **Named Docker volume** `converter_art_cache` → `/var/cache/converter-art` on `fastapi`; keep `./website:/app:ro` |
-| Cross-repo prefetch     | **No** — all art logic stays in **website3**                                                                      |
-| Media Manager           | **Later** — not part of this project                                                                              |
-| Arr URL from Docker     | `http://steveds920:8989` and `http://steveds920:7878`                                                             |
-| Poster fit              | Fixed **2:3** slot sized by width; `object-fit: contain`; do not stretch slot to row height (avoids side letterboxing) |
-| Art URL shape           | **Relative** `art/{key}?v={updated_at}` from Converter page (version busts browser cache on re-resolve)           |
-| Push notification art   | Prefer public **HTTPS** `remote_url` from cache; never tools-auth art paths                                       |
-| Cache retention         | **14 days** unused (`last_accessed_at` / `updated_at`)                                                            |
-| Queue list              | Include **converting/copying** rows with appropriate status                                                       |
-| Overview UI             | **Dialog** from Activity kicker row; not an inline card                                                           |
-| Overview KPIs           | Totals + sizes/saved/time + films/TV counts + films/TV mix strings                                                |
-| Opening empty state     | **Connecting…** status (no fake cards); real empty copy when lists are zero                                       |
-| Overview mount          | **Lazy** — KPI DOM on first open / when stats available while open                                                |
-| Last-run / offline      | App shell cached by **service worker**; Activity + Overview payloads in `localStorage`                            |
-| TV title matching       | **Policy C** — punct-folded exact, then query⊆title (longest), then title⊆query                                   |
+| Topic                   | Decision                                                                                                                                             |
+| ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Primary art source      | **Arr first (Radarr/Sonarr), TMDB fallback**                                                                                                         |
+| TV art granularity (v1) | **Series poster only**                                                                                                                               |
+| WS / UI filenames       | Show `display_title` (and basename if needed); **never show full paths**                                                                             |
+| Cache storage           | **Named Docker volume** `converter_art_cache` → `/var/cache/converter-art` on `fastapi`; keep `./website:/app:ro`                                    |
+| Cross-repo prefetch     | **No** (v1 as-built) — all art logic stays in **website3**. **Superseded by proposal:** `[Media-Cover-Art-Package.md](./Media-Cover-Art-Package.md)` |
+| Media Manager           | **Later** — not part of this project                                                                                                                 |
+| Arr URL from Docker     | `http://steveds920:8989` and `http://steveds920:7878`                                                                                                |
+| Poster fit              | Fixed **2:3** slot sized by width; `object-fit: contain`; do not stretch slot to row height (avoids side letterboxing)                               |
+| Art URL shape           | **Relative** `art/{key}?v={updated_at}` from Converter page (version busts browser cache on re-resolve)                                              |
+| Push notification art   | Prefer public **HTTPS** `remote_url` from cache; never tools-auth art paths                                                                          |
+| Cache retention         | **14 days** unused (`last_accessed_at` / `updated_at`)                                                                                               |
+| Queue list              | Include **converting/copying** rows with appropriate status                                                                                          |
+| Overview UI             | **Dialog** from Activity kicker row; not an inline card                                                                                              |
+| Overview KPIs           | Totals + sizes/saved/time + films/TV counts + films/TV mix strings                                                                                   |
+| Opening empty state     | **Connecting…** status (no fake cards); real empty copy when lists are zero                                                                          |
+| Overview mount          | **Lazy** — KPI DOM on first open / when stats available while open                                                                                   |
+| Last-run / offline      | App shell cached by **service worker**; Activity + Overview payloads in `localStorage`                                                               |
+| TV title matching       | **Policy C** — punct-folded exact, then query⊆title (longest), then title⊆query                                                                      |
 
 
 ---
