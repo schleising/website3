@@ -2,7 +2,7 @@
 
 **Status: Implemented** (website3 Converter UI + art package + Overview/dashboard polish). This document is the design record and as-built notes.
 
-**Follow-on proposal:** extract this art subsystem into an installable GitHub package and prefetch from the convert-to-h265 Walker — see `[Media-Cover-Art-Package.md](./Media-Cover-Art-Package.md)`. That proposal revises the “Cross-repo prefetch = No” decision below.
+**Follow-on:** cover art now lives in [`media-cover-art`](https://github.com/schleising/media-cover-art); see [`Media-Cover-Art-Package.md`](./Media-Cover-Art-Package.md).
 
 ## 1. Goal
 
@@ -747,7 +747,7 @@ Not implemented; leave for a later pass if wanted:
 | TV art granularity (v1) | **Series poster only**                                                                                                                               |
 | WS / UI filenames       | Show `display_title` (and basename if needed); **never show full paths**                                                                             |
 | Cache storage           | **Named Docker volume** `converter_art_cache` → `/var/cache/converter-art` on `fastapi`; keep `./website:/app:ro`                                    |
-| Cross-repo prefetch     | **No** (v1 as-built) — all art logic stays in **website3**. **Superseded by proposal:** `[Media-Cover-Art-Package.md](./Media-Cover-Art-Package.md)` |
+| Cross-repo prefetch     | **Yes** — shared [`media-cover-art`](https://github.com/schleising/media-cover-art) package; Walker prefetches via `ensure_posters` (see [`Media-Cover-Art-Package.md`](./Media-Cover-Art-Package.md)) |
 | Media Manager           | **Later** — not part of this project                                                                                                                 |
 | Arr URL from Docker     | `http://steveds920:8989` and `http://steveds920:7878`                                                                                                |
 | Poster fit              | Fixed **2:3** slot sized by width; `object-fit: contain`; do not stretch slot to row height (avoids side letterboxing)                               |
