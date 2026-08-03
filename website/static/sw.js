@@ -1,4 +1,4 @@
-const TOOLS_CACHE_VERSION = "tools-webapp-v7";
+const TOOLS_CACHE_VERSION = "tools-webapp-v8";
 
 // Warm shell assets when this SW is installed on a tools host.
 // Missing URLs on other hosts are harmless no-ops.
@@ -20,11 +20,21 @@ const TOOLS_SHELL_URLS = [
     "/css/tools/webapp-shell.css?v1.0.0",
     "/css/tools/monitor/monitor.css?v2.0.3",
     "/js/tools/monitor/scope.js?v1.1.0",
-    "/js/tools/monitor/monitor.js?v2.0.3",
+    "/js/tools/monitor/monitor.js?v2.0.4",
     "/js/tools/monitor/page-layout.js?v1.0.0",
     "/js/tools/monitor/theme-toggle.js?v2.0.0",
     "/icons/tools/monitor/monitor-icon-any-20260504.svg"
 ];
+
+function isLiveDataRequest(requestUrl) {
+    const path = requestUrl.pathname;
+    return (
+        path.endsWith("/latest_data")
+        || path.endsWith("/latest_data/")
+        || path.endsWith("/timeseries")
+        || path.endsWith("/timeseries/")
+    );
+}
 
 function isCacheableRequest(request, requestUrl) {
     if (request.method !== "GET") {
@@ -114,6 +124,20 @@ self.addEventListener("fetch", function (event) {
                 return caches.match(event.request).then(function (cached) {
                     return cached || caches.match("/");
                 });
+            })
+        );
+        return;
+    }
+
+    // Live sensor JSON must reach the page as soon as the network responds.
+    // Cache-first left the page on stale data until the next poll (~5s).
+    if (isLiveDataRequest(requestUrl)) {
+        event.respondWith(
+            fetch(event.request).then(function (networkResponse) {
+                putInCache(event.request, networkResponse);
+                return networkResponse;
+            }).catch(function () {
+                return caches.match(event.request);
             })
         );
         return;

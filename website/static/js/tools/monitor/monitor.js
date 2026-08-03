@@ -1,4 +1,4 @@
-const serviceWorkerPath = '/sw.js?v=tools-webapp-v7';
+const serviceWorkerPath = '/sw.js?v=tools-webapp-v8';
 const chartSettingsStorageKey = 'monitor.chartSettings';
 
 // The chart data to be fetched from the server
@@ -856,7 +856,7 @@ async function fetchSensorData() {
     const headers = new Headers();
     headers.append("Content-Type", "application/json");
     // Fetch the sensor data
-    fetch('/latest_data/', { headers })
+    fetch('/latest_data/', { headers, cache: 'no-store' })
         .then(response => response.json())
         .then(response_data => {
             // Update the sensor data on the page
@@ -910,7 +910,7 @@ async function fetchTemperatureData() {
     const headers = new Headers();
     headers.append("Content-Type", "application/json");
     // Fetch the temperature data
-    fetch('/timeseries/', { headers })
+    fetch('/timeseries/', { headers, cache: 'no-store' })
         .then(response => response.json())
         .then(response_data => {
             // Update the temperature data

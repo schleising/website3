@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from datetime import datetime, timedelta, timezone
 
@@ -94,6 +95,34 @@ async def get_data() -> SensorDataPoints:
         return SensorDataPoints(data=[])
 
 
+async def _timeseries_for_device(
+    device_name: str, since: datetime
+) -> TimeseriesData:
+    assert sensor_data_collection is not None
+    collection = sensor_data_collection
+
+    data = collection.find(
+        {
+            "device_name": device_name,
+            "timestamp": {"$gte": since},
+        }
+    ).sort([("timestamp", 1)])
+
+    data_list = [SensorData.model_validate(item) async for item in data]
+
+    return TimeseriesData(
+        device_id=device_name.lower().replace(" ", "-"),
+        data=[
+            TimeseriesDataPoint(
+                timestamp=item.timestamp.astimezone(timezone.utc).isoformat(),
+                temp=item.temperature,
+                humidity=item.humidity,
+            )
+            for item in data_list
+        ],
+    )
+
+
 # Endpoint to get the timeseries data
 @monitor_router.get("/timeseries", response_class=JSONResponse)
 @monitor_router.get("/timeseries/", response_class=JSONResponse)
@@ -112,40 +141,14 @@ async def timeseries() -> TimeseriesDataResponse:
 
     logging.debug(f"Device names: {device_names}")
 
-    # Create a list to store the timeseries data
-    timeseries_data: list[TimeseriesData] = []
-
     # Get the timeseries data for each device over the last 14 days
     # (supports daily/weekly charts with previous-period overlay)
-    for device_name in device_names:
-        # Get the data for the device
-        data = sensor_data_collection.find(
-            {
-                "device_name": device_name,
-                "timestamp": {"$gte": datetime.now() - timedelta(days=14)},
-            }
-        ).sort([("timestamp", 1)])
-
-        # Parse the data into a list of SensorData objects
-        data_list = [SensorData.model_validate(item) async for item in data]
-
-        # Create a list of TimeseriesDataPoint objects
-        timeseries_data_points = [
-            TimeseriesDataPoint(
-                timestamp=item.timestamp.astimezone(timezone.utc).isoformat(),
-                temp=item.temperature,
-                humidity=item.humidity,
-            )
-            for item in data_list
-        ]
-
-        # Add the timeseries data to the list
-        timeseries_data.append(
-            TimeseriesData(
-                device_id=device_name.lower().replace(" ", "-"),
-                data=timeseries_data_points,
-            )
+    since = datetime.now() - timedelta(days=14)
+    timeseries_data = list(
+        await asyncio.gather(
+            *[_timeseries_for_device(name, since) for name in device_names]
         )
+    )
 
     # Return the timeseries data
     return TimeseriesDataResponse(data=timeseries_data)
