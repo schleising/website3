@@ -1,4 +1,4 @@
-const CONVERTER_CACHE_VERSION = "converter-webapp-v3";
+const CONVERTER_CACHE_VERSION = "converter-webapp-v5";
 
 // Warm the Converter shell when this SW is installed on converter.schleising.net
 // (harmless no-ops on other tools hosts if a URL is missing).
@@ -6,13 +6,13 @@ const CONVERTER_SHELL_URLS = [
     "/",
     "/css/tools/fonts.css?v2.2.0",
     "/css/tools/converter/reset.css?v4.0.0",
-    "/css/tools/converter/main.css?v5.2.32",
-    "/js/tools/converter/utils.js?v5.1.5",
-    "/js/tools/converter/websocket.js?v5.1.16",
+    "/css/tools/converter/main.css?v5.2.34",
+    "/js/tools/converter/utils.js?v5.1.6",
+    "/js/tools/converter/websocket.js?v5.1.17",
     "/js/tools/converter/page-layout.js?v1.0.0",
     "/js/tools/converter/scope.js?v4.0.0",
     "/js/tools/converter/theme-toggle.js?v2.0.0",
-    "/js/utils/subscribe.js?v4.0.2",
+    "/js/utils/subscribe.js?v4.0.4",
     "/icons/tools/converter/converter-icon-any-20260725.svg",
     "/icons/tools/converter/art-placeholder.svg"
 ];

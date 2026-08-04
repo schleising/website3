@@ -64,6 +64,7 @@ function appendConvertedFileCard(element, data) {
         ]
     });
 
+    attachConvertedFileInfoButton(row, data);
     element.appendChild(row);
     return row;
 }
@@ -240,6 +241,174 @@ function appendFileFact(element, label, value) {
     fact.appendChild(valueElement);
 
     element.appendChild(fact);
+}
+
+function attachConvertedFileInfoButton(row, data) {
+    row.dataset.fileInfo = JSON.stringify(data);
+
+    var button = document.createElement("button");
+    button.type = "button";
+    button.className = "file-info-button";
+    button.setAttribute("aria-label", "File details for " + (data.display_title || data.filename || "converted file"));
+    button.setAttribute("aria-haspopup", "dialog");
+    button.setAttribute("aria-controls", "file-info-dialog");
+    button.title = "File details";
+    button.innerHTML = [
+        '<svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">',
+        '<circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="1.8"></circle>',
+        '<circle cx="12" cy="8" r="1.15" fill="currentColor" stroke="none"></circle>',
+        '<path d="M12 11.2v6.2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path>',
+        "</svg>"
+    ].join("");
+
+    button.addEventListener("click", function(event) {
+        event.preventDefault();
+        event.stopPropagation();
+        var payload = data;
+        try {
+            if (row.dataset.fileInfo) {
+                payload = JSON.parse(row.dataset.fileInfo);
+            }
+        } catch (error) {
+            payload = data;
+        }
+        openFileInfoDialog(payload);
+    });
+
+    row.appendChild(button);
+}
+
+function formatMediaKindLabel(mediaKind) {
+    var kind = String(mediaKind || "").trim().toLowerCase();
+    if (kind === "film" || kind === "movie") {
+        return "Film";
+    }
+    if (kind === "tv" || kind === "series" || kind === "episode") {
+        return "TV";
+    }
+    if (kind === "") {
+        return "Media";
+    }
+    return kind.charAt(0).toUpperCase() + kind.slice(1);
+}
+
+function formatDetailDateTime(dateTimeString) {
+    if (dateTimeString == null || dateTimeString === "" || dateTimeString === "Unknown") {
+        return "--";
+    }
+
+    var parsedDate = new Date(dateTimeString);
+    if (Number.isNaN(parsedDate.getTime())) {
+        return String(dateTimeString);
+    }
+
+    return parsedDate.toLocaleString("en-GB", {
+        weekday: "short",
+        day: "numeric",
+        month: "short",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false
+    }).replace(",", "");
+}
+
+function appendFileInfoStat(container, label, value) {
+    var item = document.createElement("div");
+    item.className = "file-info-stat";
+
+    var labelElement = document.createElement("span");
+    labelElement.className = "file-info-stat-label";
+    labelElement.innerText = label;
+    item.appendChild(labelElement);
+
+    var valueElement = document.createElement("span");
+    valueElement.className = "file-info-stat-value";
+    valueElement.innerText = value;
+    item.appendChild(valueElement);
+
+    container.appendChild(item);
+}
+
+function openFileInfoDialog(data) {
+    var dialog = document.getElementById("file-info-dialog");
+    var poster = document.getElementById("file-info-dialog-poster");
+    var kindElement = document.getElementById("file-info-kind");
+    var titleElement = document.getElementById("file-info-title");
+    var filenameElement = document.getElementById("file-info-filename");
+    var statsElement = document.getElementById("file-info-stats");
+
+    if (dialog == null || statsElement == null) {
+        return;
+    }
+
+    var title = data.display_title || data.filename || "Converted file";
+    var posterUrl = data.cover_art_url || "/icons/tools/converter/art-placeholder.svg";
+    var ratioNumber = data.percentage_saved == null || data.percentage_saved === ""
+        ? null
+        : Math.round(Number(data.percentage_saved));
+    var savedLabel = ratioNumber == null || Number.isNaN(ratioNumber) ? "--" : ratioNumber + "%";
+
+    if (poster != null) {
+        poster.src = posterUrl;
+        poster.alt = "";
+        poster.onerror = function() {
+            poster.onerror = null;
+            poster.src = "/icons/tools/converter/art-placeholder.svg";
+        };
+    }
+
+    if (kindElement != null) {
+        kindElement.innerText = formatMediaKindLabel(data.media_kind);
+    }
+
+    if (titleElement != null) {
+        titleElement.innerText = title;
+    }
+
+    if (filenameElement != null) {
+        filenameElement.innerText = data.filename || "";
+        filenameElement.hidden = !data.filename || data.filename === title;
+        filenameElement.title = data.filename || "";
+    }
+
+    while (statsElement.firstChild) {
+        statsElement.removeChild(statsElement.firstChild);
+    }
+
+    appendFileInfoStat(statsElement, "Saved", savedLabel);
+    appendFileInfoStat(
+        statsElement,
+        "Original size",
+        getCardValue(data.pre_conversion_size, "--", false, false, true)
+    );
+    appendFileInfoStat(
+        statsElement,
+        "New size",
+        getCardValue(data.current_size, "--", false, false, true)
+    );
+    appendFileInfoStat(
+        statsElement,
+        "Bytes saved",
+        getCardValue(data.bytes_saved, "--", false, false, true)
+    );
+    appendFileInfoStat(statsElement, "Took", getCardValue(data.total_conversion_time));
+    appendFileInfoStat(statsElement, "Started", formatDetailDateTime(data.start_conversion_time));
+    appendFileInfoStat(statsElement, "Ended", formatDetailDateTime(data.end_conversion_time));
+    appendFileInfoStat(statsElement, "Duration", getCardValue(data.video_duration));
+    appendFileInfoStat(statsElement, "Resolution", getCardValue(data.resolution));
+    appendFileInfoStat(
+        statsElement,
+        "Codecs",
+        formatCodecValue(data.video_codec) + " / " + formatCodecValue(data.audio_codec)
+    );
+    appendFileInfoStat(statsElement, "Bit rate", getCardValue(data.bit_rate));
+    appendFileInfoStat(statsElement, "Backend", getCardValue(data.backend_name, "—"));
+
+    if (typeof dialog.showModal === "function") {
+        dialog.showModal();
+    } else {
+        dialog.setAttribute("open", "");
+    }
 }
 
 function getCardValue(value, fallback = "--", percentage = false, isDateTime = false, isSize = false) {

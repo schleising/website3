@@ -41,16 +41,36 @@ class DatabaseTools:
 
         return f"{size:.2f} PB"
 
+    def _format_resolution(self, db_file: Mapping[str, Any]) -> str:
+        streams = db_file.get("video_information", {}).get("streams", [])
+
+        for stream in streams:
+            if stream.get("codec_type") != "video":
+                continue
+
+            width = stream.get("width")
+            height = stream.get("height")
+            if width and height:
+                return f"{width}×{height}"
+
+        return "Unknown"
+
     def _create_converted_data(
         self,
         count: int,
         file_data: ConvertedFileDataFromDb,
         art: ArtDisplayFields,
+        db_file: Mapping[str, Any],
     ) -> ConvertedFileData:
         # Calculate the compression percentage
-        compression_percentage = (
-            1 - (file_data.current_size / file_data.pre_conversion_size)
-        ) * 100
+        if file_data.pre_conversion_size <= 0:
+            compression_percentage = 0.0
+            bytes_saved = 0
+        else:
+            compression_percentage = (
+                1 - (file_data.current_size / file_data.pre_conversion_size)
+            ) * 100
+            bytes_saved = max(0, file_data.pre_conversion_size - file_data.current_size)
 
         # Calculate the total conversion time
         if (
@@ -80,6 +100,14 @@ class DatabaseTools:
         else:
             total_conversion_time_string = f"{hours}hrs {minutes} mins"
 
+        duration = (
+            db_file.get("video_information", {}).get("format", {}).get("duration")
+        )
+        bit_rate = (
+            db_file.get("video_information", {}).get("format", {}).get("bit_rate")
+        )
+        backend_name = str(db_file.get("backend_name") or "").strip() or "—"
+
         # Create a ConvertedFileData object
         return ConvertedFileData(
             file_data_id=f"file-{count}",
@@ -96,7 +124,14 @@ class DatabaseTools:
                 file_data.pre_conversion_size
             ),
             current_size=self._human_readable_file_size(file_data.current_size),
+            bytes_saved=self._human_readable_file_size(bytes_saved),
             percentage_saved=round(compression_percentage),
+            video_duration=self._format_video_duration(duration),
+            video_codec=self._get_codec_name(db_file, "video"),
+            audio_codec=self._get_codec_name(db_file, "audio"),
+            bit_rate=self._format_bit_rate(bit_rate),
+            resolution=self._format_resolution(db_file),
+            backend_name=backend_name,
         )
 
     def _format_video_duration(self, duration_seconds: float | int | None) -> str:
@@ -614,6 +649,13 @@ class DatabaseTools:
                 "end_conversion_time",
                 "pre_conversion_size",
                 "current_size",
+                "backend_name",
+                "video_information.streams.codec_type",
+                "video_information.streams.codec_name",
+                "video_information.streams.width",
+                "video_information.streams.height",
+                "video_information.format.duration",
+                "video_information.format.bit_rate",
             ],
         )
 
@@ -629,6 +671,7 @@ class DatabaseTools:
                 count,
                 ConvertedFileDataFromDb.model_validate(data),
                 art_fields[count],
+                data,
             )
             for count, data in enumerate(db_file_list)
         ]

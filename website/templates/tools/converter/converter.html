@@ -12,15 +12,15 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <link type="text/css" rel="stylesheet" href="/css/tools/fonts.css?v2.2.0" />
     <link type="text/css" rel="stylesheet" href="/css/tools/converter/reset.css?v4.0.0" />
-    <link type="text/css" rel="stylesheet" href="/css/tools/converter/main.css?v5.2.32" />
+    <link type="text/css" rel="stylesheet" href="/css/tools/converter/main.css?v5.2.34" />
     <link rel="icon" type="image/svg+xml" sizes="any" href="/icons/tools/converter/converter-icon-any-20260725.svg" />
     <link rel="manifest" href="/manifests/tools/converter/converter-20260725.webmanifest" crossorigin="use-credentials" />
-    <script defer src="/js/tools/converter/utils.js?v5.1.5"></script>
-    <script defer src="/js/tools/converter/websocket.js?v5.1.16"></script>
+    <script defer src="/js/tools/converter/utils.js?v5.1.6"></script>
+    <script defer src="/js/tools/converter/websocket.js?v5.1.17"></script>
     <script defer src="/js/tools/converter/page-layout.js?v1.0.0"></script>
     <script defer src="/js/tools/converter/scope.js?v4.0.0"></script>
     <script defer src="/js/tools/converter/theme-toggle.js?v2.0.0"></script>
-    <script defer src="/js/utils/subscribe.js?v4.0.2"></script>
+    <script defer src="/js/utils/subscribe.js?v4.0.4"></script>
     <title>Converter</title>
   </head>
   <body>
@@ -119,6 +119,26 @@
         </div>
         <p id="overview-status" class="overview-status" hidden></p>
         <div class="kpi-grid" id="statistics"></div>
+      </div>
+    </dialog>
+
+    <dialog id="file-info-dialog" class="file-info-dialog" aria-labelledby="file-info-title">
+      <div class="file-info-dialog-panel">
+        <div class="file-info-dialog-backdrop" aria-hidden="true">
+          <img id="file-info-dialog-poster" class="file-info-dialog-poster" alt="" decoding="async" />
+          <div class="file-info-dialog-dim"></div>
+        </div>
+        <div class="file-info-dialog-content">
+          <div class="file-info-dialog-head">
+            <div class="file-info-dialog-heading">
+              <p id="file-info-kind" class="section-kicker">Media</p>
+              <h2 id="file-info-title" class="section-title">File details</h2>
+              <p id="file-info-filename" class="file-info-filename" hidden></p>
+            </div>
+            <button id="file-info-dialog-close" type="button" aria-label="Close file details">Close</button>
+          </div>
+          <div id="file-info-stats" class="file-info-stats"></div>
+        </div>
       </div>
     </dialog>
   </body>

@@ -82,6 +82,7 @@ document.addEventListener('readystatechange', event => {
         initializeConverterScaffold();
         initializeFilesViewButtons();
         initializeOverviewDialog();
+        initializeFileInfoDialog();
         setupNetworkListeners();
         startConnectionWatchdog();
         updateConnectionStatus();
@@ -188,6 +189,33 @@ function initializeOverviewDialog() {
 
     dialog.addEventListener("close", function() {
         setExpanded(false);
+    });
+}
+
+function initializeFileInfoDialog() {
+    const dialog = document.getElementById("file-info-dialog");
+    const closeButton = document.getElementById("file-info-dialog-close");
+
+    if (dialog == null) {
+        return;
+    }
+
+    if (dialog.dataset.fileInfoBound === "true") {
+        return;
+    }
+
+    dialog.dataset.fileInfoBound = "true";
+
+    if (closeButton != null) {
+        closeButton.addEventListener("click", function() {
+            dialog.close();
+        });
+    }
+
+    dialog.addEventListener("click", function(event) {
+        if (event.target === dialog) {
+            dialog.close();
+        }
     });
 }
 
@@ -1186,6 +1214,7 @@ function patchActivityCoverArt(filesContainer, files) {
     }
 
     var posters = filesContainer.querySelectorAll(".file-row-poster");
+    var rows = filesContainer.querySelectorAll(".file-row");
     for (var i = 0; i < files.length && i < posters.length; i++) {
         var poster = posters[i];
         var file = files[i];
@@ -1194,6 +1223,18 @@ function patchActivityCoverArt(filesContainer, files) {
         poster.dataset.artKey = file.cover_art_key || "";
         if (poster.getAttribute("src") !== nextSrc) {
             poster.setAttribute("src", nextSrc);
+        }
+
+        if (i < rows.length && rows[i].dataset.fileInfo) {
+            try {
+                var stored = JSON.parse(rows[i].dataset.fileInfo);
+                stored.cover_art_url = file.cover_art_url || "";
+                stored.cover_art_status = file.cover_art_status || "pending";
+                stored.cover_art_key = file.cover_art_key || "";
+                rows[i].dataset.fileInfo = JSON.stringify(stored);
+            } catch (error) {
+                // Ignore malformed stored payloads.
+            }
         }
     }
 }

@@ -43,6 +43,7 @@ Websocket payloads send **basename** (`filename`), plus `display_title`, `media_
 | Activity rows (converted / queue) | `display_title`, facts, % / est. save    | Fixed 2:3 slot, `object-fit: contain` |
 | Now converting                    | Poster + title + per-line stats + % hero | Same card-like grid as activity rows  |
 | Overview dialog                   | Aggregate KPIs (lazy-mounted on open)    | N/A                                   |
+| Converted-file info dialog        | Per-file stats over dimmed poster        | Poster as dialog background           |
 
 
 Queue rows also include the **active converting/copying** file(s) at the top with `queue_status` of `converting` / `copying` / `queued`.

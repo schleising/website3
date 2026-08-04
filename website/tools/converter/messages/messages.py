@@ -39,7 +39,14 @@ class ConvertedFileData(BaseModel):
     total_conversion_time: str
     pre_conversion_size: str
     current_size: str
+    bytes_saved: str = "--"
     percentage_saved: int
+    video_duration: str = "Unknown"
+    video_codec: str = "Unknown"
+    audio_codec: str = "Unknown"
+    bit_rate: str = "Unknown"
+    resolution: str = "Unknown"
+    backend_name: str = "—"
 
 class ConvertedFilesMessage(BaseModel):
     converted_files: list[ConvertedFileData]
