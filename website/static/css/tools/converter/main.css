@@ -889,10 +889,11 @@ body::after {
     max-width: min(34rem, calc(100vw - 1.5rem));
     max-height: min(90vh, 42rem);
     width: 100%;
+    color-scheme: light;
 }
 
 .file-info-dialog::backdrop {
-    background: rgba(12, 22, 19, 0.52);
+    background: rgba(12, 22, 19, 0.42);
     backdrop-filter: blur(0.25rem);
 }
 
@@ -902,7 +903,7 @@ body::after {
     border: 0.0625rem solid var(--line);
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow);
-    color: #f4faf7;
+    color: var(--ink);
     max-height: min(90vh, 42rem);
 }
 
@@ -911,7 +912,7 @@ body::after {
     inset: 0;
     z-index: 0;
     overflow: hidden;
-    background: #12201c;
+    background: var(--paper-deep);
 }
 
 .file-info-dialog-poster {
@@ -921,16 +922,17 @@ body::after {
     height: 116%;
     object-fit: cover;
     object-position: center top;
-    filter: saturate(0.92) brightness(0.72);
+    filter: saturate(0.88) brightness(1.05);
     transform: scale(1.04);
+    opacity: 0.55;
 }
 
 .file-info-dialog-dim {
     position: absolute;
     inset: 0;
     background:
-        linear-gradient(180deg, rgba(8, 16, 14, 0.42), rgba(8, 16, 14, 0.78) 55%, rgba(8, 16, 14, 0.9)),
-        radial-gradient(90% 70% at 12% 0%, rgba(15, 143, 122, 0.22), transparent 55%);
+        linear-gradient(180deg, rgba(232, 239, 233, 0.72), rgba(213, 224, 215, 0.88) 55%, rgba(213, 224, 215, 0.94)),
+        radial-gradient(90% 70% at 12% 0%, rgba(15, 143, 122, 0.16), transparent 55%);
 }
 
 .file-info-dialog-content {
@@ -957,19 +959,19 @@ body::after {
 }
 
 .file-info-dialog-heading .section-kicker {
-    color: rgba(45, 206, 178, 0.92);
+    color: var(--live-deep);
 }
 
 .file-info-dialog-heading .section-title {
     margin-top: 0.15rem;
     font-size: clamp(1.25rem, 3.5vw, 1.55rem);
-    color: #f4faf7;
-    text-shadow: 0 1px 10px rgba(0, 0, 0, 0.35);
+    color: var(--ink);
+    text-shadow: none;
 }
 
 .file-info-filename {
     margin: 0.35rem 0 0;
-    color: rgba(232, 242, 236, 0.78);
+    color: var(--ink-muted);
     font-family: var(--font-body);
     font-size: 0.78rem;
     line-height: 1.35;
@@ -978,10 +980,10 @@ body::after {
 
 #file-info-dialog-close {
     flex-shrink: 0;
-    border: 0.0625rem solid rgba(232, 242, 236, 0.28);
+    border: 0.0625rem solid var(--line-strong);
     border-radius: 999px;
-    background: rgba(255, 255, 255, 0.12);
-    color: #f4faf7;
+    background: var(--surface-strong);
+    color: var(--ink);
     padding: 0.35rem 0.8rem;
     font-family: var(--font-display);
     font-size: 0.78rem;
@@ -991,8 +993,8 @@ body::after {
 }
 
 #file-info-dialog-close:hover {
-    border-color: rgba(45, 206, 178, 0.7);
-    background: rgba(255, 255, 255, 0.2);
+    border-color: var(--live);
+    background: #fff;
 }
 
 .file-info-stats {
@@ -1007,10 +1009,11 @@ body::after {
     gap: 0.18rem;
     min-width: 0;
     padding: 0.55rem 0.65rem;
-    border: 0.0625rem solid rgba(232, 242, 236, 0.14);
+    border: 0.0625rem solid var(--line);
     border-radius: var(--radius-md);
-    background: rgba(8, 16, 14, 0.42);
+    background: var(--surface-strong);
     backdrop-filter: blur(0.35rem);
+    box-shadow: 0 6px 16px rgba(18, 32, 28, 0.06);
 }
 
 .file-info-stat-label {
@@ -1018,14 +1021,14 @@ body::after {
     font-weight: 700;
     letter-spacing: 0.12em;
     text-transform: uppercase;
-    color: rgba(232, 242, 236, 0.68);
+    color: var(--ink-muted);
 }
 
 .file-info-stat-value {
     font-family: var(--font-display);
     font-size: 0.95rem;
     font-weight: 650;
-    color: #f4faf7;
+    color: var(--ink);
     font-variant-numeric: tabular-nums;
     word-break: break-word;
 }
@@ -1400,6 +1403,42 @@ body.dark-mode .overview-dialog::backdrop {
 
 body.dark-mode .file-info-dialog::backdrop {
     background: rgba(0, 0, 0, 0.68);
+}
+
+body.dark-mode .file-info-dialog {
+    color-scheme: dark;
+}
+
+body.dark-mode .file-info-dialog-poster {
+    filter: saturate(0.92) brightness(0.7);
+    opacity: 0.85;
+}
+
+body.dark-mode .file-info-dialog-dim {
+    background:
+        linear-gradient(180deg, rgba(8, 16, 14, 0.42), rgba(8, 16, 14, 0.78) 55%, rgba(8, 16, 14, 0.9)),
+        radial-gradient(90% 70% at 12% 0%, rgba(45, 206, 178, 0.18), transparent 55%);
+}
+
+body.dark-mode .file-info-dialog-heading .section-title {
+    text-shadow: 0 1px 10px rgba(0, 0, 0, 0.35);
+}
+
+body.dark-mode #file-info-dialog-close {
+    border-color: var(--line-strong);
+    background: rgba(30, 44, 38, 0.88);
+    color: var(--ink);
+}
+
+body.dark-mode #file-info-dialog-close:hover {
+    border-color: var(--live);
+    background: rgba(45, 206, 178, 0.14);
+}
+
+body.dark-mode .file-info-stat {
+    border-color: var(--line);
+    background: rgba(22, 34, 29, 0.72);
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.22);
 }
 
 body.dark-mode .file-info-button {
