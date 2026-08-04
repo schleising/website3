@@ -917,13 +917,16 @@ body::after {
 
 .file-info-dialog-poster {
     position: absolute;
-    inset: -8%;
-    width: 116%;
-    height: 116%;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    max-width: none;
+    max-height: none;
     object-fit: cover;
-    object-position: center top;
+    object-position: center center;
     filter: saturate(0.95) brightness(1.02);
     transform: scale(1.04);
+    transform-origin: center center;
     opacity: 0.82;
 }
 
