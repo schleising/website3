@@ -1,10 +1,10 @@
-const FEEDS_CACHE_VERSION = "feeds-webapp-v8";
+const FEEDS_CACHE_VERSION = "feeds-webapp-v9";
 const FEEDS_SHELL_URLS = [
     "/",
     "/settings/",
     "/css/base.css?v1.2.0",
     "/css/dropdown-menus.css?v1.2.7",
-    "/css/feeds/feeds.css?v1.2.9",
+    "/css/feeds/feeds.css?v1.3.6",
     "/js/base.js?v1.2.12",
     "/js/feeds/pwa.js?v1.0.1",
     "/icons/feeds/android-chrome-192x192.png?v1.0.1"

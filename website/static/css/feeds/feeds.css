@@ -501,6 +501,8 @@
     overflow: hidden;
     border: 0.0625rem solid color-mix(in srgb, var(--line), #ffffff 30%);
     background: color-mix(in srgb, var(--surface-soft), #ffffff 18%);
+    /* Soft footprint while the image is still loading (reduces j/k scroll drift). */
+    min-height: 5.5rem;
 }
 
 .feed-article-media img {
@@ -739,6 +741,11 @@
     max-height: none;
     object-fit: contain;
     margin: 0.2rem 0 0.55rem;
+}
+
+.feed-article-summary img.feed-article-summary-image--sized {
+    width: min(100%, 42rem);
+    height: auto;
 }
 
 @media screen and (min-width: 68rem) {

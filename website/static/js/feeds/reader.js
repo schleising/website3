@@ -167,6 +167,12 @@
 
     /** @type {number} */
     let selectedIndex = -1;
+    /** @type {boolean} */
+    let pinSelectedCardToTop = false;
+    /** @type {number} */
+    let selectedCardTopPinFrame = 0;
+    /** @type {number} */
+    let suppressScrollUnpinUntilMs = 0;
 
     /** @type {Set<string>} */
     const pendingOpenIds = new Set();
@@ -833,6 +839,20 @@
                 }
 
                 element.setAttribute("referrerpolicy", "no-referrer");
+
+                // Preserve intrinsic aspect ratio from width/height attrs so lazy
+                // loads do not collapse then expand the article layout.
+                const widthAttr = String(element.getAttribute("width") || "").trim();
+                const heightAttr = String(element.getAttribute("height") || "").trim();
+                if (/^\d{1,4}$/.test(widthAttr) && /^\d{1,4}$/.test(heightAttr)) {
+                    const widthValue = Number(widthAttr);
+                    const heightValue = Number(heightAttr);
+                    if (widthValue > 0 && heightValue > 0) {
+                        element.style.aspectRatio = `${widthValue} / ${heightValue}`;
+                        element.style.height = "auto";
+                        element.classList.add("feed-article-summary-image--sized");
+                    }
+                }
             }
         });
 
@@ -1075,6 +1095,11 @@
      * Update card selected state and ensure focus visibility.
      *
      * @param {number} nextIndex
+     * @param {{
+     *   markReadOnSelect?: boolean,
+     *   scrollIntoView?: boolean,
+     *   scrollMode?: "top-always" | "top-if-needed" | "nearest",
+     * }} [options]
      */
     function setSelectedIndex(nextIndex, options = {}) {
         const markReadOnSelect = Boolean(options.markReadOnSelect);
@@ -1085,6 +1110,7 @@
         const cards = getCards();
         if (cards.length === 0) {
             selectedIndex = -1;
+            pinSelectedCardToTop = false;
             return;
         }
 
@@ -1100,8 +1126,10 @@
             const selectedCard = cards[boundedIndex];
 
             if (forceTopAlign) {
-                selectedCard.scrollIntoView({ block: "start" });
+                pinSelectedCardToTop = true;
+                scrollSelectedCardToTop(selectedCard);
             } else if (preferTopAlign) {
+                pinSelectedCardToTop = false;
                 const rect = selectedCard.getBoundingClientRect();
                 const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
                 const needsTopAlignment = rect.top < 0 || rect.top > viewportHeight || rect.bottom > viewportHeight;
@@ -1110,13 +1138,86 @@
                     selectedCard.scrollIntoView({ block: "start" });
                 }
             } else {
+                pinSelectedCardToTop = false;
                 selectedCard.scrollIntoView({ block: "nearest" });
             }
+        } else if (!forceTopAlign) {
+            pinSelectedCardToTop = false;
         }
 
         if (markReadOnSelect) {
             markCardRead(cards[boundedIndex]);
         }
+    }
+
+    /**
+     * Scroll a card so its top aligns with the reader viewport start.
+     *
+     * @param {HTMLElement} [card]
+     */
+    function scrollSelectedCardToTop(card) {
+        const selectedCard = card instanceof HTMLElement
+            ? card
+            : (selectedIndex >= 0 ? getCards()[selectedIndex] : null);
+        if (!(selectedCard instanceof HTMLElement)) {
+            return;
+        }
+
+        // Ignore the scroll event we are about to cause so j/k pin stays active
+        // until the user scrolls manually (or images finish shifting layout).
+        suppressScrollUnpinUntilMs = performance.now() + 180;
+        selectedCard.scrollIntoView({ block: "start" });
+    }
+
+    /**
+     * Re-align the keyboard-selected card after layout shifts (e.g. image load).
+     */
+    function scheduleSelectedCardTopPin() {
+        if (!pinSelectedCardToTop || selectedIndex < 0) {
+            return;
+        }
+
+        if (selectedCardTopPinFrame !== 0) {
+            return;
+        }
+
+        selectedCardTopPinFrame = window.requestAnimationFrame(() => {
+            selectedCardTopPinFrame = 0;
+            if (!pinSelectedCardToTop || selectedIndex < 0) {
+                return;
+            }
+
+            const selectedCard = getCards()[selectedIndex];
+            if (!(selectedCard instanceof HTMLElement)) {
+                return;
+            }
+
+            const containerTop = useElementScrollContainer
+                ? scrollContainer.getBoundingClientRect().top
+                : 0;
+            const scrollMarginTop = Number.parseFloat(
+                window.getComputedStyle(selectedCard).scrollMarginTop,
+            ) || 0;
+            const targetTop = containerTop + scrollMarginTop;
+            const delta = selectedCard.getBoundingClientRect().top - targetTop;
+
+            // Images loading above the selected card push it down; re-pin when
+            // it drifts more than a couple of pixels from scrollIntoView(start).
+            if (Math.abs(delta) > 2) {
+                scrollSelectedCardToTop(selectedCard);
+            }
+        });
+    }
+
+    /**
+     * Stop pinning the selected card after intentional user scrolling.
+     */
+    function clearSelectedCardTopPinFromUserScroll() {
+        if (performance.now() < suppressScrollUnpinUntilMs) {
+            return;
+        }
+
+        pinSelectedCardToTop = false;
     }
 
     /**
@@ -1630,8 +1731,6 @@
             mediaImage.loading = "lazy";
             mediaImage.decoding = "async";
             mediaImage.referrerPolicy = "no-referrer";
-            mediaImage.addEventListener("load", schedulePagePrefetchCheck, { once: true });
-            mediaImage.addEventListener("error", schedulePagePrefetchCheck, { once: true });
             media.appendChild(mediaImage);
 
             card.appendChild(media);
@@ -3071,6 +3170,7 @@
 
             void markCardOpened(cardForExpansion);
             schedulePagePrefetchCheck();
+            scheduleSelectedCardTopPin();
             return;
         }
 
@@ -3136,10 +3236,39 @@
 
     if (useElementScrollContainer) {
         scrollContainer.addEventListener("scroll", schedulePagePrefetchCheck, { passive: true });
+        scrollContainer.addEventListener("scroll", clearSelectedCardTopPinFromUserScroll, { passive: true });
     }
     window.addEventListener("scroll", schedulePagePrefetchCheck, { passive: true });
+    window.addEventListener("scroll", clearSelectedCardTopPinFromUserScroll, { passive: true });
     window.addEventListener("resize", schedulePagePrefetchCheck, { passive: true });
+    window.addEventListener("resize", scheduleSelectedCardTopPin, { passive: true });
     window.addEventListener("orientationchange", schedulePagePrefetchCheck, { passive: true });
+
+    // Image loads (media + in-summary) expand cards without reserved height and
+    // can push the j/k-selected article off the top of the viewport.
+    articleList.addEventListener("load", event => {
+        if (!(event.target instanceof HTMLImageElement)) {
+            return;
+        }
+
+        schedulePagePrefetchCheck();
+        scheduleSelectedCardTopPin();
+    }, true);
+    articleList.addEventListener("error", event => {
+        if (!(event.target instanceof HTMLImageElement)) {
+            return;
+        }
+
+        schedulePagePrefetchCheck();
+        scheduleSelectedCardTopPin();
+    }, true);
+
+    if (typeof ResizeObserver === "function") {
+        const articleListResizeObserver = new ResizeObserver(() => {
+            scheduleSelectedCardTopPin();
+        });
+        articleListResizeObserver.observe(articleList);
+    }
 
     if (isTouchOnlyDevice) {
         window.addEventListener("touchmove", schedulePagePrefetchCheck, { passive: true });
