@@ -75,6 +75,7 @@
             {% set current_path = request.url.path %}
             {% set current_section = current_path.split('/')[1] if current_path != '/' else '' %}
             {% set is_user_management_page = current_path.startswith('/account/users') %}
+            {% set is_system_notifications_page = current_path.startswith('/account/notifications') %}
             {% set is_logout_page = current_path.startswith('/account/logout') %}
             <a class="sub-level-nav{% if current_path == '/' %} is-current{% endif %}" href="/"{% if current_path == '/' %} aria-current="page"{% endif %}>Home</a>
             <a class="sub-level-nav{% if current_section == 'webapps' %} is-current{% endif %}" href="/webapps/"{% if current_section == 'webapps' %} aria-current="page"{% endif %}>Webapps</a>
@@ -90,6 +91,7 @@
             {% if request.state.user.can_use_tools %}
             <a class="sub-level-nav{% if current_section == 'media' %} is-current{% endif %}" href="/media/"{% if current_section == 'media' %} aria-current="page"{% endif %}>Media</a>
             <a class="sub-level-nav{% if is_user_management_page %} is-current{% endif %}" href="/account/users/"{% if is_user_management_page %} aria-current="page"{% endif %}>Users</a>
+            <a class="sub-level-nav{% if is_system_notifications_page %} is-current{% endif %}" href="/account/notifications/"{% if is_system_notifications_page %} aria-current="page"{% endif %}>Notifications</a>
             {% endif %}
             <a class="sub-level-nav{% if is_logout_page %} is-current{% endif %}" href="/account/logout/"{% if is_logout_page %} aria-current="page"{% endif %}>Logout</a>
             {% else %}

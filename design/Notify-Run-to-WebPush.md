@@ -1,6 +1,6 @@
 # Design: Replace notify-run with First-Party Web Push
 
-Status: Proposed  
+Status: Implemented  
 Date: 2026-08-08  
 Scope: Remove the `notify-run` dependency from dyn DNS alerts; reuse the existing `pywebpush` + VAPID stack with a tools-only subscription page
 
@@ -219,7 +219,7 @@ Shared types: either duplicate the small `PushSubscription` Pydantic models in b
 Copy Media:
 
 ```python
-# website/account/system_notifications_access.py (name flexible)
+# website/utils/system_notifications_access.py (name flexible)
 
 def request_can_manage_system_notifications(request: Request) -> bool:
     user = getattr(request.state, "user", None)
@@ -271,9 +271,9 @@ There is no automatic migration of notify.run subscribers: Web Push endpoints ar
 
 | Area | Likely paths |
 | ---- | ------------ |
-| Access | `website/account/system_notifications_access.py` |
-| Router | `website/account/router.py` (or `website/account/notifications_router.py` included from account) |
-| Models / DB | `website/account/system_push_db.py` + Pydantic models |
+| Access | `website/utils/system_notifications_access.py` |
+| Router | `website/account/notifications_router.py` (included from account router) |
+| Models / DB | `website/account/system_push_models.py`, `website/account/system_push_db.py` |
 | Template / JS | `website/templates/account/notifications.html`, `website/static/js/account/notifications.js` |
 | Nav | `website/templates/base.html` (`can_use_tools` block) |
 | Backend send | `backend/src/system_push/…`, wire collection in backend package init |

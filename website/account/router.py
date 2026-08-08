@@ -54,12 +54,14 @@ from .next_path import (
 )
 from ..utils.user_management_access import require_user_management_access
 from ..utils.cookie_policy import cookie_domain_for_request
+from .notifications_router import notifications_router
 
 # Set the Jinja template location
 TEMPLATES = Jinja2Templates("/app/templates")
 
 # Create an account router
 account_router = APIRouter(prefix="/account")
+account_router.include_router(notifications_router)
 logger = logging.getLogger(__name__)
 
 OVERSEERR_WHATSAPP_URL = os.getenv("OVERSEERR_WHATSAPP_URL", "").strip()

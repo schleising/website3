@@ -1,0 +1,94 @@
+.system-notifications-page {
+    width: min(100%, 42rem);
+    margin: 0 auto;
+    display: grid;
+    gap: 1rem;
+}
+
+.system-notifications-hero,
+.system-notifications-panel {
+    padding: clamp(1.2rem, 2vw, 1.6rem);
+}
+
+.system-notifications-eyebrow {
+    margin: 0 0 0.4rem;
+    font-size: 0.78rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #5b6f86;
+}
+
+.system-notifications-title {
+    margin: 0 0 0.55rem;
+    font-size: clamp(1.55rem, 2.4vw, 1.9rem);
+    line-height: 1.15;
+    color: #1c314f;
+}
+
+.system-notifications-intro,
+.system-notifications-section-copy,
+.system-notifications-status {
+    margin: 0;
+    color: #3d5168;
+    line-height: 1.45;
+}
+
+.system-notifications-section-title {
+    margin: 0 0 0.35rem;
+    font-size: 1.15rem;
+    color: #1c314f;
+}
+
+.system-notifications-section-copy {
+    margin-bottom: 1rem;
+}
+
+.system-notifications-topic-list {
+    list-style: none;
+    margin: 0 0 1.2rem;
+    padding: 0;
+    display: grid;
+    gap: 0.75rem;
+}
+
+.system-notifications-topic-label {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 0.75rem;
+    align-items: start;
+    cursor: pointer;
+}
+
+.system-notifications-topic-checkbox {
+    margin-top: 0.2rem;
+}
+
+.system-notifications-topic-copy {
+    display: grid;
+    gap: 0.2rem;
+}
+
+.system-notifications-topic-copy strong {
+    color: #1c314f;
+}
+
+.system-notifications-topic-copy span {
+    color: #3d5168;
+    font-size: 0.95rem;
+    line-height: 1.4;
+}
+
+.system-notifications-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-bottom: 0.85rem;
+}
+
+.system-notifications-status.is-error {
+    color: #8a2f2f;
+}
+
+.system-notifications-status.is-success {
+    color: #1f5c3a;
+}

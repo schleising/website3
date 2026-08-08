@@ -14,3 +14,6 @@ webauthn_challenge_collection = mongodb.get_collection('webauthn_challenges')
 
 # Store short-lived one-time email link tokens for signup and recovery.
 email_link_token_collection = mongodb.get_collection('email_link_tokens')
+
+# System (tools-only) Web Push subscriptions for dyn DNS and similar alerts.
+system_push_subscriptions = mongodb.get_collection('system_push_subscriptions')

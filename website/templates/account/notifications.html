@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+
+{% block title %}<title>System Notifications</title>{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="/css/account/notifications.css?v1.0.0">
+{% endblock %}
+
+{% block scripts %}
+<script defer src="/js/account/notifications.js?v1.0.0"></script>
+{% endblock %}
+
+{% set render_right_sidebar = false %}
+
+{% block header %}
+<h3 class="header-text no-margin">System Notifications</h3>
+{% endblock %}
+
+{% block content %}
+<section
+  class="system-notifications-page"
+  aria-label="System notification subscriptions"
+  data-csrf-token="{{ request.state.csrf_token|default('') }}"
+>
+  <article class="site-card system-notifications-hero">
+    <p class="system-notifications-eyebrow">Administrative Tools</p>
+    <h1 class="system-notifications-title">System push notifications</h1>
+    <p class="system-notifications-intro">
+      Subscribe this browser to operational alerts such as dyn DNS IP changes.
+      Notifications use the same Web Push channel as the rest of the site.
+    </p>
+  </article>
+
+  <article class="site-card system-notifications-panel">
+    <h2 class="system-notifications-section-title">Topics</h2>
+    <p class="system-notifications-section-copy">
+      Choose which alerts this device should receive.
+    </p>
+
+    <ul class="system-notifications-topic-list" id="system-notification-topics">
+      {% for topic in topics %}
+      <li class="system-notifications-topic">
+        <label class="system-notifications-topic-label" for="topic-{{ topic.id }}">
+          <input
+            class="system-notifications-topic-checkbox"
+            type="checkbox"
+            id="topic-{{ topic.id }}"
+            name="topics"
+            value="{{ topic.id }}"
+            checked
+          >
+          <span class="system-notifications-topic-copy">
+            <strong>{{ topic.label }}</strong>
+            <span>{{ topic.description }}</span>
+          </span>
+        </label>
+      </li>
+      {% endfor %}
+    </ul>
+
+    <div class="system-notifications-actions">
+      <button
+        type="button"
+        class="btn btn-primary"
+        id="system-notifications-save"
+        disabled
+      >
+        Enable notifications
+      </button>
+      <button
+        type="button"
+        class="btn btn-outline-secondary"
+        id="system-notifications-disable"
+        hidden
+        disabled
+      >
+        Disable
+      </button>
+    </div>
+
+    <p
+      class="system-notifications-status"
+      id="system-notifications-status"
+      role="status"
+      aria-live="polite"
+    ></p>
+  </article>
+</section>
+{% endblock %}
