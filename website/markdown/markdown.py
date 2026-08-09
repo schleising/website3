@@ -10,6 +10,7 @@ from fastapi.encoders import jsonable_encoder
 
 from ..account.user_model import User
 from ..utils.html_sanitizer import sanitize_html
+from ..utils.mermaid import MermaidExtension
 
 from .models import (
     MarkdownDataMessage,
@@ -33,7 +34,7 @@ async def convert_to_markdown(
         extensions=[
             "markdown.extensions.admonition",
             "pymdownx.extra",
-            "md_mermaid",
+            MermaidExtension(),
         ],
     )
     converted_text = sanitize_html(converted_text)

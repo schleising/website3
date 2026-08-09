@@ -1,8 +1,14 @@
 from __future__ import annotations
 
 import unittest
+from unittest.mock import patch
 
-from website.utils.mermaid import disable_mermaid_autorun_markup
+from markdown import markdown
+
+from website.utils.mermaid import (
+    MermaidExtension,
+    disable_mermaid_autorun_markup,
+)
 from website.utils.markdown_preview import build_markdown_preview, extract_first_mermaid_preview
 
 
@@ -64,6 +70,44 @@ graph TD
         result = disable_mermaid_autorun_markup(html)
 
         self.assertEqual(result, '<div class="mermaid-source" id="abc">graph TD\nA --&gt; B</div>')
+
+    def test_mermaid_extension_converts_fence_to_div(self) -> None:
+        with patch(
+            "website.utils.mermaid._unique_mermaid_id",
+            return_value="mermaidTestId000",
+        ):
+            html = markdown(
+                """# Title
+
+```mermaid
+graph TD
+    A --> B
+```
+""",
+                extensions=[MermaidExtension()],
+            )
+
+        self.assertIn('<div class="mermaid" id="mermaidTestId000">', html)
+        self.assertIn("graph TD", html)
+        self.assertIn("A --> B", html)
+        self.assertNotIn("```mermaid", html)
+
+    def test_mermaid_extension_supports_tilde_fences(self) -> None:
+        with patch(
+            "website.utils.mermaid._unique_mermaid_id",
+            return_value="mermaidTildeId000",
+        ):
+            html = markdown(
+                """~~~mermaid
+sequenceDiagram
+    Alice->>Bob: Hello
+~~~
+""",
+                extensions=[MermaidExtension()],
+            )
+
+        self.assertIn('<div class="mermaid" id="mermaidTildeId000">', html)
+        self.assertIn("Alice->>Bob: Hello", html)
 
 
 if __name__ == "__main__":
