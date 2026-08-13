@@ -14,6 +14,8 @@
     const savedChart = document.getElementById("feeds-stats-saved-chart");
     const categoryBars = document.getElementById("feeds-stats-category-bars");
     const feedBars = document.getElementById("feeds-stats-feed-bars");
+    const feedOpenedBars = document.getElementById("feeds-stats-feed-opened-bars");
+    const feedSavedBars = document.getElementById("feeds-stats-feed-saved-bars");
     const categoryTable = document.getElementById("feeds-stats-category-table");
     const feedTable = document.getElementById("feeds-stats-feed-table");
     const categoryTableBody = document.querySelector("#feeds-stats-category-table tbody");
@@ -159,6 +161,23 @@
                 return comparison * directionMultiplier;
             }
 
+            // Stable ties: name, then scope_id — never depend on input order.
+            const nameComparison = compareSortableValues(
+                leftEntry.row?.name,
+                rightEntry.row?.name
+            );
+            if (nameComparison !== 0) {
+                return nameComparison;
+            }
+
+            const idComparison = compareSortableValues(
+                leftEntry.row?.scope_id,
+                rightEntry.row?.scope_id
+            );
+            if (idComparison !== 0) {
+                return idComparison;
+            }
+
             return leftEntry.index - rightEntry.index;
         });
 
@@ -280,8 +299,34 @@
                 return Math.max(0, Number(pointData.saved_count || 0));
             },
         });
+        const feedRowsUnsorted = Array.isArray(safePayload.per_feed) ? safePayload.per_feed : [];
         renderBarList(categoryBars, perCategory, "articles_recent");
-        renderBarList(feedBars, perFeed, "articles_recent");
+        renderBarList(
+            feedBars,
+            getSortedRows(feedRowsUnsorted, {
+                key: "articles_recent",
+                direction: "descending",
+            }),
+            "articles_recent",
+        );
+        renderBarList(
+            feedOpenedBars,
+            getSortedRows(feedRowsUnsorted, {
+                key: "opened_total",
+                direction: "descending",
+            }),
+            "opened_total",
+            { fillClassName: "is-opened", emptyLabel: "opened" },
+        );
+        renderBarList(
+            feedSavedBars,
+            getSortedRows(feedRowsUnsorted, {
+                key: "saved_total",
+                direction: "descending",
+            }),
+            "saved_total",
+            { fillClassName: "is-saved", emptyLabel: "saved" },
+        );
         renderTableRows(categoryTableBody, perCategory, false);
         renderTableRows(feedTableBody, perFeed, true);
         updateTableSortIndicators(categoryTable, tableSortState.category);
@@ -673,15 +718,26 @@
         container.appendChild(body);
     }
 
-    function renderBarList(container, rows, metricKey) {
+    function renderBarList(container, rows, metricKey, options = {}) {
         if (!(container instanceof HTMLElement)) {
             return;
         }
 
+        const fillClassName = String(options.fillClassName || "").trim();
+        const emptyLabel = String(options.emptyLabel || "activity").trim() || "activity";
         const visibleRows = rows.filter(row => Number(row?.[metricKey] || 0) > 0);
         const maxMetric = Math.max(1, ...visibleRows.map(row => Number(row[metricKey] || 0)));
 
         container.innerHTML = "";
+
+        if (visibleRows.length === 0) {
+            const empty = document.createElement("p");
+            empty.className = "feeds-stats-chart-empty";
+            empty.textContent = `No ${emptyLabel} activity.`;
+            container.appendChild(empty);
+            return;
+        }
+
         visibleRows.forEach(row => {
             const item = document.createElement("div");
             item.className = "feeds-stats-bar-item";
@@ -694,7 +750,9 @@
             barWrap.className = "feeds-stats-bar-wrap";
 
             const bar = document.createElement("div");
-            bar.className = "feeds-stats-bar-fill";
+            bar.className = fillClassName === ""
+                ? "feeds-stats-bar-fill"
+                : `feeds-stats-bar-fill ${fillClassName}`;
             bar.style.width = `${Math.max(4, Math.round((Number(row[metricKey] || 0) / maxMetric) * 100))}%`;
 
             const value = document.createElement("span");
