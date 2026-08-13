@@ -149,8 +149,8 @@ FOOTBALL_HISTORY_API_KEY_PATHS = (
 )
 
 SEASON_MONTH_ORDER = [8, 9, 10, 11, 12, 1, 2, 3, 4, 5]
-LIVE_DAYS_BEFORE_TODAY = 7
-LIVE_DAYS_AFTER_TODAY = 6
+LIVE_DAYS_BEFORE_TODAY = 10
+LIVE_DAYS_AFTER_TODAY = 10
 LONDON_TZ = ZoneInfo("Europe/London")
 _football_history_api_key_cache: str | None = None
 
