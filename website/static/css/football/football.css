@@ -768,11 +768,11 @@ h3.header-text.football-header-text--season {
 }
 
 .score-widget > .date-and-time + .team {
-    margin-top: 0.35rem;
+    margin-top: 0.175rem;
 }
 
 .score-widget > .team + .team {
-    margin-top: 0.4rem;
+    margin-top: 0.2rem;
 }
 
 .date-and-time {
