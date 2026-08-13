@@ -14,7 +14,6 @@ document.addEventListener('readystatechange', event => {
         syncSidebarWidths();
         setupHistoryModeNavigation();
         setupSidebarHoverStateReset();
-        setupFeedsAllBackNavigationBoundary();
     }
 });
 
@@ -91,54 +90,6 @@ function getFeedsPageContext(urlValue) {
     }
 
     return null;
-}
-
-function setupFeedsAllBackNavigationBoundary() {
-    const allFeedsBoundaryStateKey = "__feedsAllBoundary";
-
-    const currentContext = getFeedsPageContext(window.location.href);
-    if (!currentContext || currentContext.pageType !== "reader" || currentContext.category !== "all") {
-        return;
-    }
-
-    const currentState = window.history.state;
-    const hasBoundaryState = Boolean(
-        currentState
-        && typeof currentState === "object"
-        && currentState[allFeedsBoundaryStateKey] === true
-    );
-
-    if (!hasBoundaryState) {
-        const boundaryState = currentState && typeof currentState === "object"
-            ? { ...currentState }
-            : {};
-        boundaryState[allFeedsBoundaryStateKey] = true;
-        window.history.pushState(boundaryState, "", window.location.href);
-    }
-
-    window.addEventListener("popstate", function(event) {
-        const popContext = getFeedsPageContext(window.location.href);
-        if (!popContext || popContext.pageType !== "reader" || popContext.category !== "all") {
-            return;
-        }
-
-        const popState = event.state;
-        const popHasBoundaryState = Boolean(
-            popState
-            && typeof popState === "object"
-            && popState[allFeedsBoundaryStateKey] === true
-        );
-
-        if (popHasBoundaryState) {
-            return;
-        }
-
-        const boundaryState = popState && typeof popState === "object"
-            ? { ...popState }
-            : {};
-        boundaryState[allFeedsBoundaryStateKey] = true;
-        window.history.pushState(boundaryState, "", window.location.href);
-    });
 }
 
 function setupSidebarHoverStateReset() {
