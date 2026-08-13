@@ -18,19 +18,20 @@ WC_LIVE_EDITION: str | None = None  # None = museum mode (no live tournament)
 WC_DEFAULT_EDITION = "2026"
 WC_CURRENT_EDITION = WC_DEFAULT_EDITION  # default browse edition (latest completed)
 WC_FORMAT_EDITION_2026 = "2026"
+_WC_DATA_DIR = Path(__file__).resolve().parent / "data"
 WC_TV_FILES: dict[str, Path] = {
-    "GROUP_STAGE": Path(__file__).resolve().parent / "wc_group_tv.csv",
-    "LAST_32": Path(__file__).resolve().parent / "wc_last_32_knockout_tv.csv",
-    "LAST_16": Path(__file__).resolve().parent / "wc_last_16_knockout_tv.csv",
-    "QUARTER_FINALS": Path(__file__).resolve().parent / "wc_qf_knockout_tv.csv",
-    "SEMI_FINALS": Path(__file__).resolve().parent / "wc_sf_knockout_tv.csv",
-    "THIRD_PLACE": Path(__file__).resolve().parent / "wc_third_place_knockout_tv.csv",
-    "FINAL": Path(__file__).resolve().parent / "wc_final_knockout_tv.csv",
+    "GROUP_STAGE": _WC_DATA_DIR / "wc_group_tv.csv",
+    "LAST_32": _WC_DATA_DIR / "wc_last_32_knockout_tv.csv",
+    "LAST_16": _WC_DATA_DIR / "wc_last_16_knockout_tv.csv",
+    "QUARTER_FINALS": _WC_DATA_DIR / "wc_qf_knockout_tv.csv",
+    "SEMI_FINALS": _WC_DATA_DIR / "wc_sf_knockout_tv.csv",
+    "THIRD_PLACE": _WC_DATA_DIR / "wc_third_place_knockout_tv.csv",
+    "FINAL": _WC_DATA_DIR / "wc_final_knockout_tv.csv",
 }
 WC_KNOCKOUT_TV_FILES = WC_TV_FILES
 WC_KNOCKOUT_TV_PATHS = tuple(WC_TV_FILES.values())
 WC_KNOCKOUT_TV_TIMEZONE = ZoneInfo("Europe/London")
-WC_2026_STADIUMS_PATH = Path(__file__).resolve().parent / "wc_2026_stadiums.csv"
+WC_2026_STADIUMS_PATH = _WC_DATA_DIR / "wc_2026_stadiums.csv"
 # Westernmost host timezone — match day rolls at Pacific midnight so late West Coast
 # kickoffs stay on the same tournament day as Mexico City / Eastern venues.
 WC_TOURNAMENT_TZ = ZoneInfo("America/Los_Angeles")
@@ -79,7 +80,7 @@ WC_CREST_UNKNOWN_URL = "/images/football/crests/unknown_team.svg"
 WC_CREST_STATIC_DIR = (
     Path(__file__).resolve().parents[1] / "static" / "images" / "football" / "crests" / "wc"
 )
-WC_FLAG_CACHE_VERSION_PATH = Path(__file__).with_name("wc_flag_cache_version.json")
+WC_FLAG_CACHE_VERSION_PATH = _WC_DATA_DIR / "wc_flag_cache_version.json"
 WC_GROUP_STAGE = "GROUP_STAGE"
 WC_GROUP_PLAYOFF = "GROUP_PLAYOFF"
 WC_GROUP_ORDER = tuple(chr(code) for code in range(ord("a"), ord("l") + 1))
@@ -412,7 +413,7 @@ def edition_summary_rules_sections(edition: str) -> list[dict[str, str | list[st
     return sections
 
 
-WC_EDITION_SUMMARIES_PATH = Path(__file__).with_name("wc_edition_summaries.json")
+WC_EDITION_SUMMARIES_PATH = _WC_DATA_DIR / "wc_edition_summaries.json"
 
 
 @lru_cache(maxsize=1)

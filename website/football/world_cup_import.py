@@ -50,7 +50,7 @@ WC_COMPETITION = Competition(
     type="CUP",
     emblem="",
 )
-_TEAM_REGISTRY_PATH = Path(__file__).with_name("wc_team_registry.json")
+_TEAM_REGISTRY_PATH = Path(__file__).resolve().parent / "data" / "wc_team_registry.json"
 _MATCHDAY_RE = re.compile(r"^Matchday\s+(\d+)$", re.IGNORECASE)
 _GROUP_PLAYOFF_RE = re.compile(r"^Group\s+\d+\s+Play-off$", re.IGNORECASE)
 _ROUND_ALIASES: dict[str, str] = {

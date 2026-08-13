@@ -18,9 +18,9 @@ class TeamRegistryEntry(TypedDict):
     short_name: str
 
 ROOT = Path(__file__).resolve().parents[1]
-TEAM_REGISTRY_PATH = ROOT / "website" / "football" / "wc_team_registry.json"
-FLAG_REGISTRY_PATH = ROOT / "website" / "football" / "wc_flag_registry.json"
-FLAG_CACHE_VERSION_PATH = ROOT / "website" / "football" / "wc_flag_cache_version.json"
+TEAM_REGISTRY_PATH = ROOT / "website" / "football" / "data" / "wc_team_registry.json"
+FLAG_REGISTRY_PATH = ROOT / "website" / "football" / "data" / "wc_flag_registry.json"
+FLAG_CACHE_VERSION_PATH = ROOT / "website" / "football" / "data" / "wc_flag_cache_version.json"
 CREST_DIR = ROOT / "website" / "static" / "images" / "football" / "crests" / "wc"
 DEFAULT_HOST = "macmini2"
 DEFAULT_DB = "wc_database"

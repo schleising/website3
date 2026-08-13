@@ -14,9 +14,9 @@ from urllib.parse import quote
 from urllib.request import Request, urlopen
 
 ROOT = Path(__file__).resolve().parents[1]
-FLAG_REGISTRY_PATH = ROOT / "website" / "football" / "wc_flag_registry.json"
-TEAM_REGISTRY_PATH = ROOT / "website" / "football" / "wc_team_registry.json"
-FLAG_CACHE_VERSION_PATH = ROOT / "website" / "football" / "wc_flag_cache_version.json"
+FLAG_REGISTRY_PATH = ROOT / "website" / "football" / "data" / "wc_flag_registry.json"
+TEAM_REGISTRY_PATH = ROOT / "website" / "football" / "data" / "wc_team_registry.json"
+FLAG_CACHE_VERSION_PATH = ROOT / "website" / "football" / "data" / "wc_flag_cache_version.json"
 CREST_DIR = ROOT / "website" / "static" / "images" / "football" / "crests" / "wc"
 COMMONS_FILE_PATH = "https://commons.wikimedia.org/wiki/Special:FilePath/{filename}"
 USER_AGENT = "website3-wc-flag-fetch/1.0 (personal football stats site)"
