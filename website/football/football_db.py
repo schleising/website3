@@ -554,6 +554,14 @@ async def get_table_db() -> list[LiveTableItem]:
 async def get_table_db_for_season(season_key: str | None = None) -> list[LiveTableItem]:
     table_list: list[LiveTableItem] = []
 
+    available_season_keys = await get_available_season_keys()
+    current_season_key = infer_current_season_key(available_season_keys)
+
+    # Current season pages use live_pl_table so SSR matches the WebSocket
+    # overlay (alphabetical at 0 games; live re-rank once matches start).
+    if season_key is None or season_key == current_season_key:
+        return await get_table_db()
+
     table_collection = _get_table_collection_for_season(season_key)
 
     if table_collection is not None:
@@ -563,28 +571,8 @@ async def get_table_db_for_season(season_key: str | None = None) -> list[LiveTab
             LiveTableItem.model_validate(table_item) async for table_item in table_cursor
         ]
 
-    # Fallback to live table only for current season if seasonal table is empty.
-    if len(table_list) == 0 and pl_table is not None and season_key is not None:
-        available_season_keys = await get_available_season_keys()
-        current_season_key = infer_current_season_key(available_season_keys)
-
-        if season_key == current_season_key:
-            table_cursor = pl_table.find({}).sort("position", ASCENDING)
-
-            table_list = [
-                LiveTableItem.model_validate(table_item) async for table_item in table_cursor
-            ]
-
     _normalise_table_form_items(table_list)
-
-    available_season_keys = await get_available_season_keys()
-    current_season_key = infer_current_season_key(available_season_keys)
-    should_apply_outcome_labels = season_key is None or season_key == current_season_key
-
-    if should_apply_outcome_labels:
-        _apply_position_outcome_labels(table_list)
-    else:
-        _clear_position_outcome_labels(table_list)
+    _clear_position_outcome_labels(table_list)
 
     return table_list
 
