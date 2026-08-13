@@ -10,6 +10,8 @@
     const windowDaysNode = document.getElementById("feeds-stats-window-days");
     const kpiContainer = document.getElementById("feeds-stats-kpis");
     const overallChart = document.getElementById("feeds-stats-overall-chart");
+    const openedChart = document.getElementById("feeds-stats-opened-chart");
+    const savedChart = document.getElementById("feeds-stats-saved-chart");
     const categoryBars = document.getElementById("feeds-stats-category-bars");
     const feedBars = document.getElementById("feeds-stats-feed-bars");
     const categoryTable = document.getElementById("feeds-stats-category-table");
@@ -262,6 +264,22 @@
 
         renderKpis(overall);
         renderOverallChart(daily);
+        renderDailyMetricChart(openedChart, daily, {
+            key: "opened",
+            label: "Opened",
+            className: "is-opened",
+            getValue(pointData) {
+                return Math.max(0, Number(pointData.opened_count || 0));
+            },
+        });
+        renderDailyMetricChart(savedChart, daily, {
+            key: "saved",
+            label: "Saved",
+            className: "is-saved",
+            getValue(pointData) {
+                return Math.max(0, Number(pointData.saved_count || 0));
+            },
+        });
         renderBarList(categoryBars, perCategory, "articles_recent");
         renderBarList(feedBars, perFeed, "articles_recent");
         renderTableRows(categoryTableBody, perCategory, false);
@@ -322,24 +340,8 @@
                     return Math.max(0, Number(pointData.published_count || 0));
                 },
             },
-            {
-                key: "opened",
-                label: "Opened",
-                className: "is-opened",
-                getValue(pointData) {
-                    return Math.max(0, Number(pointData.opened_count || 0));
-                },
-            },
-            {
-                key: "saved",
-                label: "Saved",
-                className: "is-saved",
-                getValue(pointData) {
-                    return Math.max(0, Number(pointData.saved_count || 0));
-                },
-            },
         ];
-        const stackOrder = ["published", "opened", "saved"];
+        const stackOrder = ["published"];
         const activeSeriesKeys = new Set(seriesDefs.map(def => def.key));
         const legend = document.createElement("div");
         legend.className = "feeds-stats-overall-legend";
@@ -397,8 +399,6 @@
             dayGroup.title = [
                 pointData.day,
                 `Published: ${formatNumber(pointData.published_count)}`,
-                `Opened: ${formatNumber(pointData.opened_count)}`,
-                `Saved: ${formatNumber(pointData.saved_count)}`,
             ].join("\n");
 
             const dayBars = document.createElement("div");
@@ -550,6 +550,127 @@
         });
 
         updateOverallChartVisibility();
+    }
+
+    /**
+     * Render a single-series daily bar chart (Opened or Saved).
+     *
+     * @param {HTMLElement | null} container
+     * @param {Array<Record<string, any>>} dailyPoints
+     * @param {{
+     *   key: string,
+     *   label: string,
+     *   className: string,
+     *   getValue: (pointData: Record<string, any>) => number,
+     * }} seriesDef
+     */
+    function renderDailyMetricChart(container, dailyPoints, seriesDef) {
+        if (!(container instanceof HTMLElement)) {
+            return;
+        }
+
+        container.innerHTML = "";
+
+        if (!Array.isArray(dailyPoints) || dailyPoints.length === 0) {
+            const empty = document.createElement("p");
+            empty.className = "feeds-stats-chart-empty";
+            empty.textContent = `No ${seriesDef.label.toLowerCase()} activity in this window.`;
+            container.appendChild(empty);
+            return;
+        }
+
+        const maxValue = Math.max(
+            1,
+            ...dailyPoints.map(pointData => seriesDef.getValue(pointData)),
+        );
+        const scale = buildNiceAxisScale(maxValue);
+
+        const body = document.createElement("div");
+        body.className = "feeds-stats-overall-body";
+
+        const yAxis = document.createElement("div");
+        yAxis.className = "feeds-stats-overall-y-axis";
+
+        const stage = document.createElement("div");
+        stage.className = "feeds-stats-overall-stage";
+
+        const gridArea = document.createElement("div");
+        gridArea.className = "feeds-stats-overall-grid-area";
+
+        const gridLines = document.createElement("div");
+        gridLines.className = "feeds-stats-overall-gridlines";
+
+        const plot = document.createElement("div");
+        plot.className = "feeds-stats-overall-plot";
+
+        const xAxis = document.createElement("div");
+        xAxis.className = "feeds-stats-overall-x-axis";
+
+        scale.tickValues.forEach((value, index) => {
+            const tick = document.createElement("div");
+            tick.className = "feeds-stats-overall-y-tick";
+            tick.textContent = formatNumber(value);
+            yAxis.appendChild(tick);
+
+            const line = document.createElement("div");
+            line.className = "feeds-stats-overall-gridline";
+            if (index === scale.tickValues.length - 1 || value === 0) {
+                line.classList.add("is-baseline");
+            }
+            gridLines.appendChild(line);
+        });
+
+        dailyPoints.forEach((pointData, index) => {
+            const value = seriesDef.getValue(pointData);
+            const dayGroup = document.createElement("div");
+            dayGroup.className = "feeds-stats-overall-day";
+            dayGroup.title = [
+                pointData.day,
+                `${seriesDef.label}: ${formatNumber(value)}`,
+            ].join("\n");
+
+            const dayBars = document.createElement("div");
+            dayBars.className = "feeds-stats-overall-day-bars";
+
+            const barWrap = document.createElement("span");
+            barWrap.className = "feeds-stats-series-bar-wrap";
+
+            const bar = document.createElement("span");
+            bar.className = `feeds-stats-series-bar ${seriesDef.className}`;
+            if (value <= 0) {
+                bar.classList.add("is-hidden");
+                bar.style.height = "0%";
+                bar.style.opacity = "0";
+            } else {
+                bar.style.height = `${((value / scale.axisMax) * 100).toFixed(3)}%`;
+                bar.style.opacity = "0.92";
+            }
+            barWrap.appendChild(bar);
+            dayBars.appendChild(barWrap);
+            dayGroup.appendChild(dayBars);
+            plot.appendChild(dayGroup);
+
+            const xTick = document.createElement("div");
+            xTick.className = "feeds-stats-overall-x-tick";
+            if (index === 0) {
+                xTick.classList.add("is-first");
+            }
+            if (index === dailyPoints.length - 1) {
+                xTick.classList.add("is-last");
+            }
+            xTick.textContent = shouldShowXAxisLabel(index, dailyPoints.length)
+                ? formatShortDay(pointData.day)
+                : "";
+            xAxis.appendChild(xTick);
+        });
+
+        gridArea.appendChild(gridLines);
+        gridArea.appendChild(plot);
+        stage.appendChild(gridArea);
+        stage.appendChild(xAxis);
+        body.appendChild(yAxis);
+        body.appendChild(stage);
+        container.appendChild(body);
     }
 
     function renderBarList(container, rows, metricKey) {

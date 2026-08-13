@@ -1969,6 +1969,30 @@ html.suppress-sidebar-hover .right-sidebar .feed-sidebar-feed-link:hover:not(.is
     gap: 0.7rem;
 }
 
+.feeds-stats-chart-block {
+    display: grid;
+    gap: 0.55rem;
+    margin-top: 0.85rem;
+}
+
+.feeds-stats-chart-block:first-of-type {
+    margin-top: 0.35rem;
+}
+
+.feeds-stats-chart-title {
+    margin: 0;
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: var(--brand-strong);
+}
+
+.feeds-stats-chart-empty {
+    margin: 0;
+    padding: 0.85rem 0.2rem;
+    color: var(--text-soft);
+    font-size: 0.9rem;
+}
+
 .feeds-stats-overall-legend {
     display: flex;
     flex-wrap: wrap;
