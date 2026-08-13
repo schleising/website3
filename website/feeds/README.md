@@ -389,10 +389,11 @@ sequenceDiagram
 
 #### 4.3 Retention Guard Rules
 
-1. Soft-delete threshold remains 7 days for aging articles.
+1. Soft-delete threshold remains 7 days for aging articles (hides them from the reader UI).
 2. Hard-delete threshold remains 30 days only for soft-deleted articles.
 3. Hard delete is blocked if any user still has the article marked unread.
 4. Purge and read-state cleanup run in a transaction-like batch to avoid orphaned state.
+5. **Stats** (`GET /feeds/api/stats`, default 30-day window) **include soft-deleted articles** so daily/published/opened/saved charts remain accurate for the full displayed month. Hard-purged articles are excluded (gone from Mongo). Soft-delete + hard-delete retention (7 + 30 days) is long enough to cover the default 30-day stats window.
 
 #### 4.4 Test Scenario Controls
 
@@ -665,11 +666,12 @@ sequenceDiagram
 
 ### 8. Retention and Data Lifecycle
 
-1. Worker marks articles as logically deleted after 7 days (`is_deleted=true`, `deleted_at=now`).
+1. Worker marks articles as logically deleted after 7 days (`is_deleted=true`, `deleted_at=now`). Soft-deleted articles are hidden from the reader list but kept for stats.
 2. Worker evaluates hard-delete candidates with `is_deleted=true` and `deleted_at < now-30d`.
 3. Candidates are only purged when no user has an unread state for that article.
 4. User read-state records are removed only for safely purged articles.
 5. Articles that remain unread for any user are retained regardless of age.
+6. Feed stats aggregations include soft-deleted articles so the 30-day stats page does not lose history when reader soft-delete runs.
 
 ### 9. Error Handling and Resilience
 

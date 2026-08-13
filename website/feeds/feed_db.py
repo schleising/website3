@@ -4033,7 +4033,13 @@ def _build_day_keys(window_days: int, now: datetime) -> list[str]:
 
 
 async def get_feed_stats(user_id: str, window_days: int = 30) -> FeedStatsResponse:
-    """Return aggregate feed-reader stats overall, by category, and by feed."""
+    """Return aggregate feed-reader stats overall, by category, and by feed.
+
+    Soft-deleted articles are included so the default 30-day stats window stays
+    accurate after the 7-day reader soft-delete. Hard-purged rows are removed
+    from Mongo and cannot contribute; soft-deleted docs are retained for 30 days
+    after soft-delete, which covers the default stats window.
+    """
 
     if (
         user_feed_subscriptions_collection is None
@@ -4066,14 +4072,18 @@ async def get_feed_stats(user_id: str, window_days: int = 30) -> FeedStatsRespon
     }
     source_map = await load_sources_map(set(feed_ids))
 
+    # Stats must see soft-deleted articles; reader retention hides them from
+    # the main UI but they remain until hard purge.
+    subscribed_article_match: dict[str, Any] = {
+        "feed_id": {"$in": feed_ids},
+    }
+    subscribed_article_lookup_match: dict[str, Any] = {
+        "feed_id": {"$in": feed_ids},
+    }
+
     feed_article_stats: dict[ObjectId, dict[str, Any]] = {}
     article_pipeline: list[dict[str, Any]] = [
-        {
-            "$match": {
-                "feed_id": {"$in": feed_ids},
-                "is_deleted": False,
-            }
-        },
+        {"$match": subscribed_article_match},
         {
             "$project": {
                 "feed_id": 1,
@@ -4083,6 +4093,8 @@ async def get_feed_stats(user_id: str, window_days: int = 30) -> FeedStatsRespon
         {
             "$group": {
                 "_id": "$feed_id",
+                # All retained articles (including soft-deleted) so open/save
+                # rates stay coherent with windowed history.
                 "articles_total": {"$sum": 1},
                 "articles_recent": {
                     "$sum": {
@@ -4123,12 +4135,7 @@ async def get_feed_stats(user_id: str, window_days: int = 30) -> FeedStatsRespon
                 "let": {"article_id": "$article_id"},
                 "pipeline": [
                     {"$match": {"$expr": {"$eq": ["$_id", "$$article_id"]}}},
-                    {
-                        "$match": {
-                            "feed_id": {"$in": feed_ids},
-                            "is_deleted": False,
-                        }
-                    },
+                    {"$match": subscribed_article_lookup_match},
                     {
                         "$project": {
                             "feed_id": 1,
@@ -4204,12 +4211,7 @@ async def get_feed_stats(user_id: str, window_days: int = 30) -> FeedStatsRespon
     }
 
     publish_daily_pipeline: list[dict[str, Any]] = [
-        {
-            "$match": {
-                "feed_id": {"$in": feed_ids},
-                "is_deleted": False,
-            }
-        },
+        {"$match": subscribed_article_match},
         {
             "$project": {
                 "event_at": {"$ifNull": ["$published_at", "$fetched_at"]},
@@ -4258,12 +4260,7 @@ async def get_feed_stats(user_id: str, window_days: int = 30) -> FeedStatsRespon
                 "let": {"article_id": "$article_id"},
                 "pipeline": [
                     {"$match": {"$expr": {"$eq": ["$_id", "$$article_id"]}}},
-                    {
-                        "$match": {
-                            "feed_id": {"$in": feed_ids},
-                            "is_deleted": False,
-                        }
-                    },
+                    {"$match": subscribed_article_lookup_match},
                     {"$project": {"_id": 1}},
                 ],
                 "as": "article_docs",
@@ -4311,12 +4308,7 @@ async def get_feed_stats(user_id: str, window_days: int = 30) -> FeedStatsRespon
                 "let": {"article_id": "$article_id"},
                 "pipeline": [
                     {"$match": {"$expr": {"$eq": ["$_id", "$$article_id"]}}},
-                    {
-                        "$match": {
-                            "feed_id": {"$in": feed_ids},
-                            "is_deleted": False,
-                        }
-                    },
+                    {"$match": subscribed_article_lookup_match},
                     {"$project": {"_id": 1}},
                 ],
                 "as": "article_docs",
