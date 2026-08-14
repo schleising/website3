@@ -3,7 +3,7 @@
 
 Prefer the installable library for production resolve:
 
-  pip install "media-cover-art @ git+https://github.com/schleising/media-cover-art.git@v0.1.0"
+  pip install "media-cover-art @ git+https://github.com/schleising/media-cover-art.git@v0.1.4"
   python -m media_cover_art  # not available; use scripts/probe_cover_art.py from that repo
 
 This stdlib script remains for quick Arr API probing without installing the package.
