@@ -87,17 +87,35 @@ class NginxErrorHelperTests(unittest.TestCase):
         self.assertEqual(context["error_heading"], "Bad Gateway")
         self.assertEqual(context["error_title"], "Overseerr could not be reached.")
 
+    def test_rebuild_variant_names_nas_apps(self) -> None:
+        for host, name in (
+            ("sonarr.schleising.net", "Sonarr"),
+            ("radarr.schleising.net", "Radarr"),
+            ("prowlarr.schleising.net", "Prowlarr"),
+            ("plex.schleising.net", "Plex"),
+            ("transmission.schleising.net", "Transmission"),
+        ):
+            with self.subTest(host=host):
+                context = nginx_5xx_page_context(
+                    raw_status="502",
+                    raw_host=host,
+                    raw_uri="/",
+                    raw_variant="rebuild",
+                )
+                self.assertEqual(context["error_title"], f"{name} is temporarily offline.")
+                self.assertIn("NAS storage pool is rebuilt", context["error_message"])
+
     def test_generic_502_uses_fallback_title_for_unknown_service(self) -> None:
         context = nginx_5xx_page_context(
             raw_status="502",
-            raw_host="sonarr.schleising.net",
+            raw_host="portainer.schleising.net",
             raw_uri="/",
             raw_variant="",
         )
 
         self.assertEqual(context["error_heading"], "Bad Gateway")
         self.assertEqual(context["error_title"], "This application could not be reached.")
-        self.assertEqual(service_label("sonarr.schleising.net"), "This application")
+        self.assertEqual(service_label("portainer.schleising.net"), "This application")
 
     def test_www_host_does_not_set_site_origin(self) -> None:
         context = nginx_5xx_page_context(

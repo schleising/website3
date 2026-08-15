@@ -7,6 +7,11 @@ SITE_ORIGIN = "https://www.schleising.net"
 _SERVICE_NAMES: dict[str, str] = {
     "overseerr.schleising.net": "Overseerr",
     "tautulli.schleising.net": "Tautulli",
+    "sonarr.schleising.net": "Sonarr",
+    "radarr.schleising.net": "Radarr",
+    "prowlarr.schleising.net": "Prowlarr",
+    "plex.schleising.net": "Plex",
+    "transmission.schleising.net": "Transmission",
 }
 
 _GENERIC_5XX: dict[int, tuple[str, str, str]] = {
