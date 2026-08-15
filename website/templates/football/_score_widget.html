@@ -1,0 +1,70 @@
+{% macro score_widget_score(home_score, away_score, annotation=none, include_annotation=false) %}
+{% set pending = home_score is none and away_score is none %}
+<div class="score-widget__score{% if pending %} score-widget__score--pending{% endif %}">
+  <div class="score-widget__score-line">
+    <span class="home-team-score">{% if home_score is none %}-{% else %}{{ home_score }}{% endif %}</span>
+    <span class="score-widget__sep" aria-hidden="true">–</span>
+    <span class="away-team-score">{% if away_score is none %}-{% else %}{{ away_score }}{% endif %}</span>
+  </div>
+  {% if include_annotation %}
+  <span class="world-cup-score-annotation"{% if not annotation %} hidden{% endif %}>{{ annotation or '' }}</span>
+  {% endif %}
+</div>
+{% endmacro %}
+
+{% macro score_widget_team_side(side, crest, name, href) %}
+<div class="score-widget__side score-widget__side--{{ side }} team">
+  <div class="team-and-badge">
+    <img class="team-badge" src="{{ crest }}" alt="{{ name }} crest">
+    {% if href %}
+    <a class="team-name" href="{{ href }}">{{ name }}</a>
+    {% else %}
+    <span class="team-name">{{ name }}</span>
+    {% endif %}
+  </div>
+</div>
+{% endmacro %}
+
+{% macro premier_league_match_card(match, football_root, card_season_key, selected_season_key, current_season_key, live_matches=false) %}
+{% set season_key = selected_season_key|default(current_season_key)|default('') %}
+{% set home_score = none if live_matches else match.score.full_time.home %}
+{% set away_score = none if live_matches else match.score.full_time.away %}
+<div class="score-widget site-card" id="{{ match.id }}" data-match-time="{{ match.utc_date|kickoff_utc_iso }}">
+  <div class="date-and-time">
+    {% if live_matches %}
+    <time class="match-start" datetime="{{ match.utc_date|kickoff_utc_iso }}" data-kickoff-format="time"></time>
+    {% else %}
+    <time class="match-start" datetime="{{ match.utc_date|kickoff_utc_iso }}" data-kickoff-format="full"></time>
+    {% endif %}
+    <div class="match-meta-actions">
+      <a
+        class="match-h2h-pill"
+        href="{{ football_root }}head-to-head/?team_a={{ match.home_team.id }}&team_b={{ match.away_team.id }}{% if card_season_key %}&season={{ card_season_key }}{% endif %}"
+        aria-label="View {{ match.home_team.short_name }} vs {{ match.away_team.short_name }} head to head"
+      >
+        H2H
+      </a>
+      {% if live_matches %}
+      <div class="match-status"></div>
+      {% else %}
+      <div class="match-status{% if match.status == 'IN_PLAY' %} match-status--live{% endif %}">{{ match.status }}</div>
+      {% endif %}
+    </div>
+  </div>
+  <div class="score-widget__board">
+    {{ score_widget_team_side(
+      'home',
+      match.home_team.local_crest,
+      match.home_team.short_name,
+      football_root ~ 'matches/team/' ~ match.home_team.id ~ '/?season=' ~ season_key
+    ) }}
+    {{ score_widget_score(home_score, away_score) }}
+    {{ score_widget_team_side(
+      'away',
+      match.away_team.local_crest,
+      match.away_team.short_name,
+      football_root ~ 'matches/team/' ~ match.away_team.id ~ '/?season=' ~ season_key
+    ) }}
+  </div>
+</div>
+{% endmacro %}

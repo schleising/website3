@@ -328,7 +328,7 @@
 .live-match-popup {
     position: fixed;
     z-index: 22;
-    width: min(18rem, calc(100vw - 1.25rem));
+    width: min(22rem, calc(100vw - 1.25rem));
     pointer-events: auto;
 }
 
@@ -338,16 +338,21 @@
 
 .live-match-popup-card {
     margin: 0;
-    padding: 0.34rem;
+    padding: 0.42rem 0.55rem 0.48rem;
     box-shadow: 0 0.7rem 1.4rem rgba(18, 35, 57, 0.24);
 }
 
 .live-match-popup-card .date-and-time {
-    margin-bottom: 0.1rem;
+    margin-bottom: 0;
 }
 
-.live-match-popup-card .team {
-    min-height: 1.4rem;
+.live-match-popup-card .score-widget__side .team-badge {
+    width: 1.7rem;
+    height: 1.7rem;
+}
+
+.live-match-popup-card .score-widget__score-line {
+    font-size: 1.22rem;
 }
 
 .data-row.table-zone-ucl > .position {

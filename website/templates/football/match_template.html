@@ -1,4 +1,5 @@
 {% extends "football/football-base.html" %}
+{% from "football/_score_widget.html" import premier_league_match_card %}
 
 {% block title %}<title>Football - {{ title }}</title>{% endblock %}
 
@@ -53,59 +54,14 @@
     {% if day_group.matches|length > 0 %}
     <div class="football-grid">
     {% for match in day_group.matches %}
-      <div class="score-widget site-card" id="{{ match.id }}" data-match-time="{{ match.utc_date|kickoff_utc_iso }}">
-        <div class="date-and-time">
-          {% if live_matches %}
-          <time class="match-start" datetime="{{ match.utc_date|kickoff_utc_iso }}" data-kickoff-format="time"></time>
-          {% else %}
-          <time class="match-start" datetime="{{ match.utc_date|kickoff_utc_iso }}" data-kickoff-format="full"></time>
-          {% endif %}
-          <div class="match-meta-actions">
-            <a
-              class="match-h2h-pill"
-              href="{{ football_root }}head-to-head/?team_a={{ match.home_team.id }}&team_b={{ match.away_team.id }}{% if card_season_key %}&season={{ card_season_key }}{% endif %}"
-              aria-label="View {{ match.home_team.short_name }} vs {{ match.away_team.short_name }} head to head"
-            >
-              H2H
-            </a>
-            {% if live_matches %}
-            <div class="match-status"></div>
-            {% else %}
-            <div class="match-status">{{ match.status }}</div>
-            {% endif %}
-          </div>
-        </div>
-        <div class="team">
-          <div class="team-and-badge">
-            <img class="team-badge" src="{{ match.home_team.local_crest }}" alt="{{ match.home_team.short_name }} crest"></img>
-            <a class="team-name" href="{{ football_root }}matches/team/{{ match.home_team.id }}/?season={{ selected_season_key|default(current_season_key)|default('') }}">{{ match.home_team.short_name }}</a>
-          </div>
-          {% if live_matches %}
-          <div class="home-team-score"></div>
-          {% else %}
-            {% if match.score.full_time.home == None %}
-            <div class="home-team-score">-</div>
-            {% else %}
-            <div class="home-team-score">{{ match.score.full_time.home }}</div>
-            {% endif %}
-          {% endif %}
-        </div>
-        <div class="team">
-          <div class="team-and-badge">
-            <img class="team-badge" src="{{ match.away_team.local_crest }}" alt="{{ match.away_team.short_name }} crest"></img>
-            <a class="team-name" href="{{ football_root }}matches/team/{{ match.away_team.id }}/?season={{ selected_season_key|default(current_season_key)|default('') }}">{{ match.away_team.short_name }}</a>
-          </div>
-          {% if live_matches %}
-          <div class="away-team-score"></div>
-          {% else %}
-            {% if match.score.full_time.away == None %}
-            <div class="away-team-score">-</div>
-            {% else %}
-            <div class="away-team-score">{{ match.score.full_time.away }}</div>
-            {% endif %}
-          {% endif %}
-        </div>
-      </div>
+      {{ premier_league_match_card(
+        match,
+        football_root,
+        card_season_key,
+        selected_season_key,
+        current_season_key,
+        live_matches=live_matches
+      ) }}
     {% endfor %}
     </div>
     {% else %}
@@ -117,59 +73,14 @@
 {% elif matches|length > 0 %}
 <div class="football-grid football-grid--standalone">
 {% for match in matches %}
-  <div class="score-widget site-card" id="{{ match.id }}" data-match-time="{{ match.utc_date|kickoff_utc_iso }}">
-    <div class="date-and-time">
-      {% if  live_matches %}
-      <time class="match-start" datetime="{{ match.utc_date|kickoff_utc_iso }}" data-kickoff-format="time"></time>
-      {% else %}
-      <time class="match-start" datetime="{{ match.utc_date|kickoff_utc_iso }}" data-kickoff-format="full"></time>
-      {% endif %}
-      <div class="match-meta-actions">
-        <a
-          class="match-h2h-pill"
-          href="{{ football_root }}head-to-head/?team_a={{ match.home_team.id }}&team_b={{ match.away_team.id }}{% if card_season_key %}&season={{ card_season_key }}{% endif %}"
-          aria-label="View {{ match.home_team.short_name }} vs {{ match.away_team.short_name }} head to head"
-        >
-          H2H
-        </a>
-        {% if live_matches %}
-        <div class="match-status"></div>
-        {% else %}
-        <div class="match-status">{{ match.status }}</div>
-        {% endif %}
-      </div>
-    </div>
-    <div class="team">
-      <div class="team-and-badge">
-        <img class="team-badge" src="{{ match.home_team.local_crest }}" alt="{{ match.home_team.short_name }} crest"></img>
-        <a class="team-name" href="{{ football_root }}matches/team/{{ match.home_team.id }}/?season={{ selected_season_key|default(current_season_key)|default('') }}">{{ match.home_team.short_name }}</a>
-      </div>
-      {% if live_matches %}
-      <div class="home-team-score"></div>
-      {% else %}
-        {% if match.score.full_time.home == None %}
-        <div class="home-team-score">-</div>
-        {% else %}
-        <div class="home-team-score">{{ match.score.full_time.home }}</div>
-        {% endif %}
-      {% endif %}
-    </div>
-    <div class="team">
-      <div class="team-and-badge">
-        <img class="team-badge" src="{{ match.away_team.local_crest }}" alt="{{ match.away_team.short_name }} crest"></img>
-        <a class="team-name" href="{{ football_root }}matches/team/{{ match.away_team.id }}/?season={{ selected_season_key|default(current_season_key)|default('') }}">{{ match.away_team.short_name }}</a>
-      </div>
-      {% if live_matches %}
-      <div class="away-team-score"></div>
-      {% else %}
-        {% if match.score.full_time.away == None %}
-        <div class="away-team-score">-</div>
-        {% else %}
-        <div class="away-team-score">{{ match.score.full_time.away }}</div>
-        {% endif %}
-      {% endif %}
-    </div>
-  </div>
+  {{ premier_league_match_card(
+    match,
+    football_root,
+    card_season_key,
+    selected_season_key,
+    current_season_key,
+    live_matches=live_matches
+  ) }}
 {% endfor %}
 </div>
 {% else %}

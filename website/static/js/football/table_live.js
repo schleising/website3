@@ -12,7 +12,7 @@ const FOOTBALL_MATCH_POPUP_HIDE_DELAY_MS = 140;
 const FOOTBALL_MATCH_POPUP_EDGE_MARGIN_PX = 10;
 const FOOTBALL_MATCH_POPUP_GAP_PX = 3;
 const FOOTBALL_MATCH_POPUP_HORIZONTAL_GAP_PX = 6;
-const FOOTBALL_MATCH_POPUP_FALLBACK_HEIGHT_PX = 190;
+const FOOTBALL_MATCH_POPUP_FALLBACK_HEIGHT_PX = 220;
 const FOOTBALL_UNKNOWN_TEAM_CREST_PATH = "/images/football/crests/unknown_team.svg";
 const RANGE_CLASSES = [
     "table-range-focus",
@@ -1006,17 +1006,24 @@ function renderLiveMatchPopupCard(matchData) {
                 <div class="match-start">Live Match</div>
                 <div class="match-status">Unavailable</div>
             </div>
-            <div class="team">
-                <div class="team-and-badge">
-                    <span class="team-name">Match details are loading.</span>
+            <div class="score-widget__board">
+                <div class="score-widget__side score-widget__side--home team">
+                    <div class="team-and-badge">
+                        <span class="team-name">Match details are loading.</span>
+                    </div>
                 </div>
-                <div class="home-team-score">-</div>
-            </div>
-            <div class="team">
-                <div class="team-and-badge">
-                    <span class="team-name">Please try again.</span>
+                <div class="score-widget__score score-widget__score--pending">
+                    <div class="score-widget__score-line">
+                        <span class="home-team-score">-</span>
+                        <span class="score-widget__sep" aria-hidden="true">–</span>
+                        <span class="away-team-score">-</span>
+                    </div>
                 </div>
-                <div class="away-team-score">-</div>
+                <div class="score-widget__side score-widget__side--away team">
+                    <div class="team-and-badge">
+                        <span class="team-name">Please try again.</span>
+                    </div>
+                </div>
             </div>
         `;
         return;
@@ -1024,31 +1031,40 @@ function renderLiveMatchPopupCard(matchData) {
 
     const homeScore = matchData.home_team_score ?? "-";
     const awayScore = matchData.away_team_score ?? "-";
+    const pending = homeScore === "-" && awayScore === "-";
     const statusText = formatLiveMatchStatus(matchData.status);
     const kickoffText = formatLiveMatchStart(matchData.start_time_iso);
     const homeTeamName = String(matchData.home_team || "Home");
     const awayTeamName = String(matchData.away_team || "Away");
     const homeTeamCrest = normalizeTeamCrestPath(matchData.home_team_crest);
     const awayTeamCrest = normalizeTeamCrestPath(matchData.away_team_crest);
+    const liveClass = normalizeMatchStatus(matchData.status) === "IN PLAY" ? " match-status--live" : "";
 
     liveMatchPopupCardElement.innerHTML = `
         <div class="date-and-time">
             <div class="match-start">${escapeHtml(kickoffText)}</div>
-            <div class="match-status">${escapeHtml(statusText)}</div>
+            <div class="match-status${liveClass}">${escapeHtml(statusText)}</div>
         </div>
-        <div class="team">
-            <div class="team-and-badge">
-                <img class="team-badge" src="${escapeHtml(homeTeamCrest)}" alt="${escapeHtml(homeTeamName)} crest" loading="lazy"></img>
-                <span class="team-name">${escapeHtml(homeTeamName)}</span>
+        <div class="score-widget__board">
+            <div class="score-widget__side score-widget__side--home team">
+                <div class="team-and-badge">
+                    <img class="team-badge" src="${escapeHtml(homeTeamCrest)}" alt="${escapeHtml(homeTeamName)} crest" loading="lazy">
+                    <span class="team-name">${escapeHtml(homeTeamName)}</span>
+                </div>
             </div>
-            <div class="home-team-score">${escapeHtml(homeScore)}</div>
-        </div>
-        <div class="team">
-            <div class="team-and-badge">
-                <img class="team-badge" src="${escapeHtml(awayTeamCrest)}" alt="${escapeHtml(awayTeamName)} crest" loading="lazy"></img>
-                <span class="team-name">${escapeHtml(awayTeamName)}</span>
+            <div class="score-widget__score${pending ? " score-widget__score--pending" : ""}">
+                <div class="score-widget__score-line">
+                    <span class="home-team-score">${escapeHtml(String(homeScore))}</span>
+                    <span class="score-widget__sep" aria-hidden="true">–</span>
+                    <span class="away-team-score">${escapeHtml(String(awayScore))}</span>
+                </div>
             </div>
-            <div class="away-team-score">${escapeHtml(awayScore)}</div>
+            <div class="score-widget__side score-widget__side--away team">
+                <div class="team-and-badge">
+                    <img class="team-badge" src="${escapeHtml(awayTeamCrest)}" alt="${escapeHtml(awayTeamName)} crest" loading="lazy">
+                    <span class="team-name">${escapeHtml(awayTeamName)}</span>
+                </div>
+            </div>
         </div>
     `;
 }

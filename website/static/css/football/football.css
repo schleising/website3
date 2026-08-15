@@ -719,7 +719,7 @@ h3.header-text.football-header-text--season {
 .score-widget {
     display: flex;
     flex-direction: column;
-    padding: 0.25rem;
+    padding: 0.5rem 0.7rem 0.55rem;
     user-select: none;
     transition: transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease;
 }
@@ -728,6 +728,155 @@ h3.header-text.football-header-text--season {
     transform: translateY(-0.125rem);
     box-shadow: 0 0.625rem 1.5rem rgba(26, 46, 75, 0.18);
     border-color: var(--brand);
+}
+
+.score-widget > .date-and-time {
+    position: relative;
+    z-index: 1;
+    padding-bottom: 0.32rem;
+    margin-bottom: 0.4rem;
+    border-bottom: 0.0625rem solid color-mix(in srgb, var(--line), #ffffff 28%);
+}
+
+.score-widget__board {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    align-items: center;
+    column-gap: 0.45rem;
+    min-width: 0;
+}
+
+.score-widget__side {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-width: 0;
+    flex: 0 1 auto;
+}
+
+.score-widget__side .team-and-badge {
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    column-gap: 0;
+    row-gap: 0.28rem;
+    text-align: center;
+    min-width: 0;
+    width: 100%;
+}
+
+.score-widget__side .team-badge {
+    width: 2rem;
+    height: 2rem;
+    flex-shrink: 0;
+}
+
+.score-widget__side .team-name {
+    white-space: normal;
+    text-align: center;
+    font-size: 0.82rem;
+    font-weight: 650;
+    line-height: 1.15;
+    overflow-wrap: anywhere;
+}
+
+.score-widget__score {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.08rem;
+    min-width: 3.4rem;
+    padding: 0 0.15rem;
+}
+
+.score-widget__score-line {
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: 0.28rem;
+    font-variant-numeric: tabular-nums;
+    font-weight: 750;
+    font-size: 1.35rem;
+    line-height: 1;
+    color: var(--text);
+}
+
+.score-widget__sep {
+    color: var(--text-soft);
+    font-weight: 600;
+}
+
+.score-widget__score .home-team-score,
+.score-widget__score .away-team-score {
+    min-width: 0.7em;
+    text-align: center;
+}
+
+.score-widget__score--pending .home-team-score,
+.score-widget__score--pending .away-team-score {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+.score-widget__score--pending {
+    position: relative;
+}
+
+.score-widget__score--pending .score-widget__sep {
+    font-size: 1.35rem;
+    color: var(--text-soft);
+}
+
+.world-cup-score-annotation {
+    display: block;
+    margin: 0.12rem 0 0;
+    font-size: 0.68rem;
+    font-weight: 600;
+    color: var(--text-soft);
+    white-space: nowrap;
+    line-height: 1.2;
+}
+
+.world-cup-score-annotation[hidden] {
+    display: none;
+}
+
+.score-widget--compact {
+    padding: 0.32rem 0.42rem 0.38rem;
+}
+
+.score-widget--compact > .date-and-time {
+    padding-bottom: 0.22rem;
+    margin-bottom: 0.28rem;
+}
+
+.score-widget--compact .score-widget__side .team-badge {
+    width: 1.4rem;
+    height: 1.4rem;
+}
+
+.score-widget--compact .score-widget__side .team-name {
+    font-size: 0.7rem;
+}
+
+.score-widget--compact .score-widget__score-line,
+.score-widget--compact .score-widget__score--pending .score-widget__sep {
+    font-size: 1.08rem;
+}
+
+.score-widget--compact .score-widget__score {
+    min-width: 2.6rem;
 }
 
 .football-empty-state {
@@ -760,27 +909,12 @@ h3.header-text.football-header-text--season {
     font-size: 0.9rem;
 }
 
-.team {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    flex: 1 1 auto;
-}
-
-.score-widget > .date-and-time + .team {
-    margin-top: 0.175rem;
-}
-
-.score-widget > .team + .team {
-    margin-top: 0.2rem;
-}
-
 .date-and-time {
     display: flex;
     flex-direction: row;
     justify-content: space-between;
     align-items: center;
-    flex: 1 1 auto;
+    flex: 0 0 auto;
     font-size: 0.75rem;
 }
 
@@ -797,11 +931,18 @@ h3.header-text.football-header-text--season {
     white-space: nowrap;
 }
 
-.world-cup-score-annotation {
-    display: inline-block;
-    margin-left: 0.35rem;
-    font-size: inherit;
-    font-weight: inherit;
+.match-status--live {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999rem;
+    background: var(--success);
+    color: #ffffff;
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    line-height: 1;
+    padding: 0.18rem 0.48rem;
 }
 
 .match-h2h-pill {

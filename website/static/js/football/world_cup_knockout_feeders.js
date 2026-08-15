@@ -280,13 +280,27 @@ function widgetStatusFromDom(widget) {
     }
 }
 
+/**
+ * Return the home/away side nodes for a match card.
+ *
+ * @param {Element} widget
+ * @returns {NodeListOf<Element>}
+ */
+function widgetTeamSides(widget) {
+    const sides = widget.querySelectorAll(".score-widget__side");
+    if (sides.length >= 2) {
+        return sides;
+    }
+    return widget.querySelectorAll(":scope > .team");
+}
+
 function parseMatchFromWidget(widget) {
     const matchId = Number.parseInt(widget.id, 10);
     if (Number.isNaN(matchId)) {
         return null;
     }
 
-    const teamElements = widget.querySelectorAll(":scope > .team");
+    const teamElements = widgetTeamSides(widget);
     if (teamElements.length < 2) {
         return null;
     }
@@ -388,7 +402,7 @@ function teamDisplayLabel(team) {
 }
 
 function updateKnockoutTeamSlot(widget, side, team, edition) {
-    const teamElements = widget.querySelectorAll(":scope > .team");
+    const teamElements = widgetTeamSides(widget);
     const teamElement = teamElements[side === "home" ? 0 : 1];
     if (!teamElement) {
         return;
@@ -483,7 +497,7 @@ function applyWorldCupKnockoutFeederWinners() {
                 continue;
             }
 
-            const teamElement = widget.querySelectorAll(":scope > .team")[side === "home" ? 0 : 1];
+            const teamElement = widgetTeamSides(widget)[side === "home" ? 0 : 1];
             const currentLabel = teamElement?.querySelector(".team-name")?.textContent?.trim() ?? "";
             const nextLabel = teamDisplayLabel(displayTeam);
             const apiLabel = teamDisplayLabel(apiTeam);

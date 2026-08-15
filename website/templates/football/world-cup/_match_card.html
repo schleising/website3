@@ -1,10 +1,12 @@
 {% from "football/world-cup/_team_link.html" import world_cup_team_badge, world_cup_team_display %}
-{% macro world_cup_match_card(match, football_root='/football/', edition='', highlight_winner=false, home_label=none, away_label=none, home_crest=none, away_crest=none, show_round_background=false) %}
+{% from "football/_score_widget.html" import score_widget_score %}
+{% macro world_cup_match_card(match, football_root='/football/', edition='', highlight_winner=false, home_label=none, away_label=none, home_crest=none, away_crest=none, show_round_background=false, compact=false) %}
 {% set winner_side = match|knockout_winner_side if highlight_winner else none %}
 {% set loser_side = 'away' if winner_side == 'home' else ('home' if winner_side == 'away' else none) %}
 {% set display_score = match|world_cup_display_score %}
 {% set round_bg_label = match|world_cup_all_matches_bg_label if show_round_background else none %}
-<div class="score-widget site-card world-cup-score-widget{% if match.stage == 'FINAL' %} world-cup-score-widget--final{% endif %}{% if highlight_winner and winner_side %} world-cup-score-widget--result{% endif %}{% if round_bg_label %} world-cup-score-widget--round-labelled{% endif %}" id="{{ match.id }}" data-match-stage="{{ match.stage }}" data-match-time="{{ match.utc_date|kickoff_utc_iso }}" data-match-finished="{{ 'true' if match.status.has_finished else 'false' }}" data-match-live="{{ 'true' if match.status.is_live else 'false' }}">
+{% set score_annotation = match|world_cup_score_annotation %}
+<div class="score-widget site-card world-cup-score-widget{% if compact %} score-widget--compact{% endif %}{% if match.stage == 'FINAL' %} world-cup-score-widget--final{% endif %}{% if highlight_winner and winner_side %} world-cup-score-widget--result{% endif %}{% if round_bg_label %} world-cup-score-widget--round-labelled{% endif %}" id="{{ match.id }}" data-match-stage="{{ match.stage }}" data-match-time="{{ match.utc_date|kickoff_utc_iso }}" data-match-finished="{{ 'true' if match.status.has_finished else 'false' }}" data-match-live="{{ 'true' if match.status.is_live else 'false' }}">
   {% if round_bg_label %}
   <span class="world-cup-score-widget__round-bg" aria-hidden="true">{{ round_bg_label }}</span>
   {% endif %}
@@ -19,29 +21,24 @@
       {% endif %}
     </div>
     <div class="match-meta-actions">
-      <div class="match-status">
+      <div class="match-status{% if match.status == 'IN_PLAY' %} match-status--live{% endif %}">
         <span class="world-cup-match-status-text">{{ match|world_cup_match_status_display }}</span>
-        {% set score_annotation = match|world_cup_score_annotation %}
-        {% if score_annotation %}<span class="world-cup-score-annotation">{{ score_annotation }}</span>{% endif %}
       </div>
     </div>
   </div>
-  <div class="team{% if winner_side == 'home' %} world-cup-team-winner{% elif highlight_winner and loser_side == 'home' %} world-cup-team-loser{% endif %}">
-    <div class="team-and-badge">
-      {{ world_cup_team_badge(match.home_team, home_label, home_crest) }}
-      {{ world_cup_team_display(match.home_team, football_root, edition, home_label) }}
+  <div class="score-widget__board">
+    <div class="score-widget__side score-widget__side--home team{% if winner_side == 'home' %} world-cup-team-winner{% elif highlight_winner and loser_side == 'home' %} world-cup-team-loser{% endif %}">
+      <div class="team-and-badge">
+        {{ world_cup_team_badge(match.home_team, home_label, home_crest) }}
+        {{ world_cup_team_display(match.home_team, football_root, edition, home_label) }}
+      </div>
     </div>
-    <div class="home-team-score">
-      {% if display_score[0] is none %}-{% else %}{{ display_score[0] }}{% endif %}
-    </div>
-  </div>
-  <div class="team{% if winner_side == 'away' %} world-cup-team-winner{% elif highlight_winner and loser_side == 'away' %} world-cup-team-loser{% endif %}">
-    <div class="team-and-badge">
-      {{ world_cup_team_badge(match.away_team, away_label, away_crest) }}
-      {{ world_cup_team_display(match.away_team, football_root, edition, away_label) }}
-    </div>
-    <div class="away-team-score">
-      {% if display_score[1] is none %}-{% else %}{{ display_score[1] }}{% endif %}
+    {{ score_widget_score(display_score[0], display_score[1], annotation=score_annotation, include_annotation=true) }}
+    <div class="score-widget__side score-widget__side--away team{% if winner_side == 'away' %} world-cup-team-winner{% elif highlight_winner and loser_side == 'away' %} world-cup-team-loser{% endif %}">
+      <div class="team-and-badge">
+        {{ world_cup_team_badge(match.away_team, away_label, away_crest) }}
+        {{ world_cup_team_display(match.away_team, football_root, edition, away_label) }}
+      </div>
     </div>
   </div>
 </div>

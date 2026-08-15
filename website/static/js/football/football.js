@@ -127,9 +127,22 @@ function openWebSocket() {
                 return;
             }
 
-            scoreWidget.getElementsByClassName("match-status")[0].innerHTML = status;
-            scoreWidget.getElementsByClassName("home-team-score")[0].innerHTML = home;
-            scoreWidget.getElementsByClassName("away-team-score")[0].innerHTML = away;
+            const statusElement = scoreWidget.getElementsByClassName("match-status")[0];
+            const homeElement = scoreWidget.getElementsByClassName("home-team-score")[0];
+            const awayElement = scoreWidget.getElementsByClassName("away-team-score")[0];
+            if (!statusElement || !homeElement || !awayElement) {
+                return;
+            }
+
+            statusElement.textContent = status;
+            statusElement.classList.toggle("match-status--live", match.status === "IN_PLAY");
+            homeElement.textContent = home;
+            awayElement.textContent = away;
+            const scoreCluster = scoreWidget.querySelector(".score-widget__score");
+            if (scoreCluster) {
+                const pending = home === "-" && away === "-";
+                scoreCluster.classList.toggle("score-widget__score--pending", pending);
+            }
         });
 
         shouldPollForUpdates = hasRefreshableMatchToday(matches.matches);

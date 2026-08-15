@@ -1,6 +1,6 @@
 # Design: Football Match Card Refresh
 
-Status: **Direction chosen — B Centre scoreboard** (2026-08-14)  
+Status: **Implemented — B Centre scoreboard** (2026-08-14)  
 Date: 2026-08-14  
 Scope: Premier League and World Cup `score-widget` cards (same visual family)
 
@@ -187,40 +187,15 @@ TV channel marks in the WC mockup are placeholders. Real cards keep the existing
 
 ---
 
-## 7. Next: implement B
+## 7. Implementation (as built)
 
-If §6 still looks right, the next change is HTML/CSS (not more mockups).
+Centre-scoreboard cards are live in PL, H2H, World Cup, and the table live-match popup.
 
-### Markup
-
-Keep the live-JS hooks. Restructure around them:
-
-| Keep (JS / a11y) | Change |
-| ---------------- | ------ |
-| `.score-widget.site-card` + `id` / `data-match-*` | Add a `.score-widget__board` wrapper: home column, centre, away column |
-| `.match-start`, `.match-status`, `.match-h2h-pill` | Header stays kickoff left, meta right |
-| `.home-team-score`, `.away-team-score` | Move into the centre cluster so live JS still finds them |
-| `.team-badge`, `a.team-name` | Stack crest **above** name in each side column |
-| WC: `.world-cup-match-venue`, TV logos, `.world-cup-score-annotation`, winner/loser classes | Venue under kickoff; annotation under the centre score |
-
-Centre cluster for a 2–1:
-
-```html
-<div class="score-widget__score">
-  <span class="home-team-score">2</span>
-  <span class="score-widget__sep">–</span>
-  <span class="away-team-score">1</span>
-  <!-- WC only, when present -->
-  <span class="world-cup-score-annotation">(3–4 pens)</span>
-</div>
-```
-
-### Surfaces
-
-1. PL `match_template.html` (+ live popup card in `table_live.js`)
-2. Shared CSS in `football.css` (board layout, live pill, tabular score)
-3. WC `_match_card.html` + `world-cup.css` extras
-4. Compact modifier for knockout bracket slots (same anatomy, smaller crests/type) so the graphical bracket does not grow
+- Shared board markup: `website/templates/football/_score_widget.html`
+- PL cards: `match_template.html` via `premier_league_match_card`
+- WC extras (venue, TV, pens caption, winner/loser fade) stay on `_match_card.html`
+- Knockout bracket uses `score-widget--compact`
+- Live JS still writes `.home-team-score`, `.away-team-score`, and `.match-status`
 
 ### Out of this pass
 

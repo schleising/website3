@@ -1,4 +1,5 @@
 {% extends "football/football-base.html" %}
+{% from "football/_score_widget.html" import score_widget_score, score_widget_team_side %}
 
 {% block football_head %}
 <script defer src="/js/football/head_to_head.js?v1.1.3"></script>
@@ -151,27 +152,20 @@
               <div class="match-status">{{ match.status }}</div>
             </div>
           </div>
-          <div class="team">
-            <div class="team-and-badge">
-              <img class="team-badge" src="{{ match.home_team.local_crest }}" alt="{{ match.home_team.short_name }} crest">
-              <a class="team-name" href="{{ football_root }}matches/team/{{ match.home_team.id }}/?season={{ match_season_key }}">{{ match.home_team.short_name }}</a>
-            </div>
-            {% if match.score.full_time.home == None %}
-            <div class="home-team-score">-</div>
-            {% else %}
-            <div class="home-team-score">{{ match.score.full_time.home }}</div>
-            {% endif %}
-          </div>
-          <div class="team">
-            <div class="team-and-badge">
-              <img class="team-badge" src="{{ match.away_team.local_crest }}" alt="{{ match.away_team.short_name }} crest">
-              <a class="team-name" href="{{ football_root }}matches/team/{{ match.away_team.id }}/?season={{ match_season_key }}">{{ match.away_team.short_name }}</a>
-            </div>
-            {% if match.score.full_time.away == None %}
-            <div class="away-team-score">-</div>
-            {% else %}
-            <div class="away-team-score">{{ match.score.full_time.away }}</div>
-            {% endif %}
+          <div class="score-widget__board">
+            {{ score_widget_team_side(
+              'home',
+              match.home_team.local_crest,
+              match.home_team.short_name,
+              football_root ~ 'matches/team/' ~ match.home_team.id ~ '/?season=' ~ match_season_key
+            ) }}
+            {{ score_widget_score(match.score.full_time.home, match.score.full_time.away) }}
+            {{ score_widget_team_side(
+              'away',
+              match.away_team.local_crest,
+              match.away_team.short_name,
+              football_root ~ 'matches/team/' ~ match.away_team.id ~ '/?season=' ~ match_season_key
+            ) }}
           </div>
         </article>
         {% endfor %}

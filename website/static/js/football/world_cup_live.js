@@ -170,14 +170,29 @@ function updateWorldCupScoreWidget(match) {
 
     statusElement.textContent = formatWorldCupMatchStatus(match);
     const [homeScore, awayScore] = worldCupDisplayScore(match);
-    homeElement.textContent = homeScore ?? "-";
-    awayElement.textContent = awayScore ?? "-";
+    const homeText = homeScore ?? "-";
+    const awayText = awayScore ?? "-";
+    homeElement.textContent = homeText;
+    awayElement.textContent = awayText;
+
+    const scoreCluster = scoreWidget.querySelector(".score-widget__score");
+    if (scoreCluster) {
+        scoreCluster.classList.toggle(
+            "score-widget__score--pending",
+            homeText === "-" && awayText === "-"
+        );
+    }
 
     const annotationElement = scoreWidget.querySelector(".world-cup-score-annotation");
     const annotation = worldCupScoreAnnotation(match);
     if (annotationElement) {
         annotationElement.textContent = annotation ?? "";
         annotationElement.hidden = !annotation;
+    }
+
+    const statusWrap = scoreWidget.querySelector(".match-status");
+    if (statusWrap) {
+        statusWrap.classList.toggle("match-status--live", match.status === "IN_PLAY");
     }
 
     scoreWidget.dataset.matchFinished = match.status === "FINISHED" ? "true" : "false";
