@@ -8,6 +8,8 @@ from starlette.types import ASGIApp, Receive, Scope, Send
 
 from fastapi import FastAPI, Request, Depends
 from fastapi.exception_handlers import http_exception_handler as fastapi_http_exception_handler
+from collections.abc import Mapping
+
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.exceptions import RequestValidationError
 from fastapi.templating import Jinja2Templates
@@ -35,6 +37,7 @@ from .media.router import media_router
 
 from .tools.router import tools_router
 from .units.router import units_router
+from .utils.nginx_errors import nginx_5xx_page_context
 
 WEBSITE_ROOT = Path(__file__).resolve().parents[1]
 TOOLS_SERVICE_WORKER_PATH = WEBSITE_ROOT / "static" / "sw.js"
@@ -107,7 +110,7 @@ def _should_render_html_error(request: Request) -> bool:
 def _error_template_response(
     request: Request,
     template_name: str,
-    context: dict[str, object],
+    context: Mapping[str, object],
     status_code: int,
 ) -> HTMLResponse:
     _ensure_request_state_defaults(request)
@@ -217,6 +220,7 @@ def _is_passkey_migration_exempt_path(path: str) -> bool:
         "/account/webauthn/",
         "/account/logout",
         "/account/token",
+        "/__nginx_",
     )
 
     return any(path.startswith(prefix) for prefix in exempt_prefixes)
@@ -427,4 +431,21 @@ async def nginx_404_page(request: Request):
         "404.html",
         {"display_path": original_uri},
         status_code=404,
+    )
+
+
+@app.get("/__nginx_5xx__", response_class=HTMLResponse, include_in_schema=False)
+async def nginx_5xx_page(request: Request):
+    context = nginx_5xx_page_context(
+        raw_status=request.headers.get("x-original-status"),
+        raw_host=request.headers.get("x-original-host"),
+        raw_uri=request.headers.get("x-original-uri"),
+        raw_variant=request.headers.get("x-error-variant"),
+    )
+
+    return _error_template_response(
+        request,
+        "500.html",
+        context,
+        status_code=context["error_code"],
     )
