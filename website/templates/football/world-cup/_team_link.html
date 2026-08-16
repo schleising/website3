@@ -1,8 +1,8 @@
-{% macro world_cup_team_badge(team, label=none, crest_url=none) %}
+{% macro world_cup_team_badge(team, label=none, crest_url=none, decorative=false) %}
 <img
   class="team-badge"
   src="{{ crest_url if crest_url is not none else team.world_cup_local_crest }}"
-  alt="{{ label if label is not none else team.display_name }} crest"
+  alt="{% if decorative %}{% else %}{{ label if label is not none else team.display_name }} crest{% endif %}"
 >
 {% endmacro %}
 
@@ -12,6 +12,21 @@
 <a class="team-name" href="{{ football_root }}world-cup/teams/{{ team.id }}/?edition={{ edition }}">{{ label }}</a>
 {% else %}
 <span class="team-name">{{ label }}</span>
+{% endif %}
+{% endmacro %}
+
+{% macro world_cup_match_team(team, football_root, edition, label_override=none, crest_url=none) %}
+{% set label = label_override if label_override is not none else team.display_name %}
+{% if team.id is not none %}
+<a class="team-and-badge" href="{{ football_root }}world-cup/teams/{{ team.id }}/?edition={{ edition }}">
+  {{ world_cup_team_badge(team, label, crest_url, decorative=true) }}
+  <span class="team-name">{{ label }}</span>
+</a>
+{% else %}
+<div class="team-and-badge">
+  {{ world_cup_team_badge(team, label, crest_url) }}
+  <span class="team-name">{{ label }}</span>
+</div>
 {% endif %}
 {% endmacro %}
 

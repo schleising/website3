@@ -14,14 +14,17 @@
 
 {% macro score_widget_team_side(side, crest, name, href) %}
 <div class="score-widget__side score-widget__side--{{ side }} team">
+  {% if href %}
+  <a class="team-and-badge" href="{{ href }}">
+    <img class="team-badge" src="{{ crest }}" alt="">
+    <span class="team-name">{{ name }}</span>
+  </a>
+  {% else %}
   <div class="team-and-badge">
     <img class="team-badge" src="{{ crest }}" alt="{{ name }} crest">
-    {% if href %}
-    <a class="team-name" href="{{ href }}">{{ name }}</a>
-    {% else %}
     <span class="team-name">{{ name }}</span>
-    {% endif %}
   </div>
+  {% endif %}
 </div>
 {% endmacro %}
 

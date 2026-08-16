@@ -766,6 +766,39 @@ h3.header-text.football-header-text--season {
     text-align: center;
     min-width: 0;
     width: 100%;
+    color: inherit;
+    text-decoration: none;
+}
+
+.score-widget__side a.team-and-badge {
+    cursor: pointer;
+}
+
+.score-widget__side a.team-and-badge .team-name {
+    position: relative;
+}
+
+.score-widget__side a.team-and-badge .team-name::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    height: 0.0625rem;
+    background-color: currentColor;
+    transform: scaleX(0);
+    transform-origin: left center;
+    transition: transform 250ms ease;
+}
+
+.score-widget__side a.team-and-badge:hover .team-name,
+.score-widget__side a.team-and-badge:focus-visible .team-name {
+    color: var(--brand-strong);
+}
+
+.score-widget__side a.team-and-badge:hover .team-name::after,
+.score-widget__side a.team-and-badge:focus-visible .team-name::after {
+    transform: scaleX(1);
 }
 
 .score-widget__side .team-badge {
@@ -986,6 +1019,11 @@ h3.header-text.football-header-text--season {
     align-items: center;
     flex: 1 1 auto;
     column-gap: 0.75rem;
+}
+
+a.team-and-badge {
+    color: inherit;
+    text-decoration: none;
 }
 
 .team-badge {

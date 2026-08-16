@@ -182,7 +182,7 @@ function updateFormContainer(row, formList, formText) {
 }
 
 function updateTeamLink(row, teamId, seasonKey) {
-    const teamLinkElement = row.querySelector(".team-name");
+    const teamLinkElement = row.querySelector("a.team-and-badge, a.team-name");
     if (!teamLinkElement) {
         return;
     }

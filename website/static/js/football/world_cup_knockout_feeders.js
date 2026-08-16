@@ -243,10 +243,28 @@ function parseScoreText(value) {
     return Number.isNaN(parsed) ? null : parsed;
 }
 
+/**
+ * @param {Element} teamElement
+ * @returns {HTMLAnchorElement | null}
+ */
+function teamHrefElement(teamElement) {
+    const block = teamElement.querySelector(".team-and-badge");
+    if (block instanceof HTMLAnchorElement) {
+        return block;
+    }
+
+    const nameElement = teamElement.querySelector(".team-name");
+    if (nameElement instanceof HTMLAnchorElement) {
+        return nameElement;
+    }
+
+    return null;
+}
+
 function parseTeamFromElement(teamElement) {
     const nameElement = teamElement.querySelector(".team-name");
     const label = nameElement?.textContent?.trim() ?? "";
-    const href = nameElement?.getAttribute("href") ?? "";
+    const href = teamHrefElement(teamElement)?.getAttribute("href") ?? "";
     const idMatch = href.match(/\/teams\/(\d+)\//);
     const badge = teamElement.querySelector(".team-badge");
 
@@ -412,6 +430,7 @@ function updateKnockoutTeamSlot(widget, side, team, edition) {
     const crestUrl = worldCupCrestUrl(team);
     const badge = teamElement.querySelector(".team-badge");
     const nameElement = teamElement.querySelector(".team-name");
+    const block = teamElement.querySelector(".team-and-badge");
     const footballRoot = String(document.documentElement.dataset.footballBasePath ?? "/football")
         .trim()
         .replace(/\/+$/, "");
@@ -419,12 +438,29 @@ function updateKnockoutTeamSlot(widget, side, team, edition) {
 
     if (badge) {
         badge.src = crestUrl;
-        badge.alt = `${label} crest`;
+        badge.alt = "";
     }
 
     if (team.id && isConfirmedKnockoutTeam(team)) {
         const href = `${footballPrefix}world-cup/teams/${team.id}/?edition=${encodeURIComponent(edition)}`;
-        if (nameElement instanceof HTMLAnchorElement) {
+        if (block instanceof HTMLAnchorElement) {
+            block.href = href;
+            if (nameElement) {
+                nameElement.textContent = label;
+            }
+        } else if (block) {
+            const link = document.createElement("a");
+            link.className = block.className;
+            link.href = href;
+            while (block.firstChild) {
+                link.appendChild(block.firstChild);
+            }
+            block.replaceWith(link);
+            const linkedName = link.querySelector(".team-name");
+            if (linkedName) {
+                linkedName.textContent = label;
+            }
+        } else if (nameElement instanceof HTMLAnchorElement) {
             nameElement.href = href;
             nameElement.textContent = label;
         } else if (nameElement) {
@@ -438,7 +474,18 @@ function updateKnockoutTeamSlot(widget, side, team, edition) {
         return;
     }
 
-    if (nameElement instanceof HTMLAnchorElement) {
+    if (block instanceof HTMLAnchorElement) {
+        const div = document.createElement("div");
+        div.className = block.className;
+        while (block.firstChild) {
+            div.appendChild(block.firstChild);
+        }
+        block.replaceWith(div);
+        const unresolvedName = div.querySelector(".team-name");
+        if (unresolvedName) {
+            unresolvedName.textContent = label;
+        }
+    } else if (nameElement instanceof HTMLAnchorElement) {
         const span = document.createElement("span");
         span.className = "team-name";
         span.textContent = label;

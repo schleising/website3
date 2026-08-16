@@ -1,4 +1,4 @@
-{% from "football/world-cup/_team_link.html" import world_cup_team_name %}
+{% from "football/world-cup/_team_link.html" import world_cup_match_team %}
 {% macro world_cup_overview_standings(table_rows, football_root, edition, group_slug='', live_table=false) %}
 {% if live_table %}
 {% set ns = namespace(has_live=false, has_delta=false) %}
@@ -37,12 +37,7 @@
       {% endif %}
     </span>
     <span class="world-cup-overview-standings-team" role="cell">
-      <img
-        class="team-badge"
-        src="{{ table_item.team.world_cup_local_crest }}"
-        alt="{{ table_item.team.display_name }} crest"
-      >
-      {{ world_cup_team_name(table_item.team, football_root, edition) }}
+      {{ world_cup_match_team(table_item.team, football_root, edition) }}
     </span>
     <span class="world-cup-overview-standings-stat world-cup-overview-standings-played" role="cell">{{ table_item.played_games }}</span>
     <span class="world-cup-overview-standings-stat world-cup-overview-standings-stat--desktop world-cup-overview-standings-won" role="cell">{{ table_item.won }}</span>
@@ -73,12 +68,7 @@
   <div class="world-cup-overview-standings-row" role="row" data-team-id="{{ table_item.team.id }}" data-position="{{ table_item.position }}">
     <span class="world-cup-overview-standings-pos world-cup-overview-standings-position" role="cell">{{ table_item.position_label or table_item.position }}</span>
     <span class="world-cup-overview-standings-team" role="cell">
-      <img
-        class="team-badge"
-        src="{{ table_item.team.world_cup_local_crest }}"
-        alt="{{ table_item.team.display_name }} crest"
-      >
-      {{ world_cup_team_name(table_item.team, football_root, edition) }}
+      {{ world_cup_match_team(table_item.team, football_root, edition) }}
     </span>
     <span class="world-cup-overview-standings-stat world-cup-overview-standings-played" role="cell">{{ table_item.played_games }}</span>
     <span class="world-cup-overview-standings-stat world-cup-overview-standings-stat--desktop world-cup-overview-standings-won" role="cell">{{ table_item.won }}</span>

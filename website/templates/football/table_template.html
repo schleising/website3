@@ -1,10 +1,10 @@
 {% extends "football/football-base.html" %}
 
 {% block football_head %}
-<link rel="stylesheet" href="/css/table.css?v1.9.3">
+<link rel="stylesheet" href="/css/table.css?v1.9.4">
 {% block football_scripts %}
 {% if is_current_season|default(false) %}
-<script defer src="/js/football/table_live.js?v1.8.25"></script>
+<script defer src="/js/football/table_live.js?v1.8.26"></script>
 {% endif %}
 {% endblock %}
 {% block title %}<title>Football - {{ title }}</title>{% endblock %}
@@ -83,10 +83,10 @@
           {% endif %}
         </div>
         <div class="row-data data table-cell" role="cell">
-          <div class="team-and-badge">
-            <img class="team-badge" src="{{ table_item.team.local_crest }}" alt="{{ table_item.team.short_name }} crest"></img>
-            <a class="team-name" href="{{ football_root }}matches/team/{{ table_item.team.id }}/?season={{ selected_season_key|default(current_season_key)|default('') }}">{{ table_item.team.short_name }}</a>
-          </div>
+          <a class="team-and-badge" href="{{ football_root }}matches/team/{{ table_item.team.id }}/?season={{ selected_season_key|default(current_season_key)|default('') }}">
+            <img class="team-badge" src="{{ table_item.team.local_crest }}" alt="">
+            <span class="team-name">{{ table_item.team.short_name }}</span>
+          </a>
         </div>
         <div class="row-data data table-cell centre-align table-played" role="cell">{{ table_item.played_games }}</div>
         <div class="row-data data table-cell medium-table centre-align table-won" role="cell">{{ table_item.won }}</div>

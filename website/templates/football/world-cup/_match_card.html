@@ -1,4 +1,4 @@
-{% from "football/world-cup/_team_link.html" import world_cup_team_badge, world_cup_team_display %}
+{% from "football/world-cup/_team_link.html" import world_cup_match_team %}
 {% from "football/_score_widget.html" import score_widget_score %}
 {% macro world_cup_match_card(match, football_root='/football/', edition='', highlight_winner=false, home_label=none, away_label=none, home_crest=none, away_crest=none, show_round_background=false, compact=false) %}
 {% set winner_side = match|knockout_winner_side if highlight_winner else none %}
@@ -28,17 +28,11 @@
   </div>
   <div class="score-widget__board">
     <div class="score-widget__side score-widget__side--home team{% if winner_side == 'home' %} world-cup-team-winner{% elif highlight_winner and loser_side == 'home' %} world-cup-team-loser{% endif %}">
-      <div class="team-and-badge">
-        {{ world_cup_team_badge(match.home_team, home_label, home_crest) }}
-        {{ world_cup_team_display(match.home_team, football_root, edition, home_label) }}
-      </div>
+      {{ world_cup_match_team(match.home_team, football_root, edition, home_label, home_crest) }}
     </div>
     {{ score_widget_score(display_score[0], display_score[1], annotation=score_annotation, include_annotation=true) }}
     <div class="score-widget__side score-widget__side--away team{% if winner_side == 'away' %} world-cup-team-winner{% elif highlight_winner and loser_side == 'away' %} world-cup-team-loser{% endif %}">
-      <div class="team-and-badge">
-        {{ world_cup_team_badge(match.away_team, away_label, away_crest) }}
-        {{ world_cup_team_display(match.away_team, football_root, edition, away_label) }}
-      </div>
+      {{ world_cup_match_team(match.away_team, football_root, edition, away_label, away_crest) }}
     </div>
   </div>
 </div>

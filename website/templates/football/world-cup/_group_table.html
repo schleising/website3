@@ -1,4 +1,4 @@
-{% from "football/world-cup/_team_link.html" import world_cup_team_name %}
+{% from "football/world-cup/_team_link.html" import world_cup_match_team %}
 {% macro world_cup_group_table(table_rows, title, football_root, edition, compact=false, overview=false, group_slug='', live_table=false) %}
 {% if live_table %}
 {% set ns = namespace(has_live=false, has_delta=false) %}
@@ -42,14 +42,7 @@
           {% endif %}
         </div>
         <div class="row-data data table-cell world-cup-team-cell" role="cell">
-          <div class="team-and-badge">
-            <img
-              class="team-badge"
-              src="{{ table_item.team.world_cup_local_crest }}"
-              alt="{{ table_item.team.display_name }} crest"
-            >
-            {{ world_cup_team_name(table_item.team, football_root, edition) }}
-          </div>
+          {{ world_cup_match_team(table_item.team, football_root, edition) }}
         </div>
         <div class="row-data data table-cell centre-align table-played" role="cell">{{ table_item.played_games }}</div>
         <div class="row-data data table-cell medium-table centre-align table-won" role="cell">{{ table_item.won }}</div>
@@ -90,14 +83,7 @@
           <div class="table-position-value">{{ table_item.position_label or table_item.position }}</div>
         </div>
         <div class="row-data data table-cell world-cup-team-cell" role="cell">
-          <div class="team-and-badge">
-            <img
-              class="team-badge"
-              src="{{ table_item.team.world_cup_local_crest }}"
-              alt="{{ table_item.team.display_name }} crest"
-            >
-            {{ world_cup_team_name(table_item.team, football_root, edition) }}
-          </div>
+          {{ world_cup_match_team(table_item.team, football_root, edition) }}
         </div>
         <div class="row-data data table-cell centre-align table-played" role="cell">{{ table_item.played_games }}</div>
         <div class="row-data data table-cell medium-table centre-align table-won" role="cell">{{ table_item.won }}</div>

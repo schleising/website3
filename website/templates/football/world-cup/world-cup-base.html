@@ -7,7 +7,7 @@
 <script defer src="/js/football/pwa.js?v1.0.2"></script>
 {% endif %}
 {% if enable_live_updates|default(false) %}
-<script defer src="/js/football/world_cup_knockout_feeders.js?v1.0.1"></script>
+<script defer src="/js/football/world_cup_knockout_feeders.js?v1.0.2"></script>
 <script defer src="/js/football/world_cup_live.js?v1.0.11"></script>
 {% endif %}
 {% if auto_center_next_match|default(false) or all_matches_view|default(false) or (jump_targets is defined and jump_targets|length > 0) %}
@@ -19,8 +19,8 @@
 {% endblock %}
 
 {% block football_head %}
-<link rel="stylesheet" href="/css/table.css?v1.9.3">
-<link rel="stylesheet" href="/css/football/world-cup.css?v1.5.86">
+<link rel="stylesheet" href="/css/table.css?v1.9.4">
+<link rel="stylesheet" href="/css/football/world-cup.css?v1.5.87">
 <script defer src="/js/football/world_cup_bracket.js?v1.0.11"></script>
 <script defer src="/js/football/world_cup_standings_rules.js?v1.0.3"></script>
 {% if show_edition_selector|default(false) %}
