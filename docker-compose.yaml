@@ -7,8 +7,8 @@ services:
       - .env
     environment:
       - CONVERTER_ART_CACHE_DIR=/var/cache/converter-art
-      - SONARR_URL=http://steveds920:8989
-      - RADARR_URL=http://steveds920:7878
+      - SONARR_URL=http://macmini2.home.arpa:8989
+      - RADARR_URL=http://macmini2.home.arpa:7878
     volumes:
       - ./website:/app:ro
       - converter_art_cache:/var/cache/converter-art:rw
