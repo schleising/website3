@@ -155,7 +155,6 @@ class MediaDatabase:
             "filename": filename,
             "display_name": display_name,
             "parent_directory": "" if parent_directory == "." else parent_directory,
-            "inode": db_file.get("inode"),
             "status_label": status_label,
             "conversion_required": conversion_required,
             "conversion_error": conversion_error,
@@ -261,7 +260,6 @@ class MediaDatabase:
             sort=sort_fields,
             projection=[
                 "filename",
-                "inode",
                 "conversion_required",
                 "conversion_error",
                 "converted",

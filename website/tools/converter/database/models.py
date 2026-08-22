@@ -117,7 +117,6 @@ class VideoInformation(BaseModel):
 
 class FileData(BaseModel):
     filename: str
-    inode: int
     deleted: bool
     video_information: VideoInformation
     conversion_required: bool
@@ -147,9 +146,3 @@ class ConvertedFileDataFromDb(BaseModel):
     end_conversion_time: datetime | None = None
     pre_conversion_size: int
     current_size: int
-
-
-class FileInfo:
-    def __init__(self, filename: str, inode: int) -> None:
-        self.filename = filename
-        self.inode = inode
