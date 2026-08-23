@@ -14,35 +14,6 @@ _SERVICE_NAMES: dict[str, str] = {
     "transmission.schleising.net": "Transmission",
 }
 
-_GENERIC_5XX: dict[int, tuple[str, str, str]] = {
-    500: (
-        "Server Error",
-        "Something went wrong on the server.",
-        (
-            "The request could not be completed because the site encountered "
-            "an unexpected problem. Please try again shortly."
-        ),
-    ),
-    502: (
-        "Bad Gateway",
-        "This application could not be reached.",
-        (
-            "The service behind this address is not responding. "
-            "Please try again shortly."
-        ),
-    ),
-    503: (
-        "Service Unavailable",
-        "This application is temporarily unavailable.",
-        "The service is not accepting requests right now. Please try again shortly.",
-    ),
-    504: (
-        "Gateway Timeout",
-        "This application took too long to respond.",
-        "The service did not answer in time. Please try again shortly.",
-    ),
-}
-
 
 class Nginx5xxTemplateContext(TypedDict):
     error_code: int
@@ -89,32 +60,73 @@ def service_label(host: str) -> str:
     return _SERVICE_NAMES.get(host, "This application")
 
 
+def _copy_for_status(status_code: int, name: str) -> tuple[str, str, str]:
+    subject = name if name != "This application" else "The application"
+
+    if status_code == 500:
+        return (
+            "Internal Server Error",
+            f"{subject} hit an unexpected server error.",
+            (
+                f"{subject} encountered an unexpected problem while handling this "
+                "request. That is a fault on the server, not in your browser. "
+                "Please try again in a moment."
+            ),
+        )
+
+    if status_code == 502:
+        return (
+            "Bad Gateway",
+            f"{subject} could not be reached.",
+            (
+                "The reverse proxy could not get a valid response from the upstream "
+                "service. That usually means the application is stopped, crashed, "
+                "or refusing connections. Please try again shortly."
+            ),
+        )
+
+    if status_code == 503:
+        return (
+            "Service Unavailable",
+            f"{subject} is temporarily unavailable.",
+            (
+                "The service is not accepting requests right now. It may be "
+                "overloaded, restarting, or temporarily taken offline for "
+                "maintenance. Please try again shortly."
+            ),
+        )
+
+    if status_code == 504:
+        return (
+            "Gateway Timeout",
+            f"{subject} took too long to respond.",
+            (
+                "The reverse proxy waited for the upstream service, but no "
+                "response arrived in time. The application may be overloaded or "
+                "stuck. Please try again shortly."
+            ),
+        )
+
+    return (
+        "Server Error",
+        f"{subject} returned an unexpected server error.",
+        (
+            f"The server returned HTTP {status_code}, which means this request "
+            "could not be completed. Please try again shortly."
+        ),
+    )
+
+
 def nginx_5xx_page_context(
     *,
     raw_status: str | None,
     raw_host: str | None,
     raw_uri: str | None,
-    raw_variant: str | None,
 ) -> Nginx5xxTemplateContext:
     status_code = parse_nginx_status(raw_status)
     host = safe_original_host(raw_host)
     retry_url = original_request_url(host, raw_uri)
-    variant = (raw_variant or "").strip().lower()
-    heading, title, message = _GENERIC_5XX.get(status_code, _GENERIC_5XX[502])
-
-    if variant == "rebuild":
-        name = service_label(host)
-        heading = "Storage Rebuild"
-        title = f"{name} is temporarily offline."
-        message = (
-            f"{name} is offline while the NAS storage pool is rebuilt after a "
-            "drive failure. The rest of the site is unaffected. Please try again "
-            "once the rebuild has finished."
-        )
-    elif host != "" and status_code != 500:
-        name = service_label(host)
-        if name != "This application":
-            title = f"{name} could not be reached."
+    heading, title, message = _copy_for_status(status_code, service_label(host))
 
     site_origin = SITE_ORIGIN if host != "" and host != "www.schleising.net" else ""
     login_next = retry_url if retry_url != "" else "/"

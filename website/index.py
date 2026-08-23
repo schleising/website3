@@ -440,7 +440,6 @@ async def nginx_5xx_page(request: Request):
         raw_status=request.headers.get("x-original-status"),
         raw_host=request.headers.get("x-original-host"),
         raw_uri=request.headers.get("x-original-uri"),
-        raw_variant=request.headers.get("x-error-variant"),
     )
 
     return _error_template_response(

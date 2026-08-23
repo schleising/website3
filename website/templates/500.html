@@ -1,9 +1,9 @@
 {% extends "base.html" %}
 
 {% set error_code = error_code|default(500) %}
-{% set error_heading = error_heading|default("Server Error") %}
-{% set error_title = error_title|default("Something went wrong on the server.") %}
-{% set error_message = error_message|default("The request could not be completed because the site encountered an unexpected problem. Please try again shortly.") %}
+{% set error_heading = error_heading|default("Internal Server Error") %}
+{% set error_title = error_title|default("The application hit an unexpected server error.") %}
+{% set error_message = error_message|default("The application encountered an unexpected problem while handling this request. That is a fault on the server, not in your browser. Please try again in a moment.") %}
 {% set retry_url = retry_url|default('') %}
 
 {% block title %}<title>{{ error_code }} {{ error_heading }}</title>{% endblock %}

@@ -46,51 +46,73 @@ class NginxErrorHelperTests(unittest.TestCase):
             "https://overseerr.schleising.net/",
         )
 
-    def test_rebuild_variant_names_overseerr(self) -> None:
+    def test_502_explains_bad_gateway_and_names_service(self) -> None:
         context = nginx_5xx_page_context(
             raw_status="502",
             raw_host="overseerr.schleising.net",
             raw_uri="/",
-            raw_variant="rebuild",
         )
 
         self.assertEqual(context["error_code"], 502)
-        self.assertEqual(context["error_heading"], "Storage Rebuild")
-        self.assertEqual(context["error_title"], "Overseerr is temporarily offline.")
-        self.assertIn("NAS storage pool is rebuilt", context["error_message"])
+        self.assertEqual(context["error_heading"], "Bad Gateway")
+        self.assertEqual(context["error_title"], "Overseerr could not be reached.")
+        self.assertIn("stopped, crashed, or refusing connections", context["error_message"])
         self.assertEqual(context["retry_url"], "https://overseerr.schleising.net/")
         self.assertEqual(context["site_origin"], SITE_ORIGIN)
         self.assertEqual(context["login_next"], "https://overseerr.schleising.net/")
 
-    def test_rebuild_variant_names_tautulli(self) -> None:
+    def test_503_explains_service_unavailable(self) -> None:
         context = nginx_5xx_page_context(
-            raw_status="502",
-            raw_host="tautulli.schleising.net",
-            raw_uri="/home",
-            raw_variant="rebuild",
-        )
-
-        self.assertEqual(context["error_title"], "Tautulli is temporarily offline.")
-        self.assertEqual(
-            context["retry_url"],
-            "https://tautulli.schleising.net/home",
-        )
-
-    def test_generic_502_names_known_service(self) -> None:
-        context = nginx_5xx_page_context(
-            raw_status="502",
-            raw_host="overseerr.schleising.net",
+            raw_status="503",
+            raw_host="sonarr.schleising.net",
             raw_uri="/",
-            raw_variant="",
         )
 
-        self.assertEqual(context["error_heading"], "Bad Gateway")
-        self.assertEqual(context["error_title"], "Overseerr could not be reached.")
+        self.assertEqual(context["error_heading"], "Service Unavailable")
+        self.assertEqual(context["error_title"], "Sonarr is temporarily unavailable.")
+        self.assertIn("overloaded, restarting", context["error_message"])
 
-    def test_rebuild_variant_names_nas_apps(self) -> None:
+    def test_504_explains_gateway_timeout(self) -> None:
+        context = nginx_5xx_page_context(
+            raw_status="504",
+            raw_host="radarr.schleising.net",
+            raw_uri="/",
+        )
+
+        self.assertEqual(context["error_heading"], "Gateway Timeout")
+        self.assertEqual(context["error_title"], "Radarr took too long to respond.")
+        self.assertIn("no response arrived in time", context["error_message"])
+
+    def test_500_explains_internal_server_error(self) -> None:
+        context = nginx_5xx_page_context(
+            raw_status="500",
+            raw_host="www.schleising.net",
+            raw_uri="/football/table/",
+        )
+
+        self.assertEqual(context["error_heading"], "Internal Server Error")
+        self.assertEqual(
+            context["error_title"],
+            "The application hit an unexpected server error.",
+        )
+        self.assertIn("fault on the server", context["error_message"])
+        self.assertEqual(context["site_origin"], "")
+
+    def test_other_5xx_keeps_status_and_explains(self) -> None:
+        context = nginx_5xx_page_context(
+            raw_status="505",
+            raw_host="portainer.schleising.net",
+            raw_uri="/",
+        )
+
+        self.assertEqual(context["error_code"], 505)
+        self.assertEqual(context["error_heading"], "Server Error")
+        self.assertIn("HTTP 505", context["error_message"])
+        self.assertEqual(service_label("portainer.schleising.net"), "This application")
+
+    def test_named_services_include_nas_apps(self) -> None:
         for host, name in (
-            ("sonarr.schleising.net", "Sonarr"),
-            ("radarr.schleising.net", "Radarr"),
+            ("tautulli.schleising.net", "Tautulli"),
             ("prowlarr.schleising.net", "Prowlarr"),
             ("plex.schleising.net", "Plex"),
             ("transmission.schleising.net", "Transmission"),
@@ -100,37 +122,8 @@ class NginxErrorHelperTests(unittest.TestCase):
                     raw_status="502",
                     raw_host=host,
                     raw_uri="/",
-                    raw_variant="rebuild",
                 )
-                self.assertEqual(context["error_title"], f"{name} is temporarily offline.")
-                self.assertIn("NAS storage pool is rebuilt", context["error_message"])
-
-    def test_generic_502_uses_fallback_title_for_unknown_service(self) -> None:
-        context = nginx_5xx_page_context(
-            raw_status="502",
-            raw_host="portainer.schleising.net",
-            raw_uri="/",
-            raw_variant="",
-        )
-
-        self.assertEqual(context["error_heading"], "Bad Gateway")
-        self.assertEqual(context["error_title"], "This application could not be reached.")
-        self.assertEqual(service_label("portainer.schleising.net"), "This application")
-
-    def test_www_host_does_not_set_site_origin(self) -> None:
-        context = nginx_5xx_page_context(
-            raw_status="503",
-            raw_host="www.schleising.net",
-            raw_uri="/football/table/",
-            raw_variant=None,
-        )
-
-        self.assertEqual(context["error_code"], 503)
-        self.assertEqual(context["site_origin"], "")
-        self.assertEqual(
-            context["retry_url"],
-            "https://www.schleising.net/football/table/",
-        )
+                self.assertEqual(context["error_title"], f"{name} could not be reached.")
 
 
 if __name__ == "__main__":
