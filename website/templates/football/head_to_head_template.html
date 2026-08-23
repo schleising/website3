@@ -149,7 +149,7 @@
             <time class="match-start" datetime="{{ match.utc_date|kickoff_utc_iso }}" data-kickoff-format="long"></time>
             <div class="h2h-match-meta">
               <div class="h2h-season-pill">{{ match_competition_label }} {{ match_season_label }}</div>
-              <div class="match-status">{{ match.status }}</div>
+              <div class="match-status {{ match.status|match_status_pill_class }}">{{ match.status }}</div>
             </div>
           </div>
           <div class="score-widget__board">

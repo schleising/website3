@@ -1004,7 +1004,7 @@ function renderLiveMatchPopupCard(matchData) {
         liveMatchPopupCardElement.innerHTML = `
             <div class="date-and-time">
                 <div class="match-start">Live Match</div>
-                <div class="match-status">Unavailable</div>
+                <div class="match-status match-status--scheduled">Unavailable</div>
             </div>
             <div class="score-widget__board">
                 <div class="score-widget__side score-widget__side--home team">
@@ -1038,7 +1038,9 @@ function renderLiveMatchPopupCard(matchData) {
     const awayTeamName = String(matchData.away_team || "Away");
     const homeTeamCrest = normalizeTeamCrestPath(matchData.home_team_crest);
     const awayTeamCrest = normalizeTeamCrestPath(matchData.away_team_crest);
-    const liveClass = normalizeMatchStatus(matchData.status) === "IN PLAY" ? " match-status--live" : "";
+    const liveClass = window.FootballMatchStatus
+        ? ` ${window.FootballMatchStatus.matchStatusPillClass(matchData.status)}`
+        : (normalizeMatchStatus(matchData.status) === "IN PLAY" ? " match-status--live" : "");
 
     liveMatchPopupCardElement.innerHTML = `
         <div class="date-and-time">

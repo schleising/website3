@@ -43,7 +43,12 @@ from .football_db import (
     delete_push_subscription,
 )
 
-from .football_utils import update_match_timezone, create_bet_standings, kickoff_utc_iso
+from .football_utils import (
+    update_match_timezone,
+    create_bet_standings,
+    kickoff_utc_iso,
+    match_status_pill_class,
+)
 from .world_cup_db import world_cup_nav_available
 from .chatbot_history_api import (
     football_history_api_router,
@@ -91,6 +96,7 @@ from .world_cup_utils import WC_CURRENT_EDITION
 
 TEMPLATES = Jinja2Templates("/app/templates")
 TEMPLATES.env.filters["kickoff_utc_iso"] = kickoff_utc_iso
+TEMPLATES.env.filters["match_status_pill_class"] = match_status_pill_class
 
 football_router = APIRouter(prefix="/football")
 football_router.include_router(football_history_api_router, prefix="/api/history")

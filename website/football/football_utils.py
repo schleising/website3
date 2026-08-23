@@ -15,6 +15,7 @@ from .models import (
     FootballBetList,
     LiveTableItem,
     Match,
+    MatchStatus,
 )
 
 
@@ -77,6 +78,42 @@ def kickoff_utc_iso(value: datetime) -> str:
         utc_value = value.astimezone(timezone.utc)
 
     return utc_value.replace(microsecond=0).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def match_status_pill_class(
+    status: MatchStatus | str | None,
+    duration: str | None = None,
+) -> str:
+    """Return the CSS modifier class for a coloured match-status pill."""
+    if isinstance(status, MatchStatus):
+        status_value = status.value
+    else:
+        status_value = str(status or "").strip().upper().replace(" ", "_")
+
+    duration_value = str(duration or "").strip().upper()
+
+    if status_value == MatchStatus.in_play.value:
+        if duration_value == "PENALTY_SHOOTOUT":
+            return "match-status--penalties"
+        return "match-status--live"
+    if status_value == MatchStatus.paused.value:
+        return "match-status--paused"
+    if status_value == MatchStatus.finished.value:
+        return "match-status--finished"
+    if status_value == MatchStatus.suspended.value:
+        return "match-status--suspended"
+    if status_value == MatchStatus.postponed.value:
+        return "match-status--postponed"
+    if status_value == MatchStatus.cancelled.value:
+        return "match-status--cancelled"
+    if status_value in {
+        MatchStatus.scheduled.value,
+        MatchStatus.timed.value,
+        MatchStatus.awarded.value,
+    }:
+        return "match-status--scheduled"
+
+    return "match-status--scheduled"
 
 
 def update_match_timezone(matches: list[Match]) -> list[Match]:

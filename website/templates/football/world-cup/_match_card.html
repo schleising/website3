@@ -21,7 +21,7 @@
       {% endif %}
     </div>
     <div class="match-meta-actions">
-      <div class="match-status{% if match.status == 'IN_PLAY' %} match-status--live{% endif %}">
+      <div class="match-status {{ match.status|match_status_pill_class(match.score.duration) }}">
         <span class="world-cup-match-status-text">{{ match|world_cup_match_status_display }}</span>
       </div>
     </div>

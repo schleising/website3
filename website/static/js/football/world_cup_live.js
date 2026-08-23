@@ -192,7 +192,15 @@ function updateWorldCupScoreWidget(match) {
 
     const statusWrap = scoreWidget.querySelector(".match-status");
     if (statusWrap) {
-        statusWrap.classList.toggle("match-status--live", match.status === "IN_PLAY");
+        if (window.FootballMatchStatus) {
+            window.FootballMatchStatus.applyMatchStatusPill(
+                statusWrap,
+                match.status,
+                match.score?.duration
+            );
+        } else {
+            statusWrap.classList.toggle("match-status--live", match.status === "IN_PLAY");
+        }
     }
 
     scoreWidget.dataset.matchFinished = match.status === "FINISHED" ? "true" : "false";

@@ -952,6 +952,20 @@ h3.header-text.football-header-text--season {
     font-size: 0.75rem;
 }
 
+.score-widget .match-start {
+    color: var(--brand-strong);
+    font-size: 0.86rem;
+    font-weight: 750;
+    letter-spacing: -0.01em;
+    line-height: 1.2;
+    font-variant-numeric: tabular-nums;
+}
+
+.score-widget--compact .match-start {
+    font-size: 0.74rem;
+    font-weight: 700;
+}
+
 .match-meta-actions {
     display: inline-flex;
     align-items: center;
@@ -962,21 +976,64 @@ h3.header-text.football-header-text--season {
 }
 
 .match-status {
-    white-space: nowrap;
-}
-
-.match-status--live {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     border-radius: 999rem;
-    background: var(--success);
-    color: #ffffff;
+    border: 0.0625rem solid transparent;
     font-size: 0.62rem;
     font-weight: 700;
     letter-spacing: 0.03em;
     line-height: 1;
     padding: 0.18rem 0.48rem;
+    white-space: nowrap;
+}
+
+.match-status:empty {
+    display: none;
+}
+
+.match-status--scheduled {
+    background: #ffffff;
+    border-color: color-mix(in srgb, var(--line), var(--brand-soft) 35%);
+    color: var(--text-soft);
+}
+
+.match-status--live,
+.match-status--penalties {
+    background: var(--success);
+    border-color: color-mix(in srgb, var(--success), #0a4d2c 18%);
+    color: #ffffff;
+}
+
+.match-status--paused {
+    background: color-mix(in srgb, #c9851a, #ffffff 18%);
+    border-color: color-mix(in srgb, #c9851a, #ffffff 8%);
+    color: #ffffff;
+}
+
+.match-status--finished {
+    background: var(--brand-strong);
+    border-color: color-mix(in srgb, var(--brand-strong), #0b1f33 12%);
+    color: #ffffff;
+}
+
+.match-status--suspended {
+    background: color-mix(in srgb, #b56a12, #ffffff 16%);
+    border-color: color-mix(in srgb, #b56a12, #ffffff 6%);
+    color: #ffffff;
+}
+
+.match-status--postponed {
+    background: color-mix(in srgb, var(--warning), #ffffff 42%);
+    border-color: color-mix(in srgb, var(--warning), #ffffff 18%);
+    color: #3f4550;
+}
+
+.match-status--cancelled {
+    background: color-mix(in srgb, var(--danger), #ffffff 18%);
+    border-color: color-mix(in srgb, var(--danger), #ffffff 8%);
+    color: #ffffff;
 }
 
 .match-h2h-pill {

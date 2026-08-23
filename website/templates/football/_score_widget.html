@@ -50,7 +50,7 @@
       {% if live_matches %}
       <div class="match-status"></div>
       {% else %}
-      <div class="match-status{% if match.status == 'IN_PLAY' %} match-status--live{% endif %}">{{ match.status }}</div>
+      <div class="match-status {{ match.status|match_status_pill_class }}">{{ match.status }}</div>
       {% endif %}
     </div>
   </div>

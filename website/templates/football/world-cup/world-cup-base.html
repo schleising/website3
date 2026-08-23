@@ -1,14 +1,14 @@
 {% extends "football/football-base.html" %}
 
 {% block scripts %}
-<script defer src="/js/football/match_times.js?v1.0.1"></script>
+<script defer src="/js/football/match_times.js?v1.0.2"></script>
 <script defer src="/js/football/competition_nav.js?v1.0.2"></script>
 {% if is_web_app|default(false) %}
 <script defer src="/js/football/pwa.js?v1.0.2"></script>
 {% endif %}
 {% if enable_live_updates|default(false) %}
 <script defer src="/js/football/world_cup_knockout_feeders.js?v1.0.2"></script>
-<script defer src="/js/football/world_cup_live.js?v1.0.11"></script>
+<script defer src="/js/football/world_cup_live.js?v1.0.12"></script>
 {% endif %}
 {% if auto_center_next_match|default(false) or all_matches_view|default(false) or (jump_targets is defined and jump_targets|length > 0) %}
 <script defer src="/js/football/world_cup_all_matches_view.js?v1.0.8"></script>

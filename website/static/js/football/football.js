@@ -135,7 +135,15 @@ function openWebSocket() {
             }
 
             statusElement.textContent = status;
-            statusElement.classList.toggle("match-status--live", match.status === "IN_PLAY");
+            if (window.FootballMatchStatus) {
+                window.FootballMatchStatus.applyMatchStatusPill(
+                    statusElement,
+                    match.status,
+                    match.score?.duration
+                );
+            } else {
+                statusElement.classList.toggle("match-status--live", match.status === "IN_PLAY");
+            }
             homeElement.textContent = home;
             awayElement.textContent = away;
             const scoreCluster = scoreWidget.querySelector(".score-widget__score");

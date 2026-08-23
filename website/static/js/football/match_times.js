@@ -64,3 +64,75 @@ window.FootballMatchTimes = {
     localizeMatchStartElements,
     parseKickoffUtc,
 };
+
+const MATCH_STATUS_PILL_CLASSES = [
+    "match-status--scheduled",
+    "match-status--live",
+    "match-status--paused",
+    "match-status--finished",
+    "match-status--suspended",
+    "match-status--postponed",
+    "match-status--cancelled",
+    "match-status--penalties",
+];
+
+/**
+ * Map an API match status (+ optional duration) to a status-pill CSS class.
+ *
+ * @param {string | null | undefined} status
+ * @param {string | null | undefined} [duration]
+ * @returns {string}
+ */
+function matchStatusPillClass(status, duration) {
+    const statusValue = String(status || "")
+        .trim()
+        .toUpperCase()
+        .replaceAll(" ", "_");
+    const durationValue = String(duration || "").trim().toUpperCase();
+
+    if (statusValue === "IN_PLAY") {
+        if (durationValue === "PENALTY_SHOOTOUT") {
+            return "match-status--penalties";
+        }
+        return "match-status--live";
+    }
+    if (statusValue === "PAUSED") {
+        return "match-status--paused";
+    }
+    if (statusValue === "FINISHED") {
+        return "match-status--finished";
+    }
+    if (statusValue === "SUSPENDED") {
+        return "match-status--suspended";
+    }
+    if (statusValue === "POSTPONED") {
+        return "match-status--postponed";
+    }
+    if (statusValue === "CANCELLED") {
+        return "match-status--cancelled";
+    }
+    return "match-status--scheduled";
+}
+
+/**
+ * Apply the coloured status-pill modifier to a match-status element.
+ *
+ * @param {Element | null | undefined} element
+ * @param {string | null | undefined} status
+ * @param {string | null | undefined} [duration]
+ */
+function applyMatchStatusPill(element, status, duration) {
+    if (!(element instanceof Element)) {
+        return;
+    }
+
+    MATCH_STATUS_PILL_CLASSES.forEach((className) => {
+        element.classList.remove(className);
+    });
+    element.classList.add(matchStatusPillClass(status, duration));
+}
+
+window.FootballMatchStatus = {
+    applyMatchStatusPill,
+    matchStatusPillClass,
+};
