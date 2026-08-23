@@ -6,7 +6,6 @@ document.addEventListener("readystatechange", event => {
 
 function initializeTodayScrollAnchor() {
     const todayCard = document.getElementById("live-day-today");
-    const topGapPx = 14;
     const visibilityThresholdPx = 14;
 
     if (!todayCard) {
@@ -23,7 +22,7 @@ function initializeTodayScrollAnchor() {
 
     requestAnimationFrame(() => {
         requestAnimationFrame(() => {
-            const targetScrollTop = getTodayTargetScrollTop(todayCard, contentContainer, topGapPx);
+            const targetScrollTop = getTodayCenteredScrollTop(todayCard, contentContainer);
 
             if (contentContainer) {
                 contentContainer.scrollTo({
@@ -56,7 +55,8 @@ function initializeTodayScrollAnchor() {
 
                 returnButton.addEventListener("click", () => {
                     returnButton.classList.remove("is-visible");
-                    scrollContainerTo(contentContainer, initialScrollTop, "smooth");
+                    const recenterScrollTop = getTodayCenteredScrollTop(todayCard, contentContainer);
+                    scrollContainerTo(contentContainer, recenterScrollTop, "smooth");
                 });
 
                 const scrollEventTarget = contentContainer || window;
@@ -77,14 +77,35 @@ function initializeTodayScrollAnchor() {
     });
 }
 
-function getTodayTargetScrollTop(todayCard, contentContainer, topGapPx) {
+/**
+ * Scroll offset that vertically centres Today's day group in the scroll container.
+ *
+ * @param {HTMLElement} todayCard
+ * @param {HTMLElement | null} contentContainer
+ * @returns {number}
+ */
+function getTodayCenteredScrollTop(todayCard, contentContainer) {
     if (contentContainer) {
-        const targetTop = todayCard.offsetTop - contentContainer.offsetTop;
-        return Math.max(targetTop - topGapPx, 0);
+        const containerRect = contentContainer.getBoundingClientRect();
+        const cardRect = todayCard.getBoundingClientRect();
+        const cardCenter = cardRect.top + (cardRect.height / 2);
+        const viewportCenter = containerRect.top + (contentContainer.clientHeight / 2);
+        const nextScrollTop = contentContainer.scrollTop + (cardCenter - viewportCenter);
+        const maxScrollTop = Math.max(
+            contentContainer.scrollHeight - contentContainer.clientHeight,
+            0
+        );
+        return Math.min(Math.max(nextScrollTop, 0), maxScrollTop);
     }
 
-    const cardTop = todayCard.getBoundingClientRect().top + window.scrollY;
-    return Math.max(cardTop - topGapPx, 0);
+    const cardRect = todayCard.getBoundingClientRect();
+    const cardCenter = cardRect.top + window.scrollY + (cardRect.height / 2);
+    const nextScrollTop = cardCenter - (window.innerHeight / 2);
+    const maxScrollTop = Math.max(
+        document.documentElement.scrollHeight - window.innerHeight,
+        0
+    );
+    return Math.min(Math.max(nextScrollTop, 0), maxScrollTop);
 }
 
 function getCurrentScrollTop(contentContainer) {
