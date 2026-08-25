@@ -17,6 +17,7 @@ from pymongo.errors import DuplicateKeyError
 
 from ..utils.html_sanitizer import sanitize_html
 from . import feed_utils
+from .feed_summary_images import strip_duplicate_summary_image
 from . import (
     feed_articles_collection,
     feed_categories_collection,
@@ -622,13 +623,28 @@ def build_article_summary_html(
     if raw_summary_html is None:
         return None, None, False
 
+    article_url = str(article_doc.get("canonical_url") or article_doc.get("link") or "")
     normalized_summary_html = normalize_summary_document_fragment_links(
         str(raw_summary_html),
-        str(article_doc.get("canonical_url") or article_doc.get("link") or ""),
+        article_url,
     )
 
     if normalized_summary_html is None or normalized_summary_html == "":
         return None, None, False
+
+    # Drop inline summary images that duplicate the dedicated media image.
+    # Handles already-stored Eurogamer-style entries where HTML kept &amp;
+    # while media_image_url used decoded &.
+    media_image_url = article_doc.get("media_image_url")
+    if isinstance(media_image_url, str) and media_image_url.strip() != "":
+        dedupe_base = article_url or media_image_url
+        normalized_summary_html = strip_duplicate_summary_image(
+            normalized_summary_html,
+            media_image_url,
+            dedupe_base,
+        )
+        if normalized_summary_html is None or normalized_summary_html == "":
+            return None, None, False
 
     sanitized = sanitize_html(
         normalized_summary_html,
