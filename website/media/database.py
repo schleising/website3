@@ -6,6 +6,7 @@ from bson import ObjectId
 from pymongo import DESCENDING
 
 from ..database.database import Database
+from ..tools.converter.database.models import effective_video_information_from_db
 
 
 mongodb = Database()
@@ -75,7 +76,7 @@ class MediaDatabase:
         return None
 
     def _get_codec_name(self, db_file: Mapping[str, Any], codec_type: str) -> str:
-        streams = db_file.get("video_information", {}).get("streams", [])
+        streams = effective_video_information_from_db(db_file).get("streams", [])
 
         for stream in streams:
             if stream.get("codec_type") == codec_type and stream.get("codec_name"):
@@ -84,7 +85,7 @@ class MediaDatabase:
         return "Unknown"
 
     def _get_video_resolution(self, db_file: Mapping[str, Any]) -> str:
-        streams = db_file.get("video_information", {}).get("streams", [])
+        streams = effective_video_information_from_db(db_file).get("streams", [])
 
         for stream in streams:
             if stream.get("codec_type") != "video":
@@ -149,7 +150,7 @@ class MediaDatabase:
         else:
             status_label = "Idle"
 
-        format_data = db_file.get("video_information", {}).get("format", {})
+        format_data = effective_video_information_from_db(db_file).get("format", {})
 
         return {
             "filename": filename,
@@ -283,6 +284,14 @@ class MediaDatabase:
                 "video_information.streams.coded_height",
                 "video_information.format.duration",
                 "video_information.format.bit_rate",
+                "converted_video_information.streams.codec_type",
+                "converted_video_information.streams.codec_name",
+                "converted_video_information.streams.width",
+                "converted_video_information.streams.height",
+                "converted_video_information.streams.coded_width",
+                "converted_video_information.streams.coded_height",
+                "converted_video_information.format.duration",
+                "converted_video_information.format.bit_rate",
             ],
         ).limit(limit)
 

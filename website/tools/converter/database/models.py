@@ -1,6 +1,26 @@
 from datetime import datetime
+from typing import Any, Mapping
 
 from pydantic import BaseModel
+
+
+def effective_video_information_from_db(
+    db_file: Mapping[str, Any],
+) -> Mapping[str, Any]:
+    """Library file metadata when converted; otherwise the walker probe."""
+    if (
+        db_file.get("converted")
+        and db_file.get("converted_video_information") is not None
+    ):
+        converted_info = db_file.get("converted_video_information")
+        if isinstance(converted_info, dict):
+            return converted_info
+
+    video_info = db_file.get("video_information")
+    if isinstance(video_info, dict):
+        return video_info
+
+    return {}
 
 
 class Disposition(BaseModel):
@@ -119,15 +139,20 @@ class FileData(BaseModel):
     filename: str
     deleted: bool
     video_information: VideoInformation
+    converted_video_information: VideoInformation | None = None
     conversion_required: bool
     converting: bool
     converted: bool
     conversion_error: bool
+    conversion_error_message: str | None = None
     copying: bool | None = None
     percentage_complete: float
     start_copy_time: datetime | None = None
     start_conversion_time: datetime | None = None
     end_conversion_time: datetime | None = None
+    overwrite_in_progress: bool = False
+    temp_output_path: str | None = None
+    backup_path: str | None = None
     video_streams: int
     audio_streams: int
     subtitle_streams: int
@@ -139,6 +164,12 @@ class FileData(BaseModel):
     backend_name: str = "None"
     speed: float | None = None
 
+    def effective_video_information(self) -> VideoInformation:
+        """Library file metadata when converted; otherwise the walker probe."""
+        if self.converted and self.converted_video_information is not None:
+            return self.converted_video_information
+        return self.video_information
+
 
 class ConvertedFileDataFromDb(BaseModel):
     filename: str
@@ -146,3 +177,8 @@ class ConvertedFileDataFromDb(BaseModel):
     end_conversion_time: datetime | None = None
     pre_conversion_size: int
     current_size: int
+
+
+class FileInfo:
+    def __init__(self, filename: str) -> None:
+        self.filename = filename

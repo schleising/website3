@@ -5,7 +5,11 @@ from typing import Any, Mapping
 
 from pymongo import ASCENDING, DESCENDING, UpdateOne
 
-from .models import FileData, ConvertedFileDataFromDb
+from .models import (
+    ConvertedFileDataFromDb,
+    FileData,
+    effective_video_information_from_db,
+)
 from ..messages.messages import StatisticsMessage, ConvertedFileData, FileToConvertData
 from media_cover_art import ArtDisplayFields
 from ..cover_art_runtime import resolve_art_for_display_many
@@ -42,7 +46,7 @@ class DatabaseTools:
         return f"{size:.2f} PB"
 
     def _format_resolution(self, db_file: Mapping[str, Any]) -> str:
-        streams = db_file.get("video_information", {}).get("streams", [])
+        streams = effective_video_information_from_db(db_file).get("streams", [])
 
         for stream in streams:
             if stream.get("codec_type") != "video":
@@ -100,12 +104,10 @@ class DatabaseTools:
         else:
             total_conversion_time_string = f"{hours}hrs {minutes} mins"
 
-        duration = (
-            db_file.get("video_information", {}).get("format", {}).get("duration")
-        )
-        bit_rate = (
-            db_file.get("video_information", {}).get("format", {}).get("bit_rate")
-        )
+        display_video_info = effective_video_information_from_db(db_file)
+        format_data = display_video_info.get("format", {})
+        duration = format_data.get("duration")
+        bit_rate = format_data.get("bit_rate")
         backend_name = str(db_file.get("backend_name") or "").strip() or "—"
 
         # Create a ConvertedFileData object
@@ -152,8 +154,17 @@ class DatabaseTools:
 
         return f"{minutes}:{seconds:02d}"
 
-    def _get_codec_name(self, db_file: Mapping[str, Any], codec_type: str) -> str:
-        streams = db_file.get("video_information", {}).get("streams", [])
+    def _get_codec_name(
+        self,
+        db_file: Mapping[str, Any],
+        codec_type: str,
+        *,
+        for_display: bool = True,
+    ) -> str:
+        if for_display:
+            streams = effective_video_information_from_db(db_file).get("streams", [])
+        else:
+            streams = db_file.get("video_information", {}).get("streams", [])
 
         for stream in streams:
             if stream.get("codec_type") == codec_type and stream.get("codec_name"):
@@ -303,7 +314,7 @@ class DatabaseTools:
                 bitrate_band = self._get_bitrate_band_key(parsed_bit_rate)
                 bitrate_band_ratios.setdefault(bitrate_band, []).append(saved_ratio)
 
-            video_codec = self._get_codec_name(db_file, "video")
+            video_codec = self._get_codec_name(db_file, "video", for_display=False)
             if video_codec != "Unknown":
                 codec_ratios.setdefault(video_codec, []).append(saved_ratio)
 
@@ -525,10 +536,11 @@ class DatabaseTools:
         if base_size <= 0:
             return 0
 
-        bit_rate = file_data.video_information.format.bit_rate
+        display_video_info = file_data.effective_video_information()
+        bit_rate = display_video_info.format.bit_rate
 
         video_codec = "Unknown"
-        for stream in file_data.video_information.streams:
+        for stream in display_video_info.streams:
             if stream.codec_type == "video" and stream.codec_name is not None:
                 video_codec = str(stream.codec_name).upper()
                 break
@@ -562,17 +574,10 @@ class DatabaseTools:
     ) -> FileToConvertData:
         current_size = db_file.get("current_size") or db_file.get("pre_conversion_size") or 0
 
-        duration = (
-            db_file.get("video_information", {})
-            .get("format", {})
-            .get("duration")
-        )
-
-        bit_rate = (
-            db_file.get("video_information", {})
-            .get("format", {})
-            .get("bit_rate")
-        )
+        display_video_info = effective_video_information_from_db(db_file)
+        format_data = display_video_info.get("format", {})
+        duration = format_data.get("duration")
+        bit_rate = format_data.get("bit_rate")
 
         video_codec = self._get_codec_name(db_file, "video")
 
@@ -645,6 +650,7 @@ class DatabaseTools:
             sort=[("end_conversion_time", DESCENDING)],
             projection=[
                 "filename",
+                "converted",
                 "start_conversion_time",
                 "end_conversion_time",
                 "pre_conversion_size",
@@ -656,6 +662,12 @@ class DatabaseTools:
                 "video_information.streams.height",
                 "video_information.format.duration",
                 "video_information.format.bit_rate",
+                "converted_video_information.streams.codec_type",
+                "converted_video_information.streams.codec_name",
+                "converted_video_information.streams.width",
+                "converted_video_information.streams.height",
+                "converted_video_information.format.duration",
+                "converted_video_information.format.bit_rate",
             ],
         )
 
@@ -693,6 +705,7 @@ class DatabaseTools:
 
         queue_projection = [
             "filename",
+            "converted",
             "current_size",
             "pre_conversion_size",
             "converting",
@@ -702,6 +715,10 @@ class DatabaseTools:
             "video_information.streams.codec_name",
             "video_information.format.duration",
             "video_information.format.bit_rate",
+            "converted_video_information.streams.codec_type",
+            "converted_video_information.streams.codec_name",
+            "converted_video_information.format.duration",
+            "converted_video_information.format.bit_rate",
         ]
 
         active_cursor = media_collection.find(
