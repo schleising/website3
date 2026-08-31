@@ -192,10 +192,30 @@ class FeedDbHelperTests(unittest.TestCase):
                 saved_count=0,
                 categories=[],
             ),
+            3,
         )
 
         feed_db.invalidate_category_counts_cache("test-user")
         self.assertNotIn("test-user", feed_db._category_counts_cache)
+
+    def test_category_counts_cache_misses_when_read_state_size_changes(self) -> None:
+        from website.feeds import feed_db
+        from website.feeds.models import FeedCategoryListResponse
+
+        feed_db._category_counts_cache["test-user"] = (
+            feed_db.utc_now(),
+            FeedCategoryListResponse(
+                all_unread_count=0,
+                recently_read_count=0,
+                saved_count=0,
+                categories=[],
+            ),
+            2,
+        )
+
+        cached_entry = feed_db._category_counts_cache["test-user"]
+        self.assertEqual(cached_entry[2], 2)
+        self.assertNotEqual(cached_entry[2], 3)
 
 
 class HtmlSanitizerTests(unittest.TestCase):

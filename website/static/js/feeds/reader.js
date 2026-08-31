@@ -185,6 +185,9 @@
     /** @type {Set<string>} */
     const pendingUnsaveIds = new Set();
 
+    /** @type {Map<string, number>} */
+    const pinnedUnreadCounts = new Map();
+
     /** @type {boolean} */
     const isTouchOnlyDevice = (() => {
         const hasTouchCapability = typeof navigator.maxTouchPoints === "number"
@@ -1382,6 +1385,8 @@
 
             setCardReadAppearance(card, true, new Date().toISOString());
             setCardNewBadge(card, false);
+            pinUnreadCountsAfterLocalMark();
+            renderPinnedUnreadCounts();
             await refreshSidebarMeta();
             schedulePagePrefetchCheck();
         } finally {
@@ -1443,6 +1448,8 @@
                 }
             }
 
+            pinUnreadCountsAfterLocalUnread();
+            renderPinnedUnreadCounts();
             await refreshSidebarMeta();
             schedulePagePrefetchCheck();
         } finally {
@@ -2363,6 +2370,183 @@
     }
 
     /**
+     * Return the unread-count scope key for a sidebar category ID.
+     *
+     * @param {string} categoryId
+     * @returns {string}
+     */
+    function unreadCountScopeForCategory(categoryId) {
+        return `category:${String(categoryId || "").trim()}`;
+    }
+
+    /**
+     * Return unread-count scopes that should move after a local read/unread toggle.
+     *
+     * @returns {string[]}
+     */
+    function getActiveUnreadCountScopes() {
+        if (isSearchPage || selectedCategory === "recently-read" || selectedCategory === "saved") {
+            return [];
+        }
+
+        if (selectedCategory === "all") {
+            return ["all"];
+        }
+
+        return [unreadCountScopeForCategory(selectedCategory), "all"];
+    }
+
+    /**
+     * Read the currently rendered unread count for a sidebar scope.
+     *
+     * @param {string} scope
+     * @returns {number}
+     */
+    function getDisplayedCountForScope(scope) {
+        if (scope === "all") {
+            const allLink = document.querySelector('.feed-category-shortcut[data-category-shortcut="all"]');
+            const countNode = allLink?.querySelector(".feed-category-count");
+            return normalizeCount(countNode?.textContent);
+        }
+
+        const categoryId = scope.startsWith("category:")
+            ? scope.slice("category:".length)
+            : scope;
+        const link = document.querySelector(
+            `.feed-category-link[data-category-id="${CSS.escape(categoryId)}"]`
+        );
+        const countNode = link?.querySelector(".feed-category-count");
+        return normalizeCount(countNode?.textContent);
+    }
+
+    /**
+     * Pin unread counts after a local mark-read so stale poll payloads cannot flash 0.
+     */
+    function pinUnreadCountsAfterLocalMark() {
+        getActiveUnreadCountScopes().forEach(scope => {
+            pinnedUnreadCounts.set(scope, Math.max(0, getDisplayedCountForScope(scope) - 1));
+        });
+    }
+
+    /**
+     * Pin unread counts after a local mark-unread so stale poll payloads cannot flash high.
+     */
+    function pinUnreadCountsAfterLocalUnread() {
+        getActiveUnreadCountScopes().forEach(scope => {
+            pinnedUnreadCounts.set(scope, getDisplayedCountForScope(scope) + 1);
+        });
+    }
+
+    /**
+     * Reconcile a server unread count with any active local pin for that scope.
+     *
+     * @param {string} scope
+     * @param {unknown} serverValue
+     * @returns {number}
+     */
+    function resolveUnreadCount(scope, serverValue) {
+        const normalized = normalizeCount(serverValue);
+        if (!pinnedUnreadCounts.has(scope)) {
+            return normalized;
+        }
+
+        const pinned = pinnedUnreadCounts.get(scope);
+        if (typeof pinned !== "number") {
+            return normalized;
+        }
+
+        if (normalized === pinned) {
+            pinnedUnreadCounts.delete(scope);
+            return normalized;
+        }
+
+        if (normalized > pinned) {
+            return pinned;
+        }
+
+        return pinned;
+    }
+
+    /**
+     * Apply local unread-count pins to a sidebar payload before rendering.
+     *
+     * @param {{ all_unread_count?: number, recently_read_count?: number, saved_count?: number, categories?: Array<Record<string, any>> }} payload
+     * @returns {{ all_unread_count?: number, recently_read_count?: number, saved_count?: number, categories?: Array<Record<string, any>> }}
+     */
+    function applyPinnedUnreadCounts(payload) {
+        const categories = Array.isArray(payload.categories) ? payload.categories : [];
+
+        return {
+            ...payload,
+            all_unread_count: resolveUnreadCount("all", payload.all_unread_count),
+            categories: categories.map(category => {
+                const categoryId = String(category.category_id || "").trim();
+                if (categoryId === "") {
+                    return category;
+                }
+
+                return {
+                    ...category,
+                    unread_count: resolveUnreadCount(
+                        unreadCountScopeForCategory(categoryId),
+                        category.unread_count
+                    ),
+                };
+            }),
+        };
+    }
+
+    /**
+     * Write a sidebar unread count for a scope without a full payload refresh.
+     *
+     * @param {string} scope
+     * @param {number} value
+     */
+    function setDisplayedCountForScope(scope, value) {
+        const normalizedValue = normalizeCount(value);
+        if (scope === "all") {
+            const allLink = document.querySelector('.feed-category-shortcut[data-category-shortcut="all"]');
+            const countNode = allLink?.querySelector(".feed-category-count");
+            if (countNode) {
+                countNode.textContent = String(normalizedValue);
+            }
+            if (selectedCategory === "all") {
+                renderHeaderCountAsPill(normalizedValue, { useAllAccent: true });
+            }
+            return;
+        }
+
+        const categoryId = scope.startsWith("category:")
+            ? scope.slice("category:".length)
+            : scope;
+        const link = document.querySelector(
+            `.feed-category-link[data-category-id="${CSS.escape(categoryId)}"]`
+        );
+        const countNode = link?.querySelector(".feed-category-count");
+        if (countNode) {
+            countNode.textContent = String(normalizedValue);
+        }
+
+        if (selectedCategory === categoryId) {
+            const accentHex = countNode instanceof HTMLElement
+                ? String(countNode.style.getPropertyValue("--feed-category-accent") || "").trim()
+                : "";
+            renderHeaderCountAsPill(normalizedValue, {
+                accentHex,
+            });
+        }
+    }
+
+    /**
+     * Push any pinned unread counts to the sidebar/header immediately.
+     */
+    function renderPinnedUnreadCounts() {
+        pinnedUnreadCounts.forEach((value, scope) => {
+            setDisplayedCountForScope(scope, value);
+        });
+    }
+
+    /**
      * Reset header count node classes/styles before reapplying display mode.
      */
     function resetHeaderCountNodePresentation() {
@@ -2482,6 +2666,7 @@
       * @param {{ all_unread_count?: number, recently_read_count?: number, saved_count?: number, categories?: Array<Record<string, any>> }} payload
      */
     function updateSidebarCounts(payload) {
+        const resolvedPayload = applyPinnedUnreadCounts(payload);
         const allLink = document.querySelector('.feed-category-shortcut[data-category-shortcut="all"]');
         const recentlyReadLink = document.querySelector('.feed-category-shortcut[data-category-shortcut="recently-read"]');
           const savedLink = document.querySelector('.feed-category-shortcut[data-category-shortcut="saved"]');
@@ -2489,7 +2674,7 @@
         if (allLink) {
             const allCountNode = allLink.querySelector(".feed-category-count");
             if (allCountNode) {
-                allCountNode.textContent = String(Number(payload.all_unread_count || 0));
+                allCountNode.textContent = String(Number(resolvedPayload.all_unread_count || 0));
             }
         }
         if (recentlyReadLink) {
@@ -2498,11 +2683,11 @@
         if (savedLink) {
             const savedCountNode = savedLink.querySelector(".feed-category-count");
             if (savedCountNode) {
-                savedCountNode.textContent = String(Number(payload.saved_count || 0));
+                savedCountNode.textContent = String(Number(resolvedPayload.saved_count || 0));
             }
         }
 
-        const categories = Array.isArray(payload.categories) ? payload.categories : [];
+        const categories = Array.isArray(resolvedPayload.categories) ? resolvedPayload.categories : [];
         categories.forEach(category => {
             const categoryId = String(category.category_id || "");
             const link = document.querySelector(`.feed-category-link[data-category-id="${CSS.escape(categoryId)}"]`);
@@ -2521,7 +2706,7 @@
             }
         });
 
-        updateReaderHeader(payload);
+        updateReaderHeader(resolvedPayload);
         syncSidebarSelection();
     }
 

@@ -63,7 +63,7 @@ SEARCH_TERM_IRREGULAR_VARIANTS: dict[str, tuple[str, ...]] = {
 
 _feed_article_text_index_available_cache: bool | None = None
 _feed_article_text_index_checked_at: datetime | None = None
-_category_counts_cache: dict[str, tuple[datetime, FeedCategoryListResponse]] = {}
+_category_counts_cache: dict[str, tuple[datetime, FeedCategoryListResponse, int]] = {}
 
 SUMMARY_ANCHOR_HREF_RE = re.compile(
     r'(?P<prefix>\bhref\s*=\s*)(?P<quote>["\']?)(?P<href>[^"\'\s>]+)(?P=quote)',
@@ -1683,6 +1683,34 @@ def invalidate_category_counts_cache(user_id: str) -> None:
     _category_counts_cache.pop(user_id, None)
 
 
+async def resolve_categories_with_counts_cached(
+    user_id: str,
+    categories: list[FeedCategoryDocument],
+    subscriptions: list[dict[str, Any]],
+    read_state_ids: set[ObjectId],
+) -> FeedCategoryListResponse:
+    """Return category counts, using cache only when read-state size still matches."""
+
+    now = utc_now()
+    read_state_count = len(read_state_ids)
+    cached_entry = _category_counts_cache.get(user_id)
+    if (
+        cached_entry is not None
+        and now - cached_entry[0] <= CATEGORY_COUNTS_CACHE_TTL
+        and cached_entry[2] == read_state_count
+    ):
+        return cached_entry[1]
+
+    payload = await build_categories_with_counts(
+        user_id,
+        categories,
+        subscriptions,
+        read_state_ids,
+    )
+    _category_counts_cache[user_id] = (now, payload, read_state_count)
+    return payload
+
+
 async def build_categories_with_counts(
     user_id: str,
     categories: list[FeedCategoryDocument],
@@ -1745,25 +1773,15 @@ async def build_categories_with_counts(
 async def get_categories_with_counts(user_id: str) -> FeedCategoryListResponse:
     """Return sidebar categories and unread counters for a user."""
 
-    now = utc_now()
-    cached_entry = _category_counts_cache.get(user_id)
-    if (
-        cached_entry is not None
-        and now - cached_entry[0] <= CATEGORY_COUNTS_CACHE_TTL
-    ):
-        return cached_entry[1]
-
     categories = await list_category_documents(user_id)
     subscriptions = await list_user_subscription_docs(user_id)
     read_state_ids = await get_read_article_id_set(user_id)
-    payload = await build_categories_with_counts(
+    return await resolve_categories_with_counts_cached(
         user_id,
         categories,
         subscriptions,
         read_state_ids,
     )
-    _category_counts_cache[user_id] = (now, payload)
-    return payload
 
 
 async def get_read_article_id_set(user_id: str) -> set[ObjectId]:
@@ -3733,21 +3751,12 @@ async def get_sidebar_meta_for_reader(user_id: str) -> FeedSidebarMetaResponse:
     subscriptions = await list_user_subscription_docs(user_id)
     read_state_ids = await get_read_article_id_set(user_id)
 
-    now = utc_now()
-    cached_entry = _category_counts_cache.get(user_id)
-    if (
-        cached_entry is not None
-        and now - cached_entry[0] <= CATEGORY_COUNTS_CACHE_TTL
-    ):
-        categories_payload = cached_entry[1]
-    else:
-        categories_payload = await build_categories_with_counts(
-            user_id,
-            categories,
-            subscriptions,
-            read_state_ids,
-        )
-        _category_counts_cache[user_id] = (now, categories_payload)
+    categories_payload = await resolve_categories_with_counts_cached(
+        user_id,
+        categories,
+        subscriptions,
+        read_state_ids,
+    )
 
     visible_feed_ids_by_group = await get_sidebar_visible_feed_ids_by_group(
         user_id,
@@ -3779,21 +3788,12 @@ async def get_reader_live_sync(
     subscriptions = await list_user_subscription_docs(user_id)
     read_state_ids = await get_read_article_id_set(user_id)
 
-    now = utc_now()
-    cached_entry = _category_counts_cache.get(user_id)
-    if (
-        cached_entry is not None
-        and now - cached_entry[0] <= CATEGORY_COUNTS_CACHE_TTL
-    ):
-        categories_payload = cached_entry[1]
-    else:
-        categories_payload = await build_categories_with_counts(
-            user_id,
-            categories,
-            subscriptions,
-            read_state_ids,
-        )
-        _category_counts_cache[user_id] = (now, categories_payload)
+    categories_payload = await resolve_categories_with_counts_cached(
+        user_id,
+        categories,
+        subscriptions,
+        read_state_ids,
+    )
 
     visible_feed_ids_by_group = await get_sidebar_visible_feed_ids_by_group(
         user_id,
