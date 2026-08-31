@@ -597,6 +597,34 @@
     }
 
     /**
+     * Extract card category ID.
+     *
+     * @param {HTMLElement} card
+     * @returns {string}
+     */
+    function getCardCategoryId(card) {
+        return String(card.dataset.categoryId || "").trim();
+    }
+
+    /**
+     * Return unread-count scopes affected by a local read/unread toggle.
+     *
+     * @param {HTMLElement} [card]
+     * @returns {string[]}
+     */
+    function getUnreadCountScopesForCard(card) {
+        const scopes = new Set(getActiveUnreadCountScopes());
+        if (card instanceof HTMLElement) {
+            const categoryId = getCardCategoryId(card);
+            if (categoryId !== "") {
+                scopes.add(unreadCountScopeForCategory(categoryId));
+            }
+        }
+
+        return Array.from(scopes);
+    }
+
+    /**
      * Return safe article link text, filtering null-like placeholders.
      *
      * @param {unknown} value
@@ -1385,7 +1413,7 @@
 
             setCardReadAppearance(card, true, new Date().toISOString());
             setCardNewBadge(card, false);
-            pinUnreadCountsAfterLocalMark();
+            pinUnreadCountsAfterLocalMark(card);
             renderPinnedUnreadCounts();
             await refreshSidebarMeta();
             schedulePagePrefetchCheck();
@@ -1448,7 +1476,7 @@
                 }
             }
 
-            pinUnreadCountsAfterLocalUnread();
+            pinUnreadCountsAfterLocalUnread(card);
             renderPinnedUnreadCounts();
             await refreshSidebarMeta();
             schedulePagePrefetchCheck();
@@ -1666,6 +1694,7 @@
         card.className = "feed-article-card site-card";
         card.dataset.articleId = String(article.article_id || "");
         card.dataset.feedId = String(article.feed_id || "");
+        card.dataset.categoryId = String(article.category_id || "");
         card.dataset.articleLink = normalizeArticleLink(article.link);
         card.dataset.isRead = Boolean(article.is_read) ? "true" : "false";
         card.dataset.isSaved = Boolean(article.is_saved) ? "true" : "false";
@@ -2421,18 +2450,22 @@
 
     /**
      * Pin unread counts after a local mark-read so stale poll payloads cannot flash 0.
+     *
+     * @param {HTMLElement} card
      */
-    function pinUnreadCountsAfterLocalMark() {
-        getActiveUnreadCountScopes().forEach(scope => {
+    function pinUnreadCountsAfterLocalMark(card) {
+        getUnreadCountScopesForCard(card).forEach(scope => {
             pinnedUnreadCounts.set(scope, Math.max(0, getDisplayedCountForScope(scope) - 1));
         });
     }
 
     /**
      * Pin unread counts after a local mark-unread so stale poll payloads cannot flash high.
+     *
+     * @param {HTMLElement} card
      */
-    function pinUnreadCountsAfterLocalUnread() {
-        getActiveUnreadCountScopes().forEach(scope => {
+    function pinUnreadCountsAfterLocalUnread(card) {
+        getUnreadCountScopesForCard(card).forEach(scope => {
             pinnedUnreadCounts.set(scope, getDisplayedCountForScope(scope) + 1);
         });
     }
