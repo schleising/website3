@@ -1,7 +1,7 @@
 subscribeButton = document.getElementById('subscribe-button');
 
 // Query string forces browsers/proxies to fetch a new worker script when we ship SW changes.
-const serviceWorkerPath = '/sw.js?v=tools-webapp-v13';
+const serviceWorkerPath = '/sw.js?v=tools-webapp-v14';
 let isReloadingForUpdate = false;
 
 function promptForWaitingWorker(registration) {
