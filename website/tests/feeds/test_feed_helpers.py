@@ -218,6 +218,24 @@ class FeedDbHelperTests(unittest.TestCase):
         self.assertNotEqual(cached_entry[2], 3)
 
 
+class ArticleNavigationLinkTests(unittest.TestCase):
+    def test_preserves_youtube_watch_query(self) -> None:
+        from website.feeds.feed_db import normalize_article_navigation_link
+
+        youtube_url = "https://www.youtube.com/watch?v=0Ck-NPqf2c8"
+        self.assertEqual(normalize_article_navigation_link(youtube_url), youtube_url)
+
+    def test_strips_fragment_but_keeps_query(self) -> None:
+        from website.feeds.feed_db import normalize_article_navigation_link
+
+        self.assertEqual(
+            normalize_article_navigation_link(
+                "https://example.com/article?id=42#section"
+            ),
+            "https://example.com/article?id=42",
+        )
+
+
 class HtmlSanitizerTests(unittest.TestCase):
     def test_restores_missing_spaces_around_inline_tags_between_words(self) -> None:
         html = (

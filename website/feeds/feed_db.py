@@ -477,7 +477,12 @@ def normalize_article_link(value: Any) -> str:
 
 
 def normalize_article_navigation_link(value: Any) -> str:
-    """Return a canonical article URL for user navigation and visited-link matching."""
+    """Return a canonical article URL for user navigation and visited-link matching.
+
+    Query strings are preserved because many article destinations encode identity
+    there (YouTube ``?v=``, shared CMS permalinks, etc.). Fragments are dropped
+    so in-page anchors do not create distinct visited-link keys.
+    """
 
     normalized = normalize_article_link(value)
     if normalized == "":
@@ -501,7 +506,7 @@ def normalize_article_navigation_link(value: Any) -> str:
         netloc = f"{hostname}:{port}"
 
     path = parsed.path or "/"
-    return urlunparse((scheme, netloc, path, parsed.params, "", ""))
+    return urlunparse((scheme, netloc, path, parsed.params, parsed.query, ""))
 
 
 def _normalize_fragment_parent_url(value: str, source_url: str) -> str | None:

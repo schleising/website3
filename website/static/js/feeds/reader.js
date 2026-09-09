@@ -651,8 +651,9 @@
                 return "";
             }
 
-            // Canonicalize article URLs for stable visited/history behavior.
-            parsed.search = "";
+            // Keep query strings: many destinations encode identity there
+            // (YouTube ?v=, CMS permalinks). Drop only the fragment so in-page
+            // anchors do not create distinct visited-link keys.
             parsed.hash = "";
 
             return parsed.toString();
