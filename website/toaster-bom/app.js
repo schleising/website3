@@ -65,6 +65,7 @@
  * @property {number} height
  */
 
+const ASSET_VERSION = "0.1.1";
 const NODE_WIDTH = 240;
 const COLUMN_GAP = 88;
 const ROW_GAP = 20;
@@ -92,7 +93,7 @@ async function main() {
   bindToolbar();
   bindPanZoom();
   try {
-    const loaded = await loadGraph("./graph.json");
+    const loaded = await loadGraph(`./graph.json?v${ASSET_VERSION}`);
     graph = loaded;
     applyDocumentChrome(loaded);
     render();
@@ -235,6 +236,15 @@ function bindToolbar() {
 }
 
 /**
+ * True when the target should keep its own gesture (tap, follow link).
+ * @param {Element} target
+ * @returns {boolean}
+ */
+function isBrowserGestureTarget(target) {
+  return Boolean(target.closest(".node-chevron, .node-source, button, a, input, label"));
+}
+
+/**
  * Bind pan and wheel-zoom on the stage background.
  * @returns {void}
  */
@@ -246,29 +256,38 @@ function bindPanZoom() {
   /** @type {{x: number, y: number} | null} */
   let drag = null;
 
-  stage.addEventListener("pointerdown", (event) => {
-    if (!(event.target instanceof Element)) {
-      return;
-    }
-    if (event.target.closest(".node")) {
-      return;
-    }
-    event.preventDefault();
-    window.getSelection()?.removeAllRanges();
-    drag = { x: event.clientX, y: event.clientY };
-    stage.classList.add("is-panning");
-    stage.setPointerCapture(event.pointerId);
-  });
+  stage.addEventListener(
+    "pointerdown",
+    (event) => {
+      if (!(event.target instanceof Element)) {
+        return;
+      }
+      if (isBrowserGestureTarget(event.target)) {
+        return;
+      }
+      event.preventDefault();
+      window.getSelection()?.removeAllRanges();
+      drag = { x: event.clientX, y: event.clientY };
+      stage.classList.add("is-panning");
+      stage.setPointerCapture(event.pointerId);
+    },
+    { passive: false },
+  );
 
-  stage.addEventListener("pointermove", (event) => {
-    if (!drag) {
-      return;
-    }
-    state.pan.x += event.clientX - drag.x;
-    state.pan.y += event.clientY - drag.y;
-    drag = { x: event.clientX, y: event.clientY };
-    applyWorldTransform();
-  });
+  stage.addEventListener(
+    "pointermove",
+    (event) => {
+      if (!drag) {
+        return;
+      }
+      event.preventDefault();
+      state.pan.x += event.clientX - drag.x;
+      state.pan.y += event.clientY - drag.y;
+      drag = { x: event.clientX, y: event.clientY };
+      applyWorldTransform();
+    },
+    { passive: false },
+  );
 
   const endDrag = () => {
     drag = null;
@@ -276,6 +295,14 @@ function bindPanZoom() {
   };
   stage.addEventListener("pointerup", endDrag);
   stage.addEventListener("pointercancel", endDrag);
+
+  stage.addEventListener(
+    "touchmove",
+    (event) => {
+      event.preventDefault();
+    },
+    { passive: false },
+  );
 
   stage.addEventListener(
     "wheel",
