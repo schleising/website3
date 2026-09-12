@@ -1,0 +1,745 @@
+{
+  "schemaVersion": "1.0",
+  "meta": {
+    "title": "Toaster bill of materials",
+    "description": "2-slice toaster product structure",
+    "defaultColorMode": "own",
+    "displayFields": [
+      "Owner",
+      "Updated"
+    ]
+  },
+  "statuses": [
+    {
+      "id": "Released",
+      "label": "Released",
+      "color": "#2e7d32",
+      "severity": 0
+    },
+    {
+      "id": "In Work",
+      "label": "In Work",
+      "color": "#1565c0",
+      "severity": 1
+    },
+    {
+      "id": "Pending Change",
+      "label": "Pending Change",
+      "color": "#f9a825",
+      "severity": 2
+    }
+  ],
+  "nodes": [
+    {
+      "id": "TST-1000",
+      "title": "2-slice toaster",
+      "subtitle": "TST-1000",
+      "status": "In Work",
+      "rollupStatus": "Pending Change",
+      "sourceUrl": "https://plm.example.com/item/TST-1000",
+      "data": {
+        "Owner": "Maya Cole",
+        "Updated": "2026-09-01"
+      },
+      "childIds": [
+        "HSG-200",
+        "HTG-300",
+        "CRG-400",
+        "CTL-500",
+        "PWR-600"
+      ]
+    },
+    {
+      "id": "HSG-200",
+      "title": "Housing assembly",
+      "subtitle": "HSG-200",
+      "status": "Released",
+      "rollupStatus": "Pending Change",
+      "sourceUrl": "https://plm.example.com/item/HSG-200",
+      "data": {
+        "Owner": "Maya Cole",
+        "Updated": "2026-08-12"
+      },
+      "childIds": [
+        "HSG-210",
+        "HSG-220"
+      ]
+    },
+    {
+      "id": "HTG-300",
+      "title": "Heating assembly",
+      "subtitle": "HTG-300",
+      "status": "In Work",
+      "rollupStatus": "Pending Change",
+      "sourceUrl": "https://plm.example.com/item/HTG-300",
+      "data": {
+        "Owner": "Owen Park",
+        "Updated": "2026-08-20"
+      },
+      "childIds": [
+        "HTG-310",
+        "HTG-320",
+        "HTG-330"
+      ]
+    },
+    {
+      "id": "CRG-400",
+      "title": "Carriage assembly",
+      "subtitle": "CRG-400",
+      "status": "Released",
+      "rollupStatus": "Released",
+      "sourceUrl": "https://plm.example.com/item/CRG-400",
+      "data": {
+        "Owner": "Maya Cole",
+        "Updated": "2026-07-30"
+      },
+      "childIds": [
+        "CRG-410",
+        "CRG-420",
+        "CRG-430"
+      ]
+    },
+    {
+      "id": "CTL-500",
+      "title": "Control assembly",
+      "subtitle": "CTL-500",
+      "status": "Pending Change",
+      "rollupStatus": "Pending Change",
+      "sourceUrl": "https://plm.example.com/item/CTL-500",
+      "data": {
+        "Owner": "Priya Shah",
+        "Updated": "2026-09-04"
+      },
+      "childIds": [
+        "CTL-510",
+        "CTL-520",
+        "CTL-530"
+      ]
+    },
+    {
+      "id": "PWR-600",
+      "title": "Power assembly",
+      "subtitle": "PWR-600",
+      "status": "Released",
+      "rollupStatus": "Released",
+      "sourceUrl": "https://plm.example.com/item/PWR-600",
+      "data": {
+        "Owner": "Owen Park",
+        "Updated": "2026-07-18"
+      },
+      "childIds": [
+        "PWR-610",
+        "PWR-620",
+        "PWR-630",
+        "FAST-CLIP"
+      ]
+    },
+    {
+      "id": "HSG-210",
+      "title": "Outer shell",
+      "subtitle": "HSG-210",
+      "status": "Released",
+      "rollupStatus": "Pending Change",
+      "sourceUrl": "https://plm.example.com/item/HSG-210",
+      "data": {
+        "Owner": "Maya Cole",
+        "Updated": "2026-08-10"
+      },
+      "childIds": [
+        "HSG-211",
+        "HSG-212",
+        "HSG-213",
+        "HSG-214",
+        "FAST-M3",
+        "FAST-CLIP"
+      ]
+    },
+    {
+      "id": "HSG-220",
+      "title": "Carriage lever",
+      "subtitle": "HSG-220",
+      "status": "In Work",
+      "rollupStatus": "In Work",
+      "sourceUrl": "https://plm.example.com/item/HSG-220",
+      "data": {
+        "Owner": "Maya Cole",
+        "Updated": "2026-08-28"
+      },
+      "childIds": [
+        "HSG-221",
+        "HSG-222"
+      ]
+    },
+    {
+      "id": "HTG-310",
+      "title": "Element pair",
+      "subtitle": "HTG-310",
+      "status": "In Work",
+      "rollupStatus": "In Work",
+      "sourceUrl": "https://plm.example.com/item/HTG-310",
+      "data": {
+        "Owner": "Owen Park",
+        "Updated": "2026-08-18"
+      },
+      "childIds": [
+        "HTG-311",
+        "HTG-312",
+        "HTG-313"
+      ]
+    },
+    {
+      "id": "HTG-320",
+      "title": "Reflector pan",
+      "subtitle": "HTG-320",
+      "status": "Released",
+      "rollupStatus": "Released",
+      "sourceUrl": "https://plm.example.com/item/HTG-320",
+      "data": {
+        "Owner": "Owen Park",
+        "Updated": "2026-07-22"
+      },
+      "childIds": [
+        "FAST-M3"
+      ]
+    },
+    {
+      "id": "HTG-330",
+      "title": "Mica insulation wrap",
+      "subtitle": "HTG-330",
+      "status": "Pending Change",
+      "rollupStatus": "Pending Change",
+      "sourceUrl": "https://plm.example.com/item/HTG-330",
+      "data": {
+        "Owner": "Owen Park",
+        "Updated": "2026-09-02"
+      },
+      "childIds": []
+    },
+    {
+      "id": "CRG-410",
+      "title": "Bread rack",
+      "subtitle": "CRG-410",
+      "status": "Released",
+      "rollupStatus": "Released",
+      "sourceUrl": "https://plm.example.com/item/CRG-410",
+      "data": {
+        "Owner": "Maya Cole",
+        "Updated": "2026-07-15"
+      },
+      "childIds": []
+    },
+    {
+      "id": "CRG-420",
+      "title": "Lift spring set",
+      "subtitle": "CRG-420",
+      "status": "Released",
+      "rollupStatus": "Released",
+      "sourceUrl": "https://plm.example.com/item/CRG-420",
+      "data": {
+        "Owner": "Maya Cole",
+        "Updated": "2026-07-15"
+      },
+      "childIds": [
+        "CRG-421",
+        "CRG-422"
+      ]
+    },
+    {
+      "id": "CRG-430",
+      "title": "Guide rails",
+      "subtitle": "CRG-430",
+      "status": "Released",
+      "rollupStatus": "Released",
+      "sourceUrl": "https://plm.example.com/item/CRG-430",
+      "data": {
+        "Owner": "Maya Cole",
+        "Updated": "2026-07-16"
+      },
+      "childIds": [
+        "FAST-M3"
+      ]
+    },
+    {
+      "id": "CTL-510",
+      "title": "Timer PCB",
+      "subtitle": "CTL-510",
+      "status": "Pending Change",
+      "rollupStatus": "Pending Change",
+      "sourceUrl": "https://plm.example.com/item/CTL-510",
+      "data": {
+        "Owner": "Priya Shah",
+        "Updated": "2026-09-04"
+      },
+      "childIds": [
+        "CTL-511",
+        "CTL-512"
+      ]
+    },
+    {
+      "id": "CTL-520",
+      "title": "Rotary browning knob",
+      "subtitle": "CTL-520",
+      "status": "In Work",
+      "rollupStatus": "In Work",
+      "sourceUrl": "https://plm.example.com/item/CTL-520",
+      "data": {
+        "Owner": "Priya Shah",
+        "Updated": "2026-08-30"
+      },
+      "childIds": [
+        "CTL-521"
+      ]
+    },
+    {
+      "id": "CTL-530",
+      "title": "Cancel switch",
+      "subtitle": "CTL-530",
+      "status": "Released",
+      "rollupStatus": "Released",
+      "sourceUrl": "https://plm.example.com/item/CTL-530",
+      "data": {
+        "Owner": "Priya Shah",
+        "Updated": "2026-07-08"
+      },
+      "childIds": []
+    },
+    {
+      "id": "PWR-610",
+      "title": "Cordset",
+      "subtitle": "PWR-610",
+      "status": "Released",
+      "rollupStatus": "Released",
+      "sourceUrl": "https://plm.example.com/item/PWR-610",
+      "data": {
+        "Owner": "Owen Park",
+        "Updated": "2026-06-20"
+      },
+      "childIds": [
+        "PWR-611",
+        "PWR-612"
+      ]
+    },
+    {
+      "id": "PWR-620",
+      "title": "Strain relief",
+      "subtitle": "PWR-620",
+      "status": "Released",
+      "rollupStatus": "Released",
+      "sourceUrl": "https://plm.example.com/item/PWR-620",
+      "data": {
+        "Owner": "Owen Park",
+        "Updated": "2026-06-20"
+      },
+      "childIds": []
+    },
+    {
+      "id": "PWR-630",
+      "title": "Fuse 5 A",
+      "subtitle": "PWR-630",
+      "status": "Released",
+      "rollupStatus": "Released",
+      "sourceUrl": "https://plm.example.com/item/PWR-630",
+      "data": {
+        "Owner": "Owen Park",
+        "Updated": "2026-06-21"
+      },
+      "childIds": []
+    },
+    {
+      "id": "HSG-211",
+      "title": "Side panel LH",
+      "subtitle": "HSG-211",
+      "status": "Released",
+      "rollupStatus": "Released",
+      "sourceUrl": "https://plm.example.com/item/HSG-211",
+      "data": {
+        "Owner": "Maya Cole",
+        "Updated": "2026-08-02"
+      },
+      "childIds": []
+    },
+    {
+      "id": "HSG-212",
+      "title": "Side panel RH",
+      "subtitle": "HSG-212",
+      "status": "Released",
+      "rollupStatus": "Released",
+      "sourceUrl": "https://plm.example.com/item/HSG-212",
+      "data": {
+        "Owner": "Maya Cole",
+        "Updated": "2026-08-02"
+      },
+      "childIds": []
+    },
+    {
+      "id": "HSG-213",
+      "title": "Top cover with vents",
+      "subtitle": "HSG-213",
+      "status": "Pending Change",
+      "rollupStatus": "Pending Change",
+      "sourceUrl": "https://plm.example.com/item/HSG-213",
+      "data": {
+        "Owner": "Maya Cole",
+        "Updated": "2026-09-03"
+      },
+      "childIds": []
+    },
+    {
+      "id": "HSG-214",
+      "title": "Crumb tray",
+      "subtitle": "HSG-214",
+      "status": "Released",
+      "rollupStatus": "Released",
+      "sourceUrl": "https://plm.example.com/item/HSG-214",
+      "data": {
+        "Owner": "Maya Cole",
+        "Updated": "2026-07-11"
+      },
+      "childIds": []
+    },
+    {
+      "id": "HSG-221",
+      "title": "Lever arm",
+      "subtitle": "HSG-221",
+      "status": "In Work",
+      "rollupStatus": "In Work",
+      "sourceUrl": "https://plm.example.com/item/HSG-221",
+      "data": {
+        "Owner": "Maya Cole",
+        "Updated": "2026-08-28"
+      },
+      "childIds": []
+    },
+    {
+      "id": "HSG-222",
+      "title": "Lever knob cap",
+      "subtitle": "HSG-222",
+      "status": "Released",
+      "rollupStatus": "Released",
+      "sourceUrl": "https://plm.example.com/item/HSG-222",
+      "data": {
+        "Owner": "Maya Cole",
+        "Updated": "2026-07-19"
+      },
+      "childIds": []
+    },
+    {
+      "id": "HTG-311",
+      "title": "Heating element LH",
+      "subtitle": "HTG-311",
+      "status": "In Work",
+      "rollupStatus": "In Work",
+      "sourceUrl": "https://plm.example.com/item/HTG-311",
+      "data": {
+        "Owner": "Owen Park",
+        "Updated": "2026-08-18"
+      },
+      "childIds": []
+    },
+    {
+      "id": "HTG-312",
+      "title": "Heating element RH",
+      "subtitle": "HTG-312",
+      "status": "In Work",
+      "rollupStatus": "In Work",
+      "sourceUrl": "https://plm.example.com/item/HTG-312",
+      "data": {
+        "Owner": "Owen Park",
+        "Updated": "2026-08-18"
+      },
+      "childIds": []
+    },
+    {
+      "id": "HTG-313",
+      "title": "Element terminal clip",
+      "subtitle": "HTG-313",
+      "status": "Released",
+      "rollupStatus": "Released",
+      "sourceUrl": "https://plm.example.com/item/HTG-313",
+      "data": {
+        "Owner": "Owen Park",
+        "Updated": "2026-07-09"
+      },
+      "childIds": []
+    },
+    {
+      "id": "CRG-421",
+      "title": "Lift spring LH",
+      "subtitle": "CRG-421",
+      "status": "Released",
+      "rollupStatus": "Released",
+      "sourceUrl": "https://plm.example.com/item/CRG-421",
+      "data": {
+        "Owner": "Maya Cole",
+        "Updated": "2026-07-14"
+      },
+      "childIds": []
+    },
+    {
+      "id": "CRG-422",
+      "title": "Lift spring RH",
+      "subtitle": "CRG-422",
+      "status": "Released",
+      "rollupStatus": "Released",
+      "sourceUrl": "https://plm.example.com/item/CRG-422",
+      "data": {
+        "Owner": "Maya Cole",
+        "Updated": "2026-07-14"
+      },
+      "childIds": []
+    },
+    {
+      "id": "CTL-511",
+      "title": "Timer microcontroller",
+      "subtitle": "CTL-511",
+      "status": "Pending Change",
+      "rollupStatus": "Pending Change",
+      "sourceUrl": "https://plm.example.com/item/CTL-511",
+      "data": {
+        "Owner": "Priya Shah",
+        "Updated": "2026-09-04"
+      },
+      "childIds": []
+    },
+    {
+      "id": "CTL-512",
+      "title": "16 MHz crystal",
+      "subtitle": "CTL-512",
+      "status": "Released",
+      "rollupStatus": "Released",
+      "sourceUrl": "https://plm.example.com/item/CTL-512",
+      "data": {
+        "Owner": "Priya Shah",
+        "Updated": "2026-06-30"
+      },
+      "childIds": []
+    },
+    {
+      "id": "CTL-521",
+      "title": "Knob insert",
+      "subtitle": "CTL-521",
+      "status": "In Work",
+      "rollupStatus": "In Work",
+      "sourceUrl": "https://plm.example.com/item/CTL-521",
+      "data": {
+        "Owner": "Priya Shah",
+        "Updated": "2026-08-30"
+      },
+      "childIds": []
+    },
+    {
+      "id": "PWR-611",
+      "title": "C13 connector",
+      "subtitle": "PWR-611",
+      "status": "Released",
+      "rollupStatus": "Released",
+      "sourceUrl": "https://plm.example.com/item/PWR-611",
+      "data": {
+        "Owner": "Owen Park",
+        "Updated": "2026-06-18"
+      },
+      "childIds": []
+    },
+    {
+      "id": "PWR-612",
+      "title": "2 m PVC flex",
+      "subtitle": "PWR-612",
+      "status": "Released",
+      "rollupStatus": "Released",
+      "sourceUrl": "https://plm.example.com/item/PWR-612",
+      "data": {
+        "Owner": "Owen Park",
+        "Updated": "2026-06-18"
+      },
+      "childIds": []
+    },
+    {
+      "id": "FAST-M3",
+      "title": "M3x8 machine screw",
+      "subtitle": "FAST-M3",
+      "status": "Released",
+      "rollupStatus": "Released",
+      "sourceUrl": "https://plm.example.com/item/FAST-M3",
+      "data": {
+        "Owner": "Lee Nguyen",
+        "Updated": "2026-05-12"
+      },
+      "childIds": []
+    },
+    {
+      "id": "FAST-CLIP",
+      "title": "Cable clip",
+      "subtitle": "FAST-CLIP",
+      "status": "Released",
+      "rollupStatus": "Released",
+      "sourceUrl": "https://plm.example.com/item/FAST-CLIP",
+      "data": {
+        "Owner": "Lee Nguyen",
+        "Updated": "2026-05-12"
+      },
+      "childIds": []
+    }
+  ],
+  "links": [
+    {
+      "from": "TST-1000",
+      "to": "HSG-200"
+    },
+    {
+      "from": "TST-1000",
+      "to": "HTG-300"
+    },
+    {
+      "from": "TST-1000",
+      "to": "CRG-400"
+    },
+    {
+      "from": "TST-1000",
+      "to": "CTL-500"
+    },
+    {
+      "from": "TST-1000",
+      "to": "PWR-600"
+    },
+    {
+      "from": "HSG-200",
+      "to": "HSG-210"
+    },
+    {
+      "from": "HSG-200",
+      "to": "HSG-220"
+    },
+    {
+      "from": "HTG-300",
+      "to": "HTG-310"
+    },
+    {
+      "from": "HTG-300",
+      "to": "HTG-320"
+    },
+    {
+      "from": "HTG-300",
+      "to": "HTG-330"
+    },
+    {
+      "from": "CRG-400",
+      "to": "CRG-410"
+    },
+    {
+      "from": "CRG-400",
+      "to": "CRG-420"
+    },
+    {
+      "from": "CRG-400",
+      "to": "CRG-430"
+    },
+    {
+      "from": "CTL-500",
+      "to": "CTL-510"
+    },
+    {
+      "from": "CTL-500",
+      "to": "CTL-520"
+    },
+    {
+      "from": "CTL-500",
+      "to": "CTL-530"
+    },
+    {
+      "from": "PWR-600",
+      "to": "PWR-610"
+    },
+    {
+      "from": "PWR-600",
+      "to": "PWR-620"
+    },
+    {
+      "from": "PWR-600",
+      "to": "PWR-630"
+    },
+    {
+      "from": "HSG-210",
+      "to": "HSG-211"
+    },
+    {
+      "from": "HSG-210",
+      "to": "HSG-212"
+    },
+    {
+      "from": "HSG-210",
+      "to": "HSG-213"
+    },
+    {
+      "from": "HSG-210",
+      "to": "HSG-214"
+    },
+    {
+      "from": "HSG-220",
+      "to": "HSG-221"
+    },
+    {
+      "from": "HSG-220",
+      "to": "HSG-222"
+    },
+    {
+      "from": "HTG-310",
+      "to": "HTG-311"
+    },
+    {
+      "from": "HTG-310",
+      "to": "HTG-312"
+    },
+    {
+      "from": "HTG-310",
+      "to": "HTG-313"
+    },
+    {
+      "from": "CRG-420",
+      "to": "CRG-421"
+    },
+    {
+      "from": "CRG-420",
+      "to": "CRG-422"
+    },
+    {
+      "from": "CTL-510",
+      "to": "CTL-511"
+    },
+    {
+      "from": "CTL-510",
+      "to": "CTL-512"
+    },
+    {
+      "from": "CTL-520",
+      "to": "CTL-521"
+    },
+    {
+      "from": "PWR-610",
+      "to": "PWR-611"
+    },
+    {
+      "from": "PWR-610",
+      "to": "PWR-612"
+    },
+    {
+      "from": "HSG-210",
+      "to": "FAST-M3"
+    },
+    {
+      "from": "HTG-320",
+      "to": "FAST-M3"
+    },
+    {
+      "from": "CRG-430",
+      "to": "FAST-M3"
+    },
+    {
+      "from": "PWR-600",
+      "to": "FAST-CLIP"
+    },
+    {
+      "from": "HSG-210",
+      "to": "FAST-CLIP"
+    }
+  ]
+}

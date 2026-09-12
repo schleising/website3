@@ -37,6 +37,7 @@ from .media.router import media_router
 
 from .tools.router import tools_router
 from .units.router import units_router
+from .toaster.router import toaster_router
 from .utils.nginx_errors import nginx_5xx_page_context
 
 WEBSITE_ROOT = Path(__file__).resolve().parents[1]
@@ -329,6 +330,9 @@ app.include_router(tools_router)
 
 # Include the units converter router (public)
 app.include_router(units_router)
+
+# Unlisted standalone example; not linked from site navigation.
+app.include_router(toaster_router)
 
 
 @app.get("/sw.js", response_class=FileResponse, response_model=None)

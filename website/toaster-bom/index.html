@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>Tree Viewer</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div id="app">
+      <header class="toolbar">
+        <div class="toolbar-text">
+          <h1 id="doc-title">Tree Viewer</h1>
+          <p id="doc-description" hidden></p>
+        </div>
+        <div class="toolbar-controls">
+          <fieldset class="mode-toggle">
+            <legend class="visually-hidden">Colour mode</legend>
+            <label>
+              <input type="radio" name="color-mode" value="own" checked />
+              Own status
+            </label>
+            <label>
+              <input type="radio" name="color-mode" value="rollup" />
+              Roll-up
+            </label>
+          </fieldset>
+          <div class="zoom-controls">
+            <button type="button" id="zoom-out" aria-label="Zoom out">−</button>
+            <button type="button" id="zoom-reset" aria-label="Reset view">Reset view</button>
+            <button type="button" id="zoom-in" aria-label="Zoom in">+</button>
+          </div>
+        </div>
+        <ul id="legend" class="legend" aria-label="Status legend"></ul>
+      </header>
+      <div id="banner" class="banner" hidden role="alert"></div>
+      <div id="stage" aria-label="Relationship tree">
+        <div id="world">
+          <svg id="edges" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"></svg>
+          <div id="nodes"></div>
+        </div>
+      </div>
+    </div>
+    <script src="./app.js"></script>
+  </body>
+</html>

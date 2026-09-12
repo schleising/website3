@@ -50,5 +50,6 @@ Disallow: /login/
 # Don't index backend system folders if they exist
 Disallow: /tools/
 Disallow: /admin/
+Disallow: /toaster/
 # Allow everything else (Blog, Football, etc.)
 Allow: /
