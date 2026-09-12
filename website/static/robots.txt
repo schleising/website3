@@ -51,5 +51,8 @@ Disallow: /login/
 Disallow: /tools/
 Disallow: /admin/
 Disallow: /toaster/
+# Combinatorial head-to-head URLs cause expensive all-season lookups
+Disallow: /football/head-to-head
+Disallow: /head-to-head
 # Allow everything else (Blog, Football, etc.)
 Allow: /

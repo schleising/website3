@@ -1,10 +1,103 @@
-document.addEventListener("readystatechange", event => {
+document.addEventListener("readystatechange", async event => {
     if (event.target.readyState === "complete") {
         initialiseInputCardToggle();
+        await loadHeadToHeadResults();
         resetResultsScrollPosition();
         initialiseOutcomeBarColours();
     }
 });
+
+async function loadHeadToHeadResults() {
+    const root = document.getElementById("h2h-results-root");
+
+    if (!root || root.dataset.shouldLoad !== "true") {
+        return;
+    }
+
+    const resultsUrl = root.dataset.resultsUrl;
+    const teamA = root.dataset.teamA;
+    const teamB = root.dataset.teamB;
+
+    if (!resultsUrl || !teamA || !teamB) {
+        return;
+    }
+
+    const params = new URLSearchParams({
+        team_a: teamA,
+        team_b: teamB,
+    });
+
+    if (root.dataset.season) {
+        params.set("season", root.dataset.season);
+    }
+
+    root.innerHTML = '<p class="h2h-message">Loading matches…</p>';
+
+    try {
+        const response = await fetch(`${resultsUrl}?${params.toString()}`, {
+            headers: {
+                "X-CSRF-Token": root.dataset.csrfToken || "",
+                "X-Requested-With": "XMLHttpRequest",
+            },
+            credentials: "same-origin",
+        });
+
+        if (!response.ok) {
+            root.innerHTML = '<p class="h2h-message">Unable to load head-to-head matches.</p>';
+            return;
+        }
+
+        root.innerHTML = await response.text();
+        applyFetchedStatusMessage(root);
+        collapseInputCardAfterResults();
+
+        if (window.FootballMatchTimes) {
+            window.FootballMatchTimes.localizeMatchStartElements(root);
+        }
+
+        window.requestAnimationFrame(() => {
+            window.requestAnimationFrame(() => {
+                window.setTimeout(() => {
+                    resetResultsScrollPosition();
+                }, 190);
+            });
+        });
+    } catch {
+        root.innerHTML = '<p class="h2h-message">Unable to load head-to-head matches.</p>';
+    }
+}
+
+function applyFetchedStatusMessage(root) {
+    const fetchedMessage = root.querySelector("[data-h2h-status-message]");
+    const statusMessage = document.getElementById("h2h-status-message");
+
+    if (!fetchedMessage || !statusMessage) {
+        return;
+    }
+
+    statusMessage.textContent = fetchedMessage.textContent;
+    statusMessage.hidden = fetchedMessage.textContent.trim() === "";
+    fetchedMessage.remove();
+}
+
+function collapseInputCardAfterResults() {
+    const inputCard = document.getElementById("h2h-input-card");
+    const toggleButton = document.getElementById("h2h-input-toggle");
+    const toggleIcon = document.getElementById("h2h-input-toggle-icon");
+    const contentElement = document.getElementById("h2h-input-content");
+    const hasResultsCard = document.querySelector(".h2h-results-card");
+
+    if (!inputCard || !toggleButton || !contentElement || !hasResultsCard) {
+        return;
+    }
+
+    inputCard.classList.add("collapsed");
+    toggleButton.setAttribute("aria-expanded", "false");
+    if (toggleIcon) {
+        toggleIcon.textContent = "▼";
+    }
+    contentElement.style.maxHeight = "0px";
+}
 
 function resetResultsScrollPosition() {
     const resultsScroller = document.querySelector(".h2h-results-scroll");

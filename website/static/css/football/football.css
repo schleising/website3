@@ -457,6 +457,14 @@ h3.header-text.football-header-text--season {
     overflow: hidden;
 }
 
+#h2h-results-root {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+}
+
 .h2h-input-card,
 .h2h-results-card {
     width: 100%;

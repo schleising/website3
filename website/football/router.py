@@ -49,6 +49,12 @@ from .football_utils import (
     kickoff_utc_iso,
     match_status_pill_class,
 )
+from .h2h_protection import (
+    H2H_ROBOTS_HEADERS,
+    allows_expensive_h2h_lookup,
+    consume_h2h_rate_limit,
+    h2h_rejected_response,
+)
 from .world_cup_db import world_cup_nav_available
 from .chatbot_history_api import (
     football_history_api_router,
@@ -77,6 +83,7 @@ from .models import (
     LiveTableItem,
     WorldCupStandingsList,
     WorldCupStandingsGroupPayload,
+    Match,
     SimplifiedMatch,
     SimplifiedTableRow,
     SimplifiedFootballData,
@@ -933,14 +940,90 @@ async def get_subscriptions_page(request: Request):
     )
 
 
-@football_router.get("/head-to-head", response_class=HTMLResponse)
-@football_router.get("/head-to-head/", response_class=HTMLResponse)
-async def get_head_to_head_matches(
+def _h2h_pair_validation_message(
+    team_a: int | None,
+    team_b: int | None,
+    selected_team_a: Team | None,
+    selected_team_b: Team | None,
+) -> str | None:
+    if team_a is None and team_b is None:
+        return None
+
+    team_a_id = selected_team_a.id if selected_team_a is not None else None
+    team_b_id = selected_team_b.id if selected_team_b is not None else None
+
+    if selected_team_a is None or selected_team_b is None:
+        return "Please select two valid teams."
+    if not isinstance(team_a_id, int) or not isinstance(team_b_id, int):
+        return "Please select two valid teams."
+    if team_a_id == team_b_id:
+        return "Please choose two different teams."
+
+    return None
+
+
+def _h2h_summary_for_matches(
+    matches: list[Match], selected_team_a: Team
+) -> dict[str, int]:
+    played_matches = [
+        match
+        for match in matches
+        if match.score.full_time.home is not None
+        and match.score.full_time.away is not None
+    ]
+
+    team_a_wins = 0
+    team_b_wins = 0
+    draws = 0
+    team_a_goals = 0
+    team_b_goals = 0
+
+    for match in played_matches:
+        home_score = match.score.full_time.home
+        away_score = match.score.full_time.away
+
+        if home_score is None or away_score is None:
+            continue
+
+        if match.home_team.id == selected_team_a.id:
+            team_a_goals += home_score
+            team_b_goals += away_score
+        else:
+            team_a_goals += away_score
+            team_b_goals += home_score
+
+        if home_score == away_score:
+            draws += 1
+        elif home_score > away_score:
+            if match.home_team.id == selected_team_a.id:
+                team_a_wins += 1
+            else:
+                team_b_wins += 1
+        else:
+            if match.away_team.id == selected_team_a.id:
+                team_a_wins += 1
+            else:
+                team_b_wins += 1
+
+    return {
+        "meetings": len(matches),
+        "played": len(played_matches),
+        "team_a_wins": team_a_wins,
+        "team_b_wins": team_b_wins,
+        "draws": draws,
+        "team_a_goals": team_a_goals,
+        "team_b_goals": team_b_goals,
+    }
+
+
+async def _build_h2h_page_context(
     request: Request,
-    team_a: int | None = Query(default=None),
-    team_b: int | None = Query(default=None),
-    season: str | None = Query(default=None),
-):
+    team_a: int | None,
+    team_b: int | None,
+    season: str | None,
+    *,
+    include_matches: bool,
+) -> dict:
     season_context = await _build_football_season_context(
         request, season, show_selector=False
     )
@@ -950,109 +1033,100 @@ async def get_head_to_head_matches(
 
     selected_team_a = teams_by_id.get(team_a) if team_a is not None else None
     selected_team_b = teams_by_id.get(team_b) if team_b is not None else None
+    validation_message = _h2h_pair_validation_message(
+        team_a, team_b, selected_team_a, selected_team_b
+    )
 
-    matches = []
+    matches: list[Match] = []
     summary = None
-    validation_message: str | None = None
     team_primary_colours: dict[int, str] = {}
 
     team_a_id = selected_team_a.id if selected_team_a is not None else None
     team_b_id = selected_team_b.id if selected_team_b is not None else None
 
-    if isinstance(team_a_id, int) and isinstance(team_b_id, int):
+    if (
+        include_matches
+        and validation_message is None
+        and isinstance(team_a_id, int)
+        and isinstance(team_b_id, int)
+        and selected_team_a is not None
+    ):
         team_primary_colours = await retreive_team_primary_colours(
             [team_a_id, team_b_id]
         )
+        matches = await retreive_head_to_head_matches_by_id(team_a_id, team_b_id)
+        matches = update_match_timezone(matches)
+        summary = _h2h_summary_for_matches(matches, selected_team_a)
+        if len(matches) == 0:
+            validation_message = "No matches found between the selected teams."
 
-    if team_a is not None or team_b is not None:
-        if selected_team_a is None or selected_team_b is None:
-            validation_message = "Please select two valid teams."
-        elif not isinstance(team_a_id, int) or not isinstance(team_b_id, int):
-            validation_message = "Please select two valid teams."
-        elif team_a_id == team_b_id:
-            validation_message = "Please choose two different teams."
-        else:
-            matches = await retreive_head_to_head_matches_by_id(team_a_id, team_b_id)
-            matches = update_match_timezone(matches)
+    return {
+        "request": request,
+        "title": "Head to Head",
+        "live_matches": False,
+        "matches": matches,
+        "teams": teams,
+        "selected_team_a": selected_team_a,
+        "selected_team_b": selected_team_b,
+        "team_a_primary_colour": (
+            team_primary_colours.get(team_a_id) if isinstance(team_a_id, int) else None
+        ),
+        "team_b_primary_colour": (
+            team_primary_colours.get(team_b_id) if isinstance(team_b_id, int) else None
+        ),
+        "summary": summary,
+        "validation_message": validation_message,
+        **season_context,
+    }
 
-            played_matches = [
-                match
-                for match in matches
-                if match.score.full_time.home is not None
-                and match.score.full_time.away is not None
-            ]
 
-            team_a_wins = 0
-            team_b_wins = 0
-            draws = 0
-            team_a_goals = 0
-            team_b_goals = 0
-
-            for match in played_matches:
-                home_score = match.score.full_time.home
-                away_score = match.score.full_time.away
-
-                if home_score is None or away_score is None:
-                    continue
-
-                if match.home_team.id == selected_team_a.id:
-                    team_a_goals += home_score
-                    team_b_goals += away_score
-                else:
-                    team_a_goals += away_score
-                    team_b_goals += home_score
-
-                if home_score == away_score:
-                    draws += 1
-                elif home_score > away_score:
-                    if match.home_team.id == selected_team_a.id:
-                        team_a_wins += 1
-                    else:
-                        team_b_wins += 1
-                else:
-                    if match.away_team.id == selected_team_a.id:
-                        team_a_wins += 1
-                    else:
-                        team_b_wins += 1
-
-            summary = {
-                "meetings": len(matches),
-                "played": len(played_matches),
-                "team_a_wins": team_a_wins,
-                "team_b_wins": team_b_wins,
-                "draws": draws,
-                "team_a_goals": team_a_goals,
-                "team_b_goals": team_b_goals,
-            }
-
-            if len(matches) == 0:
-                validation_message = "No matches found between the selected teams."
-
+@football_router.get("/head-to-head", response_class=HTMLResponse)
+@football_router.get("/head-to-head/", response_class=HTMLResponse)
+async def get_head_to_head_matches(
+    request: Request,
+    team_a: int | None = Query(default=None),
+    team_b: int | None = Query(default=None),
+    season: str | None = Query(default=None),
+):
+    context = await _build_h2h_page_context(
+        request, team_a, team_b, season, include_matches=False
+    )
     return TEMPLATES.TemplateResponse(
         request,
         "football/head_to_head_template.html",
-        {
-            "request": request,
-            "title": "Head to Head",
-            "live_matches": False,
-            "matches": matches,
-            "teams": teams,
-            "selected_team_a": selected_team_a,
-            "selected_team_b": selected_team_b,
-            "team_a_primary_colour": (
-                team_primary_colours.get(team_a_id)
-                if isinstance(team_a_id, int)
-                else None
-            ),
-            "team_b_primary_colour": (
-                team_primary_colours.get(team_b_id)
-                if isinstance(team_b_id, int)
-                else None
-            ),
-            "summary": summary,
-            "validation_message": validation_message,
-            **season_context,
-        },
+        context,
+        headers=dict(H2H_ROBOTS_HEADERS),
+    )
+
+
+@football_router.get("/head-to-head/results", response_class=HTMLResponse)
+@football_router.get("/head-to-head/results/", response_class=HTMLResponse)
+async def get_head_to_head_results(
+    request: Request,
+    team_a: int | None = Query(default=None),
+    team_b: int | None = Query(default=None),
+    season: str | None = Query(default=None),
+):
+    if not allows_expensive_h2h_lookup(request):
+        return h2h_rejected_response(
+            status.HTTP_403_FORBIDDEN,
+            "Head-to-head results are not available for automated clients.",
+        )
+    if consume_h2h_rate_limit(request):
+        return h2h_rejected_response(
+            status.HTTP_429_TOO_MANY_REQUESTS,
+            "Too many head-to-head requests. Try again shortly.",
+            retry_after=60,
+        )
+
+    context = await _build_h2h_page_context(
+        request, team_a, team_b, season, include_matches=True
+    )
+    return TEMPLATES.TemplateResponse(
+        request,
+        "football/_head_to_head_results.html",
+        context,
+        headers=dict(H2H_ROBOTS_HEADERS),
     )
 
 

@@ -1,4 +1,5 @@
 from datetime import UTC, datetime
+from time import monotonic
 import logging
 import re
 
@@ -37,6 +38,11 @@ FIRST_PREMIER_LEAGUE_SEASON_START_YEAR = 1992
 TEAM_CACHE: list[Team] = []
 TEAM_CACHE_INITIALISED = False
 SUBSCRIPTION_DOCUMENT_SORT = [("updated_at", DESCENDING), ("created_at", DESCENDING)]
+_SEASON_KEYS_CACHE_TTL_SECONDS = 300.0
+_H2H_MATCH_CACHE_TTL_SECONDS = 180.0
+_H2H_MATCH_CACHE_MAX_ENTRIES = 256
+_season_keys_cache: tuple[float, list[str]] | None = None
+_h2h_match_cache: dict[tuple[int, int], tuple[float, list[Match]]] = {}
 
 
 def _season_matches_collection_name(season_key: str) -> str:
@@ -209,6 +215,14 @@ def infer_current_season_key(available_season_keys: list[str]) -> str:
 
 
 async def get_available_season_keys() -> list[str]:
+    global _season_keys_cache
+
+    cached = _season_keys_cache
+    if cached is not None:
+        cached_at, cached_keys = cached
+        if monotonic() - cached_at <= _SEASON_KEYS_CACHE_TTL_SECONDS:
+            return list(cached_keys)
+
     pl_db = mongodb.get_database(PL_DATABASE)
     collection_names = await pl_db.list_collection_names()
     season_keys: list[str] = []
@@ -221,9 +235,11 @@ async def get_available_season_keys() -> list[str]:
     if len(season_keys) == 0 and pl_matches is not None:
         matched = SEASON_MATCH_COLLECTION_PATTERN.match(pl_matches.name)
         if matched is not None:
-            return [matched.group(1)]
+            season_keys = [matched.group(1)]
 
-    return sorted(set(season_keys), key=_season_sort_value, reverse=True)
+    season_keys = sorted(set(season_keys), key=_season_sort_value, reverse=True)
+    _season_keys_cache = (monotonic(), season_keys)
+    return list(season_keys)
 
 
 def _get_match_collection_for_season(
@@ -435,9 +451,20 @@ async def retreive_head_to_head_matches(
     return matches
 
 
+def _h2h_cache_key(team_a_id: int, team_b_id: int) -> tuple[int, int]:
+    return (team_a_id, team_b_id) if team_a_id <= team_b_id else (team_b_id, team_a_id)
+
+
 async def retreive_head_to_head_matches_by_id(
     team_a_id: int, team_b_id: int
 ) -> list[Match]:
+    cache_key = _h2h_cache_key(team_a_id, team_b_id)
+    cached = _h2h_match_cache.get(cache_key)
+    if cached is not None:
+        cached_at, cached_matches = cached
+        if monotonic() - cached_at <= _H2H_MATCH_CACHE_TTL_SECONDS:
+            return list(cached_matches)
+
     matches: list[Match] = []
 
     match_collections = await _get_match_collections(include_all_seasons=True)
@@ -465,8 +492,12 @@ async def retreive_head_to_head_matches_by_id(
         matches.extend(collection_matches)
 
     matches.sort(key=lambda match: match.utc_date, reverse=True)
+    _h2h_match_cache[cache_key] = (monotonic(), matches)
+    if len(_h2h_match_cache) > _H2H_MATCH_CACHE_MAX_ENTRIES:
+        oldest_key = min(_h2h_match_cache, key=lambda key: _h2h_match_cache[key][0])
+        _h2h_match_cache.pop(oldest_key, None)
 
-    return matches
+    return list(matches)
 
 
 async def retreive_all_teams() -> list[Team]:
