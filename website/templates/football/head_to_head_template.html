@@ -1,7 +1,7 @@
 {% extends "football/football-base.html" %}
 
 {% block football_head %}
-<script defer src="/js/football/head_to_head.js?v1.2.1"></script>
+<script defer src="/js/football/head_to_head.js?v1.2.2"></script>
 {% endblock %}
 
 {% block robots %}
@@ -38,9 +38,6 @@
     <div class="h2h-input-content" id="h2h-input-content">
       <p>Select two teams to view all league meetings.</p>
       <form class="h2h-form" method="get" action="{{ head_to_head_url|default(football_root ~ 'head-to-head/') }}">
-        {% if selected_season_key is defined %}
-        <input type="hidden" name="season" value="{{ selected_season_key }}">
-        {% endif %}
         <div class="h2h-team-grid">
           <label class="h2h-team-select" for="team-a-select">
             <span class="h2h-label">Team A</span>
@@ -78,7 +75,6 @@
     data-results-url="{{ football_root }}head-to-head/results/"
     data-team-a="{% if selected_team_a %}{{ selected_team_a.id }}{% endif %}"
     data-team-b="{% if selected_team_b %}{{ selected_team_b.id }}{% endif %}"
-    data-season="{{ selected_season_key|default('') }}"
     data-csrf-token="{{ request.state.csrf_token|default('') }}"
     data-should-load="{% if has_valid_pair and not validation_message %}true{% else %}false{% endif %}"
   ></div>

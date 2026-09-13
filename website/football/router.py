@@ -4,7 +4,7 @@ from datetime import UTC, date, datetime, timedelta
 import json
 import logging
 from pathlib import Path as FilePath
-from urllib.parse import quote
+from urllib.parse import quote, urlencode
 from ..account.csrf import validate_csrf
 from zoneinfo import ZoneInfo
 
@@ -20,7 +20,7 @@ from fastapi import (
     Response,
     status,
 )
-from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 from .football_db import (
@@ -1016,16 +1016,29 @@ def _h2h_summary_for_matches(
     }
 
 
+def _h2h_url_without_season(
+    request: Request, team_a: int | None, team_b: int | None
+) -> str:
+    query_items: list[tuple[str, str]] = []
+    if team_a is not None:
+        query_items.append(("team_a", str(team_a)))
+    if team_b is not None:
+        query_items.append(("team_b", str(team_b)))
+
+    query = urlencode(query_items)
+    path = request.url.path
+    return f"{path}?{query}" if query else path
+
+
 async def _build_h2h_page_context(
     request: Request,
     team_a: int | None,
     team_b: int | None,
-    season: str | None,
     *,
     include_matches: bool,
 ) -> dict:
     season_context = await _build_football_season_context(
-        request, season, show_selector=False
+        request, None, show_selector=False
     )
 
     teams = await retreive_all_teams()
@@ -1086,10 +1099,16 @@ async def get_head_to_head_matches(
     request: Request,
     team_a: int | None = Query(default=None),
     team_b: int | None = Query(default=None),
-    season: str | None = Query(default=None),
 ):
+    if "season" in request.query_params:
+        return RedirectResponse(
+            url=_h2h_url_without_season(request, team_a, team_b),
+            status_code=status.HTTP_301_MOVED_PERMANENTLY,
+            headers=dict(H2H_ROBOTS_HEADERS),
+        )
+
     context = await _build_h2h_page_context(
-        request, team_a, team_b, season, include_matches=False
+        request, team_a, team_b, include_matches=False
     )
     return TEMPLATES.TemplateResponse(
         request,
@@ -1105,7 +1124,6 @@ async def get_head_to_head_results(
     request: Request,
     team_a: int | None = Query(default=None),
     team_b: int | None = Query(default=None),
-    season: str | None = Query(default=None),
 ):
     if not allows_expensive_h2h_lookup(request):
         return h2h_rejected_response(
@@ -1120,7 +1138,7 @@ async def get_head_to_head_results(
         )
 
     context = await _build_h2h_page_context(
-        request, team_a, team_b, season, include_matches=True
+        request, team_a, team_b, include_matches=True
     )
     return TEMPLATES.TemplateResponse(
         request,

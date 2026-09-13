@@ -27,10 +27,6 @@ async function loadHeadToHeadResults() {
         team_b: teamB,
     });
 
-    if (root.dataset.season) {
-        params.set("season", root.dataset.season);
-    }
-
     root.innerHTML = '<p class="h2h-message">Loading matches…</p>';
 
     try {
