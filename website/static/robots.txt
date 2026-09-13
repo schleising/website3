@@ -17,6 +17,7 @@ User-agent: CCBot
 User-agent: PerplexityBot
 User-agent: Bytespider
 User-agent: meta-externalagent
+User-agent: Reflectionbot
 Disallow: /
 
 # 2. BLOCK AGGRESSIVE/UNWANTED SEO BOTS
