@@ -5,6 +5,7 @@
     min-height: 0;
     width: 100%;
     padding: 0;
+    position: relative;
     user-select: none;
     --table-row-count: 20;
     --table-grid-row-gap: 0.12rem;
@@ -552,4 +553,213 @@
     .large-table {
         display: none;
     }
+}
+
+/* Narrow viewports: long-press a row for hidden stats */
+.table-team-detail-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 40;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.75rem;
+    background: rgba(12, 24, 40, 0.42);
+    backdrop-filter: blur(0.25rem);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.25s ease, visibility 0.25s ease;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.table-team-detail-overlay.is-open {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+}
+
+.table-team-detail-overlay.is-open.is-opening {
+    pointer-events: none;
+}
+
+.table-team-detail-sheet {
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+    gap: 0.75rem;
+    width: fit-content;
+    min-width: 12.75rem;
+    max-width: min(100%, 15.5rem);
+    max-height: min(100%, 36rem);
+    margin: 0;
+    padding: 0.85rem 0.9rem;
+    border: 0.0625rem solid rgba(199, 216, 238, 0.95);
+    border-radius: 0.95rem;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.99) 0%, rgba(242, 247, 252, 0.99) 100%);
+    box-shadow: 0 1.2rem 2.6rem rgba(15, 31, 53, 0.22);
+    overflow: hidden;
+    transform: translateY(0.45rem);
+    opacity: 0;
+    transition: transform 0.25s ease, opacity 0.25s ease;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.table-team-detail-overlay.is-open .table-team-detail-sheet {
+    transform: translateY(0);
+    opacity: 1;
+}
+
+.table-team-detail-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding-bottom: 0.65rem;
+    border-bottom: 0.0625rem solid rgba(199, 216, 238, 0.9);
+}
+
+.table-team-detail-identity {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    min-width: 0;
+}
+
+.table-team-detail-identity .team-badge {
+    width: 2.1rem;
+    height: 2.1rem;
+    flex: 0 0 auto;
+}
+
+.table-team-detail-title {
+    margin: 0;
+    min-width: 0;
+    font-size: 1.05rem;
+    font-weight: 700;
+    line-height: 1.2;
+    color: var(--brand-strong, #1f4570);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.table-team-detail-close {
+    flex: 0 0 auto;
+    width: 2.1rem;
+    height: 2.1rem;
+    margin: 0;
+    padding: 0;
+    border: 0.0625rem solid rgba(164, 186, 213, 0.95);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.92);
+    color: var(--brand-strong, #1f4570);
+    font-size: 1.15rem;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.table-team-detail-close:hover,
+.table-team-detail-close:focus-visible {
+    background: #eef3fa;
+    outline: none;
+}
+
+.table-team-detail-body {
+    display: grid;
+    gap: 0.85rem;
+    min-height: 0;
+    overflow: auto;
+    padding-right: 0.1rem;
+}
+
+.table-team-detail-list {
+    display: grid;
+    margin: 0;
+    width: 100%;
+}
+
+.table-team-detail-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    column-gap: 0.75rem;
+    align-items: baseline;
+    min-height: 1.7rem;
+    padding: 0.28rem 0;
+    border-bottom: 0.0625rem solid rgba(217, 228, 241, 0.95);
+}
+
+.table-team-detail-row:last-child {
+    border-bottom: 0;
+}
+
+.table-team-detail-term {
+    margin: 0;
+    font-size: 0.92rem;
+    line-height: 1.25;
+    text-align: left;
+    color: var(--text-subtle, #5f6b7a);
+}
+
+.table-team-detail-value {
+    margin: 0;
+    min-width: 1.6rem;
+    font-size: 0.98rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.25;
+    text-align: right;
+    color: var(--brand-strong, #1f4570);
+}
+
+.table-team-detail-value--form {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.table-team-detail-value--form .form-container {
+    justify-content: flex-end;
+    width: max-content;
+    margin: 0;
+}
+
+.table-team-detail-value--form .form-character {
+    font-size: 0.72rem;
+    width: 1.15rem;
+    height: 1.15rem;
+    margin: 0.08rem;
+}
+
+.table-team-detail-actions {
+    display: grid;
+}
+
+.table-team-detail-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 2.4rem;
+    padding: 0.55rem 0.9rem;
+    border-radius: 0.7rem;
+    border: 0.0625rem solid var(--brand-soft, #4d7bb1);
+    background: var(--brand, #2a5b90);
+    color: #fff;
+    font-size: 0.9rem;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.table-team-detail-link:hover,
+.table-team-detail-link:focus-visible {
+    background: var(--brand-strong, #1f4570);
+    outline: none;
+}
+
+.table-team-detail-link[hidden] {
+    display: none !important;
+}
+
+body.table-team-detail-open {
+    overflow: hidden;
 }

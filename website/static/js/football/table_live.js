@@ -309,6 +309,10 @@ function updateTableRow(row, tableItem, seasonKey, teamCount) {
     updateTextIfChanged(row.querySelector(".table-points"), tableItem.points);
     updateFormContainer(row, tableItem.form_list, tableItem.form);
     updateTeamLink(row, tableItem.team.id, seasonKey);
+    row.dispatchEvent(new CustomEvent("football-table-row-updated", {
+        bubbles: true,
+        detail: { row },
+    }));
 }
 
 function getTableRows() {

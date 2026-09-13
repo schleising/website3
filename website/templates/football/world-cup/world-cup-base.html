@@ -14,13 +14,14 @@
 <script defer src="/js/football/world_cup_all_matches_view.js?v1.0.8"></script>
 {% endif %}
 {% if enable_live_standings|default(false) %}
-<script defer src="/js/football/world_cup_standings_live.js?v1.1.4"></script>
+<script defer src="/js/football/world_cup_standings_live.js?v1.1.5"></script>
 {% endif %}
 {% endblock %}
 
 {% block football_head %}
-<link rel="stylesheet" href="/css/table.css?v1.9.4">
+<link rel="stylesheet" href="/css/table.css?v1.9.13">
 <link rel="stylesheet" href="/css/football/world-cup.css?v1.5.87">
+<script defer src="/js/football/table_team_detail.js?v1.0.5"></script>
 <script defer src="/js/football/world_cup_bracket.js?v1.0.11"></script>
 <script defer src="/js/football/world_cup_standings_rules.js?v1.0.3"></script>
 {% if show_edition_selector|default(false) %}

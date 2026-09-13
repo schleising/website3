@@ -218,6 +218,10 @@ function updateGroupTableRow(row, tableItem) {
     updateTextIfChanged(row.querySelector(".table-goals-against"), tableItem.goals_against);
     updateTextIfChanged(row.querySelector(".table-goal-difference"), tableItem.goal_difference);
     updateTextIfChanged(row.querySelector(".table-points"), tableItem.points);
+    row.dispatchEvent(new CustomEvent("football-table-row-updated", {
+        bubbles: true,
+        detail: { row },
+    }));
 }
 
 function patchGroupTable(group) {
