@@ -20,6 +20,7 @@ from .database.database import Database
 from .account.router import account_router
 from .account.admin import get_current_active_user, get_current_user, is_user_passkey_enrolled
 from .account.csrf import CSRF_COOKIE_NAME, ensure_csrf_token
+from .utils.client_ip import client_ip_for_request, resolve_client_ip
 from .utils.cookie_policy import cookie_domain_for_request
 
 from .aircraft_db.router import aircraft_router
@@ -57,27 +58,17 @@ class RealIPMiddleware:
     async def __call__(self, scope: Scope, receive: Receive, send: Send):
         if scope["type"] == "http":
             headers = {k.decode().lower(): v.decode() for k, v in scope["headers"]}
-            real_ip = headers.get("x-real-ip")
-            xff = headers.get("x-forwarded-for")
-
-            client_ip = None
-
-            if real_ip:
-                client_ip = real_ip
-            elif xff:
-                # X-Forwarded-For may contain a comma-separated list; take first
-                client_ip = xff.split(",")[0].strip()
-
-            # Trust forwarded headers only from explicitly configured proxies.
+            peer_host = ""
             if scope.get("client"):
-                remote_ip = scope["client"][0]
-                if remote_ip not in self.trusted_proxies:
-                    client_ip = None
-            else:
-                client_ip = None
+                peer_host = scope["client"][0]
 
-            if client_ip:
-                # Patch the ASGI client tuple (ip, port)
+            client_ip = resolve_client_ip(
+                peer_host,
+                x_real_ip=headers.get("x-real-ip", ""),
+                x_forwarded_for=headers.get("x-forwarded-for", ""),
+                trusted_proxies=self.trusted_proxies,
+            )
+            if client_ip != "unknown":
                 scope["client"] = (client_ip, 0)
 
         await self.app(scope, receive, send)
@@ -298,6 +289,24 @@ async def passkey_migration_middleware(request: Request, call_next):
             )
 
     return await call_next(request)
+
+
+@app.middleware("http")
+async def access_log_middleware(request: Request, call_next):
+    response = await call_next(request)
+    http_version = str(request.scope.get("http_version", "1.1"))
+    user_agent = request.headers.get("user-agent", "").strip() or "-"
+    logging.info(
+        '%s - "%s %s HTTP/%s" %s "%s"',
+        client_ip_for_request(request, trusted_proxies=trusted_proxy_list),
+        request.method,
+        _request_path_with_query(request),
+        http_version,
+        response.status_code,
+        user_agent,
+    )
+    return response
+
 
 # Include the account router
 app.include_router(account_router)

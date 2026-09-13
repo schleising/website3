@@ -29,4 +29,4 @@ RUN chmod +x /entrypoint.sh
 ENTRYPOINT ["/entrypoint.sh"]
 
 # Set the default command to run uvicorn with a socket connection
-CMD [ "uvicorn", "app.index:app", "--host", "0.0.0.0", "--port", "8080", "--proxy-headers" ]
+CMD [ "uvicorn", "app.index:app", "--host", "0.0.0.0", "--port", "8080", "--proxy-headers", "--no-access-log" ]
