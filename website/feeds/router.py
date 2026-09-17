@@ -38,12 +38,15 @@ from .feed_db import (
     reorder_category_sort_order,
     set_category_color,
     set_category_muted,
+    set_feed_updates_disabled,
     update_subscription_details,
     validate_feed_url,
 )
 from .models import (
     FeedAdminFeedRow,
     FeedAdminFeedListResponse,
+    FeedAdminUpdatesDisabledRequest,
+    FeedAdminUpdatesDisabledResponse,
     FeedArticleListResponse,
     FeedArticleStatusRequest,
     FeedArticleStatusResponse,
@@ -434,6 +437,40 @@ async def get_admin_feeds(request: Request) -> FeedAdminFeedListResponse:
     return FeedAdminFeedListResponse(
         feeds=[FeedAdminFeedRow.model_validate(row) for row in rows]
     )
+
+
+@feeds_router.post(
+    "/api/admin/feeds/{feed_id}/updates",
+    response_model=FeedAdminUpdatesDisabledResponse,
+)
+@feeds_router.post(
+    "/api/admin/feeds/{feed_id}/updates/",
+    response_model=FeedAdminUpdatesDisabledResponse,
+)
+async def set_admin_feed_updates(
+    request: Request,
+    feed_id: str,
+    payload: FeedAdminUpdatesDisabledRequest,
+    _: None = Depends(validate_csrf),
+) -> FeedAdminUpdatesDisabledResponse:
+    """Enable or disable automatic updates for a subscribed feed source."""
+
+    _require_logged_in_user(request)
+
+    if not _request_can_use_tools(request):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Feeds admin API is only available to tool-enabled users.",
+        )
+
+    updated = await set_feed_updates_disabled(feed_id, payload.updates_disabled)
+    if updated is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Feed source not found.",
+        )
+
+    return FeedAdminUpdatesDisabledResponse.model_validate(updated)
 
 
 @feeds_router.get(

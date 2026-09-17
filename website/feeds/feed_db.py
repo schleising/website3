@@ -1312,6 +1312,7 @@ async def request_immediate_feed_refresh(feed_ids: set[ObjectId]) -> None:
 
     This sets a force-refresh marker consumed by the backend worker and clears
     retry deferrals so newly-added/imported subscriptions are fetched quickly.
+    Sources with updates disabled are left unchanged.
     """
 
     if feed_sources_collection is None or len(feed_ids) == 0:
@@ -1319,7 +1320,10 @@ async def request_immediate_feed_refresh(feed_ids: set[ObjectId]) -> None:
 
     now = utc_now()
     await feed_sources_collection.update_many(
-        {"_id": {"$in": list(feed_ids)}},
+        {
+            "_id": {"$in": list(feed_ids)},
+            "updates_disabled": {"$ne": True},
+        },
         {
             "$set": {
                 "force_refresh_requested_at": now,
@@ -1329,6 +1333,46 @@ async def request_immediate_feed_refresh(feed_ids: set[ObjectId]) -> None:
             }
         },
     )
+
+
+async def set_feed_updates_disabled(feed_id: str, updates_disabled: bool) -> dict[str, Any] | None:
+    """Enable or disable automatic refresh updates for a shared feed source."""
+
+    if feed_sources_collection is None:
+        return None
+
+    try:
+        feed_object_id = ObjectId(feed_id)
+    except Exception:
+        return None
+
+    now = utc_now()
+    update_fields: dict[str, Any] = {
+        "updates_disabled": bool(updates_disabled),
+        "updated_at": now,
+    }
+    if updates_disabled:
+        update_fields["force_refresh_requested_at"] = None
+    else:
+        update_fields["force_refresh_requested_at"] = now
+        update_fields["next_retry_at"] = None
+        update_fields["next_refresh_at"] = now
+
+    result = await feed_sources_collection.update_one(
+        {"_id": feed_object_id},
+        {"$set": update_fields},
+    )
+    if result.matched_count == 0:
+        return None
+
+    updated = await feed_sources_collection.find_one({"_id": feed_object_id})
+    if updated is None:
+        return None
+
+    return {
+        "feed_id": str(feed_object_id),
+        "updates_disabled": bool(updated.get("updates_disabled")),
+    }
 
 
 async def create_or_update_subscription(
@@ -4018,6 +4062,7 @@ async def list_feed_admin_rows() -> list[dict[str, Any]]:
                 ),
                 "last_refresh_status": fetch_status,
                 "last_refresh_error": str(source.get("last_error", "")).strip(),
+                "updates_disabled": bool(source.get("updates_disabled")),
             }
         )
 

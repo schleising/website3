@@ -1480,7 +1480,7 @@ body.feed-category-color-popup-open {
 }
 
 .feed-admin-table {
-    --feed-admin-columns: minmax(0, 1.24fr) minmax(2.4rem, 0.36fr) max-content minmax(4.2rem, 0.5fr) minmax(4.2rem, 0.5fr) minmax(2.6rem, 0.3fr) minmax(4.2rem, 0.44fr) minmax(0, 0.88fr);
+    --feed-admin-columns: minmax(0, 1.18fr) minmax(3.4rem, 0.38fr) minmax(2.4rem, 0.34fr) max-content minmax(4.2rem, 0.5fr) minmax(4.2rem, 0.5fr) minmax(2.6rem, 0.3fr) minmax(4.2rem, 0.44fr) minmax(0, 0.88fr);
     display: grid;
     grid-template-columns: var(--feed-admin-columns);
     column-gap: 0.45rem;
@@ -1546,6 +1546,15 @@ body.feed-category-color-popup-open {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+}
+
+.feed-admin-updates-cell {
+    justify-content: flex-start;
+}
+
+.feed-admin-table-row.is-updates-disabled .feed-admin-feed-name,
+.feed-admin-table-row.is-updates-disabled .feed-admin-status-cell {
+    opacity: 0.72;
 }
 
 .feed-admin-time {

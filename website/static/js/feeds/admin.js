@@ -14,6 +14,12 @@
     const categoriesEndpoint = root.dataset.categoriesEndpoint || "/feeds/api/categories/";
     /** @type {string} */
     const adminFeedsEndpoint = root.dataset.adminFeedsEndpoint || "/feeds/api/admin/feeds/";
+    /** @type {string} */
+    const adminFeedUpdatesEndpointTemplate =
+        root.dataset.adminFeedUpdatesEndpointTemplate
+        || "/feeds/api/admin/feeds/__FEED_ID__/updates/";
+    /** @type {string} */
+    const csrfToken = root.dataset.csrfToken || "";
 
     /** @type {HTMLElement | null} */
     const adminTableBody = document.getElementById("feed-admin-table-body");
@@ -35,6 +41,9 @@
 
     /** @type {boolean} */
     let liveRefreshInFlight = false;
+
+    /** @type {Set<string>} */
+    const pendingUpdatesToggleIds = new Set();
 
     /**
      * Format an ISO datetime string to browser locale text.
@@ -59,6 +68,16 @@
         }
 
         return localeTimeFormatter.format(dateValue);
+    }
+
+    /**
+     * Build the admin updates toggle endpoint for one feed.
+     *
+     * @param {string} feedId
+     * @returns {string}
+     */
+    function buildFeedUpdatesUrl(feedId) {
+        return adminFeedUpdatesEndpointTemplate.replace("__FEED_ID__", encodeURIComponent(feedId));
     }
 
     /**
@@ -175,6 +194,40 @@
     }
 
     /**
+     * Build updates enable/disable toggle cell.
+     *
+     * @param {string} feedId
+     * @param {string} feedName
+     * @param {boolean} updatesDisabled
+     * @returns {HTMLDivElement}
+     */
+    function createUpdatesToggleCell(feedId, feedName, updatesDisabled) {
+        const cell = document.createElement("div");
+        cell.className = "feed-admin-cell feed-admin-updates-cell";
+        cell.setAttribute("role", "cell");
+        cell.dataset.label = "Updates";
+
+        const label = document.createElement("label");
+        label.className = "feed-subscription-toggle feed-admin-updates-toggle-label";
+
+        const input = document.createElement("input");
+        input.type = "checkbox";
+        input.className = "feed-subscription-truncate-toggle feed-admin-updates-toggle";
+        input.checked = !updatesDisabled;
+        input.disabled = feedId === "" || pendingUpdatesToggleIds.has(feedId);
+        input.setAttribute("aria-label", `Enable updates for ${feedName}`);
+
+        const track = document.createElement("span");
+        track.className = "feed-subscription-toggle-track";
+        track.setAttribute("aria-hidden", "true");
+
+        label.appendChild(input);
+        label.appendChild(track);
+        cell.appendChild(label);
+        return cell;
+    }
+
+    /**
      * Build a localized time cell.
      *
      * @param {string} isoValue
@@ -247,10 +300,21 @@
             }
 
             const rowNode = countdownNode.closest(".feed-admin-table-row");
+            const updatesDisabled =
+                rowNode instanceof HTMLElement
+                && String(rowNode.dataset.updatesDisabled || "").toLowerCase() === "true";
             const statusNode =
                 rowNode instanceof HTMLElement
                     ? rowNode.querySelector(".feed-admin-status-cell")
                     : null;
+
+            if (updatesDisabled) {
+                countdownNode.textContent = "";
+                if (statusNode instanceof HTMLElement) {
+                    statusNode.textContent = "disabled";
+                }
+                return;
+            }
 
             const isoValue = String(countdownNode.dataset.feedNextRefreshValue || "").trim();
             if (isoValue === "") {
@@ -281,7 +345,7 @@
     /**
      * Render live admin table rows.
      *
-    * @param {Array<{ feed_id?: string, feed_name?: string, feed_url?: string, article_count?: number, latest_article_at_iso?: string, last_refresh_at_iso?: string, next_refresh_at_iso?: string, last_refresh_status?: string, last_refresh_error?: string }>} rows
+     * @param {Array<{ feed_id?: string, feed_name?: string, feed_url?: string, article_count?: number, latest_article_at_iso?: string, last_refresh_at_iso?: string, next_refresh_at_iso?: string, last_refresh_status?: string, last_refresh_error?: string, updates_disabled?: boolean }>} rows
      */
     function renderAdminRows(rows) {
         if (!(adminTableBody instanceof HTMLElement)) {
@@ -311,25 +375,31 @@
             const nextRefreshIso = String(row.next_refresh_at_iso || "").trim();
             const lastRefreshStatus = String(row.last_refresh_status || "new").trim() || "new";
             const lastRefreshError = String(row.last_refresh_error || "").trim();
+            const updatesDisabled = Boolean(row.updates_disabled);
 
             const rowNode = document.createElement("div");
             rowNode.className = "feed-admin-table-row";
+            rowNode.classList.toggle("is-updates-disabled", updatesDisabled);
             rowNode.setAttribute("role", "row");
             if (feedId !== "") {
                 rowNode.dataset.feedId = feedId;
             }
+            rowNode.dataset.updatesDisabled = updatesDisabled ? "true" : "false";
 
             const nameCell = createFeedNameCell(feedName, feedUrl);
+            const updatesCell = createUpdatesToggleCell(feedId, feedName, updatesDisabled);
 
             const countCell = createTextCell(
                 String(Math.max(0, Number.isFinite(articleCount) ? articleCount : 0)),
                 "",
                 "Cnt"
             );
-            const statusCell = createTextCell(lastRefreshStatus, "feed-admin-status-cell", "State");
+            const statusText = updatesDisabled ? "disabled" : lastRefreshStatus;
+            const statusCell = createTextCell(statusText, "feed-admin-status-cell", "State");
             const errorCell = createTextCell(lastRefreshError !== "" ? lastRefreshError : "-", "", "Error");
 
             rowNode.appendChild(nameCell);
+            rowNode.appendChild(updatesCell);
             rowNode.appendChild(countCell);
             rowNode.appendChild(createTimeCell(latestArticleIso, "Latest", "date-time"));
             rowNode.appendChild(createTimeCell(lastRefreshIso, "Last"));
@@ -398,7 +468,7 @@
      * @returns {Promise<void>}
      */
     async function refreshLiveAdminState() {
-        if (liveRefreshInFlight) {
+        if (liveRefreshInFlight || pendingUpdatesToggleIds.size > 0) {
             return;
         }
 
@@ -412,6 +482,83 @@
         } finally {
             liveRefreshInFlight = false;
         }
+    }
+
+    /**
+     * Persist an updates enable/disable toggle change.
+     *
+     * @param {HTMLInputElement} toggle
+     * @returns {Promise<void>}
+     */
+    async function persistUpdatesToggle(toggle) {
+        const rowNode = toggle.closest(".feed-admin-table-row");
+        if (!(rowNode instanceof HTMLElement)) {
+            return;
+        }
+
+        const feedId = String(rowNode.dataset.feedId || "").trim();
+        if (feedId === "") {
+            toggle.checked = !toggle.checked;
+            return;
+        }
+
+        const updatesDisabled = !toggle.checked;
+        const previousDisabled = String(rowNode.dataset.updatesDisabled || "").toLowerCase() === "true";
+        const statusNode = rowNode.querySelector(".feed-admin-status-cell");
+
+        pendingUpdatesToggleIds.add(feedId);
+        toggle.disabled = true;
+        rowNode.dataset.updatesDisabled = updatesDisabled ? "true" : "false";
+        rowNode.classList.toggle("is-updates-disabled", updatesDisabled);
+        if (statusNode instanceof HTMLElement) {
+            statusNode.textContent = updatesDisabled ? "disabled" : "refreshing";
+        }
+
+        try {
+            const response = await fetch(buildFeedUpdatesUrl(feedId), {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRF-Token": csrfToken,
+                },
+                body: JSON.stringify({ updates_disabled: updatesDisabled }),
+            });
+
+            if (!response.ok) {
+                throw new Error(`updates toggle failed: ${response.status}`);
+            }
+
+            const payload = await response.json();
+            const confirmedDisabled = Boolean(payload.updates_disabled);
+            toggle.checked = !confirmedDisabled;
+            rowNode.dataset.updatesDisabled = confirmedDisabled ? "true" : "false";
+            rowNode.classList.toggle("is-updates-disabled", confirmedDisabled);
+            if (statusNode instanceof HTMLElement) {
+                statusNode.textContent = confirmedDisabled ? "disabled" : "refreshing";
+            }
+        } catch (_error) {
+            toggle.checked = !previousDisabled;
+            rowNode.dataset.updatesDisabled = previousDisabled ? "true" : "false";
+            rowNode.classList.toggle("is-updates-disabled", previousDisabled);
+            if (statusNode instanceof HTMLElement) {
+                statusNode.textContent = previousDisabled ? "disabled" : "ok";
+            }
+        } finally {
+            pendingUpdatesToggleIds.delete(feedId);
+            toggle.disabled = false;
+            updateNextRefreshCountdowns();
+        }
+    }
+
+    if (adminTableBody instanceof HTMLElement) {
+        adminTableBody.addEventListener("change", event => {
+            const target = event.target;
+            if (!(target instanceof HTMLInputElement) || !target.classList.contains("feed-admin-updates-toggle")) {
+                return;
+            }
+
+            persistUpdatesToggle(target);
+        });
     }
 
     localizeSsrTimes();

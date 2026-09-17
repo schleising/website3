@@ -29,6 +29,7 @@ class FeedSourceDocument(BaseModel):
     last_error: str | None = None
     next_retry_at: datetime | None = None
     force_refresh_requested_at: datetime | None = None
+    updates_disabled: bool = False
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
@@ -324,12 +325,26 @@ class FeedAdminFeedRow(BaseModel):
     next_refresh_at_iso: str = ""
     last_refresh_status: str
     last_refresh_error: str = ""
+    updates_disabled: bool = False
 
 
 class FeedAdminFeedListResponse(BaseModel):
     """Feeds admin table response payload."""
 
     feeds: list[FeedAdminFeedRow] = Field(default_factory=list)
+
+
+class FeedAdminUpdatesDisabledRequest(BaseModel):
+    """Request payload for enabling/disabling feed source updates."""
+
+    updates_disabled: bool
+
+
+class FeedAdminUpdatesDisabledResponse(BaseModel):
+    """Response payload after changing feed source update enablement."""
+
+    feed_id: str
+    updates_disabled: bool
 
 
 class FeedStatsDailyPoint(BaseModel):
