@@ -223,10 +223,22 @@ def _apply_sort_and_limit(
     return output
 
 
+def _season_overlaps_date_range(
+    season_key: str,
+    date_from: datetime,
+    date_to: datetime,
+) -> bool:
+    season_start, season_end = season_key.split("_", maxsplit=1)
+    season_from = datetime(int(season_start), 7, 1, tzinfo=UTC)
+    season_to = datetime(int(season_end), 7, 1, tzinfo=UTC)
+    return date_from < season_to and date_to > season_from
+
+
 async def _resolve_requested_seasons(
     season_start: str | None,
     season_end: str | None,
     competitions: list[str],
+    date_bounds: tuple[datetime, datetime] | None = None,
 ) -> list[str]:
     available_seasons = await get_available_season_keys()
 
@@ -251,6 +263,14 @@ async def _resolve_requested_seasons(
             if lower_year <= int(season_key.split("_", maxsplit=1)[0]) <= upper_year
         ]
 
+    if date_bounds is not None:
+        date_from, date_to = date_bounds
+        selected_seasons = [
+            season_key
+            for season_key in selected_seasons
+            if _season_overlaps_date_range(season_key, date_from, date_to)
+        ]
+
     competition_filters = {_normalise_value(item) for item in competitions}
 
     if len(competition_filters) == 0:
@@ -263,11 +283,18 @@ async def _resolve_requested_seasons(
     ]
 
 
-async def _fetch_matches_by_season(season_keys: list[str]) -> dict[str, list[Match]]:
+async def _fetch_matches_by_season(
+    season_keys: list[str],
+    date_bounds: tuple[datetime, datetime] | None = None,
+) -> dict[str, list[Match]]:
     matches_by_season: dict[str, list[Match]] = {}
 
     for season_key in season_keys:
-        date_from, date_to = _season_bounds_utc(season_key)
+        if date_bounds is None:
+            date_from, date_to = _season_bounds_utc(season_key)
+        else:
+            date_from, date_to = date_bounds
+
         season_matches = await retreive_matches(date_from, date_to, season_key)
         update_match_timezone(season_matches)
 
@@ -284,7 +311,10 @@ async def _build_match_results_data(
     venue = payload.request.filters.venue.value
 
     data: list[dict[str, object]] = []
-    matches_by_season = await _fetch_matches_by_season(season_keys)
+    matches_by_season = await _fetch_matches_by_season(
+        season_keys,
+        date_bounds=payload.request.filters.match_query_bounds_utc(),
+    )
 
     for season_key, season_matches in matches_by_season.items():
         for match in season_matches:
@@ -495,7 +525,10 @@ async def _build_head_to_head_data(
 
     rows: list[dict[str, object]] = []
 
-    matches_by_season = await _fetch_matches_by_season(season_keys)
+    matches_by_season = await _fetch_matches_by_season(
+        season_keys,
+        date_bounds=payload.request.filters.match_query_bounds_utc(),
+    )
 
     team_a_wins = 0
     team_b_wins = 0
@@ -728,6 +761,7 @@ async def query_football_history(
             season_start=payload.request.filters.season_start,
             season_end=payload.request.filters.season_end,
             competitions=payload.request.filters.competitions,
+            date_bounds=payload.request.filters.match_query_bounds_utc(),
         )
 
         if len(season_keys) == 0:

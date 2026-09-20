@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import UTC, date, datetime, timedelta
 from enum import Enum
 from typing import Any
 
@@ -52,7 +53,25 @@ class FootballHistoryFilters(BaseModel):
     competitions: list[str] = Field(default_factory=list)
     season_start: str | None = Field(default=None, pattern=r"^\d{4}/\d{2}$")
     season_end: str | None = Field(default=None, pattern=r"^\d{4}/\d{2}$")
+    date_from: date | None = None
+    date_to: date | None = None
     venue: FootballHistoryVenue = FootballHistoryVenue.both
+
+    def match_query_bounds_utc(self) -> tuple[datetime, datetime] | None:
+        start_date = self.date_from if self.date_from is not None else self.date_to
+        end_date = self.date_to if self.date_to is not None else self.date_from
+
+        if start_date is None or end_date is None:
+            return None
+
+        if end_date < start_date:
+            start_date, end_date = end_date, start_date
+
+        start_utc = datetime(start_date.year, start_date.month, start_date.day, tzinfo=UTC)
+        exclusive_end = datetime(end_date.year, end_date.month, end_date.day, tzinfo=UTC) + timedelta(
+            days=1
+        )
+        return start_utc, exclusive_end
 
 
 class FootballHistoryRequestModel(BaseModel):

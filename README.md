@@ -75,13 +75,18 @@ The football app now includes a schema-driven endpoint for chatbot tool calls.
 The request schema supports:
 
 - `action`: `get_aggregate_stats`, `get_head_to_head`, `get_league_table`, `get_match_results`
-- `filters`: `teams`, `competitions`, `season_start`, `season_end`, `venue`
+- `filters`: `teams`, `competitions`, `season_start`, `season_end`, `date_from`, `date_to`, `venue`
 - `metrics`, `group_by`, `limit`, `sort_by`
 
 Season ranges use the `YYYY/YY` format, for example:
 
 - `"season_start": "1992/93"`
 - `"season_end": "2023/24"`
+
+Match queries can also filter by calendar date (`YYYY-MM-DD`) instead of loading a whole season. Set `date_from` and `date_to` to the same day for a single date:
+
+- `"date_from": "2026-09-20"`
+- `"date_to": "2026-09-20"`
 
 ### Scripts
 
