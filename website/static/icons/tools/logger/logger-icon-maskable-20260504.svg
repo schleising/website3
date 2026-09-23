@@ -4,17 +4,24 @@
       <stop offset="0%" stop-color="#1f3f63" />
       <stop offset="100%" stop-color="#2f6f9f" />
     </linearGradient>
+    <radialGradient id="loggerMaskBgSheen" cx="0.28" cy="0.18" r="0.85">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.18" />
+      <stop offset="60%" stop-color="#ffffff" stop-opacity="0" />
+    </radialGradient>
   </defs>
-
   <rect width="512" height="512" fill="url(#loggerMaskBg)" />
-
-  <circle cx="168" cy="176" r="22" fill="#e8f4ff" />
-  <path d="M216 176h136" fill="none" stroke="#e8f4ff" stroke-width="32" stroke-linecap="round" />
-
-  <circle cx="168" cy="248" r="22" fill="#e8f4ff" opacity="0.82" />
-  <path d="M216 248h108" fill="none" stroke="#e8f4ff" stroke-width="32" stroke-linecap="round" opacity="0.82" />
-
-  <circle cx="168" cy="324" r="38" fill="#22b98a" />
-  <path d="M151 324l13 14 29-32" fill="none" stroke="#f7fbff" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" />
-  <path d="M240 324h100" fill="none" stroke="#9dd8ff" stroke-width="32" stroke-linecap="round" />
+  <rect width="512" height="512" fill="url(#loggerMaskBgSheen)" />
+  <g transform="translate(256 256) scale(8.5) translate(-32 -32)">
+  <rect x="15.5" y="16.2" width="33" height="33.2" rx="5.6" fill="#f7fbff" />
+  <rect x="24.2" y="11.8" width="15.6" height="8.4" rx="2.8" fill="#d5e8f6" />
+  <rect x="27.4" y="13.7" width="9.2" height="4.3" rx="1.5" fill="#1b3d5e" />
+  <circle cx="21.6" cy="26.5" r="1.7" fill="#7eb6de" />
+  <rect x="25.2" y="25" width="17.2" height="3" rx="1.5" fill="#c5d9ea" />
+  <circle cx="21.6" cy="32.6" r="1.7" fill="#7eb6de" />
+  <rect x="25.2" y="31.1" width="13.4" height="3" rx="1.5" fill="#c5d9ea" />
+  <circle cx="21.6" cy="38.7" r="1.7" fill="#4fb1ff" />
+  <rect x="25.2" y="37.2" width="9.2" height="3" rx="1.5" fill="#8ec8ee" />
+  <circle cx="41.6" cy="43.4" r="7.6" fill="#22b98a" />
+  <path d="M38 43.5 l2.3 2.4 4.7-5.1" fill="none" stroke="#f7fbff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" />
+  </g>
 </svg>

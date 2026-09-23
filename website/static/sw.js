@@ -1,4 +1,4 @@
-const TOOLS_CACHE_VERSION = "tools-webapp-v14";
+const TOOLS_CACHE_VERSION = "tools-webapp-v15";
 
 // Warm shell assets when this SW is installed on a tools host.
 // Missing URLs on other hosts are harmless no-ops.
