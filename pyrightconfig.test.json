@@ -1,1 +1,6 @@
-{"venvPath":".","venv":".venv","include":["website","backend/src"]}
+{
+  "venvPath": ".",
+  "venv": ".venv",
+  "extraPaths": [".", "backend/src"],
+  "include": ["website", "backend/src"]
+}

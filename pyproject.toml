@@ -1,0 +1,45 @@
+[project]
+name = "website3"
+version = "0.0.0"
+requires-python = ">=3.15"
+dependencies = []
+
+[dependency-groups]
+backend = [
+    "feedparser",
+    "pydantic",
+    "pymongo",
+    "pywebpush",
+    "requests",
+]
+fastapi = [
+    "aiohttp",
+    "bcrypt",
+    "bleach[css]",
+    "defusedxml",
+    "fastapi",
+    "jinja2",
+    "markdown",
+    "media-cover-art",
+    "motor",
+    "pydantic",
+    "pymdown-extensions",
+    "pymongo",
+    "python-jose",
+    "python-multipart",
+    "uvicorn[standard]",
+    "webauthn",
+]
+
+[tool.uv]
+package = false
+default-groups = "all"
+
+[tool.uv.sources]
+media-cover-art = { git = "https://github.com/schleising/media-cover-art.git", tag = "v0.1.5" }
+
+[tool.pyright]
+venvPath = "."
+venv = ".venv"
+extraPaths = [".", "backend/src"]
+include = ["website", "backend/src"]
