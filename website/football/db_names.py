@@ -15,7 +15,7 @@ PL_DATABASE = "pl_database"
 WC_DATABASE = "wc_database"
 WEB_DATABASE = "web_database"
 
-# Live Premier League season (worker + website defaults + bet). Next rollover: edit this.
+# Live Premier League season (worker + website defaults). Next rollover: edit this.
 CURRENT_PL_SEASON = "2026_2027"
 
 LIVE_PL_TABLE_COLLECTION = "live_pl_table"

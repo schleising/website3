@@ -45,7 +45,6 @@ from .football_db import (
 
 from .football_utils import (
     update_match_timezone,
-    create_bet_standings,
     kickoff_utc_iso,
     match_status_pill_class,
 )
@@ -77,7 +76,6 @@ from .chatbot_history_models import (
 )
 
 from .models import (
-    FootballBetList,
     MatchList,
     LiveTableList,
     LiveTableItem,
@@ -1527,20 +1525,6 @@ async def get_football_service_worker(request: Request):
             "Expires": "0",
         },
     )
-
-
-@football_router.get("/bet", response_class=HTMLResponse)
-@football_router.get("/bet/", response_class=HTMLResponse)
-async def get_bet_page(request: Request):
-    return TEMPLATES.TemplateResponse(
-        request, "football/bet_template.html", {"request": request}
-    )
-
-
-@football_router.get("/bet/data", response_model=FootballBetList)
-@football_router.get("/bet/data/", response_model=FootballBetList)
-async def get_bet_data(request: Request):
-    return await create_bet_standings()
 
 
 @football_router.get("/api", response_model=SimplifiedFootballData)

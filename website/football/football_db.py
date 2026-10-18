@@ -422,35 +422,6 @@ async def retreive_team_matches(
     return (team_name, matches)
 
 
-async def retreive_head_to_head_matches(
-    team_a_short_name: str, team_b_short_name: str
-) -> list[Match]:
-    matches: list[Match] = []
-
-    # Get the matches between the two teams from the database
-    if pl_matches is not None:
-        from_db_cursor = pl_matches.find(
-            {
-                "$or": [
-                    {
-                        "home_team.short_name": team_a_short_name,
-                        "away_team.short_name": team_b_short_name,
-                    },
-                    {
-                        "home_team.short_name": team_b_short_name,
-                        "away_team.short_name": team_a_short_name,
-                    },
-                ]
-            }
-        ).sort("utc_date", ASCENDING)
-
-        matches = [Match.model_validate(item) async for item in from_db_cursor]
-    else:
-        logging.error("No DB connection")
-
-    return matches
-
-
 def _h2h_cache_key(team_a_id: int, team_b_id: int) -> tuple[int, int]:
     return (team_a_id, team_b_id) if team_a_id <= team_b_id else (team_b_id, team_a_id)
 
@@ -539,29 +510,6 @@ async def retreive_team_primary_colours(team_ids: list[int]) -> dict[int, str]:
         colours_by_team_id[int(team_id_raw)] = colour_raw.upper()
 
     return colours_by_team_id
-
-
-async def retreive_latest_team_match(team: str) -> Match | None:
-    match: Match | None = None
-
-    if pl_matches is not None:
-        # Get the match for this team with the most recent start time before now
-        from_db = await pl_matches.find_one(
-            {
-                "$or": [{"home_team.short_name": team}, {"away_team.short_name": team}],
-                "utc_date": {"$lte": datetime.now(tz=UTC)},
-            },
-            sort=[("utc_date", DESCENDING)],
-        )
-
-        if from_db:
-            match = Match.model_validate(from_db)
-            logging.debug(f"Latest match for team {team}: {match}")
-
-    else:
-        logging.error("No DB connection")
-
-    return match
 
 
 async def get_table_db() -> list[LiveTableItem]:

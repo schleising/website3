@@ -48,7 +48,6 @@ Private apps are gated by website auth:
 - `feeds.schleising.net` / `football.schleising.net` — app-level login / public content
 - `astronomy.schleising.net` — public tool surface
 - `units.schleising.net` — public Units PWA (no auth gate; path-prefix like feeds/football)
-- `bet.schleising.net` — separate upstream (leave ungated)
 - `www.schleising.net` — site login only where routes require it
 
 
@@ -56,6 +55,7 @@ Private apps are gated by website auth:
 ### Retired apps / infra
 
 - `srm-monitor.schleising.net` — removed from `/webapps` (was not in `nginx.conf`)
+- `bet.schleising.net` — bet server removed from the repo (nginx cleanup is manual)
 - `auth.schleising.net` / Authentik stack — retired in Phase 5
 
 
@@ -135,7 +135,6 @@ sequenceDiagram
 - Changing feeds/football/astronomy auth models
 - Replacing each upstream’s *own* login (Plex/NAS/Overseerr may still have local accounts)
 - Header-based SSO into upstream accounts (gate-only; no identity headers required by upstreams)
-- Gating `bet.schleising.net` (leave as today)
 - Deleting Authentik Docker volumes / backup history (optional later cleanup)
 
 
@@ -415,11 +414,11 @@ Overseerr copy: frame as the final onboarding step (account created/signed in su
 
 | Tier                             | Auth                                     | Examples                                         |
 | -------------------------------- | ---------------------------------------- | ------------------------------------------------ |
-| Public                           | None                                     | astronomy, football (mostly), bet                |
+| Public                           | None                                     | astronomy, football (mostly)                     |
 | Site login (app-enforced)        | FastAPI route checks                     | feeds                                            |
 | Nginx gate: Overseerr allow-list | `/account/nginx-auth/?require=overseerr` | **Overseerr** (`can_use_overseerr`)              |
 | Nginx gate: tools                | `/account/nginx-auth/?require=tools`     | monitor/logger/… + *arr stack, NAS, router, etc. |
-| Retired                          | Removed from webapps + infra             | SRM Monitor, Authentik                           |
+| Retired                          | Removed from webapps + infra             | SRM Monitor, Authentik, Bet                      |
 
 
 
@@ -496,7 +495,7 @@ Migrate the remaining FastAPI tool subdomains.
 - [x] Reload nginx
 - [x] Spot-check each host: anonymous → login; tools user → OK; non-tools → Access Denied
 - [x] Confirm static assets under these hosts still load for allowed users
-- [x] Confirm feeds/football/astronomy/bet unchanged
+- [x] Confirm feeds/football/astronomy unchanged
 
 
 
@@ -609,7 +608,7 @@ Archived under `config-files/nginx/snippets/archive/`. See that folder’s READM
 - [ ] User management: toggle Overseerr checkbox persists and takes effect on next request (or after re-login if JWT omits claims — prefer reading live user record in auth gate)
 - [ ] Logout on www → gated hosts require login again
 - [ ] Access log shows website username
-- [x] Feeds/football/astronomy/bet unchanged
+- [x] Feeds/football/astronomy unchanged
 - [x] SRM Monitor removed from `/webapps`
 - [x] Authentik removed from `/webapps`
 
@@ -623,7 +622,7 @@ Archived under `config-files/nginx/snippets/archive/`. See that folder’s READM
 4. **403 copy:** default “You do not have access.”; Overseerr uses onboarding framing + WhatsApp CTA (not a hard-error tone).
 5. **Authentik:** retired after nginx migration (Phase 5); snippets archived for emergency restore.
 6. **Identity headers:** gate-only; upstreams do not need username headers for SSO.
-7. **Bet:** leave ungated.
+7. **Bet:** server and site removed from the repo. Nginx vhost cleanup is manual.
 8. **SRM Monitor:** retire completely (remove from webapps; not present in nginx config).
 
 

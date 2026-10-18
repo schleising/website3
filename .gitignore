@@ -153,6 +153,3 @@ website/secrets/
 
 # Go workspace file
 go.work
-
-# Bet Server Executable
-bet/src/go-bet-server

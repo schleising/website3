@@ -18,7 +18,7 @@ Related:
 
 | Constraint                   | Rule                                                                                                                                                                                                                                                                             |
 | ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **App / worker host**        | The football website and backend worker do **not** run on the machine used for coding. **Deploy and worker/bet restarts are manual** — the agent must not assume a local restart will take effect. After code lands, hand off: deploy + restart worker (+ bet) on the real host. |
+| **App / worker host**        | The football website and backend worker do **not** run on the machine used for coding. **Deploy and worker restarts are manual** — the agent must not assume a local restart will take effect. After code lands, hand off: deploy + restart worker on the real host. |
 | **MongoDB**                  | Live data is on `**macmini2`**. Agent may make DB changes there (audits, remaps, drops of `live_pl_table`, etc.) when implementing.                                                                                                                                              |
 | **football-data.org probes** | Allowed from this machine for prep/audit. **≥ 4 s between API calls** (same as the live worker limiter). Token: `backend/src/secrets/football_api_token.txt` — never commit.                                                                                                     |
 
@@ -30,7 +30,7 @@ Related:
 After the 2025/26 Premier League season has finished:
 
 1. **Historic freeze:** `2025_2026` match and table data stay readable in the season archive UI, with no further worker writes.
-2. **New season live:** `2026_2027` fixtures and standings come from football-data.org and become the site’s current season (live scores, live table, notifications, bet service).
+2. **New season live:** `2026_2027` fixtures and standings come from football-data.org and become the site’s current season (live scores, live table, notifications).
 3. **Crests:** ensure every 2026/27 club has a local crest under `/images/football/crests/` (download offline if missing).
 4. **Team IDs:** detect clashes between football-data.org IDs for 2026/27 and historic Mongo data; **prefer the football-data.org ID** for the live club and remapping historic conflicts.
 
@@ -51,7 +51,7 @@ All PL match/table data lives in MongoDB `pl_database` (after `scripts/migrate_f
 
 | Collection                                        | Role today                                                               |
 | ------------------------------------------------- | ------------------------------------------------------------------------ |
-| `pl_matches_2025_2026`                            | Current-season fixtures (website + backend + bet hard-wire this name)    |
+| `pl_matches_2025_2026`                            | Current-season fixtures (website + backend hard-wire this name)          |
 | `pl_table_2025_2026`                              | Official daily standings snapshot (backend writes)                       |
 | `live_pl_table`                                   | Live standings overlay for SSR / WebSocket (singular — always “current”) |
 | `pl_matches_{YYYY_YYYY}` / `pl_table_{YYYY_YYYY}` | Historic seasons discovered by listing `pl_matches_*`                    |
@@ -71,10 +71,9 @@ These must all move together:
 | `website/football/__init__.py`      | `pl_matches_{CURRENT_PL_SEASON}`; `live_pl_table`                                                  |
 | `backend/src/football/pl_season.py` | Season key; July–June match window; standings clamp `2026-08-25` (day after all clubs’ first game) |
 | `backend/src/football/__init__.py`  | `pl_matches_*` / `pl_table_*` from `pl_season`; `live_pl_table`                                    |
-| `bet/src/database.go`               | `CURRENT_PL_SEASON`; `pl_matches_` + season; `live_pl_table`                                       |
 
 
-Website **discovery** of seasons is dynamic (`get_available_season_keys()` lists `pl_matches_`* in `pl_database`). “Current” for UI is `infer_current_season_key()` → `**CURRENT_PL_SEASON`** (rollover constant). That alone does **not** retarget the worker; website / backend / bet constants must change together.
+Website **discovery** of seasons is dynamic (`get_available_season_keys()` lists `pl_matches_`* in `pl_database`). “Current” for UI is `infer_current_season_key()` → `**CURRENT_PL_SEASON`** (rollover constant). That alone does **not** retarget the worker; website and backend constants must change together.
 
 ### 2.3 Crest resolution
 
@@ -95,7 +94,6 @@ Assets live under `website/static/images/football/crests/`. Store **SVG where po
 | Crest filename `{id}.svg` / `{id}.png` | Wrong badge |
 | `pl_team_primary_colours`     | Wrong colour                                           |
 | Push `team_ids`               | Wrong club’s alerts                                    |
-| Bet service                   | Reads embedded team objects from current matches/table |
 
 
 Historic seasons already mix football-data.org IDs (clubs that were / are in the live catalogue) with project-owned or named crest files for older Division 1 clubs — same idea as WC tier A / tier B (`World-Cup.md` §7.3.1).
@@ -108,7 +106,7 @@ Historic seasons already mix football-data.org IDs (clubs that were / are in the
 | Item                | Target                                                                                                                     |
 | ------------------- | -------------------------------------------------------------------------------------------------------------------------- |
 | Historic season key | `2025_2026` — frozen; selectable in season picker; no live WS                                                              |
-| Live season key     | `2026_2027` — worker + website defaults + bet                                                                              |
+| Live season key     | `2026_2027` — worker + website defaults                                                                                    |
 | New collections     | `pl_matches_2026_2027`, `pl_table_2026_2027`                                                                               |
 | Live overlay        | `live_pl_table` rebuilt for 2026/27 (replace contents)                                                                     |
 | API                 | `GET /v4/competitions/PL/matches?dateFrom=&dateTo=` and `GET /v4/competitions/PL/standings/?date=` (existing worker paths) |
@@ -138,7 +136,7 @@ Code date window for `get_season_matches` stays the July–June pattern: `2026-0
 1. Audit 2026/27 squad IDs + crests from API (read-only; ≥4s between calls)
 2. Resolve team-ID issues on macmini2: §8.2 clashes (prefer football-data) + §8.3 same-club dual ids (historic → API)
 3. Retarget code to CURRENT_PL_SEASON = 2026_2027
-4. Hand off: deploy + restart worker (and bet) on the real host — not this machine
+4. Hand off: deploy + restart worker on the real host — not this machine
 5. Offline crest download for any missing PNGs
 6. Verify historic 2025/26 vs live 2026/27 UX (incl. unified Hull/Coventry H2H)
 7. Soft: leave push subscription team_ids for relegated clubs; optional hard prune later
@@ -187,7 +185,6 @@ Indexes are ensured at backend startup by `index_bootstrap.py` patterns (`^pl_ma
 2. `website/football/__init__.py` — default matches → `pl_matches_{CURRENT_PL_SEASON}`
 3. `backend/src/football/__init__.py` — matches + official table → `*_2026_2027` via the same constant
 4. `backend/src/football/football.py` — `get_season_matches` date window `2026-07-01`→`2027-06-30`; `get_table` pre-season clamp `**2026-08-25**` (day after all clubs’ first game)
-5. `bet/src/database.go` — `PL_MATCHES_COLLECTION` derived from the same season key
 
 ### 6.3 Worker bootstrap
 
@@ -368,7 +365,7 @@ No crest downloads needed before cutover.
 
 ### Phase 1 — Code
 
-- [x] Introduce `CURRENT_PL_SEASON = "2026_2027"` and derive website / backend / bet collection names from it
+- [x] Introduce `CURRENT_PL_SEASON = "2026_2027"` and derive website / backend collection names from it
 - [x] Update season date window + standings clamp **2026-08-25** (day after all clubs’ first game) in `football.py` (via `pl_season.py`)
 - [x] (Optional follow-up) `scripts/fetch_pl_crests.py` + clash audit script
 
@@ -382,10 +379,9 @@ No crest downloads needed before cutover.
 | `website/football/football_db.py`                  | `infer_current_season_key` → `CURRENT_PL_SEASON`                                                 |
 | `backend/src/football/pl_season.py`                | season key, July–June window, standings clamp **day after all clubs’ first game** (`2026-08-25`) |
 | `backend/src/football/__init__.py` + `football.py` | collections + API date window / clamp                                                            |
-| `bet/src/database.go`                              | `CURRENT_PL_SEASON` + derived matches collection                                                 |
 
 
-Next rollover: edit `CURRENT_PL_SEASON` in the three places (website `db_names.py`, backend `pl_season.py`, bet `database.go`) and set `CURRENT_PL_STANDINGS_CLAMP_DATE` to **the day after every club’s first match** (not first kickoff alone — see §3).
+Next rollover: edit `CURRENT_PL_SEASON` in the two places (website `db_names.py`, backend `pl_season.py`) and set `CURRENT_PL_STANDINGS_CLAMP_DATE` to **the day after every club’s first match** (not first kickoff alone — see §3).
 
 ### Phase 2 — Cutover (**manual deploy / restart on real host**)
 
@@ -394,7 +390,6 @@ Agent prepares code + any Mongo prep on macmini2; **you** deploy and restart:
 - [x] Deploy code to the real host
 - [x] Drop `live_pl_table` once on macmini2 (clean slate for 2026/27)
 - [x] Restart football worker; wait for bootstrap `get_table` + `get_season_matches`
-- [x] Redeploy / restart bet service
 - [x] Confirm Hull/Coventry §8.3 remap already applied (no leftover `900011` / `900008` club rows)
 
 ### Phase 3 — Verify
@@ -404,7 +399,6 @@ Agent prepares code + any Mongo prep on macmini2; **you** deploy and restart:
 - [x] Historic `?season=2025_2026` table/results static, no live WS
 - [x] Team pages / H2H for Hull and Coventry include historic seasons under ids **322** / **1076** (not split on `900011` / `900008`)
 - [x] Notifications list shows 2026/27 clubs
-- [x] Bet service reads 2026/27 matches / live table
 - [x] Access logs / worker logs: no writes to `pl_matches_2025_2026`
 
 ### Phase 4 — Cleanup (optional)
@@ -426,7 +420,7 @@ Agent prepares code + any Mongo prep on macmini2; **you** deploy and restart:
 | ID clash corrupts historic H2H            | Audit + remap **before** public cutover; prefer API id for live club                                     |
 | Dual historic/API ids split one club      | **Required** §8.3 remap (`900011`→`322`, `900008`→`1076`) before cutover                                 |
 | Missing crests → unknown badge            | Crest audit + offline download before announcing the new season                                          |
-| Partial deploy (website vs worker vs bet) | Ship all constant changes in one release; **manual** restart of worker and bet together on the real host |
+| Partial deploy (website vs worker)        | Ship all constant changes in one release; **manual** restart of the worker on the real host             |
 | Rate limit during bootstrap / probes      | Existing staggered bootstrap + **≥4 s** between API calls                                                |
 | Agent restarts wrong host                 | Worker/site are not on the coding machine — hand off deploy/restart                                      |
 
@@ -445,7 +439,7 @@ Agent prepares code + any Mongo prep on macmini2; **you** deploy and restart:
 8. Standings clamp date: **2026-08-25** = day after **all** clubs’ first game (last MD1 games **2026-08-24**, Chelsea/Fulham). Not first kickoff (`2026-08-21`) and not first-matchday+1 — earlier clamps can make football-data.org return the previous season’s table.
 9. Drop `live_pl_table` once on cutover (macmini2), then refill via worker `get_table`.
 10. Push subscriptions: **soft** leave-as-is for relegated clubs on cutover; optional hard prune later. Still rewrite Hull/Coventry historic ids per decision 5.
-11. **Deploy / worker / bet restart:** manual on the real host (not the coding machine). Mongo changes: **macmini2**. API probes: allowed with **≥4 s** spacing.
+11. **Deploy / worker restart:** manual on the real host (not the coding machine). Mongo changes: **macmini2**. API probes: allowed with **≥4 s** spacing.
 
 ---
 
