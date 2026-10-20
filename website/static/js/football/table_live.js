@@ -922,14 +922,22 @@ function formatLiveMatchStart(startTimeIso) {
         return "Kickoff";
     }
 
-    return parsedDate.toLocaleString(undefined, {
+    const options = {
         weekday: "short",
         day: "2-digit",
         month: "short",
         hour: "2-digit",
         minute: "2-digit",
+    };
+
+    if (typeof window.FootballMatchTimes?.formatLocalKickoff === "function") {
+        return window.FootballMatchTimes.formatLocalKickoff(parsedDate, options);
+    }
+
+    return parsedDate.toLocaleString(undefined, {
+        ...options,
         timeZoneName: "short",
-    });
+    }).replace(/\bGMT[\s\u00a0\u202f]*\+0+(?::00)?\b/g, "GMT");
 }
 
 function normalizeTeamCrestPath(value) {

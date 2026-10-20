@@ -12,6 +12,29 @@ function parseKickoffUtc(isoString) {
     return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
 
+function normalizeMatchTimezoneName(timeZoneName) {
+    // Some engines label a zero offset as "GMT+0" (or "GMT+00:00").
+    // Daylight time already comes back as "BST", so only strip a zero offset.
+    return String(timeZoneName || "").replace(/^GMT[\s\u00a0\u202f]*\+0+(?::00)?$/, "GMT");
+}
+
+function formatLocalKickoff(date, options) {
+    const formatter = new Intl.DateTimeFormat(undefined, {
+        ...options,
+        timeZoneName: "short",
+    });
+
+    return formatter
+        .formatToParts(date)
+        .map((part) => {
+            if (part.type !== "timeZoneName") {
+                return part.value;
+            }
+            return normalizeMatchTimezoneName(part.value);
+        })
+        .join("");
+}
+
 function formatMatchKickoff(isoString, format = "full") {
     const parsed = parseKickoffUtc(isoString);
     if (!parsed) {
@@ -19,32 +42,29 @@ function formatMatchKickoff(isoString, format = "full") {
     }
 
     if (format === "time") {
-        return parsed.toLocaleString(undefined, {
+        return formatLocalKickoff(parsed, {
             hour: "2-digit",
             minute: "2-digit",
-            timeZoneName: "short",
         });
     }
 
     if (format === "long") {
-        return parsed.toLocaleString(undefined, {
+        return formatLocalKickoff(parsed, {
             weekday: "short",
             day: "numeric",
             month: "short",
             year: "numeric",
             hour: "2-digit",
             minute: "2-digit",
-            timeZoneName: "short",
         });
     }
 
-    return parsed.toLocaleString(undefined, {
+    return formatLocalKickoff(parsed, {
         weekday: "short",
         day: "numeric",
         month: "short",
         hour: "2-digit",
         minute: "2-digit",
-        timeZoneName: "short",
     });
 }
 
@@ -60,6 +80,7 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 window.FootballMatchTimes = {
+    formatLocalKickoff,
     formatMatchKickoff,
     localizeMatchStartElements,
     parseKickoffUtc,
