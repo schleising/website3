@@ -234,28 +234,32 @@
         x
       </button>
     </div>
-    <form id="feed-subscription-edit-form" class="feed-subscription-edit-form">
+    <form id="feed-subscription-edit-form" class="feed-subscription-edit-form" novalidate>
       <input id="feed-subscription-edit-id" type="hidden" value="">
 
       <label for="feed-subscription-edit-url">Feed URL</label>
       <input
         id="feed-subscription-edit-url"
         class="feed-subscription-url-input"
-        type="url"
+        type="text"
+        inputmode="url"
+        autocomplete="url"
+        spellcheck="false"
         required
         placeholder="https://example.com/feed.xml"
       >
 
       <label for="feed-subscription-edit-category">Category</label>
-      <select id="feed-subscription-edit-category" class="feed-subscription-category-select site-select" required>
+      <select id="feed-subscription-edit-category" class="feed-subscription-category-select site-select">
         {% for category_item in categories %}
         <option value="{{ category_item.category_id }}">{{ category_item.name }}</option>
         {% endfor %}
       </select>
 
+      <p id="feed-subscription-edit-error" class="feed-subscription-edit-error" hidden></p>
       <div class="feed-subscription-edit-actions">
         <button type="button" id="feed-subscription-edit-cancel" class="btn feed-subscription-cancel-button">Cancel</button>
-        <button type="submit" class="btn btn-primary">Save</button>
+        <button type="submit" id="feed-subscription-edit-save" class="btn btn-primary">Save</button>
       </div>
     </form>
   </section>

@@ -37,6 +37,10 @@
     /** @type {HTMLButtonElement | null} */
     const subscriptionEditCancelButton = document.getElementById("feed-subscription-edit-cancel");
     /** @type {HTMLElement | null} */
+    const subscriptionEditError = document.getElementById("feed-subscription-edit-error");
+    /** @type {HTMLButtonElement | null} */
+    const subscriptionEditSaveButton = document.getElementById("feed-subscription-edit-save");
+    /** @type {HTMLElement | null} */
     const categoryColorPopup = document.getElementById("feed-category-color-popup");
     /** @type {HTMLElement | null} */
     const categoryColorBackdrop = document.getElementById("feed-category-color-backdrop");
@@ -1088,6 +1092,21 @@
     }
 
     /**
+     * Show or clear the subscription edit dialog error.
+     *
+     * @param {string} message
+     */
+    function setSubscriptionEditError(message) {
+        if (!(subscriptionEditError instanceof HTMLElement)) {
+            return;
+        }
+
+        const normalizedMessage = String(message || "").trim();
+        subscriptionEditError.textContent = normalizedMessage;
+        subscriptionEditError.hidden = normalizedMessage === "";
+    }
+
+    /**
      * Toggle subscription edit popup visibility.
      *
      * @param {boolean} isOpen
@@ -1108,6 +1127,10 @@
      */
     function closeSubscriptionEditPopup() {
         setSubscriptionEditPopupVisibility(false);
+        setSubscriptionEditError("");
+        if (subscriptionEditSaveButton instanceof HTMLButtonElement) {
+            subscriptionEditSaveButton.disabled = false;
+        }
 
         if (subscriptionEditTriggerButton instanceof HTMLButtonElement) {
             subscriptionEditTriggerButton.setAttribute("aria-expanded", "false");
@@ -1157,6 +1180,7 @@
         subscriptionEditUrlInput.value = rowUrlInput.value.trim();
         subscriptionEditCategorySelect.value = rowCategorySelect.value.trim();
         subscriptionEditCategorySelect.dispatchEvent(new Event("change", { bubbles: true }));
+        setSubscriptionEditError("");
 
         activeSubscriptionRow = row;
         subscriptionEditTriggerButton = triggerButton;
@@ -1193,11 +1217,30 @@
             : false;
 
         if (subscriptionId === "" || feedUrl === "" || categoryId === "") {
-            setStatus("Subscription URL and category are required.", true);
+            setSubscriptionEditError("Subscription URL and category are required.");
             return;
         }
 
+        let parsedFeedUrl;
+        try {
+            parsedFeedUrl = new URL(feedUrl);
+        } catch (_error) {
+            setSubscriptionEditError("Enter a full feed URL, including https://.");
+            subscriptionEditUrlInput.focus();
+            return;
+        }
+
+        if (parsedFeedUrl.protocol !== "http:" && parsedFeedUrl.protocol !== "https:") {
+            setSubscriptionEditError("Feed URL must start with http:// or https://.");
+            subscriptionEditUrlInput.focus();
+            return;
+        }
+
+        setSubscriptionEditError("");
         setStatus("Saving subscription changes...");
+        if (subscriptionEditSaveButton instanceof HTMLButtonElement) {
+            subscriptionEditSaveButton.disabled = true;
+        }
 
         try {
             const endpoint = buildSubscriptionEndpoint(subscriptionUpdateTemplate, subscriptionId);
@@ -1217,7 +1260,13 @@
             setStatus("Subscription updated.");
             await refreshSidebarCounts();
         } catch (error) {
-            setStatus(error instanceof Error ? error.message : "Unable to update subscription.", true);
+            const message = error instanceof Error ? error.message : "Unable to update subscription.";
+            setSubscriptionEditError(message);
+            setStatus(message, true);
+        } finally {
+            if (subscriptionEditSaveButton instanceof HTMLButtonElement) {
+                subscriptionEditSaveButton.disabled = false;
+            }
         }
     }
 
