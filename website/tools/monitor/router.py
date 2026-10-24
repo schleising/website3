@@ -6,14 +6,17 @@ from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 
-from . import sensor_data_collection
+from . import heating_samples_collection, sensor_data_collection
 from .models import (
+    HeatingSample,
     SensorDataPoints,
     SensorData,
     SensorDataMessage,
     TimeseriesDataPoint,
     TimeseriesData,
     TimeseriesDataResponse,
+    HeatingSeries,
+    build_heating_series,
 )
 
 # Devices whose readings should not be shown on the monitor
@@ -123,9 +126,34 @@ async def _timeseries_for_device(
     )
 
 
-# Endpoint to get the timeseries data
-@monitor_router.get("/timeseries", response_class=JSONResponse)
-@monitor_router.get("/timeseries/", response_class=JSONResponse)
+async def _load_heating_series(since: datetime) -> HeatingSeries | None:
+    """Load heating heartbeats with the same 14-day `since` as the room series.
+
+    `since` is the naive `datetime.now() - 14 days` already used for sensor_data.
+    Stored timestamps are UTC. Missing rows leave `heating` unset.
+    """
+    if heating_samples_collection is None:
+        return None
+
+    cursor = heating_samples_collection.find({"timestamp": {"$gte": since}}).sort(
+        [("timestamp", 1)]
+    )
+    samples = [HeatingSample.model_validate(item) async for item in cursor]
+    return build_heating_series(samples)
+
+
+# Endpoint to get the timeseries data.
+# None fields (absent mode/setpoint, or no heating series) are omitted.
+@monitor_router.get(
+    "/timeseries",
+    response_class=JSONResponse,
+    response_model_exclude_none=True,
+)
+@monitor_router.get(
+    "/timeseries/",
+    response_class=JSONResponse,
+    response_model_exclude_none=True,
+)
 async def timeseries() -> TimeseriesDataResponse:
     logging.info("Timeseries data requested")
 
@@ -142,13 +170,15 @@ async def timeseries() -> TimeseriesDataResponse:
     logging.debug(f"Device names: {device_names}")
 
     # Get the timeseries data for each device over the last 14 days
-    # (supports daily/weekly charts with previous-period overlay)
+    # (supports daily/weekly charts with previous-period overlay).
+    # The same `since` covers heating_samples, including the previous week.
     since = datetime.now() - timedelta(days=14)
     timeseries_data = list(
         await asyncio.gather(
             *[_timeseries_for_device(name, since) for name in device_names]
         )
     )
+    heating = await _load_heating_series(since)
 
     # Return the timeseries data
-    return TimeseriesDataResponse(data=timeseries_data)
+    return TimeseriesDataResponse(data=timeseries_data, heating=heating)

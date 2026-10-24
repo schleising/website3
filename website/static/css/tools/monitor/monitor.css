@@ -48,12 +48,14 @@
     --chart-grid: rgba(18, 32, 28, 0.2);
     --chart-text: rgba(90, 107, 100, 0.95);
     --chart-overlay: #b56a12;
+    --heating-band: rgba(180, 35, 24, 0.23);
 }
 
 body.dark-mode {
     --chart-grid: rgba(232, 242, 236, 0.23);
     --chart-text: rgba(232, 242, 236, 0.85);
     --chart-overlay: #e0a24a;
+    --heating-band: rgba(255, 122, 110, 0.31);
 }
 
 .chart-controls {
@@ -391,6 +393,11 @@ body.dark-mode .chart-svg {
     stroke-linejoin: round;
     stroke-linecap: round;
     opacity: 0.85;
+}
+
+.chart-svg .heating-band {
+    fill: var(--heating-band);
+    stroke: none;
 }
 
 .chart-svg .temperature-circle-current {
