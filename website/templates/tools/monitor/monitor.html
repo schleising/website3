@@ -15,9 +15,9 @@
   <link type="text/css" rel="stylesheet" href="/css/tools/monitor/reset.css?v1.1.0" />
   <link type="text/css" rel="stylesheet" href="/css/tools/webapp-tokens.css?v1.0.0" />
   <link type="text/css" rel="stylesheet" href="/css/tools/webapp-shell.css?v1.0.0" />
-  <link type="text/css" rel="stylesheet" href="/css/tools/monitor/monitor.css?v2.0.4" />
+  <link type="text/css" rel="stylesheet" href="/css/tools/monitor/monitor.css?v2.0.6" />
   <script defer src="/js/tools/monitor/scope.js?v1.1.0"></script>
-  <script defer src="/js/tools/monitor/monitor.js?v2.0.6"></script>
+  <script defer src="/js/tools/monitor/monitor.js?v2.0.7"></script>
   <script defer src="/js/tools/monitor/page-layout.js?v1.0.0"></script>
   <script defer src="/js/tools/monitor/theme-toggle.js?v2.0.0"></script>
   <link rel="icon" type="image/svg+xml" sizes="any" href="/icons/tools/monitor/monitor-icon-any-20260504.svg" />
@@ -34,6 +34,7 @@
           <h1 class="brand-title">Monitor</h1>
         </div>
         <div class="topbar-actions">
+          <button id="heating-stats-button" class="heating-stats-button" type="button" aria-haspopup="dialog" aria-controls="heating-stats-dialog" aria-expanded="false">Heating</button>
           <button id="theme-toggle-button" class="theme-switch" type="button" aria-label="Toggle dark mode" aria-pressed="false" title="Toggle dark mode">
             <span class="theme-switch-track" aria-hidden="true">
               <svg class="theme-switch-track-icon theme-switch-track-icon-sun" viewBox="0 0 24 24" focusable="false" aria-hidden="true">
@@ -131,6 +132,28 @@
       </section>
     </div>
   </div>
+
+  <dialog id="heating-stats-dialog" class="heating-stats-dialog" aria-labelledby="heating-stats-title">
+    <div class="heating-stats-panel">
+      <div class="heating-stats-head">
+        <div class="heating-stats-heading">
+          <p class="section-kicker">Heating</p>
+          <h2 id="heating-stats-title" class="section-title" hidden></h2>
+          <p id="heating-stats-period" class="heating-stats-period">Daily · last 24 hours</p>
+        </div>
+        <button id="heating-stats-close" class="heating-stats-close" type="button">Close</button>
+      </div>
+      <p id="heating-stats-empty" class="heating-stats-empty" hidden>No heating readings</p>
+      <p id="heating-stats-summary" class="heating-stats-summary" hidden></p>
+      <p id="heating-stats-compare" class="heating-stats-compare" hidden></p>
+      <div id="heating-stats-runs" class="heating-stats-runs" hidden>
+        <p id="heating-stats-runs-label" class="section-kicker">Runs</p>
+        <p id="heating-stats-runs-empty" class="heating-stats-runs-empty" hidden>No heating in this period</p>
+        <ul id="heating-stats-run-list" class="heating-stats-run-list" aria-labelledby="heating-stats-runs-label"></ul>
+      </div>
+      <p id="heating-stats-status" class="heating-stats-status" hidden></p>
+    </div>
+  </dialog>
 </body>
 
 </html>

@@ -486,3 +486,210 @@ body.dark-mode .chart-svg {
         font-size: 0.86rem;
     }
 }
+
+.heating-stats-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 2.1rem;
+    padding: 0 0.85rem;
+    border: 0.0625rem solid var(--line-strong);
+    border-radius: 999px;
+    background: var(--surface-strong);
+    color: var(--ink);
+    font-family: var(--font-display);
+    font-size: 0.78rem;
+    font-weight: 700;
+    line-height: 1;
+    cursor: pointer;
+    transition: border-color 160ms ease, background 160ms ease;
+}
+
+.heating-stats-button:hover,
+.heating-stats-close:hover {
+    border-color: var(--live);
+}
+
+.heating-stats-button:focus-visible,
+.heating-stats-close:focus-visible {
+    outline: 0.125rem solid rgba(15, 143, 122, 0.55);
+    outline-offset: 0.125rem;
+}
+
+.heating-stats-button[aria-expanded="true"] {
+    background: var(--live-soft);
+    border-color: var(--live);
+}
+
+@media screen and (max-width: 44rem) {
+    .heating-stats-button {
+        height: 1.9rem;
+        padding: 0 0.7rem;
+    }
+}
+
+.heating-stats-dialog:not([open]) {
+    display: none;
+}
+
+.heating-stats-dialog[open] {
+    display: flex;
+}
+
+.heating-stats-dialog {
+    width: min(28rem, calc(100vw - 1.5rem - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)));
+    max-height: min(90dvh, 40rem);
+    margin: auto;
+    padding: 0;
+    border: 0;
+    overflow: hidden;
+    background: transparent;
+    color: var(--ink);
+}
+
+.heating-stats-dialog::backdrop {
+    background: rgba(12, 22, 19, 0.48);
+}
+
+.heating-stats-panel {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-height: min(90dvh, 40rem);
+    min-height: 0;
+    overflow: hidden;
+    padding: 0.95rem 0.95rem 0.85rem;
+    border: 0.0625rem solid var(--line);
+    border-radius: var(--radius-lg);
+    background:
+        linear-gradient(135deg, rgba(15, 143, 122, 0.08), transparent 42%),
+        var(--surface-strong);
+    box-shadow: var(--shadow);
+    user-select: text;
+}
+
+.heating-stats-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.75rem;
+    flex-shrink: 0;
+}
+
+.heating-stats-heading {
+    min-width: 0;
+}
+
+.heating-stats-heading .section-title {
+    margin-top: 0.15rem;
+    font-size: 1.35rem;
+}
+
+.heating-stats-period,
+.heating-stats-compare,
+.heating-stats-empty,
+.heating-stats-runs-empty {
+    margin: 0.2rem 0 0;
+    color: var(--ink-muted);
+    font-size: 0.92rem;
+}
+
+.heating-stats-summary,
+.heating-stats-compare,
+.heating-stats-empty,
+.heating-stats-status {
+    flex-shrink: 0;
+}
+
+.heating-stats-summary {
+    margin: 0.7rem 0 0;
+    font-family: var(--font-display);
+    font-size: 1.02rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+}
+
+.heating-stats-runs {
+    flex: 1 1 auto;
+    min-height: 0;
+    margin-top: 0.55rem;
+    padding: 0.45rem 0.1rem 0.15rem;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    border-top: 0.0625rem solid var(--line);
+    border-bottom: 0.0625rem solid var(--line);
+}
+
+.heating-stats-runs .section-kicker {
+    margin-bottom: 0.15rem;
+}
+
+.heating-stats-run-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.heating-stats-run {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.45rem 0.15rem;
+    border-top: 0.0625rem solid var(--line);
+    font-size: 0.92rem;
+    font-variant-numeric: tabular-nums;
+}
+
+.heating-stats-run:first-child {
+    border-top: 0;
+}
+
+.heating-stats-run-duration {
+    flex-shrink: 0;
+    color: var(--ink-muted);
+}
+
+.heating-stats-status {
+    margin: 0.55rem 0 0;
+    color: var(--ink-muted);
+    font-size: 0.92rem;
+}
+
+.heating-stats-status-heating {
+    color: var(--danger);
+}
+
+.heating-stats-close {
+    flex-shrink: 0;
+    border: 0.0625rem solid var(--line-strong);
+    border-radius: 999px;
+    background: var(--surface);
+    color: var(--ink);
+    padding: 0.35rem 0.8rem;
+    font-family: var(--font-display);
+    font-size: 0.78rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: border-color 160ms ease, background 160ms ease;
+}
+
+body.dark-mode .heating-stats-dialog::backdrop {
+    background: rgba(0, 0, 0, 0.55);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    .heating-stats-dialog::backdrop {
+        animation: heating-stats-backdrop 160ms ease;
+    }
+}
+
+@keyframes heating-stats-backdrop {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}

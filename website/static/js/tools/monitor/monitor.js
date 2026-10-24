@@ -8,16 +8,25 @@ const chartSettingsStorageKey = 'monitor.chartSettings';
 var deviceData = null;
 
 /**
- * One thermostat timeline for every room chart. Mode and setpoint fields are
- * stored on the samples and are not read while drawing.
+ * One thermostat timeline for every room chart. Mode and setpoint are read by
+ * the heating stats dialog, not while drawing the bands.
  * @type {{
  *   sample_interval_secs: number,
  *   device_name: string,
  *   device_id: string,
- *   samples: Array<{timestamp: string, hvac_status: string}>
+ *   samples: Array<{
+ *     timestamp: string,
+ *     hvac_status: string,
+ *     mode?: string | null,
+ *     heat_celsius?: number | null,
+ *     cool_celsius?: number | null,
+ *   }>
  * } | null}
  */
 let heatingSeries = null;
+
+/** Skips a dialog rewrite when the visible heating stats have not changed. */
+let heatingStatsRenderKey = "";
 
 /**
  * @type {Map<string, DOMMatrix>} 
@@ -414,6 +423,422 @@ function heatingRuns(samples, sampleIntervalSecs, periodBounds) {
 }
 
 /**
+ * @param {number} durationMs
+ * @returns {string}
+ */
+function formatHeatingDuration(durationMs) {
+    if (!(durationMs > 0)) {
+        return "0 min";
+    }
+    if (durationMs < 60 * 1000) {
+        return "< 1 min";
+    }
+
+    const totalMinutes = Math.round(durationMs / 60000);
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    if (hours <= 0) {
+        return `${Math.max(totalMinutes, 1)} min`;
+    }
+    if (minutes === 0) {
+        return `${hours} h`;
+    }
+    return `${hours} h ${minutes} min`;
+}
+
+/**
+ * @param {Date} date
+ * @returns {string}
+ */
+function formatHeatingClock(date) {
+    const hours = String(date.getHours()).padStart(2, "0");
+    const minutes = String(date.getMinutes()).padStart(2, "0");
+    return `${hours}:${minutes}`;
+}
+
+/**
+ * Daily runs on one calendar day are clocks only. Anything that can be confused
+ * with another day includes the date.
+ *
+ * @param {Date} start
+ * @param {Date} end
+ * @param {'daily' | 'weekly'} period
+ * @returns {string}
+ */
+function formatHeatingRunRange(start, end, period) {
+    const sameDay = start.toDateString() === end.toDateString();
+    const startClock = formatHeatingClock(start);
+    const endClock = formatHeatingClock(end);
+    if (period === "daily" && sameDay) {
+        return `${startClock}–${endClock}`;
+    }
+
+    const dayFormat = { weekday: "short", day: "numeric", month: "short" };
+    const startDay = start.toLocaleDateString([], dayFormat);
+    if (sameDay) {
+        return `${startDay} ${startClock}–${endClock}`;
+    }
+    const endDay = end.toLocaleDateString([], dayFormat);
+    return `${startDay} ${startClock}–${endDay} ${endClock}`;
+}
+
+/**
+ * @param {string | null | undefined} mode
+ * @returns {string | null}
+ */
+function heatingModeLabel(mode) {
+    if (mode == null || mode === "") {
+        return null;
+    }
+
+    const known = {
+        HEAT: "Heat",
+        COOL: "Cool",
+        HEATCOOL: "Heat · Cool",
+        OFF: "Off",
+    };
+    if (Object.prototype.hasOwnProperty.call(known, mode)) {
+        return known[mode];
+    }
+    if (mode === mode.toUpperCase()) {
+        return mode.charAt(0) + mode.slice(1).toLowerCase();
+    }
+    return mode;
+}
+
+/**
+ * @param {string | null | undefined} status
+ * @returns {string | null}
+ */
+function heatingHvacLabel(status) {
+    if (status === "HEATING") {
+        return "Heating";
+    }
+    if (status === "COOLING") {
+        return "Cooling";
+    }
+    if (status === "OFF") {
+        return "Off";
+    }
+    return null;
+}
+
+/**
+ * @param {{
+ *   hvac_status: string,
+ *   mode?: string | null,
+ *   heat_celsius?: number | null,
+ *   cool_celsius?: number | null,
+ * }} sample
+ * @returns {string | null}
+ */
+function heatingSetpointLabel(sample) {
+    const mode = sample.mode;
+    /** @type {number | null | undefined} */
+    let celsius = null;
+    if (mode === "HEAT") {
+        celsius = sample.heat_celsius;
+    } else if (mode === "COOL") {
+        celsius = sample.cool_celsius;
+    } else if (mode === "HEATCOOL") {
+        celsius = sample.hvac_status === "COOLING" ? sample.cool_celsius : sample.heat_celsius;
+        if (typeof celsius !== "number") {
+            celsius = sample.hvac_status === "COOLING" ? sample.heat_celsius : sample.cool_celsius;
+        }
+    }
+    if (typeof celsius !== "number" || !Number.isFinite(celsius)) {
+        return null;
+    }
+    return formatTemperature(celsius);
+}
+
+/**
+ * @param {Array<{timestamp: string}>} samples
+ * @returns {{timestamp: string, hvac_status?: string, mode?: string | null, heat_celsius?: number | null, cool_celsius?: number | null} | null}
+ */
+function latestHeatingSample(samples) {
+    /** @type {{timeMs: number, sample: {timestamp: string, hvac_status?: string, mode?: string | null, heat_celsius?: number | null, cool_celsius?: number | null}} | null} */
+    let latest = null;
+    for (const sample of samples) {
+        const timeMs = new Date(sample.timestamp).getTime();
+        if (!Number.isFinite(timeMs)) {
+            continue;
+        }
+        if (latest == null || timeMs >= latest.timeMs) {
+            latest = { timeMs, sample };
+        }
+    }
+    return latest == null ? null : latest.sample;
+}
+
+/**
+ * @param {Array<{start: Date, end: Date}>} runs
+ * @returns {number}
+ */
+function heatingOnTimeMs(runs) {
+    return runs.reduce((total, run) => total + (run.end.getTime() - run.start.getTime()), 0);
+}
+
+/**
+ * @param {'daily' | 'weekly'} period
+ * @returns {{window: string, previous: string}}
+ */
+function heatingPeriodCopy(period) {
+    if (period === "weekly") {
+        return { window: "Weekly · last 7 days", previous: "Previous week" };
+    }
+    return { window: "Daily · last 24 hours", previous: "Previous day" };
+}
+
+/**
+ * @param {Array<{start: Date, end: Date}>} runs
+ * @returns {string}
+ */
+function heatingSummaryText(runs) {
+    if (runs.length === 0) {
+        return "0 min on · 0 runs";
+    }
+
+    const durations = runs.map(run => run.end.getTime() - run.start.getTime());
+    const total = durations.reduce((sum, value) => sum + value, 0);
+    const longest = Math.max(...durations);
+    const runLabel = runs.length === 1 ? "1 run" : `${runs.length} runs`;
+    return `${formatHeatingDuration(total)} on · ${runLabel} · longest ${formatHeatingDuration(longest)}`;
+}
+
+/**
+ * @param {{
+ *   hvac_status?: string,
+ *   mode?: string | null,
+ *   heat_celsius?: number | null,
+ *   cool_celsius?: number | null,
+ * } | null} sample
+ * @returns {Array<{text: string, heating: boolean}>}
+ */
+function heatingStatusParts(sample) {
+    if (sample == null || sample.hvac_status == null) {
+        return [];
+    }
+
+    /** @type {Array<{text: string, heating: boolean}>} */
+    const parts = [];
+    const hvac = heatingHvacLabel(sample.hvac_status);
+    if (hvac != null) {
+        parts.push({ text: hvac, heating: sample.hvac_status === "HEATING" });
+    }
+
+    const mode = heatingModeLabel(sample.mode);
+    if (mode != null && mode.toLowerCase() !== (hvac ?? "").toLowerCase()) {
+        parts.push({ text: mode, heating: false });
+    }
+
+    const setpoint = heatingSetpointLabel({
+        hvac_status: sample.hvac_status,
+        mode: sample.mode,
+        heat_celsius: sample.heat_celsius,
+        cool_celsius: sample.cool_celsius,
+    });
+    if (setpoint != null) {
+        parts.push({ text: setpoint, heating: false });
+    }
+    return parts;
+}
+
+/**
+ * @returns {boolean}
+ */
+function heatingSeriesIsUsable() {
+    const heating = heatingSeries;
+    return heating != null
+        && Array.isArray(heating.samples)
+        && heating.samples.length > 0
+        && typeof heating.sample_interval_secs === "number"
+        && heating.sample_interval_secs > 0;
+}
+
+/**
+ * @returns {{
+ *   key: string,
+ *   hasReadings: boolean,
+ *   deviceName: string,
+ *   periodLabel: string,
+ *   summary: string,
+ *   compare: string,
+ *   runs: Array<{range: string, duration: string}>,
+ *   statusParts: Array<{text: string, heating: boolean}>,
+ * }}
+ */
+function buildHeatingStatsView() {
+    const period = chartPeriod === "weekly" ? "weekly" : "daily";
+    const copy = heatingPeriodCopy(period);
+    if (!heatingSeriesIsUsable() || heatingSeries == null) {
+        return {
+            key: `empty|${period}`,
+            hasReadings: false,
+            deviceName: "",
+            periodLabel: copy.window,
+            summary: "",
+            compare: "",
+            runs: [],
+            statusParts: [],
+        };
+    }
+
+    const heating = heatingSeries;
+    const currentRuns = heatingRuns(heating.samples, heating.sample_interval_secs, getPeriodBounds(period, 0));
+    const previousRuns = heatingRuns(heating.samples, heating.sample_interval_secs, getPeriodBounds(period, 1));
+    const runs = currentRuns.map(run => ({
+        range: formatHeatingRunRange(run.start, run.end, period),
+        duration: formatHeatingDuration(run.end.getTime() - run.start.getTime()),
+    }));
+    const summary = heatingSummaryText(currentRuns);
+    const compare = `${copy.previous} ${formatHeatingDuration(heatingOnTimeMs(previousRuns))}`;
+    const statusParts = heatingStatusParts(latestHeatingSample(heating.samples));
+    const statusKey = statusParts.map(part => part.text).join("|");
+    const runKey = runs.map(run => `${run.range}|${run.duration}`).join("\n");
+    return {
+        key: [period, heating.device_name, summary, compare, statusKey, runKey].join("\n"),
+        hasReadings: true,
+        deviceName: heating.device_name,
+        periodLabel: copy.window,
+        summary,
+        compare,
+        runs,
+        statusParts,
+    };
+}
+
+/**
+ * @param {{resetScroll?: boolean}} [options]
+ */
+function renderHeatingStats(options) {
+    const dialog = document.getElementById("heating-stats-dialog");
+    if (!(dialog instanceof HTMLDialogElement)) {
+        return;
+    }
+
+    const resetScroll = options?.resetScroll === true;
+    const view = buildHeatingStatsView();
+    if (!resetScroll && view.key === heatingStatsRenderKey) {
+        return;
+    }
+    heatingStatsRenderKey = view.key;
+
+    const title = document.getElementById("heating-stats-title");
+    const period = document.getElementById("heating-stats-period");
+    const empty = document.getElementById("heating-stats-empty");
+    const summary = document.getElementById("heating-stats-summary");
+    const compare = document.getElementById("heating-stats-compare");
+    const runs = document.getElementById("heating-stats-runs");
+    const runsEmpty = document.getElementById("heating-stats-runs-empty");
+    const runList = document.getElementById("heating-stats-run-list");
+    const status = document.getElementById("heating-stats-status");
+    if (
+        !(title instanceof HTMLElement)
+        || period == null
+        || empty == null
+        || summary == null
+        || compare == null
+        || runs == null
+        || runsEmpty == null
+        || runList == null
+        || status == null
+    ) {
+        heatingStatsRenderKey = "";
+        return;
+    }
+
+    period.textContent = view.periodLabel;
+    if (view.deviceName !== "") {
+        title.hidden = false;
+        title.textContent = view.deviceName;
+        dialog.setAttribute("aria-labelledby", "heating-stats-title");
+        dialog.removeAttribute("aria-label");
+    } else {
+        title.hidden = true;
+        title.textContent = "";
+        dialog.removeAttribute("aria-labelledby");
+        dialog.setAttribute("aria-label", "Heating");
+    }
+
+    empty.hidden = view.hasReadings;
+    summary.hidden = !view.hasReadings;
+    compare.hidden = !view.hasReadings;
+    runs.hidden = !view.hasReadings;
+    status.hidden = !view.hasReadings || view.statusParts.length === 0;
+    if (!view.hasReadings) {
+        return;
+    }
+
+    summary.textContent = view.summary;
+    compare.textContent = view.compare;
+
+    const scrollTop = resetScroll ? 0 : runs.scrollTop;
+    runsEmpty.hidden = view.runs.length > 0;
+    runList.hidden = view.runs.length === 0;
+    runList.replaceChildren();
+    for (const run of view.runs) {
+        const item = document.createElement("li");
+        item.className = "heating-stats-run";
+        const range = document.createElement("span");
+        range.textContent = run.range;
+        const duration = document.createElement("span");
+        duration.className = "heating-stats-run-duration";
+        duration.textContent = run.duration;
+        item.append(range, duration);
+        runList.append(item);
+    }
+    runs.scrollTop = scrollTop;
+
+    status.replaceChildren();
+    view.statusParts.forEach((part, index) => {
+        if (index > 0) {
+            status.append(document.createTextNode(" · "));
+        }
+        const span = document.createElement("span");
+        span.textContent = part.text;
+        if (part.heating) {
+            span.className = "heating-stats-status-heating";
+        }
+        status.append(span);
+    });
+}
+
+function initializeHeatingStats() {
+    const button = document.getElementById("heating-stats-button");
+    const dialog = document.getElementById("heating-stats-dialog");
+    const closeButton = document.getElementById("heating-stats-close");
+    if (!(button instanceof HTMLButtonElement) || !(dialog instanceof HTMLDialogElement) || closeButton == null) {
+        return;
+    }
+
+    button.addEventListener("click", () => {
+        renderHeatingStats({ resetScroll: true });
+        if (!dialog.open) {
+            button.setAttribute("aria-expanded", "true");
+            dialog.showModal();
+        }
+    });
+
+    closeButton.addEventListener("click", () => {
+        dialog.close();
+    });
+
+    dialog.addEventListener("click", (event) => {
+        if (event.target === dialog) {
+            dialog.close();
+        }
+    });
+
+    dialog.addEventListener("close", () => {
+        button.setAttribute("aria-expanded", "false");
+        button.focus();
+    });
+
+    renderHeatingStats();
+}
+
+/**
  * @param {Array<{timestamp: string, temp: number, humidity: number}>} data
  * @param {'daily' | 'weekly'} period
  * @param {number} periodOffset
@@ -751,6 +1176,7 @@ function initializeChartControls() {
             chartPeriod = nextPeriod;
             syncChartControls();
             persistChartSettings();
+            renderHeatingStats({ resetScroll: true });
 
             if (deviceData != null) {
                 drawCharts();
@@ -864,6 +1290,7 @@ async function updateServiceWorkerRegistration() {
 document.addEventListener('DOMContentLoaded', () => {
     initializeChartControls();
     initializeChartReorder();
+    initializeHeatingStats();
 
     // Check if the browser supports service workers
     if ('serviceWorker' in navigator) {
@@ -1025,6 +1452,7 @@ async function fetchTemperatureData() {
             heatingSeries = response_data.heating ?? null;
             drawCharts();
             refreshAllTemperatureReadouts();
+            renderHeatingStats();
         })
         .catch(error => {
             console.error('Error fetching temperature data:', error);
