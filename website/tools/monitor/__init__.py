@@ -8,3 +8,6 @@ mongodb.set_database("web_database")
 
 # Set the sensor data collection
 sensor_data_collection = mongodb.get_collection("sensor_data")
+
+# Nest HVAC heartbeats. Sibling of sensor_data; room charts read one shared series.
+heating_samples_collection = mongodb.get_collection("heating_samples")

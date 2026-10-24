@@ -1,4 +1,4 @@
-const serviceWorkerPath = '/sw.js?v=tools-webapp-v8';
+const serviceWorkerPath = '/sw.js?v=tools-webapp-v16';
 const chartSettingsStorageKey = 'monitor.chartSettings';
 
 // The chart data to be fetched from the server
@@ -6,6 +6,18 @@ const chartSettingsStorageKey = 'monitor.chartSettings';
  * @type {Array<{device_id: string, data: Array<{timestamp: string, temp: number, humidity: number}>}>}
  */
 var deviceData = null;
+
+/**
+ * One thermostat timeline for every room chart. Mode and setpoint fields are
+ * stored on the samples and are not read while drawing.
+ * @type {{
+ *   sample_interval_secs: number,
+ *   device_name: string,
+ *   device_id: string,
+ *   samples: Array<{timestamp: string, hvac_status: string}>
+ * } | null}
+ */
+let heatingSeries = null;
 
 /**
  * @type {Map<string, DOMMatrix>} 
@@ -304,6 +316,104 @@ function getPeriodBounds(period, periodOffset) {
     const end = new Date(now.getTime() - periodOffset * durationMs);
     const start = new Date(end.getTime() - durationMs);
     return { start, end };
+}
+
+/**
+ * Turn heating heartbeats into runs for the wash and for a later usage total.
+ * Sits beside getPeriodBounds so both windows share one definition.
+ *
+ * Only HEATING extends a run. OFF and COOLING end one. A gap longer than
+ * 2 × sampleIntervalSecs ends the run one interval after the last HEATING
+ * sample. A newest HEATING sample younger than that gap extends to periodBounds.end
+ * (the right edge). The result is clipped to the window: start inclusive, end exclusive.
+ *
+ * @param {Array<{timestamp: string, hvac_status: string}>} samples
+ * @param {number} sampleIntervalSecs
+ * @param {{start: Date, end: Date}} periodBounds
+ * @returns {Array<{start: Date, end: Date}>}
+ */
+function heatingRuns(samples, sampleIntervalSecs, periodBounds) {
+    if (!(sampleIntervalSecs > 0) || periodBounds == null) {
+        return [];
+    }
+
+    const intervalMs = sampleIntervalSecs * 1000;
+    const maxGapMs = 2 * intervalMs;
+    const windowStartMs = periodBounds.start.getTime();
+    const windowEndMs = periodBounds.end.getTime();
+
+    const ordered = samples
+        .map(sample => ({
+            timeMs: new Date(sample.timestamp).getTime(),
+            heating: sample.hvac_status === "HEATING",
+        }))
+        .filter(sample => Number.isFinite(sample.timeMs))
+        .sort((left, right) => left.timeMs - right.timeMs);
+
+    /** @type {Array<{start: Date, end: Date}>} */
+    const runs = [];
+    /** @type {number | null} */
+    let runStartMs = null;
+    /** @type {number | null} */
+    let lastHeatingMs = null;
+
+    /**
+     * @param {number} startMs
+     * @param {number} endMs
+     */
+    function clipAndPush(startMs, endMs) {
+        const clippedStart = Math.max(startMs, windowStartMs);
+        const clippedEnd = Math.min(endMs, windowEndMs);
+        if (clippedStart < clippedEnd) {
+            runs.push({
+                start: new Date(clippedStart),
+                end: new Date(clippedEnd),
+            });
+        }
+    }
+
+    /**
+     * @param {number} endMs
+     */
+    function closeRun(endMs) {
+        if (runStartMs != null && lastHeatingMs != null) {
+            clipAndPush(runStartMs, endMs);
+        }
+        runStartMs = null;
+        lastHeatingMs = null;
+    }
+
+    for (const sample of ordered) {
+        if (!sample.heating) {
+            if (lastHeatingMs != null) {
+                const gapMs = sample.timeMs - lastHeatingMs;
+                closeRun(gapMs > maxGapMs ? lastHeatingMs + intervalMs : sample.timeMs);
+            }
+            continue;
+        }
+
+        if (lastHeatingMs == null || runStartMs == null) {
+            runStartMs = sample.timeMs;
+            lastHeatingMs = sample.timeMs;
+            continue;
+        }
+
+        const gapMs = sample.timeMs - lastHeatingMs;
+        if (gapMs > maxGapMs) {
+            closeRun(lastHeatingMs + intervalMs);
+            runStartMs = sample.timeMs;
+            lastHeatingMs = sample.timeMs;
+        } else {
+            lastHeatingMs = sample.timeMs;
+        }
+    }
+
+    if (lastHeatingMs != null) {
+        const ageMs = windowEndMs - lastHeatingMs;
+        closeRun(ageMs <= maxGapMs ? windowEndMs : lastHeatingMs + intervalMs);
+    }
+
+    return runs;
 }
 
 /**
@@ -915,6 +1025,7 @@ async function fetchTemperatureData() {
         .then(response_data => {
             // Update the temperature data
             deviceData = response_data.data;
+            heatingSeries = response_data.heating ?? null;
             drawCharts();
             refreshAllTemperatureReadouts();
         })
@@ -951,14 +1062,35 @@ function updateCharts() {
     });
 }
 
-// Function to get the transformation matrix of the chart
+/**
+ * @param {{current: Array<{timestamp: string, temp: number, humidity: number}>, overlay: Array<{timestamp: string, temp: number, humidity: number}> | null, bounds: {minTimestamp: number, maxTimestamp: number}}} series
+ * @returns {{minTemp: number, maxTemp: number, minTimestamp: number, maxTimestamp: number}}
+ */
+function chartValueRange(series) {
+    const { current, overlay, bounds } = series;
+    const temperatures = current.map(d => d.temp);
+    if (overlay != null) {
+        temperatures.push(...overlay.map(d => d.temp));
+    }
+
+    const defaultTemp = 20;
+    const minTemp = temperatures.length > 0 ? Math.floor(Math.min(...temperatures)) : defaultTemp - 1;
+    const maxTemp = temperatures.length > 0 ? Math.ceil(Math.max(...temperatures)) : defaultTemp + 1;
+
+    return {
+        minTemp,
+        maxTemp,
+        minTimestamp: bounds.minTimestamp,
+        maxTimestamp: bounds.maxTimestamp,
+    };
+}
+
 /**
  * @param {string} device_id
  * @param {{current: Array<{timestamp: string, temp: number, humidity: number}>, overlay: Array<{timestamp: string, temp: number, humidity: number}> | null, bounds: {minTimestamp: number, maxTimestamp: number}}} series
+ * @returns {boolean}
  */
 function setTransformationMatrix(device_id, series) {
-    const { current, overlay, bounds } = series;
-
     // Get the chart svg element
     const svgContainer = document.getElementById("svg-container-" + device_id);
     if (svgContainer == null) {
@@ -981,17 +1113,7 @@ function setTransformationMatrix(device_id, series) {
         svgContainer.style.height = "";
     }
 
-    const temperatures = current.map(d => d.temp);
-    if (overlay != null) {
-        temperatures.push(...overlay.map(d => d.temp));
-    }
-
-    const defaultTemp = 20;
-    const minTemp = temperatures.length > 0 ? Math.floor(Math.min(...temperatures)) : defaultTemp - 1;
-    const maxTemp = temperatures.length > 0 ? Math.ceil(Math.max(...temperatures)) : defaultTemp + 1;
-
-    const minTimestamp = bounds.minTimestamp;
-    const maxTimestamp = bounds.maxTimestamp;
+    const { minTemp, maxTemp, minTimestamp, maxTimestamp } = chartValueRange(series);
 
     // Get the x and y translation needed to move the top left corner to the origin
     const xTranslation = -minTimestamp;
@@ -1058,8 +1180,9 @@ function drawChart(device_id, data) {
         svg.removeChild(svg.firstChild);
     }
 
-    // Draw the grid
+    // Draw the grid, then the heating wash, then the temperature lines.
     drawGrid(svg, device_id, series);
+    drawHeatingBands(svg, device_id, series);
 
     // Draw the temperature data
     drawTemperature(svg, device_id, series);
@@ -1074,22 +1197,10 @@ function drawChart(device_id, data) {
  * @returns {void}
  */
 function drawGrid(svg, device_id, series) {
-    const { current, overlay, bounds } = series;
-
     // Get the transformation matrix of the chart
     const matrix = transformationMatrices.get(device_id);
 
-    const temperatures = current.map(d => d.temp);
-    if (overlay != null) {
-        temperatures.push(...overlay.map(d => d.temp));
-    }
-
-    const defaultTemp = 20;
-    const minTemp = temperatures.length > 0 ? Math.floor(Math.min(...temperatures)) : defaultTemp - 1;
-    const maxTemp = temperatures.length > 0 ? Math.ceil(Math.max(...temperatures)) : defaultTemp + 1;
-
-    const minTimestamp = bounds.minTimestamp;
-    const maxTimestamp = bounds.maxTimestamp;
+    const { minTemp, maxTemp, minTimestamp, maxTimestamp } = chartValueRange(series);
 
     // Create the top left, bottom left and bottom right corners of the grid
     const topLeft = matrix.transformPoint(new DOMPoint(minTimestamp, maxTemp));
@@ -1243,8 +1354,11 @@ function updateChart(device_id, data) {
         return;
     }
 
-    // Draw the grid
+    // Draw the grid, then the heating wash, then the temperature lines.
+    // The grid is appended, so the wash has to be rebuilt after it or the
+    // grid covers the bands. Rebuilding also drops a stale group.
     drawGrid(svg, device_id, series);
+    drawHeatingBands(svg, device_id, series);
 
     // Update the temperature data
     drawTemperature(svg, device_id, series);
@@ -1280,6 +1394,112 @@ function drawTemperatureLine(svg, device_id, data, className, elementId) {
     temperature.setAttribute("stroke-width", "1");
     temperature.setAttribute("points", points.map(p => `${p.x},${p.y}`).join(" "));
     svg.appendChild(temperature);
+}
+
+/**
+ * Paint this period's HEATING runs behind the temperature lines.
+ * Previous-period heating is left in the payload and is not drawn.
+ * Mode and requested temperature are not read here.
+ *
+ * @param {SVGElement} svg
+ * @param {string} device_id
+ * @param {{current: Array<{timestamp: string, temp: number, humidity: number}>, overlay: Array<{timestamp: string, temp: number, humidity: number}> | null, bounds: {minTimestamp: number, maxTimestamp: number}}} series
+ */
+function drawHeatingBands(svg, device_id, series) {
+    const existing = document.getElementById("heating-bands-" + device_id);
+    if (existing != null) {
+        existing.remove();
+    }
+    const existingDefs = document.getElementById("heating-bands-defs-" + device_id);
+    if (existingDefs != null) {
+        existingDefs.remove();
+    }
+
+    const heating = heatingSeries;
+    if (heating == null || !Array.isArray(heating.samples) || heating.samples.length === 0) {
+        return;
+    }
+    if (typeof heating.sample_interval_secs !== "number" || !(heating.sample_interval_secs > 0)) {
+        return;
+    }
+
+    const matrix = transformationMatrices.get(device_id);
+    if (matrix == null) {
+        return;
+    }
+
+    const range = chartValueRange(series);
+    const periodBounds = {
+        start: new Date(range.minTimestamp * timeScale),
+        end: new Date(range.maxTimestamp * timeScale),
+    };
+    const runs = heatingRuns(heating.samples, heating.sample_interval_secs, periodBounds);
+    if (runs.length === 0) {
+        return;
+    }
+
+    const topLeft = matrix.transformPoint(new DOMPoint(range.minTimestamp, range.maxTemp));
+    const bottomLeft = matrix.transformPoint(new DOMPoint(range.minTimestamp, range.minTemp));
+    const bottomRight = matrix.transformPoint(new DOMPoint(range.maxTimestamp, range.minTemp));
+    const clipX = Math.min(topLeft.x, bottomRight.x);
+    const clipY = Math.min(topLeft.y, bottomLeft.y);
+    const clipWidth = Math.abs(bottomRight.x - topLeft.x);
+    const clipHeight = Math.abs(bottomLeft.y - topLeft.y);
+    const bandHeight = Math.abs(bottomLeft.y - topLeft.y);
+    if (!(clipWidth > 0) || !(bandHeight > 0)) {
+        return;
+    }
+
+    const clipId = "heating-bands-clip-" + device_id;
+    const defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
+    defs.setAttribute("id", "heating-bands-defs-" + device_id);
+    const clipPath = document.createElementNS("http://www.w3.org/2000/svg", "clipPath");
+    clipPath.setAttribute("id", clipId);
+    const clipRect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+    clipRect.setAttribute("x", String(clipX));
+    clipRect.setAttribute("y", String(clipY));
+    clipRect.setAttribute("width", String(clipWidth));
+    clipRect.setAttribute("height", String(clipHeight));
+    clipPath.appendChild(clipRect);
+    defs.appendChild(clipPath);
+
+    const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
+    group.setAttribute("class", "heating-bands");
+    group.setAttribute("id", "heating-bands-" + device_id);
+    group.setAttribute("pointer-events", "none");
+    group.setAttribute("clip-path", "url(#" + clipId + ")");
+
+    const title = document.createElementNS("http://www.w3.org/2000/svg", "title");
+    title.textContent = "Heating running";
+    group.appendChild(title);
+
+    for (const run of runs) {
+        const startX = matrix.transformPoint(
+            new DOMPoint(run.start.getTime() / timeScale, range.minTemp)
+        ).x;
+        const endX = matrix.transformPoint(
+            new DOMPoint(run.end.getTime() / timeScale, range.minTemp)
+        ).x;
+        const width = endX - startX;
+        if (!(width > 0)) {
+            continue;
+        }
+
+        const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+        rect.setAttribute("class", "heating-band");
+        rect.setAttribute("x", String(startX));
+        rect.setAttribute("y", String(clipY));
+        rect.setAttribute("width", String(width));
+        rect.setAttribute("height", String(bandHeight));
+        group.appendChild(rect);
+    }
+
+    if (group.querySelector(".heating-band") == null) {
+        return;
+    }
+
+    svg.appendChild(defs);
+    svg.appendChild(group);
 }
 
 // Function to draw the temperature data on the chart

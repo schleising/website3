@@ -1,8 +1,13 @@
-from datetime import datetime
+import logging
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Any
 
 from pydantic import BaseModel, Field, field_validator
+
+# Nest poll interval (POLL_INTERVAL_SECS in rust-backend). Reported on the
+# timeseries payload so the chart does not hardcode 300.
+HEATING_SAMPLE_INTERVAL_SECS = 300
 
 
 # The instance type of the capability, e.g. "online" or "sensorTemperature"
@@ -106,6 +111,73 @@ class TimeseriesData(BaseModel):
     data: list[TimeseriesDataPoint]
 
 
-# Timeseries data response
+# One Nest HVAC heartbeat stored in web_database.heating_samples.
+class HeatingSample(BaseModel):
+    device_name: str
+    timestamp: datetime
+    hvac_status: str
+    mode: str | None = None
+    heat_celsius: float | None = None
+    cool_celsius: float | None = None
+
+
+# One sample on the timeseries payload. Mode and setpoints are carried for a
+# later usage page and are not drawn.
+class HeatingSamplePoint(BaseModel):
+    timestamp: str
+    hvac_status: str
+    mode: str | None = None
+    heat_celsius: float | None = None
+    cool_celsius: float | None = None
+
+
+# The single thermostat timeline painted on every room chart.
+class HeatingSeries(BaseModel):
+    sample_interval_secs: int
+    device_name: str
+    device_id: str
+    samples: list[HeatingSamplePoint]
+
+
+# Timeseries data response. `heating` is omitted when there are no samples.
 class TimeseriesDataResponse(BaseModel):
     data: list[TimeseriesData]
+    heating: HeatingSeries | None = None
+
+
+def build_heating_series(samples: list[HeatingSample]) -> HeatingSeries | None:
+    """Build the one heating series for the timeseries payload.
+
+    This house has one thermostat. If more than one device name is stored, the
+    series is the device with the newest sample. Every status is kept, including
+    OFF and COOLING. Empty input means the chart should draw no wash.
+    """
+    if not samples:
+        return None
+
+    ordered = sorted(samples, key=lambda sample: (sample.timestamp, sample.device_name))
+    device_name = ordered[-1].device_name
+    device_names = {sample.device_name for sample in ordered}
+    if len(device_names) > 1:
+        logging.warning(
+            "heating_samples has %s thermostats; chart series uses %s",
+            len(device_names),
+            device_name,
+        )
+
+    device_samples = [sample for sample in ordered if sample.device_name == device_name]
+    return HeatingSeries(
+        sample_interval_secs=HEATING_SAMPLE_INTERVAL_SECS,
+        device_name=device_name,
+        device_id=device_name.lower().replace(" ", "-"),
+        samples=[
+            HeatingSamplePoint(
+                timestamp=sample.timestamp.astimezone(timezone.utc).isoformat(),
+                hvac_status=sample.hvac_status,
+                mode=sample.mode,
+                heat_celsius=sample.heat_celsius,
+                cool_celsius=sample.cool_celsius,
+            )
+            for sample in device_samples
+        ],
+    )
