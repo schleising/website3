@@ -323,9 +323,10 @@ function getPeriodBounds(period, periodOffset) {
  * Sits beside getPeriodBounds so both windows share one definition.
  *
  * Only HEATING extends a run. OFF and COOLING end one. A gap longer than
- * 2 × sampleIntervalSecs ends the run one interval after the last HEATING
- * sample. A newest HEATING sample younger than that gap extends to periodBounds.end
- * (the right edge). The result is clipped to the window: start inclusive, end exclusive.
+ * 2 × sampleIntervalSecs starts a new run. Readings are taken on the sample
+ * interval, so a run is drawn half an interval before its first HEATING
+ * sample and half an interval after its last HEATING sample. The result is
+ * clipped to the window: start inclusive, end exclusive.
  *
  * @param {Array<{timestamp: string, hvac_status: string}>} samples
  * @param {number} sampleIntervalSecs
@@ -338,6 +339,7 @@ function heatingRuns(samples, sampleIntervalSecs, periodBounds) {
     }
 
     const intervalMs = sampleIntervalSecs * 1000;
+    const halfIntervalMs = intervalMs / 2;
     const maxGapMs = 2 * intervalMs;
     const windowStartMs = periodBounds.start.getTime();
     const windowEndMs = periodBounds.end.getTime();
@@ -372,12 +374,9 @@ function heatingRuns(samples, sampleIntervalSecs, periodBounds) {
         }
     }
 
-    /**
-     * @param {number} endMs
-     */
-    function closeRun(endMs) {
+    function closeRun() {
         if (runStartMs != null && lastHeatingMs != null) {
-            clipAndPush(runStartMs, endMs);
+            clipAndPush(runStartMs, lastHeatingMs + halfIntervalMs);
         }
         runStartMs = null;
         lastHeatingMs = null;
@@ -386,22 +385,21 @@ function heatingRuns(samples, sampleIntervalSecs, periodBounds) {
     for (const sample of ordered) {
         if (!sample.heating) {
             if (lastHeatingMs != null) {
-                const gapMs = sample.timeMs - lastHeatingMs;
-                closeRun(gapMs > maxGapMs ? lastHeatingMs + intervalMs : sample.timeMs);
+                closeRun();
             }
             continue;
         }
 
         if (lastHeatingMs == null || runStartMs == null) {
-            runStartMs = sample.timeMs;
+            runStartMs = sample.timeMs - halfIntervalMs;
             lastHeatingMs = sample.timeMs;
             continue;
         }
 
         const gapMs = sample.timeMs - lastHeatingMs;
         if (gapMs > maxGapMs) {
-            closeRun(lastHeatingMs + intervalMs);
-            runStartMs = sample.timeMs;
+            closeRun();
+            runStartMs = sample.timeMs - halfIntervalMs;
             lastHeatingMs = sample.timeMs;
         } else {
             lastHeatingMs = sample.timeMs;
@@ -409,8 +407,7 @@ function heatingRuns(samples, sampleIntervalSecs, periodBounds) {
     }
 
     if (lastHeatingMs != null) {
-        const ageMs = windowEndMs - lastHeatingMs;
-        closeRun(ageMs <= maxGapMs ? windowEndMs : lastHeatingMs + intervalMs);
+        closeRun();
     }
 
     return runs;

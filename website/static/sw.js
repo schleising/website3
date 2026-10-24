@@ -20,7 +20,7 @@ const TOOLS_SHELL_URLS = [
     "/css/tools/webapp-shell.css?v1.0.0",
     "/css/tools/monitor/monitor.css?v2.0.4",
     "/js/tools/monitor/scope.js?v1.1.0",
-    "/js/tools/monitor/monitor.js?v2.0.5",
+    "/js/tools/monitor/monitor.js?v2.0.6",
     "/js/tools/monitor/page-layout.js?v1.0.0",
     "/js/tools/monitor/theme-toggle.js?v2.0.0",
     "/icons/tools/monitor/monitor-icon-any-20260504.svg"
