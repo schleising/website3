@@ -1,8 +1,8 @@
 # Design: Cryptics
 
-Status: Implemented  
+Status: Anagram helper implemented. Thesaurus (§11) and abbreviations (§12) designed.  
 Date: 2026-10-25  
-Scope: Public crossword tools on the main site. Version 1 is the Anagram helper.
+Scope: Public crossword tools on the main site. Version 1 is the Anagram helper. The next two tools are specified below and are not built yet.
 
 ## 1. Goal
 
@@ -14,11 +14,11 @@ Version 1 ships one tool, the **Anagram helper**:
 - Shuffle them into a new order.
 - Click or tap a letter to lock or unlock it where it sits. Drag a letter onto a numbered position to lock it there. Further shuffles move only the unlocked letters.
 
-Later tools (pattern search, hidden words, and so on) should be able to appear as further right-nav entries without a new section.
+Later tools sit in the same right nav. The thesaurus (§11) and the dictionary of common cryptic abbreviations (§12) are specified. Pattern search, hidden words, and similar scratch tools can follow the same way.
 
 Non-goals for v1:
 
-- A dictionary or “find the word” solver. The helper rearranges letters the solver already has. It does not look up answers.
+- A dictionary or “find the word” solver on the anagram board. That helper rearranges letters the solver already has. Synonyms and cryptic abbreviations are separate tools (§11 and §12). They do not search permutations of the board.
 - Saving boards to an account, or syncing them between devices.
 - A standalone host (`cryptics.schleising.net`), a PWA manifest, or the Converter design language.
 - Clue parsing (anagram indicators, containers, reversals, charades).
@@ -90,7 +90,7 @@ Signed-in users see the same board as anonymous users. `can_use_tools` is not re
 
 ### Out of scope (v1)
 
-- Any tool other than Anagrams (see §11 for the likely follow-ons).
+- Any tool other than Anagrams. The thesaurus and the abbreviation dictionary are specified in §11 and §12. Other follow-ons are listed in §10.
 - Server-side anagram generation, wordlists, or clue markup.
 - Shareable lock URLs. The path `/cryptics/anagrams/` is stable; the board state is not put in the query string.
 - Accounts, CSRF, or rate limits. The page has no form POST.
@@ -110,6 +110,8 @@ Signed-in users see the same board as anonymous users. `can_use_tools` is not re
 | Auth | None. Anonymous requests render the page. |
 
 `/cryptics/` and `/cryptics` redirect **302** to `/cryptics/anagrams/`. Any other single segment (`/cryptics/patterns/`) is **404** until that tool exists.
+
+Thesaurus and Abbreviations join this right nav when they are built, after Anagrams, in that order. The redirect from `/cryptics/` stays on Anagrams. The home-card sentence then becomes “Anagrams, synonyms, and cryptic abbreviations.”
 
 ### 5.2 Chrome
 
@@ -518,6 +520,8 @@ The template sets the document title to `Anagrams · Cryptics`, a meta descripti
 
 Pyright should be clean on the new Python modules: typed route handlers, no unused imports.
 
+Files for the thesaurus and the abbreviation dictionary are specified in §11 and §12. They are not part of the implemented tree yet.
+
 ## 9. Checks before calling v1 done
 
 The project has no browser test runner. The router is a thin template response, so the meaningful checks are in the browser, anonymous, with no `token` cookie.
@@ -560,12 +564,386 @@ Logged-out home page shows the Cryptics card. Logged-out left nav shows Cryptics
 
 ## 10. Later tools
 
-The right nav is the extension point. Each new tool is a route under `/cryptics/`, a sidebar link, and its own client script if it needs one. None of these are part of v1, and none of them should start requiring login if the section is to stay public:
+The right nav is the extension point. Each new tool is a route under `/cryptics/`, a sidebar link, and its own client script if it needs one. None of these require login. The anagram helper stays a shuffler: these tools do not add a “find this permutation” action to the board.
 
 | Tool | Job |
 |------|-----|
+| Thesaurus | Specified in §11. Synonyms for a definition word, filtered by enumeration. |
+| Abbreviations | Specified in §12. Common cryptic abbreviations, looked up from the clue word or from the letters. |
 | Pattern | Enter a shape such as `A??E?` and the same lock-and-shuffle board, with given letters pre-locked. Still no wordlist unless a later design adds one on purpose. |
 | Hidden word | Paste a clue and highlight a run of letters inside it. |
 | Reversal and containers | Small scratch rows for a fodder written backwards, or a fodder split around a contained word. |
 
-A public `cryptics.schleising.net` host, mirroring Units, is a separate decision after the section is in use. It would still have no nginx auth gate. It is not required to ship the Anagram helper.
+Shared rules for §11 and §12:
+
+- Public GET pages on the existing router. No `can_use_tools` check, no account, no POST, no database collection.
+- Header **Cryptics**, the same favicon block as Anagrams, styles added to `website/static/css/cryptics/cryptics.css`.
+- The first of the two tools introduces `website/templates/cryptics/sidebar.html`. Anagrams switches to that partial in the same change. The partial marks the current tool with `is-current` and `aria-current="page"`. Order: Anagrams, Thesaurus, Abbreviations.
+- `/cryptics/` keeps redirecting to `/cryptics/anagrams/`.
+- Lookup state lives in the query string, so a reload keeps it and a link can be shared. `sessionStorage` is not used.
+- The lists are static files under `website/static/data/cryptics/`. The browser downloads them and filters them. There is no search API.
+
+A public `cryptics.schleising.net` host, mirroring Units, is a separate decision after the section is in use. It would still have no nginx auth gate. It is not required to ship any of these tools.
+
+## 11. Thesaurus
+
+A synonym list for the definition half of a clue. The solver types a word, optionally the enumeration, and reads other words for that meaning.
+
+Illustration of a filled search. The words are layout samples; the shipped list is whatever the build produces from WordNet.
+
+```text
+┌──────────────────────────────────────────────────────────────────┐
+│ Cryptics                                                         │
+├──────────────┬───────────────────────────────────┬───────────────┤
+│ …            │ Thesaurus                         │ Anagrams      │
+│ Cryptics     │                                   │ Thesaurus     │
+│              │ Word                              │ Abbreviations │
+│              │ ┌─────────────────────────────┐   │               │
+│              │ │ happy                       │   │               │
+│              │ └─────────────────────────────┘   │               │
+│              │ Length                            │               │
+│              │ ┌─────────────────────────────┐   │               │
+│              │ │ 5                           │   │               │
+│              │ └─────────────────────────────┘   │               │
+│              │                                   │               │
+│              │ adjective                         │               │
+│              │ enjoying or showing joy           │               │
+│              │                                   │               │
+│              │ [ merry · 5 ]                     │               │
+│              │                                   │               │
+│              │ 1 synonym                         │               │
+└──────────────┴───────────────────────────────────┴───────────────┘
+```
+
+Length 5 keeps `merry` and hides a 4-letter synonym such as `glad`. Clearing Length shows every synonym in the sense, shorter ones first.
+
+### 11.1 Routes and page
+
+| Item | Value |
+|------|-------|
+| Paths | `GET /cryptics/thesaurus/` and `GET /cryptics/thesaurus` |
+| Title | `Thesaurus · Cryptics` |
+| Description | “Look up synonyms for cryptic-crossword definitions.” |
+| Context | `{ "request": request, "q": <query or "">, "n": <length or ""> }` taken from the query string, trimmed. The template prefills the fields. It does not search. |
+| Sidebar | `cryptics_tool` = `thesaurus` |
+
+Regions, top to bottom:
+
+1. Title **Thesaurus**.
+2. **Word** field. Autofocus, `autocomplete="off"`, `autocapitalize="off"`, `spellcheck="false"`, `enterkeyhint="search"`.
+3. **Length** field, optional. Same placeholder as the anagram enumeration: `5 or 4,3 or 3-4`.
+4. **Search**, a primary button, so the form has a real control. The form is `method="get"` and `action="/cryptics/thesaurus/"`.
+5. Results, or one idle / empty sentence.
+6. A polite live region, visually hidden.
+7. Credit line, muted: “Synonyms from WordNet 3.1, Princeton University.”
+
+`<noscript>` under the title: “Synonym lists are searched in this browser.”
+
+Idle copy, when Word is empty: “Type a definition word. Add a length to match the enumeration.”
+
+### 11.2 What a search returns
+
+```mermaid
+flowchart LR
+  Fields["Word and length"] --> Script["thesaurus.js"]
+  Script --> Shard["One letter shard"]
+  Shard --> Senses["Senses for that headword"]
+  Senses --> List["Synonyms kept by the length filter"]
+  List --> URL["Query string q and n"]
+```
+
+The script reads the prefilled fields on load, debounces typing by 150ms, and searches immediately when **Search** is pressed or a synonym is activated. Each change replaces the query string with `replaceState` (`?q=happy&n=5`). Empty values are omitted. The path stays `/cryptics/thesaurus/`. A new history entry is not pushed for each keystroke.
+
+Word matching:
+
+- Trim, strip one trailing `?` or `.`, lowercase.
+- Look up that exact key in the shard.
+- A key may be a lemma or an inflected form. When the key names a different lemma, the results start with the line “Showing senses of happy.”
+- One letter is a legal query. An empty word clears the results and shows the idle sentence.
+- No key: “No entry for that spelling.”
+
+Length matching uses the anagram enumeration grammar from §6.2 (empty, `6`, `4,3`, `3-4`, and the same separators). The numbers are not required to relate to the query word. They describe the synonym.
+
+Each synonym has a derived enumeration:
+
+- Count `A–Z` and `a–z` only.
+- Split on spaces into comma-separated groups.
+- Split a group on hyphens into hyphen-separated counts.
+- Drop any other character, including apostrophes, without opening a gap. `o'clock` derives `6`. `well-being` derives `4-5`. `prime minister` derives `5,8`.
+
+| Length field | Which synonyms stay |
+|--------------|---------------------|
+| empty | all of them |
+| a single number, such as `9` | total letter count equals that number |
+| a pattern such as `4-5` or `5,8` | derived enumeration equals the pattern |
+| invalid, including a half-typed `4,` | all of them, and the field is `aria-invalid` |
+
+Invalid message: “Length should look like 5 or 4,3 or 3-4.” Results stay visible so a half-typed pattern does not blank the list. When the pattern is valid and every sense loses all of its synonyms, show “Nothing of that length.” and a button **Show every length** that clears the field and searches again.
+
+### 11.3 Results
+
+One block per sense, in the order stored in the shard.
+
+- The heading is the part of speech (`adjective`, `noun`, `verb`, `adverb`, or whatever label the shard stores).
+- The gloss is one sentence under the heading.
+- Synonyms are buttons. The label is the word, then a muted enumeration (`merry · 5`, or `well-being · 4-5`). Accessible name: “Look up merry, 5 letters.”
+- The current key is text in the list, with the suffix “this word”, and is not a button.
+- Unfiltered order: letter count ascending, then alphabetical. Filtered order: alphabetical.
+- Activating a synonym writes it into Word, leaves Length as it is, moves focus to Word, and searches immediately.
+- The live region announces “12 synonyms” or “No entry for that spelling.” It stays quiet during the debounce.
+
+Wrapping: buttons wrap inside the content column. They use the site `.btn` `.btn-outline-secondary` look, not the anagram tile, so a long phrase still fits.
+
+### 11.4 Data
+
+Source: Princeton WordNet 3.1. Senses stay separate, in WordNet’s order. The page serves generated shards, not the raw WordNet database.
+
+| File | Role |
+|------|------|
+| `scripts/build_cryptics_thesaurus.py` | Reads a local WordNet checkout and writes the shards. The checkout is not committed. |
+| `website/static/data/cryptics/thesaurus/a.json` … `z.json` | Headwords whose first letter is that character. |
+| `website/static/data/cryptics/thesaurus/other.json` | Headwords that do not start with `a–z`. |
+| `website/static/data/cryptics/thesaurus/british.json` | Hand-written aliases, committed. |
+| `website/static/data/cryptics/thesaurus/LICENSE` | The WordNet copyright notice and license, copied unchanged. |
+
+A shard is a JSON object. Each key is a lowercase headword. Each value is a list of senses:
+
+```json
+{
+  "happy": [
+    {
+      "pos": "adjective",
+      "gloss": "enjoying or showing joy",
+      "words": ["glad", "cheerful", "happy", "joyful", "merry"]
+    }
+  ]
+}
+```
+
+`words` includes the lemma itself. Gloss text is the first sentence of the WordNet gloss, trimmed.
+
+The build also writes keys for WordNet’s exception-list inflections (`happier` → the senses of `happy`). Those values add `"lemma": "happy"` beside the sense list. Synonym lists are inlined, so one shard answers the query.
+
+`british.json` is a flat object of British spelling to WordNet lemma, used when WordNet has no key of its own for the British spelling (`"colour": "color"`). The build copies that lemma’s senses into the British key and sets `lemma`. When WordNet already has the British key, the alias is ignored. Synonym spellings stay as WordNet stores them. The first version does not rewrite American spellings inside the lists.
+
+The script fetches nothing at build time beyond the files in the local checkout. It fails if any shard exceeds 400KB gzipped. It prints the key count and the largest shard.
+
+At runtime the browser fetches `/data/cryptics/thesaurus/h.json` when the query starts with `h`, and keeps fetched shards in memory for the page view. A failed fetch shows “The word list did not load. Try again.” and leaves the fields as they are. A second attempt retries that shard.
+
+### 11.5 Boundaries
+
+This tool answers “what else means happy?”. It leaves the following to other tools, or out of the section:
+
+- Letter patterns, anagrams, and “all words of length 5”.
+- Gazetteers. Rivers, artists, birds, and cities are not senses, even where setters treat the category name as a definition (`flower` for a river).
+- Cryptic abbreviations. Those are §12. `about` in the thesaurus returns ordinary synonyms; `about` in the abbreviation dictionary returns `C`, `CA`, and `RE`.
+- Commercial crossword thesauruses. Their entries are not transcribed.
+
+### 11.6 Files
+
+| Piece | Location |
+|-------|----------|
+| Route | Two GET paths on `cryptics_router` |
+| Template | `website/templates/cryptics/thesaurus.html` |
+| Script | `website/static/js/cryptics/thesaurus.js`, deferred |
+| Data | The shard directory in §11.4 |
+| Sidebar | `website/templates/cryptics/sidebar.html` |
+
+Pyright stays clean on the router and on `scripts/build_cryptics_thesaurus.py`.
+
+### 11.7 Checks when this tool is built
+
+- Anonymous `GET /cryptics/thesaurus/` returns 200 and does not redirect to login. The right nav marks Thesaurus current and still links to Anagrams and Abbreviations.
+- `?q=happy&n=5` prefills both fields and, once the shard loads, shows only synonyms whose letter count is 5.
+- `well-being` is offered as `4-5`. Length `9` and length `4-5` both keep it. Length `4,5` does not.
+- A half-typed `4,` shows the length message and the unfiltered senses.
+- Activating a synonym searches that word and leaves the length in place.
+- `colour`, via `british.json`, shows the senses of the WordNet lemma it aliases, with “Showing senses of color.”
+- An unknown spelling shows “No entry for that spelling.” An empty word shows the idle sentence.
+- Reload keeps the query. A new tab opened on the bare path starts empty.
+- With JavaScript disabled, the fields and the noscript line render, and no result list appears.
+- The license file is served beside the shards, and the credit line is on the page.
+
+## 12. Abbreviations
+
+A dictionary of the short forms UK cryptic setters use often. One box answers both directions: the word in the clue, or the letters it might become.
+
+```text
+┌──────────────────────────────────────────────────────────────────┐
+│ Cryptics                                                         │
+├──────────────┬───────────────────────────────────┬───────────────┤
+│ …            │ Abbreviations                     │ Anagrams      │
+│ Cryptics     │                                   │ Thesaurus     │
+│              │ Look up                           │ Abbreviations │
+│              │ ┌─────────────────────────────┐   │               │
+│              │ │ about                       │   │               │
+│              │ └─────────────────────────────┘   │               │
+│              │ Letters          Kind             │               │
+│              │ ┌──────────┐    ┌──────────────┐  │               │
+│              │ │ 1        │    │ All          │  │               │
+│              │ └──────────┘    └──────────────┘  │               │
+│              │                                   │               │
+│              │ Can be written                    │               │
+│              │ ┌───┐                             │               │
+│              │ │ C │  about          circa       │               │
+│              │ └───┘                             │               │
+│              │                                   │               │
+│              │ 1 abbreviation                    │               │
+└──────────────┴───────────────────────────────────┴───────────────┘
+```
+
+The same page with `RA` and Letters left empty:
+
+```text
+Can mean
+┌────┐
+│ RA │  artist            Royal Academician
+└────┘
+┌────┐
+│ RA │  Royal Artillery
+└────┘
+┌────┐
+│ RA │  Royal Academy
+└────┘
+```
+
+Those rows are examples of the entry shape. The committed JSON is the catalogue.
+
+### 12.1 Routes and page
+
+| Item | Value |
+|------|-------|
+| Paths | `GET /cryptics/abbreviations/` and `GET /cryptics/abbreviations` |
+| Title | `Abbreviations · Cryptics` |
+| Description | “Common cryptic-crossword abbreviations, both ways.” |
+| Context | `{ "request": request, "q": …, "letters": …, "kind": … }` from the query string, trimmed. `kind` is omitted from the template when it is missing or `all`. |
+| Sidebar | `cryptics_tool` = `abbreviations` |
+
+Regions, top to bottom:
+
+1. Title **Abbreviations**.
+2. **Look up** field. Autofocus, `autocomplete="off"`, `autocapitalize="off"`, `spellcheck="false"`, `enterkeyhint="search"`.
+3. **Letters**, optional. A single width, placeholder `any`. Filters by how many letters the abbreviation has.
+4. **Kind**, a `<select>` of All plus each category in §12.3. Default All.
+5. **Search**, primary, in a `method="get"` form whose action is `/cryptics/abbreviations/`.
+6. Up to two groups: **Can be written**, then **Can mean**.
+7. A count line, then the credit.
+8. A polite live region, visually hidden.
+
+`<noscript>`: “The abbreviation list is searched in this browser.”
+
+Idle copy: “Look up a word from the clue, or the letters it might become.”
+
+Credit, muted: “A short list of abbreviations in regular UK cryptic use, written for this site.”
+
+### 12.2 Search
+
+```mermaid
+flowchart TD
+  Query["Look up, letters, kind"] --> Fetch["abbreviations.json, once"]
+  Fetch --> Norm["Normalise the query"]
+  Norm --> Written["Rows whose meaning contains the query"]
+  Norm --> Means["Rows whose abbreviation equals the query letters"]
+  Written --> Filters["Kind and letter-count filters"]
+  Means --> Filters
+  Filters --> Groups["Can be written, then Can mean"]
+```
+
+The script fetches `/data/cryptics/abbreviations.json` on the first search and reuses it. Debounce is 150ms. **Search** runs immediately. The query string is kept with `replaceState`: `?q=about&letters=1&kind=general`. Default and empty fields are omitted (`kind=all` is omitted).
+
+Normalise the query: trim, lowercase, turn `.` `,` `-` `'` and `/` into spaces, collapse spaces.
+
+**Can be written** — the query is a meaning. A row matches when the normalised query equals the normalised meaning, or appears inside it as a contiguous run of whole words. `artillery` matches `Royal Artillery`. `royal artillery` matches it. `art` matches neither `artist` nor `Royal Artillery`.
+
+**Can mean** — the query is an abbreviation. Take the query’s `A–Z` letters only. If the original query contained a space, skip this group. Otherwise a row matches when those letters equal `abbr`. `ra`, `R.A.`, and `RA` all match `RA`.
+
+A query may fill both groups. `a` can be a meaning (“a French”) and an abbreviation. **Can be written** comes first.
+
+| Control | Effect |
+|---------|--------|
+| Letters empty | Keep every abbreviation length. |
+| Letters `1` … `6` | Keep rows whose `abbr` has that length. |
+| Letters anything else, including `0` or `12` | Ignore the filter, set `aria-invalid`, message “Use a number from 1 to 6.” |
+| Kind All | Keep every category. |
+| Kind set | Keep that category. |
+
+Sort inside each group: shorter abbreviation first, then abbreviation A–Z, then meaning A–Z.
+
+No rows: “Nothing common for that.” The live region announces “3 abbreviations for about” or that empty sentence.
+
+Each row is one `<li>` whose text is the abbreviation, the meaning, and the note. The abbreviation is drawn as a tile (surface, line border, uppercase, the anagram tile face) and stays in the list item’s text. It is not a separate control. The note is muted. A missing note leaves that spot empty.
+
+### 12.3 Catalogue
+
+One JSON file, hand-written, committed:
+
+`website/static/data/cryptics/abbreviations.json`
+
+```json
+{
+  "v": 1,
+  "entries": [
+    {"abbr": "C", "means": "about", "category": "general", "note": "circa"},
+    {"abbr": "CA", "means": "about", "category": "general"},
+    {"abbr": "RE", "means": "about", "category": "general", "note": "regarding"},
+    {"abbr": "AU", "means": "gold", "category": "chemistry", "note": "aurum"},
+    {"abbr": "RA", "means": "artist", "category": "general", "note": "Royal Academician"}
+  ]
+}
+```
+
+| Field | Rule |
+|-------|------|
+| `abbr` | Uppercase `A–Z`, length 1–6. |
+| `means` | Display phrase, 1–40 characters, with at least one letter. Stored in the case the page should show. |
+| `category` | One of `general`, `chemistry`, `roman`, `chess`, `compass`, `foreign`, `rank`. |
+| `note` | Optional. 1–40 characters. A reason, written for this site (`circa`, `aurum`, `Elizabeth Regina`). Omitted when there is nothing useful to add. |
+
+The same pair of `abbr` and `means` appears once, compared with the meaning case-folded. The same abbreviation with different meanings is several rows. The same meaning with different abbreviations is several rows.
+
+`scripts/check_cryptics_abbreviations.py` loads the file and exits non-zero on a broken rule. The router does not import it. Pyright stays clean on the script.
+
+Inclusion: a row earns its place when solvers of UK cryptic puzzles (Times, Guardian, and the same tradition) are expected to recognise it. The expected catalogue is a few hundred rows. Categories:
+
+| Category | What belongs there | Examples of the shape |
+|----------|--------------------|------------------------|
+| general | Everyday setter short forms | about → C, CA, RE; queen → ER; sailor → AB |
+| chemistry | Element symbols setters actually use | gold → AU; silver → AG; iron → FE; lead → PB |
+| roman | The standard numerals | hundred → C; fifty → L; five → V; thousand → M |
+| chess | Piece letters | king → K; bishop → B; knight → N |
+| compass | Points of the compass | north → N; point → N, S, E, W |
+| foreign | Articles and tiny function words from French, German, Spanish, and Latin | the French → LE, LA; a French → UN, UNE; the German → DER, DIE, DAS |
+| rank | Ranks, arms, and services | able seaman → AB; gunners → RA; engineers → RE; navy → RN |
+
+A new category means editing this table, the checker’s enum, and the Kind select in the same change.
+
+Left out of this file:
+
+- A transcription of Chambers, Bradford, or any other published abbreviation dictionary. Facts and setter conventions are rewritten in our own rows.
+- Gazetteers. `flower` may have a row whose meaning is “a river”. The rivers themselves are not entries. `artist` is the meaning of `RA`, not a list of painters.
+- Indicators that consume letters without producing a short form: anagram, container, reversal, deletion, homophone. Those are reading marks on a clue, not abbreviations.
+- Generated dumps of states, counties, rivers, or airports. A handful of textbook forms (CA, NY) may be added as ordinary `general` rows when they are in regular use. They are typed in, not imported.
+
+### 12.4 Files
+
+| Piece | Location |
+|-------|----------|
+| Route | Two GET paths on `cryptics_router` |
+| Template | `website/templates/cryptics/abbreviations.html` |
+| Script | `website/static/js/cryptics/abbreviations.js`, deferred |
+| Data | `website/static/data/cryptics/abbreviations.json` |
+| Checker | `scripts/check_cryptics_abbreviations.py` |
+| Sidebar | The partial from §11, if Thesaurus has already added it; otherwise this tool adds it |
+
+### 12.5 Checks when this tool is built
+
+- Anonymous `GET /cryptics/abbreviations/` returns 200. Abbreviations is current in the right nav. Anagrams and Thesaurus are still linked.
+- `about` with Letters `1` shows `C` and hides `CA` and `RE`.
+- `artillery` shows the Royal Artillery row under **Can be written**. `art` shows neither `artist` nor `Royal Artillery`.
+- `r.a.` and `RA` show the same **Can mean** rows. `royal artillery` does not enter **Can mean**, because of the space.
+- Kind `chemistry` with `gold` shows `AU` and hides a non-chemistry row for the same word, if one exists.
+- Letters `12` shows the range message and the unfiltered rows.
+- An unknown word shows “Nothing common for that.” An empty field shows the idle sentence.
+- `?q=about&letters=1` survives a reload.
+- The checker accepts the committed file and rejects a lowercase abbreviation, a duplicate pair, an unknown category, and a 7-letter abbreviation.
+- With JavaScript disabled, the form renders and the noscript line is visible.
