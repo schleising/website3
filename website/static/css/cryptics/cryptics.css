@@ -225,12 +225,138 @@
     border: 0;
 }
 
+.cryptics-filter-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.85rem;
+}
+
+.cryptics-field-narrow {
+    width: 7.5rem;
+}
+
+.cryptics-field-kind {
+    flex: 1 1 12rem;
+}
+
+select.cryptics-input {
+    letter-spacing: 0;
+}
+
+.cryptics-hint[hidden],
+.cryptics-count[hidden],
+.cryptics-error[hidden] {
+    display: none;
+}
+
+.cryptics-count,
+.cryptics-credit,
+.cryptics-lemma {
+    margin: 0 0 1rem;
+    color: var(--text-soft);
+    font-size: 0.95rem;
+    line-height: 1.45;
+}
+
+.cryptics-credit {
+    margin-top: 1.2rem;
+    font-size: 0.85rem;
+}
+
+.cryptics-sense {
+    margin: 0 0 1.15rem;
+}
+
+.cryptics-pos,
+.cryptics-group-heading {
+    margin: 0 0 0.35rem;
+    color: var(--brand-strong);
+    font-size: 0.95rem;
+}
+
+.cryptics-gloss {
+    margin: 0 0 0.6rem;
+    color: var(--text-soft);
+    line-height: 1.45;
+}
+
+.cryptics-synonyms {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+}
+
+.cryptics-synonym .cryptics-enum,
+.cryptics-current .cryptics-enum {
+    color: var(--text-soft);
+    font-weight: 500;
+}
+
+.cryptics-current {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    min-height: 2.45rem;
+    padding: 0.35rem 0.7rem;
+    border: 0.0625rem solid var(--line);
+    border-radius: 0.55rem;
+    background: var(--surface);
+}
+
+.cryptics-abbr-list {
+    list-style: none;
+    margin: 0 0 1.1rem;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+}
+
+.cryptics-abbr-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem 0.75rem;
+}
+
+.cryptics-abbr-tile {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    min-width: 2.75rem;
+    height: 2.75rem;
+    padding: 0 0.5rem;
+    border: 0.0625rem solid var(--line);
+    border-radius: 0.55rem;
+    background: var(--surface);
+    font-weight: 600;
+    letter-spacing: 0.04em;
+}
+
+.cryptics-abbr-means {
+    font-weight: 600;
+}
+
+.cryptics-abbr-note {
+    color: var(--text-soft);
+}
+
 @media screen and (max-width: 42rem) {
     .cryptics-actions {
         flex-direction: column;
     }
 
     .cryptics-actions .btn {
+        width: 100%;
+    }
+
+    .cryptics-filter-row {
+        flex-direction: column;
+    }
+
+    .cryptics-field-narrow,
+    .cryptics-field-kind {
         width: 100%;
     }
 }

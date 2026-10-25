@@ -19,7 +19,7 @@
 
 {% block head %}
 <link rel="stylesheet" href="/css/right-nav.css?v1.1.0">
-<link rel="stylesheet" href="/css/cryptics/cryptics.css?v1.0.1">
+<link rel="stylesheet" href="/css/cryptics/cryptics.css?v1.0.2">
 {% endblock %}
 
 {% block header %}
@@ -76,7 +76,7 @@
 {% endblock %}
 
 {% block sidebar %}
-<a class="sub-level-nav is-current" href="/cryptics/anagrams/" aria-current="page">Anagrams</a>
+{% include "cryptics/sidebar.html" %}
 {% endblock %}
 
 {% block footer %}

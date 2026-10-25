@@ -1,8 +1,8 @@
 # Design: Cryptics
 
-Status: Anagram helper implemented. Thesaurus (§11) and abbreviations (§12) designed.  
+Status: Anagram helper, thesaurus, and abbreviations implemented.  
 Date: 2026-10-25  
-Scope: Public crossword tools on the main site. Version 1 is the Anagram helper. The next two tools are specified below and are not built yet.
+Scope: Public crossword tools on the main site. The anagram helper, thesaurus, and abbreviation dictionary are built. Pattern search and the other scratch tools are still only sketched.
 
 ## 1. Goal
 
@@ -103,7 +103,7 @@ Signed-in users see the same board as anonymous users. `can_use_tools` is not re
 | Surface | Behaviour |
 |---------|-----------|
 | Left nav | Always-visible **Cryptics** → `/cryptics/`. Place it after **Units**, outside the `{% if request.state.user %}` block in `base.html`. |
-| Home | Public card **Cryptics** → `/cryptics/`, in `website/templates/index.html`, outside the logged-in branch. Short line: “Shuffle and lock letters for cryptic anagrams.” Icon: `website/static/images/home/cryptics.svg`, a row of letter tiles, same card size as Units. |
+| Home | Public card **Cryptics** → `/cryptics/`, in `website/templates/index.html`, outside the logged-in branch. Short line: “Anagrams, synonyms, and cryptic abbreviations.” Icon: `website/static/images/home/cryptics.svg`, a row of letter tiles, same card size as Units. |
 | Webapps grid | No card. Cryptics is a site section, not a tools-host or public PWA. |
 | Right nav | **Anagrams** → `/cryptics/anagrams/`, with `is-current` and `aria-current="page"` on that page. |
 | Header | `{% block header %}` reads **Cryptics**. The tool name sits in the page, as “Length” sits under the Units header. |
@@ -111,7 +111,7 @@ Signed-in users see the same board as anonymous users. `can_use_tools` is not re
 
 `/cryptics/` and `/cryptics` redirect **302** to `/cryptics/anagrams/`. Any other single segment (`/cryptics/patterns/`) is **404** until that tool exists.
 
-Thesaurus and Abbreviations join this right nav when they are built, after Anagrams, in that order. The redirect from `/cryptics/` stays on Anagrams. The home-card sentence then becomes “Anagrams, synonyms, and cryptic abbreviations.”
+The right nav order is Anagrams, Thesaurus, Abbreviations. The redirect from `/cryptics/` stays on Anagrams.
 
 ### 5.2 Chrome
 
@@ -520,7 +520,7 @@ The template sets the document title to `Anagrams · Cryptics`, a meta descripti
 
 Pyright should be clean on the new Python modules: typed route handlers, no unused imports.
 
-Files for the thesaurus and the abbreviation dictionary are specified in §11 and §12. They are not part of the implemented tree yet.
+Files for the thesaurus and the abbreviation dictionary are specified in §11 and §12.
 
 ## 9. Checks before calling v1 done
 
@@ -726,7 +726,7 @@ The build also writes keys for WordNet’s exception-list inflections (`happier`
 
 `british.json` is a flat object of British spelling to WordNet lemma, used when WordNet has no key of its own for the British spelling (`"colour": "color"`). The build copies that lemma’s senses into the British key and sets `lemma`. When WordNet already has the British key, the alias is ignored. Synonym spellings stay as WordNet stores them. The first version does not rewrite American spellings inside the lists.
 
-The script fetches nothing at build time beyond the files in the local checkout. It fails if any shard exceeds 400KB gzipped. It prints the key count and the largest shard.
+The script fetches nothing at build time beyond the files in the local checkout. It fails if any shard exceeds 600KB gzipped. The largest letter in WordNet is about 530KB once glosses are trimmed to their first clause. It prints the key count and the largest shard.
 
 At runtime the browser fetches `/data/cryptics/thesaurus/h.json` when the query starts with `h`, and keeps fetched shards in memory for the page view. A failed fetch shows “The word list did not load. Try again.” and leaves the fields as they are. A second attempt retries that shard.
 
@@ -758,7 +758,7 @@ Pyright stays clean on the router and on `scripts/build_cryptics_thesaurus.py`.
 - `well-being` is offered as `4-5`. Length `9` and length `4-5` both keep it. Length `4,5` does not.
 - A half-typed `4,` shows the length message and the unfiltered senses.
 - Activating a synonym searches that word and leaves the length in place.
-- `colour`, via `british.json`, shows the senses of the WordNet lemma it aliases, with “Showing senses of color.”
+- `centres`, via `british.json`, shows the senses of `center`, with “Showing senses of center.” WordNet already has its own entry for `colour`, so that alias is ignored and the page shows WordNet’s senses for `colour` directly.
 - An unknown spelling shows “No entry for that spelling.” An empty word shows the idle sentence.
 - Reload keeps the query. A new tab opened on the bare path starts empty.
 - With JavaScript disabled, the fields and the noscript line render, and no result list appears.

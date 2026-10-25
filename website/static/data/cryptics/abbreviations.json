@@ -1,0 +1,2131 @@
+{
+  "v": 1,
+  "entries": [
+    {
+      "abbr": "A",
+      "means": "ace",
+      "category": "general"
+    },
+    {
+      "abbr": "A",
+      "means": "adult",
+      "category": "general"
+    },
+    {
+      "abbr": "A",
+      "means": "amateur",
+      "category": "general"
+    },
+    {
+      "abbr": "A",
+      "means": "answer",
+      "category": "general"
+    },
+    {
+      "abbr": "A",
+      "means": "article",
+      "category": "general",
+      "note": "indefinite article"
+    },
+    {
+      "abbr": "A",
+      "means": "Austria",
+      "category": "general"
+    },
+    {
+      "abbr": "A",
+      "means": "first class",
+      "category": "general"
+    },
+    {
+      "abbr": "A",
+      "means": "key",
+      "category": "general"
+    },
+    {
+      "abbr": "A",
+      "means": "note",
+      "category": "general"
+    },
+    {
+      "abbr": "AB",
+      "means": "able seaman",
+      "category": "rank"
+    },
+    {
+      "abbr": "AC",
+      "means": "account",
+      "category": "general"
+    },
+    {
+      "abbr": "AC",
+      "means": "alternating current",
+      "category": "general"
+    },
+    {
+      "abbr": "AD",
+      "means": "advertisement",
+      "category": "general"
+    },
+    {
+      "abbr": "AG",
+      "means": "silver",
+      "category": "chemistry",
+      "note": "argentum"
+    },
+    {
+      "abbr": "AH",
+      "means": "hesitation",
+      "category": "general"
+    },
+    {
+      "abbr": "AI",
+      "means": "first class",
+      "category": "general",
+      "note": "A1"
+    },
+    {
+      "abbr": "AL",
+      "means": "aluminium",
+      "category": "chemistry"
+    },
+    {
+      "abbr": "AM",
+      "means": "morning",
+      "category": "general"
+    },
+    {
+      "abbr": "AR",
+      "means": "argon",
+      "category": "chemistry"
+    },
+    {
+      "abbr": "AU",
+      "means": "gold",
+      "category": "chemistry",
+      "note": "aurum"
+    },
+    {
+      "abbr": "AV",
+      "means": "bible",
+      "category": "general",
+      "note": "Authorised Version"
+    },
+    {
+      "abbr": "AVE",
+      "means": "avenue",
+      "category": "general"
+    },
+    {
+      "abbr": "B",
+      "means": "bachelor",
+      "category": "general"
+    },
+    {
+      "abbr": "B",
+      "means": "bishop",
+      "category": "general"
+    },
+    {
+      "abbr": "B",
+      "means": "black",
+      "category": "general"
+    },
+    {
+      "abbr": "B",
+      "means": "book",
+      "category": "general"
+    },
+    {
+      "abbr": "B",
+      "means": "born",
+      "category": "general"
+    },
+    {
+      "abbr": "B",
+      "means": "boron",
+      "category": "chemistry"
+    },
+    {
+      "abbr": "B",
+      "means": "British",
+      "category": "general"
+    },
+    {
+      "abbr": "B",
+      "means": "note",
+      "category": "general"
+    },
+    {
+      "abbr": "BA",
+      "means": "airline",
+      "category": "general",
+      "note": "British Airways"
+    },
+    {
+      "abbr": "BA",
+      "means": "graduate",
+      "category": "general",
+      "note": "Bachelor of Arts"
+    },
+    {
+      "abbr": "BR",
+      "means": "British",
+      "category": "general"
+    },
+    {
+      "abbr": "BR",
+      "means": "bromine",
+      "category": "chemistry"
+    },
+    {
+      "abbr": "BR",
+      "means": "brother",
+      "category": "general"
+    },
+    {
+      "abbr": "C",
+      "means": "about",
+      "category": "general",
+      "note": "circa"
+    },
+    {
+      "abbr": "C",
+      "means": "carbon",
+      "category": "chemistry"
+    },
+    {
+      "abbr": "C",
+      "means": "caught",
+      "category": "general"
+    },
+    {
+      "abbr": "C",
+      "means": "century",
+      "category": "general"
+    },
+    {
+      "abbr": "C",
+      "means": "cold",
+      "category": "general"
+    },
+    {
+      "abbr": "C",
+      "means": "Conservative",
+      "category": "general"
+    },
+    {
+      "abbr": "C",
+      "means": "hundred",
+      "category": "roman"
+    },
+    {
+      "abbr": "C",
+      "means": "many",
+      "category": "roman",
+      "note": "a large numeral"
+    },
+    {
+      "abbr": "C",
+      "means": "note",
+      "category": "general"
+    },
+    {
+      "abbr": "CA",
+      "means": "about",
+      "category": "general"
+    },
+    {
+      "abbr": "CA",
+      "means": "accountant",
+      "category": "general",
+      "note": "chartered accountant"
+    },
+    {
+      "abbr": "CA",
+      "means": "calcium",
+      "category": "chemistry"
+    },
+    {
+      "abbr": "CA",
+      "means": "California",
+      "category": "general"
+    },
+    {
+      "abbr": "CAP",
+      "means": "captain",
+      "category": "rank"
+    },
+    {
+      "abbr": "CAPT",
+      "means": "captain",
+      "category": "rank"
+    },
+    {
+      "abbr": "CD",
+      "means": "four hundred",
+      "category": "roman"
+    },
+    {
+      "abbr": "CD",
+      "means": "record",
+      "category": "general",
+      "note": "compact disc"
+    },
+    {
+      "abbr": "CE",
+      "means": "church",
+      "category": "general",
+      "note": "Church of England"
+    },
+    {
+      "abbr": "CH",
+      "means": "chapter",
+      "category": "general"
+    },
+    {
+      "abbr": "CH",
+      "means": "child",
+      "category": "general"
+    },
+    {
+      "abbr": "CH",
+      "means": "church",
+      "category": "general"
+    },
+    {
+      "abbr": "CH",
+      "means": "companion",
+      "category": "general"
+    },
+    {
+      "abbr": "CHE",
+      "means": "revolutionary",
+      "category": "general",
+      "note": "Guevara"
+    },
+    {
+      "abbr": "CL",
+      "means": "chlorine",
+      "category": "chemistry"
+    },
+    {
+      "abbr": "CM",
+      "means": "nine hundred",
+      "category": "roman"
+    },
+    {
+      "abbr": "CO",
+      "means": "care of",
+      "category": "general"
+    },
+    {
+      "abbr": "CO",
+      "means": "cobalt",
+      "category": "chemistry"
+    },
+    {
+      "abbr": "CO",
+      "means": "commanding officer",
+      "category": "rank"
+    },
+    {
+      "abbr": "CO",
+      "means": "company",
+      "category": "general"
+    },
+    {
+      "abbr": "CO",
+      "means": "county",
+      "category": "general"
+    },
+    {
+      "abbr": "COL",
+      "means": "colonel",
+      "category": "rank"
+    },
+    {
+      "abbr": "CPL",
+      "means": "corporal",
+      "category": "rank"
+    },
+    {
+      "abbr": "CR",
+      "means": "chromium",
+      "category": "chemistry"
+    },
+    {
+      "abbr": "CR",
+      "means": "credit",
+      "category": "general"
+    },
+    {
+      "abbr": "CT",
+      "means": "caught",
+      "category": "general"
+    },
+    {
+      "abbr": "CT",
+      "means": "court",
+      "category": "general"
+    },
+    {
+      "abbr": "CU",
+      "means": "copper",
+      "category": "chemistry",
+      "note": "cuprum"
+    },
+    {
+      "abbr": "D",
+      "means": "daughter",
+      "category": "general"
+    },
+    {
+      "abbr": "D",
+      "means": "day",
+      "category": "general"
+    },
+    {
+      "abbr": "D",
+      "means": "diamonds",
+      "category": "general"
+    },
+    {
+      "abbr": "D",
+      "means": "died",
+      "category": "general"
+    },
+    {
+      "abbr": "D",
+      "means": "duke",
+      "category": "general"
+    },
+    {
+      "abbr": "D",
+      "means": "five hundred",
+      "category": "roman"
+    },
+    {
+      "abbr": "D",
+      "means": "Germany",
+      "category": "foreign",
+      "note": "Deutschland"
+    },
+    {
+      "abbr": "D",
+      "means": "old penny",
+      "category": "general"
+    },
+    {
+      "abbr": "DA",
+      "means": "district attorney",
+      "category": "general"
+    },
+    {
+      "abbr": "DAS",
+      "means": "the German",
+      "category": "foreign"
+    },
+    {
+      "abbr": "DB",
+      "means": "decibel",
+      "category": "general"
+    },
+    {
+      "abbr": "DC",
+      "means": "current",
+      "category": "general",
+      "note": "direct current"
+    },
+    {
+      "abbr": "DE",
+      "means": "of the French",
+      "category": "foreign"
+    },
+    {
+      "abbr": "DE",
+      "means": "the German",
+      "category": "foreign"
+    },
+    {
+      "abbr": "DER",
+      "means": "the German",
+      "category": "foreign"
+    },
+    {
+      "abbr": "DES",
+      "means": "of the French",
+      "category": "foreign"
+    },
+    {
+      "abbr": "DIE",
+      "means": "the German",
+      "category": "foreign"
+    },
+    {
+      "abbr": "DO",
+      "means": "note",
+      "category": "general"
+    },
+    {
+      "abbr": "DOC",
+      "means": "doctor",
+      "category": "general"
+    },
+    {
+      "abbr": "DR",
+      "means": "doctor",
+      "category": "general"
+    },
+    {
+      "abbr": "DR",
+      "means": "drive",
+      "category": "general"
+    },
+    {
+      "abbr": "DU",
+      "means": "of the French",
+      "category": "foreign"
+    },
+    {
+      "abbr": "E",
+      "means": "direction",
+      "category": "compass"
+    },
+    {
+      "abbr": "E",
+      "means": "east",
+      "category": "compass"
+    },
+    {
+      "abbr": "E",
+      "means": "energy",
+      "category": "general"
+    },
+    {
+      "abbr": "E",
+      "means": "English",
+      "category": "general"
+    },
+    {
+      "abbr": "E",
+      "means": "European",
+      "category": "general"
+    },
+    {
+      "abbr": "E",
+      "means": "point",
+      "category": "compass"
+    },
+    {
+      "abbr": "E",
+      "means": "Spain",
+      "category": "foreign",
+      "note": "España"
+    },
+    {
+      "abbr": "EC",
+      "means": "city",
+      "category": "general",
+      "note": "London postal district"
+    },
+    {
+      "abbr": "ED",
+      "means": "edition",
+      "category": "general"
+    },
+    {
+      "abbr": "ED",
+      "means": "editor",
+      "category": "general"
+    },
+    {
+      "abbr": "EG",
+      "means": "for example",
+      "category": "general"
+    },
+    {
+      "abbr": "EIN",
+      "means": "a German",
+      "category": "foreign"
+    },
+    {
+      "abbr": "EINE",
+      "means": "a German",
+      "category": "foreign"
+    },
+    {
+      "abbr": "EL",
+      "means": "the Spanish",
+      "category": "foreign"
+    },
+    {
+      "abbr": "EP",
+      "means": "record",
+      "category": "general",
+      "note": "extended play"
+    },
+    {
+      "abbr": "ER",
+      "means": "hesitation",
+      "category": "general"
+    },
+    {
+      "abbr": "ER",
+      "means": "queen",
+      "category": "general",
+      "note": "Elizabeth Regina"
+    },
+    {
+      "abbr": "EST",
+      "means": "is",
+      "category": "foreign",
+      "note": "French"
+    },
+    {
+      "abbr": "ET",
+      "means": "alien",
+      "category": "general",
+      "note": "extra-terrestrial"
+    },
+    {
+      "abbr": "ET",
+      "means": "and",
+      "category": "foreign",
+      "note": "French and Latin"
+    },
+    {
+      "abbr": "EX",
+      "means": "former",
+      "category": "general"
+    },
+    {
+      "abbr": "EX",
+      "means": "from",
+      "category": "foreign",
+      "note": "Latin"
+    },
+    {
+      "abbr": "F",
+      "means": "fellow",
+      "category": "general"
+    },
+    {
+      "abbr": "F",
+      "means": "female",
+      "category": "general"
+    },
+    {
+      "abbr": "F",
+      "means": "fluorine",
+      "category": "chemistry"
+    },
+    {
+      "abbr": "F",
+      "means": "folio",
+      "category": "general"
+    },
+    {
+      "abbr": "F",
+      "means": "force",
+      "category": "general"
+    },
+    {
+      "abbr": "F",
+      "means": "forte",
+      "category": "general"
+    },
+    {
+      "abbr": "F",
+      "means": "France",
+      "category": "general"
+    },
+    {
+      "abbr": "F",
+      "means": "loud",
+      "category": "general"
+    },
+    {
+      "abbr": "F",
+      "means": "note",
+      "category": "general"
+    },
+    {
+      "abbr": "FA",
+      "means": "note",
+      "category": "general"
+    },
+    {
+      "abbr": "FE",
+      "means": "iron",
+      "category": "chemistry",
+      "note": "ferrum"
+    },
+    {
+      "abbr": "FF",
+      "means": "folios",
+      "category": "general"
+    },
+    {
+      "abbr": "FF",
+      "means": "very loud",
+      "category": "general"
+    },
+    {
+      "abbr": "FLOWER",
+      "means": "a river",
+      "category": "general",
+      "note": "setter convention"
+    },
+    {
+      "abbr": "FO",
+      "means": "folio",
+      "category": "general"
+    },
+    {
+      "abbr": "FR",
+      "means": "father",
+      "category": "general"
+    },
+    {
+      "abbr": "G",
+      "means": "good",
+      "category": "general"
+    },
+    {
+      "abbr": "G",
+      "means": "gram",
+      "category": "general"
+    },
+    {
+      "abbr": "G",
+      "means": "grand",
+      "category": "general"
+    },
+    {
+      "abbr": "G",
+      "means": "gravity",
+      "category": "general"
+    },
+    {
+      "abbr": "G",
+      "means": "note",
+      "category": "general"
+    },
+    {
+      "abbr": "GB",
+      "means": "Britain",
+      "category": "general"
+    },
+    {
+      "abbr": "GEN",
+      "means": "general",
+      "category": "rank"
+    },
+    {
+      "abbr": "GI",
+      "means": "soldier",
+      "category": "rank"
+    },
+    {
+      "abbr": "GP",
+      "means": "doctor",
+      "category": "general"
+    },
+    {
+      "abbr": "GR",
+      "means": "king",
+      "category": "general",
+      "note": "George"
+    },
+    {
+      "abbr": "H",
+      "means": "hard",
+      "category": "general"
+    },
+    {
+      "abbr": "H",
+      "means": "hearts",
+      "category": "general"
+    },
+    {
+      "abbr": "H",
+      "means": "hospital",
+      "category": "general"
+    },
+    {
+      "abbr": "H",
+      "means": "hot",
+      "category": "general"
+    },
+    {
+      "abbr": "H",
+      "means": "hour",
+      "category": "general"
+    },
+    {
+      "abbr": "H",
+      "means": "husband",
+      "category": "general"
+    },
+    {
+      "abbr": "H",
+      "means": "hydrogen",
+      "category": "chemistry"
+    },
+    {
+      "abbr": "HE",
+      "means": "helium",
+      "category": "chemistry"
+    },
+    {
+      "abbr": "HG",
+      "means": "mercury",
+      "category": "chemistry",
+      "note": "hydrargyrum"
+    },
+    {
+      "abbr": "HM",
+      "means": "majesty",
+      "category": "general"
+    },
+    {
+      "abbr": "HP",
+      "means": "horsepower",
+      "category": "general"
+    },
+    {
+      "abbr": "HR",
+      "means": "hour",
+      "category": "general"
+    },
+    {
+      "abbr": "I",
+      "means": "iodine",
+      "category": "chemistry"
+    },
+    {
+      "abbr": "I",
+      "means": "island",
+      "category": "general"
+    },
+    {
+      "abbr": "I",
+      "means": "Italy",
+      "category": "foreign"
+    },
+    {
+      "abbr": "I",
+      "means": "one",
+      "category": "roman"
+    },
+    {
+      "abbr": "IC",
+      "means": "in charge",
+      "category": "general"
+    },
+    {
+      "abbr": "ID",
+      "means": "identification",
+      "category": "general"
+    },
+    {
+      "abbr": "IE",
+      "means": "that is",
+      "category": "general"
+    },
+    {
+      "abbr": "IL",
+      "means": "the Italian",
+      "category": "foreign"
+    },
+    {
+      "abbr": "IN",
+      "means": "home",
+      "category": "general",
+      "note": "at home"
+    },
+    {
+      "abbr": "IN",
+      "means": "inch",
+      "category": "general"
+    },
+    {
+      "abbr": "IOU",
+      "means": "debt",
+      "category": "general"
+    },
+    {
+      "abbr": "IS",
+      "means": "island",
+      "category": "general"
+    },
+    {
+      "abbr": "IV",
+      "means": "four",
+      "category": "roman"
+    },
+    {
+      "abbr": "IX",
+      "means": "nine",
+      "category": "roman"
+    },
+    {
+      "abbr": "J",
+      "means": "jack",
+      "category": "general"
+    },
+    {
+      "abbr": "J",
+      "means": "joule",
+      "category": "general"
+    },
+    {
+      "abbr": "J",
+      "means": "judge",
+      "category": "general"
+    },
+    {
+      "abbr": "JR",
+      "means": "junior",
+      "category": "general"
+    },
+    {
+      "abbr": "K",
+      "means": "kelvin",
+      "category": "general"
+    },
+    {
+      "abbr": "K",
+      "means": "king",
+      "category": "general"
+    },
+    {
+      "abbr": "K",
+      "means": "knight",
+      "category": "chess"
+    },
+    {
+      "abbr": "K",
+      "means": "potassium",
+      "category": "chemistry",
+      "note": "kalium"
+    },
+    {
+      "abbr": "K",
+      "means": "thousand",
+      "category": "general"
+    },
+    {
+      "abbr": "KG",
+      "means": "knight",
+      "category": "rank",
+      "note": "Order of the Garter"
+    },
+    {
+      "abbr": "KT",
+      "means": "knight",
+      "category": "chess"
+    },
+    {
+      "abbr": "L",
+      "means": "fifty",
+      "category": "roman"
+    },
+    {
+      "abbr": "L",
+      "means": "lake",
+      "category": "general"
+    },
+    {
+      "abbr": "L",
+      "means": "large",
+      "category": "general"
+    },
+    {
+      "abbr": "L",
+      "means": "learner",
+      "category": "general"
+    },
+    {
+      "abbr": "L",
+      "means": "left",
+      "category": "general"
+    },
+    {
+      "abbr": "L",
+      "means": "liberal",
+      "category": "general"
+    },
+    {
+      "abbr": "L",
+      "means": "line",
+      "category": "general"
+    },
+    {
+      "abbr": "L",
+      "means": "pound",
+      "category": "general"
+    },
+    {
+      "abbr": "L",
+      "means": "student",
+      "category": "general",
+      "note": "learner driver"
+    },
+    {
+      "abbr": "LA",
+      "means": "Los Angeles",
+      "category": "general"
+    },
+    {
+      "abbr": "LA",
+      "means": "note",
+      "category": "general"
+    },
+    {
+      "abbr": "LA",
+      "means": "the French",
+      "category": "foreign"
+    },
+    {
+      "abbr": "LA",
+      "means": "the Italian",
+      "category": "foreign"
+    },
+    {
+      "abbr": "LA",
+      "means": "the Spanish",
+      "category": "foreign"
+    },
+    {
+      "abbr": "LAS",
+      "means": "the Spanish",
+      "category": "foreign"
+    },
+    {
+      "abbr": "LB",
+      "means": "pound",
+      "category": "general"
+    },
+    {
+      "abbr": "LE",
+      "means": "the French",
+      "category": "foreign"
+    },
+    {
+      "abbr": "LES",
+      "means": "the French",
+      "category": "foreign"
+    },
+    {
+      "abbr": "LI",
+      "means": "lithium",
+      "category": "chemistry"
+    },
+    {
+      "abbr": "LN",
+      "means": "lane",
+      "category": "general"
+    },
+    {
+      "abbr": "LO",
+      "means": "the Italian",
+      "category": "foreign"
+    },
+    {
+      "abbr": "LOS",
+      "means": "the Spanish",
+      "category": "foreign"
+    },
+    {
+      "abbr": "LP",
+      "means": "record",
+      "category": "general",
+      "note": "long play"
+    },
+    {
+      "abbr": "LT",
+      "means": "lieutenant",
+      "category": "rank"
+    },
+    {
+      "abbr": "M",
+      "means": "male",
+      "category": "general"
+    },
+    {
+      "abbr": "M",
+      "means": "many",
+      "category": "roman",
+      "note": "a large numeral"
+    },
+    {
+      "abbr": "M",
+      "means": "married",
+      "category": "general"
+    },
+    {
+      "abbr": "M",
+      "means": "mass",
+      "category": "general"
+    },
+    {
+      "abbr": "M",
+      "means": "member",
+      "category": "general"
+    },
+    {
+      "abbr": "M",
+      "means": "metre",
+      "category": "general"
+    },
+    {
+      "abbr": "M",
+      "means": "million",
+      "category": "general"
+    },
+    {
+      "abbr": "M",
+      "means": "motorway",
+      "category": "general"
+    },
+    {
+      "abbr": "M",
+      "means": "thousand",
+      "category": "roman"
+    },
+    {
+      "abbr": "MA",
+      "means": "graduate",
+      "category": "general",
+      "note": "Master of Arts"
+    },
+    {
+      "abbr": "MA",
+      "means": "mother",
+      "category": "general"
+    },
+    {
+      "abbr": "MAJ",
+      "means": "major",
+      "category": "rank"
+    },
+    {
+      "abbr": "MB",
+      "means": "doctor",
+      "category": "general"
+    },
+    {
+      "abbr": "MC",
+      "means": "master of ceremonies",
+      "category": "general"
+    },
+    {
+      "abbr": "MD",
+      "means": "doctor",
+      "category": "general"
+    },
+    {
+      "abbr": "MG",
+      "means": "magnesium",
+      "category": "chemistry"
+    },
+    {
+      "abbr": "MI",
+      "means": "note",
+      "category": "general"
+    },
+    {
+      "abbr": "MN",
+      "means": "manganese",
+      "category": "chemistry"
+    },
+    {
+      "abbr": "MO",
+      "means": "doctor",
+      "category": "general"
+    },
+    {
+      "abbr": "MO",
+      "means": "moment",
+      "category": "general"
+    },
+    {
+      "abbr": "MP",
+      "means": "member of parliament",
+      "category": "general"
+    },
+    {
+      "abbr": "MP",
+      "means": "military police",
+      "category": "rank"
+    },
+    {
+      "abbr": "MP",
+      "means": "politician",
+      "category": "general"
+    },
+    {
+      "abbr": "MR",
+      "means": "mister",
+      "category": "general"
+    },
+    {
+      "abbr": "MS",
+      "means": "manuscript",
+      "category": "general"
+    },
+    {
+      "abbr": "N",
+      "means": "direction",
+      "category": "compass"
+    },
+    {
+      "abbr": "N",
+      "means": "knight",
+      "category": "chess"
+    },
+    {
+      "abbr": "N",
+      "means": "name",
+      "category": "general"
+    },
+    {
+      "abbr": "N",
+      "means": "new",
+      "category": "general"
+    },
+    {
+      "abbr": "N",
+      "means": "nitrogen",
+      "category": "chemistry"
+    },
+    {
+      "abbr": "N",
+      "means": "noon",
+      "category": "general"
+    },
+    {
+      "abbr": "N",
+      "means": "north",
+      "category": "compass"
+    },
+    {
+      "abbr": "N",
+      "means": "point",
+      "category": "compass"
+    },
+    {
+      "abbr": "N",
+      "means": "pole",
+      "category": "compass"
+    },
+    {
+      "abbr": "NA",
+      "means": "sodium",
+      "category": "chemistry",
+      "note": "natrium"
+    },
+    {
+      "abbr": "NB",
+      "means": "note",
+      "category": "general",
+      "note": "nota bene"
+    },
+    {
+      "abbr": "NE",
+      "means": "neon",
+      "category": "chemistry"
+    },
+    {
+      "abbr": "NE",
+      "means": "north-east",
+      "category": "compass"
+    },
+    {
+      "abbr": "NEE",
+      "means": "born",
+      "category": "general"
+    },
+    {
+      "abbr": "NI",
+      "means": "nickel",
+      "category": "chemistry"
+    },
+    {
+      "abbr": "NIL",
+      "means": "nothing",
+      "category": "general"
+    },
+    {
+      "abbr": "NO",
+      "means": "number",
+      "category": "general"
+    },
+    {
+      "abbr": "NT",
+      "means": "bible",
+      "category": "general"
+    },
+    {
+      "abbr": "NT",
+      "means": "new testament",
+      "category": "general"
+    },
+    {
+      "abbr": "NW",
+      "means": "north-west",
+      "category": "compass"
+    },
+    {
+      "abbr": "NY",
+      "means": "New York",
+      "category": "general"
+    },
+    {
+      "abbr": "O",
+      "means": "circle",
+      "category": "general"
+    },
+    {
+      "abbr": "O",
+      "means": "duck",
+      "category": "general"
+    },
+    {
+      "abbr": "O",
+      "means": "love",
+      "category": "general"
+    },
+    {
+      "abbr": "O",
+      "means": "nothing",
+      "category": "general"
+    },
+    {
+      "abbr": "O",
+      "means": "old",
+      "category": "general"
+    },
+    {
+      "abbr": "O",
+      "means": "over",
+      "category": "general"
+    },
+    {
+      "abbr": "O",
+      "means": "oxygen",
+      "category": "chemistry"
+    },
+    {
+      "abbr": "O",
+      "means": "zero",
+      "category": "general"
+    },
+    {
+      "abbr": "OB",
+      "means": "died",
+      "category": "general",
+      "note": "obit"
+    },
+    {
+      "abbr": "OC",
+      "means": "officer commanding",
+      "category": "rank"
+    },
+    {
+      "abbr": "OK",
+      "means": "all right",
+      "category": "general"
+    },
+    {
+      "abbr": "OK",
+      "means": "Oklahoma",
+      "category": "general"
+    },
+    {
+      "abbr": "OP",
+      "means": "operation",
+      "category": "general"
+    },
+    {
+      "abbr": "OP",
+      "means": "work",
+      "category": "general",
+      "note": "opus"
+    },
+    {
+      "abbr": "OR",
+      "means": "gold",
+      "category": "general",
+      "note": "heraldry"
+    },
+    {
+      "abbr": "OR",
+      "means": "other ranks",
+      "category": "rank"
+    },
+    {
+      "abbr": "OS",
+      "means": "ordinary seaman",
+      "category": "rank"
+    },
+    {
+      "abbr": "OS",
+      "means": "outsize",
+      "category": "general"
+    },
+    {
+      "abbr": "OT",
+      "means": "bible",
+      "category": "general"
+    },
+    {
+      "abbr": "OT",
+      "means": "old testament",
+      "category": "general"
+    },
+    {
+      "abbr": "P",
+      "means": "page",
+      "category": "general"
+    },
+    {
+      "abbr": "P",
+      "means": "parking",
+      "category": "general"
+    },
+    {
+      "abbr": "P",
+      "means": "pawn",
+      "category": "chess"
+    },
+    {
+      "abbr": "P",
+      "means": "penny",
+      "category": "general"
+    },
+    {
+      "abbr": "P",
+      "means": "phosphorus",
+      "category": "chemistry"
+    },
+    {
+      "abbr": "P",
+      "means": "piano",
+      "category": "general"
+    },
+    {
+      "abbr": "P",
+      "means": "quiet",
+      "category": "general"
+    },
+    {
+      "abbr": "P",
+      "means": "soft",
+      "category": "general"
+    },
+    {
+      "abbr": "PA",
+      "means": "each year",
+      "category": "general",
+      "note": "per annum"
+    },
+    {
+      "abbr": "PB",
+      "means": "lead",
+      "category": "chemistry",
+      "note": "plumbum"
+    },
+    {
+      "abbr": "PC",
+      "means": "constable",
+      "category": "general"
+    },
+    {
+      "abbr": "PC",
+      "means": "postcard",
+      "category": "general"
+    },
+    {
+      "abbr": "PE",
+      "means": "exercise",
+      "category": "general",
+      "note": "physical education"
+    },
+    {
+      "abbr": "PEN",
+      "means": "writer",
+      "category": "general"
+    },
+    {
+      "abbr": "PH",
+      "means": "pub",
+      "category": "general",
+      "note": "public house"
+    },
+    {
+      "abbr": "PL",
+      "means": "place",
+      "category": "general"
+    },
+    {
+      "abbr": "PM",
+      "means": "afternoon",
+      "category": "general"
+    },
+    {
+      "abbr": "PM",
+      "means": "prime minister",
+      "category": "general"
+    },
+    {
+      "abbr": "PO",
+      "means": "petty officer",
+      "category": "rank"
+    },
+    {
+      "abbr": "PO",
+      "means": "post office",
+      "category": "general"
+    },
+    {
+      "abbr": "PP",
+      "means": "pages",
+      "category": "general"
+    },
+    {
+      "abbr": "PR",
+      "means": "pair",
+      "category": "general"
+    },
+    {
+      "abbr": "PS",
+      "means": "postscript",
+      "category": "general"
+    },
+    {
+      "abbr": "PT",
+      "means": "exercise",
+      "category": "general",
+      "note": "physical training"
+    },
+    {
+      "abbr": "PT",
+      "means": "platinum",
+      "category": "chemistry"
+    },
+    {
+      "abbr": "PT",
+      "means": "point",
+      "category": "general"
+    },
+    {
+      "abbr": "PTE",
+      "means": "private",
+      "category": "rank"
+    },
+    {
+      "abbr": "Q",
+      "means": "queen",
+      "category": "general"
+    },
+    {
+      "abbr": "Q",
+      "means": "question",
+      "category": "general"
+    },
+    {
+      "abbr": "R",
+      "means": "castle",
+      "category": "chess"
+    },
+    {
+      "abbr": "R",
+      "means": "king",
+      "category": "general",
+      "note": "rex"
+    },
+    {
+      "abbr": "R",
+      "means": "queen",
+      "category": "general",
+      "note": "regina"
+    },
+    {
+      "abbr": "R",
+      "means": "recipe",
+      "category": "general"
+    },
+    {
+      "abbr": "R",
+      "means": "resistance",
+      "category": "general"
+    },
+    {
+      "abbr": "R",
+      "means": "right",
+      "category": "general"
+    },
+    {
+      "abbr": "R",
+      "means": "river",
+      "category": "general"
+    },
+    {
+      "abbr": "R",
+      "means": "rook",
+      "category": "chess"
+    },
+    {
+      "abbr": "R",
+      "means": "run",
+      "category": "general"
+    },
+    {
+      "abbr": "R",
+      "means": "take",
+      "category": "general",
+      "note": "recipe"
+    },
+    {
+      "abbr": "RA",
+      "means": "artist",
+      "category": "general",
+      "note": "Royal Academician"
+    },
+    {
+      "abbr": "RA",
+      "means": "gunners",
+      "category": "rank"
+    },
+    {
+      "abbr": "RA",
+      "means": "Royal Academy",
+      "category": "general"
+    },
+    {
+      "abbr": "RA",
+      "means": "Royal Artillery",
+      "category": "rank"
+    },
+    {
+      "abbr": "RAF",
+      "means": "air force",
+      "category": "rank"
+    },
+    {
+      "abbr": "RC",
+      "means": "Catholic",
+      "category": "general",
+      "note": "Roman Catholic"
+    },
+    {
+      "abbr": "RD",
+      "means": "road",
+      "category": "general"
+    },
+    {
+      "abbr": "RE",
+      "means": "about",
+      "category": "general",
+      "note": "regarding"
+    },
+    {
+      "abbr": "RE",
+      "means": "engineers",
+      "category": "rank"
+    },
+    {
+      "abbr": "RE",
+      "means": "note",
+      "category": "general"
+    },
+    {
+      "abbr": "RE",
+      "means": "Royal Engineers",
+      "category": "rank"
+    },
+    {
+      "abbr": "RI",
+      "means": "religious instruction",
+      "category": "general"
+    },
+    {
+      "abbr": "RM",
+      "means": "marines",
+      "category": "rank",
+      "note": "Royal Marines"
+    },
+    {
+      "abbr": "RN",
+      "means": "navy",
+      "category": "rank",
+      "note": "Royal Navy"
+    },
+    {
+      "abbr": "RR",
+      "means": "bishops",
+      "category": "general",
+      "note": "right reverend"
+    },
+    {
+      "abbr": "RT",
+      "means": "right",
+      "category": "general"
+    },
+    {
+      "abbr": "RV",
+      "means": "bible",
+      "category": "general",
+      "note": "Revised Version"
+    },
+    {
+      "abbr": "RY",
+      "means": "railway",
+      "category": "general"
+    },
+    {
+      "abbr": "S",
+      "means": "direction",
+      "category": "compass"
+    },
+    {
+      "abbr": "S",
+      "means": "point",
+      "category": "compass"
+    },
+    {
+      "abbr": "S",
+      "means": "pole",
+      "category": "compass"
+    },
+    {
+      "abbr": "S",
+      "means": "saint",
+      "category": "general"
+    },
+    {
+      "abbr": "S",
+      "means": "second",
+      "category": "general"
+    },
+    {
+      "abbr": "S",
+      "means": "small",
+      "category": "general"
+    },
+    {
+      "abbr": "S",
+      "means": "son",
+      "category": "general"
+    },
+    {
+      "abbr": "S",
+      "means": "south",
+      "category": "compass"
+    },
+    {
+      "abbr": "S",
+      "means": "spades",
+      "category": "general"
+    },
+    {
+      "abbr": "S",
+      "means": "sulphur",
+      "category": "chemistry"
+    },
+    {
+      "abbr": "SA",
+      "means": "sex appeal",
+      "category": "general"
+    },
+    {
+      "abbr": "SA",
+      "means": "South Africa",
+      "category": "general"
+    },
+    {
+      "abbr": "SE",
+      "means": "south-east",
+      "category": "compass"
+    },
+    {
+      "abbr": "SGT",
+      "means": "sergeant",
+      "category": "rank"
+    },
+    {
+      "abbr": "SH",
+      "means": "quiet",
+      "category": "general"
+    },
+    {
+      "abbr": "SI",
+      "means": "silicon",
+      "category": "chemistry"
+    },
+    {
+      "abbr": "SN",
+      "means": "tin",
+      "category": "chemistry",
+      "note": "stannum"
+    },
+    {
+      "abbr": "SO",
+      "means": "note",
+      "category": "general"
+    },
+    {
+      "abbr": "SP",
+      "means": "starting price",
+      "category": "general"
+    },
+    {
+      "abbr": "SQ",
+      "means": "square",
+      "category": "general"
+    },
+    {
+      "abbr": "SR",
+      "means": "senior",
+      "category": "general"
+    },
+    {
+      "abbr": "SS",
+      "means": "saints",
+      "category": "general"
+    },
+    {
+      "abbr": "SS",
+      "means": "ship",
+      "category": "general",
+      "note": "steamship"
+    },
+    {
+      "abbr": "ST",
+      "means": "saint",
+      "category": "general"
+    },
+    {
+      "abbr": "ST",
+      "means": "stone",
+      "category": "general"
+    },
+    {
+      "abbr": "ST",
+      "means": "street",
+      "category": "general"
+    },
+    {
+      "abbr": "SW",
+      "means": "south-west",
+      "category": "compass"
+    },
+    {
+      "abbr": "T",
+      "means": "model",
+      "category": "general",
+      "note": "Model T"
+    },
+    {
+      "abbr": "T",
+      "means": "square",
+      "category": "general"
+    },
+    {
+      "abbr": "T",
+      "means": "time",
+      "category": "general"
+    },
+    {
+      "abbr": "T",
+      "means": "ton",
+      "category": "general"
+    },
+    {
+      "abbr": "TA",
+      "means": "volunteers",
+      "category": "rank",
+      "note": "Territorial Army"
+    },
+    {
+      "abbr": "TAR",
+      "means": "sailor",
+      "category": "rank"
+    },
+    {
+      "abbr": "TE",
+      "means": "note",
+      "category": "general"
+    },
+    {
+      "abbr": "TI",
+      "means": "note",
+      "category": "general"
+    },
+    {
+      "abbr": "TS",
+      "means": "typescript",
+      "category": "general"
+    },
+    {
+      "abbr": "TT",
+      "means": "teetotal",
+      "category": "general"
+    },
+    {
+      "abbr": "TV",
+      "means": "television",
+      "category": "general"
+    },
+    {
+      "abbr": "U",
+      "means": "acceptable",
+      "category": "general"
+    },
+    {
+      "abbr": "U",
+      "means": "turn",
+      "category": "general"
+    },
+    {
+      "abbr": "U",
+      "means": "united",
+      "category": "general"
+    },
+    {
+      "abbr": "U",
+      "means": "university",
+      "category": "general"
+    },
+    {
+      "abbr": "U",
+      "means": "upper class",
+      "category": "general"
+    },
+    {
+      "abbr": "U",
+      "means": "uranium",
+      "category": "chemistry"
+    },
+    {
+      "abbr": "UK",
+      "means": "United Kingdom",
+      "category": "general"
+    },
+    {
+      "abbr": "UM",
+      "means": "hesitation",
+      "category": "general"
+    },
+    {
+      "abbr": "UN",
+      "means": "a French",
+      "category": "foreign"
+    },
+    {
+      "abbr": "UN",
+      "means": "a Spanish",
+      "category": "foreign"
+    },
+    {
+      "abbr": "UN",
+      "means": "United Nations",
+      "category": "general"
+    },
+    {
+      "abbr": "UNA",
+      "means": "a Spanish",
+      "category": "foreign"
+    },
+    {
+      "abbr": "UNE",
+      "means": "a French",
+      "category": "foreign"
+    },
+    {
+      "abbr": "UR",
+      "means": "hesitation",
+      "category": "general"
+    },
+    {
+      "abbr": "US",
+      "means": "America",
+      "category": "general"
+    },
+    {
+      "abbr": "UT",
+      "means": "note",
+      "category": "general"
+    },
+    {
+      "abbr": "V",
+      "means": "against",
+      "category": "general"
+    },
+    {
+      "abbr": "V",
+      "means": "five",
+      "category": "roman"
+    },
+    {
+      "abbr": "V",
+      "means": "see",
+      "category": "general"
+    },
+    {
+      "abbr": "V",
+      "means": "very",
+      "category": "general"
+    },
+    {
+      "abbr": "V",
+      "means": "volt",
+      "category": "general"
+    },
+    {
+      "abbr": "VI",
+      "means": "six",
+      "category": "roman"
+    },
+    {
+      "abbr": "VOL",
+      "means": "volume",
+      "category": "general"
+    },
+    {
+      "abbr": "VS",
+      "means": "against",
+      "category": "general"
+    },
+    {
+      "abbr": "W",
+      "means": "direction",
+      "category": "compass"
+    },
+    {
+      "abbr": "W",
+      "means": "point",
+      "category": "compass"
+    },
+    {
+      "abbr": "W",
+      "means": "tungsten",
+      "category": "chemistry",
+      "note": "wolfram"
+    },
+    {
+      "abbr": "W",
+      "means": "watt",
+      "category": "general"
+    },
+    {
+      "abbr": "W",
+      "means": "week",
+      "category": "general"
+    },
+    {
+      "abbr": "W",
+      "means": "west",
+      "category": "compass"
+    },
+    {
+      "abbr": "W",
+      "means": "wife",
+      "category": "general"
+    },
+    {
+      "abbr": "W",
+      "means": "with",
+      "category": "general"
+    },
+    {
+      "abbr": "W",
+      "means": "women",
+      "category": "general"
+    },
+    {
+      "abbr": "WC",
+      "means": "toilet",
+      "category": "general"
+    },
+    {
+      "abbr": "WI",
+      "means": "institute",
+      "category": "general",
+      "note": "Women's Institute"
+    },
+    {
+      "abbr": "X",
+      "means": "cross",
+      "category": "general"
+    },
+    {
+      "abbr": "X",
+      "means": "kiss",
+      "category": "general"
+    },
+    {
+      "abbr": "X",
+      "means": "ten",
+      "category": "roman"
+    },
+    {
+      "abbr": "X",
+      "means": "vote",
+      "category": "general"
+    },
+    {
+      "abbr": "XC",
+      "means": "ninety",
+      "category": "roman"
+    },
+    {
+      "abbr": "XI",
+      "means": "eleven",
+      "category": "roman"
+    },
+    {
+      "abbr": "XL",
+      "means": "forty",
+      "category": "roman"
+    },
+    {
+      "abbr": "Y",
+      "means": "yard",
+      "category": "general"
+    },
+    {
+      "abbr": "Y",
+      "means": "year",
+      "category": "general"
+    },
+    {
+      "abbr": "Y",
+      "means": "yen",
+      "category": "general"
+    },
+    {
+      "abbr": "YD",
+      "means": "yard",
+      "category": "general"
+    },
+    {
+      "abbr": "YR",
+      "means": "year",
+      "category": "general"
+    },
+    {
+      "abbr": "Z",
+      "means": "zero",
+      "category": "general"
+    },
+    {
+      "abbr": "ZN",
+      "means": "zinc",
+      "category": "chemistry"
+    }
+  ]
+}

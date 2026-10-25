@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+
+{% block title %}<title>Thesaurus · Cryptics</title>{% endblock %}
+
+{% block meta_description %}
+<meta name="description" content="Look up synonyms for cryptic-crossword definitions.">
+{% endblock %}
+
+{% block scripts %}
+<script defer src="/js/cryptics/thesaurus.js?v1.0.0"></script>
+{% endblock %}
+
+{% block favicons %}
+<link rel="icon" type="image/svg+xml" sizes="any" href="/icons/cryptics/cryptics-icon-any.svg?v1.0.0" />
+<link rel="icon" type="image/x-icon" href="/icons/cryptics/favicon-48x48.ico?v1.0.0" />
+<link rel="shortcut icon" type="image/svg+xml" href="/icons/cryptics/cryptics-icon-any.svg?v1.0.0" />
+<link rel="apple-touch-icon" href="/icons/cryptics/android-chrome-192x192.png?v1.0.0" />
+{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="/css/right-nav.css?v1.1.0">
+<link rel="stylesheet" href="/css/cryptics/cryptics.css?v1.0.2">
+{% endblock %}
+
+{% block header %}
+<h3 class="header-text">Cryptics</h3>
+{% endblock %}
+
+{% block content %}
+<section class="cryptics-page" aria-label="Thesaurus">
+  <h3 class="cryptics-title">Thesaurus</h3>
+  <noscript>
+    <p class="cryptics-note">Synonym lists are searched in this browser.</p>
+  </noscript>
+
+  <form class="cryptics-fields" id="cryptics-thesaurus-form" method="get" action="/cryptics/thesaurus/">
+    <label class="cryptics-field" for="cryptics-word">
+      <span class="cryptics-label">Word</span>
+      <input
+        id="cryptics-word"
+        class="cryptics-input"
+        name="q"
+        type="text"
+        value="{{ q }}"
+        autocomplete="off"
+        autocapitalize="off"
+        spellcheck="false"
+        enterkeyhint="search"
+        autofocus
+      >
+    </label>
+
+    <label class="cryptics-field" for="cryptics-length">
+      <span class="cryptics-label">Length</span>
+      <input
+        id="cryptics-length"
+        class="cryptics-input"
+        name="n"
+        type="text"
+        value="{{ n }}"
+        autocomplete="off"
+        autocapitalize="off"
+        spellcheck="false"
+        placeholder="5 or 4,3 or 3-4"
+      >
+    </label>
+    <p id="cryptics-length-error" class="cryptics-error" hidden></p>
+
+    <div class="cryptics-actions">
+      <button class="btn btn-primary" id="cryptics-search" type="submit">Search</button>
+    </div>
+  </form>
+
+  <p id="cryptics-status" class="cryptics-hint">Type a definition word. Add a length to match the enumeration.</p>
+  <div id="cryptics-results" class="cryptics-results"></div>
+  <p id="cryptics-count" class="cryptics-count" hidden></p>
+  <p id="cryptics-live" class="cryptics-live" aria-live="polite"></p>
+  <p class="cryptics-credit">Synonyms from WordNet 3.1, Princeton University.</p>
+</section>
+{% endblock %}
+
+{% block sidebar %}
+{% include "cryptics/sidebar.html" %}
+{% endblock %}
+
+{% block footer %}
+Cryptics
+{% endblock %}
