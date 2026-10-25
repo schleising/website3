@@ -388,6 +388,7 @@
         },
         onPick: function (value) {
           queryInput.value = value;
+          queryInput.dispatchEvent(new Event("change", { bubbles: true }));
           queryInput.focus();
           searchNow();
         },

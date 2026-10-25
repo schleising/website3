@@ -439,6 +439,7 @@
         },
         onPick: function (value) {
           wordInput.value = value;
+          wordInput.dispatchEvent(new Event("change", { bubbles: true }));
           wordInput.focus();
           searchNow();
         },

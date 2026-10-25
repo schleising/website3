@@ -196,6 +196,10 @@ One column, top to bottom:
 
 Empty letters: hide the board and disable both buttons. Show the hint only. Do not render a row of blank slots that look like an answer grid waiting for a clue number.
 
+### 5.4 Clear control
+
+Every single-line text field has a clear control on the right, inside the box. It appears when the field has text. Activating it empties the field, leaves focus there, and runs the same update as deleting the text: the anagram board rebuilds, and a thesaurus or abbreviation search runs. The Kind menu has no clear control. `suggest.js` adds the control on each Cryptics page.
+
 ## 6. Anagram helper
 
 ### 6.1 Letters

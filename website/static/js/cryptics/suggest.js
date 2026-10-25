@@ -281,7 +281,95 @@
     };
   }
 
+  function fieldLabel(doc, input) {
+    let source = null;
+    if (input.id && typeof CSS !== "undefined" && CSS.escape) {
+      source = doc.querySelector('label[for="' + CSS.escape(input.id) + '"]');
+    }
+    if (!source) {
+      source = input.closest("label");
+    }
+    if (!source) {
+      return "field";
+    }
+    const named = source.querySelector(".cryptics-label");
+    const text = (named ? named.textContent : source.textContent) || "";
+    const trimmed = text.replace(/\s+/g, " ").trim();
+    return trimmed || "field";
+  }
+
+  function clearIcon(doc) {
+    const svg = doc.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("viewBox", "0 0 16 16");
+    svg.setAttribute("aria-hidden", "true");
+    svg.setAttribute("focusable", "false");
+    const path = doc.createElementNS("http://www.w3.org/2000/svg", "path");
+    path.setAttribute("d", "M4.2 4.2l7.6 7.6M11.8 4.2l-7.6 7.6");
+    path.setAttribute("fill", "none");
+    path.setAttribute("stroke", "currentColor");
+    path.setAttribute("stroke-width", "1.6");
+    path.setAttribute("stroke-linecap", "round");
+    svg.appendChild(path);
+    return svg;
+  }
+
+  function attachClears(doc) {
+    if (!doc) {
+      return;
+    }
+    const syncs = [];
+    Array.prototype.forEach.call(doc.querySelectorAll("input.cryptics-input"), function (input) {
+      if (!(input instanceof HTMLInputElement) || input.closest(".cryptics-entry")) {
+        return;
+      }
+      const parent = input.parentElement;
+      if (!parent) {
+        return;
+      }
+      const entry = doc.createElement("div");
+      entry.className = "cryptics-entry";
+      parent.insertBefore(entry, input);
+      entry.appendChild(input);
+
+      const button = doc.createElement("button");
+      button.type = "button";
+      button.className = "cryptics-clear";
+      button.setAttribute("aria-label", "Clear " + fieldLabel(doc, input).toLowerCase());
+      button.appendChild(clearIcon(doc));
+      entry.appendChild(button);
+
+      function sync() {
+        button.hidden = input.value === "";
+      }
+      sync();
+      syncs.push(sync);
+      input.addEventListener("input", function () {
+        window.setTimeout(sync, 0);
+      });
+      input.addEventListener("change", sync);
+      button.addEventListener("mousedown", function (event) {
+        event.preventDefault();
+      });
+      button.addEventListener("click", function () {
+        input.value = "";
+        input.dispatchEvent(new Event("input", { bubbles: true }));
+        input.focus();
+        sync();
+      });
+    });
+    window.setTimeout(function () {
+      syncs.forEach(function (sync) {
+        sync();
+      });
+    }, 0);
+  }
+
+  if (typeof document !== "undefined") {
+    attachClears(document);
+  }
+
   return {
     attach: attach,
+    attachClears: attachClears,
   };
 });
