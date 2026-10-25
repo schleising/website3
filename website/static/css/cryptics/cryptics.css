@@ -466,6 +466,7 @@ select.cryptics-input {
     .cryptics-field-narrow,
     .cryptics-field-kind {
         width: 100%;
+        flex: 0 0 auto;
     }
 }
 
