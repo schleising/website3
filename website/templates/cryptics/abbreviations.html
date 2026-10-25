@@ -7,7 +7,8 @@
 {% endblock %}
 
 {% block scripts %}
-<script defer src="/js/cryptics/abbreviations.js?v1.0.1"></script>
+<script defer src="/js/cryptics/suggest.js?v1.0.1"></script>
+<script defer src="/js/cryptics/abbreviations.js?v1.0.2"></script>
 {% endblock %}
 
 {% block favicons %}
@@ -19,7 +20,7 @@
 
 {% block head %}
 <link rel="stylesheet" href="/css/right-nav.css?v1.1.0">
-<link rel="stylesheet" href="/css/cryptics/cryptics.css?v1.0.2">
+<link rel="stylesheet" href="/css/cryptics/cryptics.css?v1.0.4">
 {% endblock %}
 
 {% block header %}
@@ -34,21 +35,23 @@
   </noscript>
 
   <form class="cryptics-fields" id="cryptics-abbreviations-form" method="get" action="/cryptics/abbreviations/">
-    <label class="cryptics-field" for="cryptics-query">
-      <span class="cryptics-label">Look up</span>
-      <input
-        id="cryptics-query"
-        class="cryptics-input"
-        name="q"
-        type="text"
-        value="{{ q }}"
-        autocomplete="off"
-        autocapitalize="off"
-        spellcheck="false"
-        enterkeyhint="search"
-        autofocus
-      >
-    </label>
+    <div class="cryptics-field">
+      <label class="cryptics-label" for="cryptics-query">Look up</label>
+      <div class="cryptics-suggest">
+        <input
+          id="cryptics-query"
+          class="cryptics-input"
+          name="q"
+          type="text"
+          value="{{ q }}"
+          autocomplete="off"
+          autocapitalize="off"
+          spellcheck="false"
+          enterkeyhint="search"
+          autofocus
+        >
+      </div>
+    </div>
 
     <div class="cryptics-filter-row">
       <label class="cryptics-field cryptics-field-narrow" for="cryptics-abbr-letters">

@@ -81,6 +81,101 @@
     return 0;
   }
 
+  function entryVisible(entry, letters, category) {
+    if (category && entry.category !== category) {
+      return false;
+    }
+    if (letters.ok && letters.length !== null && entry.abbr.length !== letters.length) {
+      return false;
+    }
+    return true;
+  }
+
+  function compareCompletions(left, right) {
+    const leftNorm = normaliseText(left);
+    const rightNorm = normaliseText(right);
+    if (leftNorm.length !== rightNorm.length) {
+      return leftNorm.length - rightNorm.length;
+    }
+    return leftNorm.localeCompare(rightNorm, "en");
+  }
+
+  function takeSuggestions(abbreviations, meanings, limit) {
+    const cap = limit > 0 ? limit : 8;
+    let abbreviationCount = Math.min(abbreviations.length, 4, cap);
+    let meaningCount = Math.min(meanings.length, cap - abbreviationCount);
+    if (abbreviationCount + meaningCount < cap) {
+      abbreviationCount = Math.min(abbreviations.length, cap - meaningCount);
+    }
+    return abbreviations.slice(0, abbreviationCount).concat(meanings.slice(0, meaningCount));
+  }
+
+  function completeAbbreviations(entries, queryRaw, lettersRaw, kind, limit) {
+    const trimmed = String(queryRaw).trim();
+    if (trimmed === "") {
+      return [];
+    }
+    const letters = parseLetters(lettersRaw);
+    const queryNorm = normaliseText(trimmed);
+    const abbrPrefix = abbreviationKey(trimmed);
+    const category = kind && kind !== "all" ? kind : "";
+    const byAbbr = new Map();
+    const meanings = [];
+    const meaningSeen = new Set();
+
+    function addMeaning(text) {
+      const key = normaliseText(text);
+      if (key === "" || key === queryNorm || meaningSeen.has(key) || key.indexOf(queryNorm) !== 0) {
+        return;
+      }
+      meaningSeen.add(key);
+      meanings.push(text);
+    }
+
+    entries.forEach(function (entry) {
+      if (!entryVisible(entry, letters, category)) {
+        return;
+      }
+      if (abbrPrefix !== "" && entry.abbr.indexOf(abbrPrefix) === 0 && entry.abbr !== abbrPrefix) {
+        if (!byAbbr.has(entry.abbr)) {
+          byAbbr.set(entry.abbr, entry.means);
+        }
+      }
+      if (queryNorm.length < 2) {
+        return;
+      }
+      const meansNorm = normaliseText(entry.means);
+      if (meansNorm.indexOf(queryNorm) === 0 && meansNorm !== queryNorm) {
+        addMeaning(entry.means);
+        return;
+      }
+      if (queryNorm.indexOf(" ") !== -1) {
+        return;
+      }
+      entry.means.split(/[^A-Za-z]+/).forEach(function (part) {
+        if (part.length > queryNorm.length && part.toLowerCase().indexOf(queryNorm) === 0) {
+          addMeaning(part);
+        }
+      });
+    });
+
+    const abbreviations = [];
+    byAbbr.forEach(function (hint, abbr) {
+      abbreviations.push({ value: abbr, label: abbr, hint: hint });
+    });
+    abbreviations.sort(function (left, right) {
+      if (left.value.length !== right.value.length) {
+        return left.value.length - right.value.length;
+      }
+      return left.value < right.value ? -1 : 1;
+    });
+    meanings.sort(compareCompletions);
+    const meaningItems = meanings.map(function (text) {
+      return { value: text, label: text };
+    });
+    return takeSuggestions(abbreviations, meaningItems, limit);
+  }
+
   function searchAbbreviations(entries, queryRaw, lettersRaw, kind) {
     const original = String(queryRaw);
     const trimmed = original.trim();
@@ -91,10 +186,7 @@
     const written = [];
     const means = [];
     entries.forEach(function (entry) {
-      if (category && entry.category !== category) {
-        return;
-      }
-      if (letters.ok && letters.length !== null && entry.abbr.length !== letters.length) {
+      if (!entryVisible(entry, letters, category)) {
         return;
       }
       if (queryNorm !== "" && meaningMatches(entry.means, queryNorm)) {
@@ -281,6 +373,26 @@
     });
     queryInput.addEventListener("input", schedule);
     lettersInput.addEventListener("input", schedule);
+    const suggestApi = typeof globalThis !== "undefined" ? globalThis.CrypticsSuggest : undefined;
+    if (suggestApi) {
+      suggestApi.attach(doc, {
+        input: queryInput,
+        listId: "cryptics-query-suggestions",
+        suggest: function (value) {
+          if (value.trim() === "") {
+            return [];
+          }
+          return loadEntries().then(function (entries) {
+            return completeAbbreviations(entries, value, lettersInput.value, kindInput.value);
+          });
+        },
+        onPick: function (value) {
+          queryInput.value = value;
+          queryInput.focus();
+          searchNow();
+        },
+      });
+    }
     kindInput.addEventListener("change", function () {
       searchNow();
     });
@@ -294,6 +406,7 @@
     mount: mount,
     normaliseText: normaliseText,
     searchAbbreviations: searchAbbreviations,
+    completeAbbreviations: completeAbbreviations,
     announcement: announcement,
   };
 });

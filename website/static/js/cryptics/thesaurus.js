@@ -143,6 +143,43 @@
     return left.localeCompare(right, "en");
   }
 
+  const keysByShard = new WeakMap();
+
+  function shardKeys(shard) {
+    if (!shard || typeof shard !== "object") {
+      return [];
+    }
+    let keys = keysByShard.get(shard);
+    if (!keys) {
+      keys = Object.keys(shard);
+      keysByShard.set(shard, keys);
+    }
+    return keys;
+  }
+
+  function completeWords(shard, raw, limit) {
+    const prefix = normaliseWord(raw);
+    const cap = limit > 0 ? limit : 8;
+    if (prefix.length < 2) {
+      return [];
+    }
+    const found = [];
+    shardKeys(shard).forEach(function (key) {
+      if (key.indexOf(prefix) === 0 && key !== prefix) {
+        found.push(key);
+      }
+    });
+    found.sort(function (left, right) {
+      if (left.length !== right.length) {
+        return left.length - right.length;
+      }
+      return left.localeCompare(right, "en");
+    });
+    return found.slice(0, cap).map(function (key) {
+      return { value: key, label: key };
+    });
+  }
+
   function lookup(shard, word, length) {
     const entry = shard[word];
     if (!entry) {
@@ -386,6 +423,27 @@
     });
     wordInput.addEventListener("input", schedule);
     lengthInput.addEventListener("input", schedule);
+    const suggestApi = typeof globalThis !== "undefined" ? globalThis.CrypticsSuggest : undefined;
+    if (suggestApi) {
+      suggestApi.attach(doc, {
+        input: wordInput,
+        listId: "cryptics-word-suggestions",
+        suggest: function (value) {
+          const word = normaliseWord(value);
+          if (word.length < 2) {
+            return [];
+          }
+          return loadShard(shardName(word)).then(function (shard) {
+            return completeWords(shard, value);
+          });
+        },
+        onPick: function (value) {
+          wordInput.value = value;
+          wordInput.focus();
+          searchNow();
+        },
+      });
+    }
 
     if (wordInput.value.trim() !== "" || lengthInput.value.trim() !== "") {
       searchNow();
@@ -399,5 +457,6 @@
     parseLength: parseLength,
     lookup: lookup,
     letterCount: letterCount,
+    completeWords: completeWords,
   };
 });

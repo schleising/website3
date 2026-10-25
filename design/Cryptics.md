@@ -630,7 +630,7 @@ Length 5 keeps `merry` and hides a 4-letter synonym such as `glad`. Clearing Len
 Regions, top to bottom:
 
 1. Title **Thesaurus**.
-2. **Word** field. Autofocus, `autocomplete="off"`, `autocapitalize="off"`, `spellcheck="false"`, `enterkeyhint="search"`.
+2. **Word** field. Autofocus, `autocomplete="off"`, `autocapitalize="off"`, `spellcheck="false"`, `enterkeyhint="search"`. After two letters, a suggestion list opens under the field.
 3. **Length** field, optional. Same placeholder as the anagram enumeration: `5 or 4,3 or 3-4`.
 4. **Search**, a primary button, so the form has a real control. The form is `method="get"` and `action="/cryptics/thesaurus/"`.
 5. Results, or one idle / empty sentence.
@@ -653,6 +653,8 @@ flowchart LR
 ```
 
 The script reads the prefilled fields on load, debounces typing by 150ms, and searches immediately when **Search** is pressed or a synonym is activated. Each change replaces the query string with `replaceState` (`?q=happy&n=5`). Empty values are omitted. The path stays `/cryptics/thesaurus/`. A new history entry is not pushed for each keystroke.
+
+Suggestions use the same shard. A row is a headword that starts with the normalised word and is longer than it. Shorter headwords come first, then alphabetical order, at most eight. One letter still searches, and the list stays closed. Arrow down and arrow up move through the rows. Enter on a highlighted row writes that headword into Word and searches. Enter with nothing highlighted searches the text already there. Escape closes the list. A pointer choice does the same as Enter on that row. A prefilled page leaves the list closed until the next edit, or until an arrow key asks for suggestions.
 
 Word matching:
 
@@ -745,7 +747,8 @@ This tool answers “what else means happy?”. It leaves the following to other
 |-------|----------|
 | Route | Two GET paths on `cryptics_router` |
 | Template | `website/templates/cryptics/thesaurus.html` |
-| Script | `website/static/js/cryptics/thesaurus.js`, deferred |
+| Suggestions | `website/static/js/cryptics/suggest.js`, deferred |
+| Script | `website/static/js/cryptics/thesaurus.js`, deferred, after `suggest.js` |
 | Data | The shard directory in §11.4 |
 | Sidebar | `website/templates/cryptics/sidebar.html` |
 
@@ -758,6 +761,7 @@ Pyright stays clean on the router and on `scripts/build_cryptics_thesaurus.py`.
 - `well-being` is offered as `4-5`. Length `9` and length `4-5` both keep it. Length `4,5` does not.
 - A half-typed `4,` shows the length message and the unfiltered senses.
 - Activating a synonym searches that word and leaves the length in place.
+- Typing `happ` opens a list whose first row is `happy`. Typing `h` leaves the list closed. Choosing `happy` searches that word.
 - `centres`, via `british.json`, shows the senses of `center`, with “Showing senses of center.” WordNet already has its own entry for `colour`, so that alias is ignored and the page shows WordNet’s senses for `colour` directly.
 - An unknown spelling shows “No entry for that spelling.” An empty word shows the idle sentence.
 - Reload keeps the query. A new tab opened on the bare path starts empty.
@@ -822,7 +826,7 @@ Those rows are examples of the entry shape. The committed JSON is the catalogue.
 Regions, top to bottom:
 
 1. Title **Abbreviations**.
-2. **Look up** field. Autofocus, `autocomplete="off"`, `autocapitalize="off"`, `spellcheck="false"`, `enterkeyhint="search"`.
+2. **Look up** field. Autofocus, `autocomplete="off"`, `autocapitalize="off"`, `spellcheck="false"`, `enterkeyhint="search"`. A suggestion list opens under the field while the catalogue can complete the text.
 3. **Letters**, optional. A single width, placeholder `any`. Filters by how many letters the abbreviation has.
 4. **Kind**, a `<select>` of All plus each category in §12.3. Default All.
 5. **Search**, primary, in a `method="get"` form whose action is `/cryptics/abbreviations/`.
@@ -850,6 +854,13 @@ flowchart TD
 ```
 
 The script fetches `/data/cryptics/abbreviations.json` on the first search and reuses it. Debounce is 150ms. **Search** runs immediately. The query string is kept with `replaceState`: `?q=about&letters=1&kind=general`. Default and empty fields are omitted (`kind=all` is omitted).
+
+Suggestions use that same list, and the same Letters and Kind filters. The keyboard matches the thesaurus: arrows move, Enter on a highlighted row fills Look up and searches, Enter with nothing highlighted searches the current text, and Escape closes the list. A prefilled page leaves the list closed until the next edit.
+
+- From the first letter, when the query has no space: abbreviations that start with its `A–Z` letters. The abbreviation that equals those letters is left off. Each abbreviation appears once, with one of its meanings beside it.
+- From two letters: a catalogue phrase that starts with the normalised query, or a word inside a phrase that starts with it. The exact query is left off.
+
+Abbreviations take up to four of the eight places. Meanings fill what is left, and either side takes spare places when the other side is short. Shorter text comes first. `art` still matches no result row. The list can offer `artist` and `Artillery`, and choosing one runs that search.
 
 Normalise the query: trim, lowercase, turn `.` `,` `-` `'` and `/` into spaces, collapse spaces.
 
@@ -930,7 +941,8 @@ Left out of this file:
 |-------|----------|
 | Route | Two GET paths on `cryptics_router` |
 | Template | `website/templates/cryptics/abbreviations.html` |
-| Script | `website/static/js/cryptics/abbreviations.js`, deferred |
+| Suggestions | `website/static/js/cryptics/suggest.js`, deferred |
+| Script | `website/static/js/cryptics/abbreviations.js`, deferred, after `suggest.js` |
 | Data | `website/static/data/cryptics/abbreviations.json` |
 | Checker | `scripts/check_cryptics_abbreviations.py` |
 | Sidebar | The partial from §11, if Thesaurus has already added it; otherwise this tool adds it |
@@ -939,7 +951,8 @@ Left out of this file:
 
 - Anonymous `GET /cryptics/abbreviations/` returns 200. Abbreviations is current in the right nav. Anagrams and Thesaurus are still linked.
 - `about` with Letters `1` shows `C` and hides `CA` and `RE`.
-- `artillery` shows the Royal Artillery row under **Can be written**. `art` shows neither `artist` nor `Royal Artillery`.
+- `artillery` shows the Royal Artillery row under **Can be written**. `art` shows neither `artist` nor `Royal Artillery` in the results. The suggestion list can still offer `artist` and `Artillery`.
+- Typing `ra` offers a longer abbreviation such as `RAC`. Choosing it fills Look up and searches.
 - `r.a.` and `RA` show the same **Can mean** rows. `royal artillery` does not enter **Can mean**, because of the space.
 - Kind `chemistry` with `gold` shows `AU` and hides a non-chemistry row for the same word, if one exists.
 - Letters `12` shows the range message and the unfiltered rows.

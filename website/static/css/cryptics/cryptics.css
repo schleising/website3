@@ -24,10 +24,72 @@
 }
 
 .cryptics-field {
+    position: relative;
     display: flex;
     flex-direction: column;
     gap: 0.35rem;
     min-width: 0;
+}
+
+.cryptics-field:focus-within {
+    z-index: 30;
+}
+
+.cryptics-suggest {
+    position: relative;
+    min-width: 0;
+}
+
+.cryptics-suggestions {
+    position: fixed;
+    z-index: 40;
+    margin: 0;
+    padding: 0.3rem;
+    list-style: none;
+    max-height: 24rem;
+    overflow: auto;
+    border: 0.0625rem solid var(--line);
+    border-radius: 0.55rem;
+    background: var(--surface);
+    box-shadow: var(--shadow);
+}
+
+.cryptics-suggestions[hidden] {
+    display: none;
+}
+
+.cryptics-suggestion {
+    display: flex;
+    align-items: baseline;
+    gap: 0.75rem;
+    min-height: 2.75rem;
+    padding: 0.4rem 0.55rem;
+    border-radius: 0.4rem;
+    cursor: pointer;
+}
+
+.cryptics-suggestion:hover,
+.cryptics-suggestion.is-active {
+    background: var(--surface-strong);
+}
+
+.cryptics-suggestion-label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 600;
+}
+
+.cryptics-suggestion-hint {
+    flex: 0 1 auto;
+    max-width: 55%;
+    margin-left: auto;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--text-soft);
+    font-size: 0.88rem;
 }
 
 .cryptics-label {
