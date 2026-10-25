@@ -27,7 +27,7 @@ idna==3.20
 jinja2==3.1.6
 markdown==3.11.2
 markupsafe==3.0.4
-media-cover-art @ git+https://github.com/schleising/media-cover-art.git@b56f32b8cf2c073f143bb3e6df905265c731583d
+media-cover-art @ git+https://github.com/schleising/media-cover-art.git@3076b982a1674443ce91fc16ecb1e1027ac22c91
 motor==3.7.1
 multidict==7.2.1
 opentelemetry-api==1.45.1
