@@ -6,7 +6,12 @@
 <meta name="description" content="Shuffle cryptic-crossword anagrams and lock letters in place.">
 {% endblock %}
 
+{% block canonical %}{{ canonical_url }}{% endblock %}
+
 {% block scripts %}
+{% if is_web_app %}
+<script defer src="/js/cryptics/pwa.js?v1.0.0"></script>
+{% endif %}
 <script defer src="/js/cryptics/suggest.js?v1.0.2"></script>
 <script defer src="/js/cryptics/anagram.js?v1.0.1"></script>
 {% endblock %}
@@ -16,9 +21,19 @@
 <link rel="icon" type="image/x-icon" href="/icons/cryptics/favicon-48x48.ico?v1.0.0" />
 <link rel="shortcut icon" type="image/svg+xml" href="/icons/cryptics/cryptics-icon-any.svg?v1.0.0" />
 <link rel="apple-touch-icon" href="/icons/cryptics/android-chrome-192x192.png?v1.0.0" />
+{% if is_web_app %}
+<link rel="manifest" href="{{ cryptics_root_path }}manifest.webmanifest?v1.0.0" crossorigin="use-credentials" />
+{% endif %}
 {% endblock %}
 
 {% block head %}
+{% if is_web_app %}
+<meta name="theme-color" content="#2a5b90">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Cryptics">
+{% endif %}
 <link rel="stylesheet" href="/css/right-nav.css?v1.1.0">
 <link rel="stylesheet" href="/css/cryptics/cryptics.css?v1.0.6">
 {% endblock %}

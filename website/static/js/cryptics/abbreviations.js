@@ -11,7 +11,10 @@
   root.CrypticsAbbreviations = api;
 })(typeof globalThis !== "undefined" ? globalThis : this, function () {
   const DATA_URL = "/data/cryptics/abbreviations.json?v1.0.1";
-  const PAGE_PATH = "/cryptics/abbreviations/";
+  function pagePath(form) {
+    const action = form.getAttribute("action") || "/cryptics/abbreviations/";
+    return action.endsWith("/") ? action : action + "/";
+  }
   const DEBOUNCE_MS = 150;
 
   function normaliseText(raw) {
@@ -260,7 +263,8 @@
         params.set("kind", kind);
       }
       const queryString = params.toString();
-      const next = queryString === "" ? PAGE_PATH : PAGE_PATH + "?" + queryString;
+      const path = pagePath(form);
+      const next = queryString === "" ? path : path + "?" + queryString;
       if (window.location.pathname + window.location.search !== next) {
         window.history.replaceState(null, "", next);
       }

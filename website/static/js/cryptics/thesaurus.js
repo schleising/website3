@@ -10,7 +10,10 @@
   }
   root.CrypticsThesaurus = api;
 })(typeof globalThis !== "undefined" ? globalThis : this, function () {
-  const PAGE_PATH = "/cryptics/thesaurus/";
+  function pagePath(form) {
+    const action = form.getAttribute("action") || "/cryptics/thesaurus/";
+    return action.endsWith("/") ? action : action + "/";
+  }
   const DEBOUNCE_MS = 150;
   const IDLE = "Type a definition word. Add a length to match the enumeration.";
   const LENGTH_MESSAGE = "Length should look like 5 or 4,3 or 3-4.";
@@ -252,7 +255,8 @@
         params.set("n", length);
       }
       const queryString = params.toString();
-      const next = queryString === "" ? PAGE_PATH : PAGE_PATH + "?" + queryString;
+      const path = pagePath(form);
+      const next = queryString === "" ? path : path + "?" + queryString;
       if (window.location.pathname + window.location.search !== next) {
         window.history.replaceState(null, "", next);
       }

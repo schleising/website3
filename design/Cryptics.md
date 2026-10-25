@@ -20,7 +20,7 @@ Non-goals for v1:
 
 - A dictionary or “find the word” solver on the anagram board. That helper rearranges letters the solver already has. Synonyms and cryptic abbreviations are separate tools (§11 and §12). They do not search permutations of the board.
 - Saving boards to an account, or syncing them between devices.
-- A standalone host (`cryptics.schleising.net`), a PWA manifest, or the Converter design language.
+- The Converter design language. The installable host is specified in §5.5.
 - Clue parsing (anagram indicators, containers, reversals, charades).
 - Checking the result against a word list.
 
@@ -94,7 +94,7 @@ Signed-in users see the same board as anonymous users. `can_use_tools` is not re
 - Server-side anagram generation, wordlists, or clue markup.
 - Shareable lock URLs. The path `/cryptics/anagrams/` is stable; the board state is not put in the query string.
 - Accounts, CSRF, or rate limits. The page has no form POST.
-- nginx `auth_request`, a new subdomain, or a service worker.
+- nginx `auth_request`. The public host and service worker are specified in §5.5.
 
 ## 5. UX and navigation
 
@@ -104,12 +104,12 @@ Signed-in users see the same board as anonymous users. `can_use_tools` is not re
 |---------|-----------|
 | Left nav | Always-visible **Cryptics** → `/cryptics/`. Place it after **Units**, outside the `{% if request.state.user %}` block in `base.html`. |
 | Home | Public card **Cryptics** → `/cryptics/`, in `website/templates/index.html`, outside the logged-in branch. Short line: “Anagrams, synonyms, and cryptic abbreviations.” Icon: `website/static/images/home/cryptics.svg`, a row of letter tiles, same card size as Units. |
-| Webapps grid | No card. Cryptics is a site section, not a tools-host or public PWA. |
+| Webapps grid | Public card **Cryptics** → `https://cryptics.schleising.net`, icon `website/static/images/webapps/cryptics.svg`. The home card stays on `/cryptics/`. |
 | Right nav | **Anagrams** → `/cryptics/anagrams/`, with `is-current` and `aria-current="page"` on that page. |
 | Header | `{% block header %}` reads **Cryptics**. The tool name sits in the page, as “Length” sits under the Units header. |
 | Auth | None. Anonymous requests render the page. |
 
-`/cryptics/` and `/cryptics` redirect **302** to `/cryptics/anagrams/`. Any other single segment (`/cryptics/patterns/`) is **404** until that tool exists.
+`/cryptics/` and `/cryptics` redirect **302** to `/cryptics/anagrams/`. On the installable host the same redirect is `/anagrams/`. Any other single segment (`/cryptics/patterns/`) is **404** until that tool exists. The manifest and service worker are the exceptions in §5.5.
 
 The right nav order is Anagrams, Thesaurus, Abbreviations. The redirect from `/cryptics/` stays on Anagrams.
 
@@ -199,6 +199,26 @@ Empty letters: hide the board and disable both buttons. Show the hint only. Do n
 ### 5.4 Clear control
 
 Every single-line text field has a clear control on the right, inside the box. It appears when the field has text. Activating it empties the field, leaves focus there, and runs the same update as deleting the text: the anagram board rebuilds, and a thesaurus or abbreviation search runs. The Kind menu has no clear control. `suggest.js` adds the control on each Cryptics page.
+
+### 5.5 Progressive Web App
+
+Same shell as Units: the site chrome stays, and a dedicated host strips the section prefix.
+
+| Piece | Detail |
+|-------|--------|
+| Host | `cryptics.schleising.net`. Public. No nginx auth gate. |
+| Detection | Host match or the `x-is-web-app` header (`1`, `true`, `yes`, or `on`). |
+| Path mode | The web app strips `/cryptics` from public URLs (`/anagrams/`, `/thesaurus/`, `/abbreviations/`). FastAPI stays mounted at `/cryptics`. |
+| Left nav | Hidden (`render_left_sidebar` is false). The right tool nav stays. |
+| Manifest | Served only in web-app mode: `GET /cryptics/manifest.webmanifest` → `website/static/manifests/cryptics/cryptics.webmanifest`. |
+| Service worker | Served only in web-app mode: `GET /cryptics/sw.js` → `website/static/cryptics/sw.js`. Cache name `cryptics-webapp-v1`. The shell is the three pages, their CSS and scripts, and the 192px icon. Thesaurus shards are fetched when a search needs them. |
+| Registration | `website/static/js/cryptics/pwa.js` when `is_web_app`. It reads `data-cryptics-base-path` on `<html>`. |
+| Icons | `website/static/icons/cryptics/`. |
+| Canonical | `https://cryptics.schleising.net/...` on the host, `https://www.schleising.net/cryptics/...` on the main site. |
+
+On `www.schleising.net`, `/cryptics/manifest.webmanifest` and `/cryptics/sw.js` are 404 from nginx and from FastAPI. The pages there do not link a manifest and do not register a service worker.
+
+Nginx, in the config outside this repo, maps `cryptics.schleising.net` to `$is_web_app`, proxies that host to `/cryptics`, and sends `/sw.js` and `/manifest.webmanifest` to FastAPI. It does not attach `website-auth-tools.conf`.
 
 ## 6. Anagram helper
 
@@ -509,7 +529,9 @@ No framework. One script, deferred, same pattern as `website/static/js/units/uni
 | Script | `website/static/js/cryptics/anagram.js` |
 | Styles | `website/static/css/cryptics/cryptics.css`, plus existing `right-nav.css` |
 | Home icon | `website/static/images/home/cryptics.svg` |
-| Section icons | `website/static/icons/cryptics/` — a white letter tile with a C on the site blue. The anagrams page overrides the site favicon with the SVG and ICO, and links the 192px PNG as the Apple touch icon. No web manifest. |
+| Section icons | `website/static/icons/cryptics/` — a white letter tile with a C on the site blue. Each Cryptics page overrides the site favicon with the SVG and ICO, and links the 192px PNG as the Apple touch icon. The web manifest is served only on the host in §5.5. |
+| Web app | `website/static/manifests/cryptics/cryptics.webmanifest`, `website/static/cryptics/sw.js`, `website/static/js/cryptics/pwa.js` |
+| Webapps icon | `website/static/images/webapps/cryptics.svg` |
 | Mount | `app.include_router(cryptics_router)` in `website/index.py`, next to `units_router` |
 | Left nav and home card | `website/templates/base.html`, `website/templates/index.html` |
 
@@ -587,7 +609,7 @@ Shared rules for §11 and §12:
 - Lookup state lives in the query string, so a reload keeps it and a link can be shared. `sessionStorage` is not used.
 - The lists are static files under `website/static/data/cryptics/`. The browser downloads them and filters them. There is no search API.
 
-A public `cryptics.schleising.net` host, mirroring Units, is a separate decision after the section is in use. It would still have no nginx auth gate. It is not required to ship any of these tools.
+The installable host is `cryptics.schleising.net`, specified in §5.5. It has no nginx auth gate. The same three tools are served there with the `/cryptics` prefix removed from public URLs.
 
 ## 11. Thesaurus
 
