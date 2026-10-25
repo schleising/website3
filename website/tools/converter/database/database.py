@@ -1,5 +1,6 @@
-from datetime import datetime, timedelta
+import re
 from bisect import bisect_left
+from datetime import datetime, timedelta
 from statistics import median
 from typing import Any, Mapping
 
@@ -12,7 +13,10 @@ from .models import (
 )
 from ..messages.messages import StatisticsMessage, ConvertedFileData, FileToConvertData
 from media_cover_art import ArtDisplayFields
-from ..cover_art_runtime import resolve_art_for_display_many
+from ..cover_art_runtime import (
+    resolve_art_for_display_many,
+    source_path_matching_cover_art,
+)
 from . import media_collection
 
 
@@ -631,6 +635,36 @@ class DatabaseTools:
             audio_codec=self._get_codec_name(db_file, "audio"),
             video_duration=self._format_video_duration(duration),
         )
+
+    async def find_source_path_for_cover_art(
+        self, cache_key: str, filename: str
+    ) -> str | None:
+        """Return a stored media path for a cover-art refresh.
+
+        The UI only has the basename and cache key. The full path stays in
+        Mongo and is what the cover-art client parses.
+        """
+        if media_collection is None:
+            return None
+
+        wanted_name = filename.strip()
+        wanted_key = cache_key.strip()
+        if wanted_name == "" or wanted_key == "":
+            return None
+
+        pattern = re.compile(rf"(?:^|/){re.escape(wanted_name)}$")
+        cursor = media_collection.find(
+            {"deleted": False, "filename": pattern},
+            projection=["filename"],
+            limit=40,
+        )
+        documents = await cursor.to_list(length=40)
+        paths: list[str] = []
+        for document in documents:
+            path = document.get("filename")
+            if isinstance(path, str) and path != "":
+                paths.append(path)
+        return source_path_matching_cover_art(paths, wanted_key, wanted_name)
 
     async def get_converted_files(self) -> list[ConvertedFileData]:
         if media_collection is None:

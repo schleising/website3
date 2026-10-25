@@ -22,6 +22,7 @@ from media_cover_art import (
     CoverArtClient,
     CoverArtSettings,
     art_url_for_cache_key,
+    cache_key_for_path,
 )
 
 logger = logging.getLogger("converter.cover_art")
@@ -32,6 +33,7 @@ _worker_task: asyncio.Task[None] | None = None
 _purge_task: asyncio.Task[None] | None = None
 _pending_paths: set[str] = set()
 _client_lock = asyncio.Lock()
+_refresh_inflight: dict[str, asyncio.Task[ArtDisplayFields]] = {}
 
 _PURGE_INTERVAL_SECONDS = 6 * 60 * 60
 
@@ -145,10 +147,38 @@ async def resolve_art_for_display_many(
     return fields
 
 
+def source_path_matching_cover_art(
+    paths: list[str], cache_key: str, filename: str
+) -> str | None:
+    """Return the first path whose basename and cover-art key both match."""
+    wanted_name = filename.strip()
+    wanted_key = cache_key.strip()
+    if wanted_name == "" or wanted_key == "":
+        return None
+    for path in paths:
+        if Path(path).name != wanted_name:
+            continue
+        if cache_key_for_path(path) == wanted_key:
+            return path
+    return None
+
+
 async def refresh_art_for_path(source_path: str) -> ArtDisplayFields:
+    """Force a new Arr/TMDB lookup, ignoring the missing-art cache TTL."""
     await _ensure_runtime()
     client = get_cover_art_client()
-    return await asyncio.to_thread(client.refresh, source_path)
+    cache_key = await asyncio.to_thread(cache_key_for_path, source_path)
+    existing = _refresh_inflight.get(cache_key)
+    if existing is not None and not existing.done():
+        return await asyncio.shield(existing)
+
+    task = asyncio.create_task(asyncio.to_thread(client.refresh, source_path))
+    _refresh_inflight[cache_key] = task
+    try:
+        return await task
+    finally:
+        if _refresh_inflight.get(cache_key) is task:
+            _refresh_inflight.pop(cache_key, None)
 
 
 def _enqueue_resolve(source_path: str) -> None:
@@ -234,4 +264,5 @@ __all__ = [
     "resolve_art_for_display",
     "resolve_art_for_display_many",
     "serve_cached_poster",
+    "source_path_matching_cover_art",
 ]

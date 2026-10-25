@@ -38,6 +38,8 @@ const legacySessionStatisticsStorageKey = 'converter.session.statistics';
 // Track which cards are shown in the lower panel.
 var filesViewMode = getStoredFilesViewMode();
 
+var coverArtRefreshTimers = {};
+
 // Cache the latest payload for each lower-card view to avoid flicker on toggle.
 var cachedConvertedFiles = null;
 var cachedFilesToConvert = null;
@@ -690,6 +692,9 @@ function openWebSocket() {
 
                 updateStatisticsValues(statistics);
                 break;
+            case 'cover_art_updated':
+                applyCoverArtUpdate(message.messageBody);
+                break;
             default:
                 console.warn("Unknown message type received: " + message.messageType);
 
@@ -941,12 +946,20 @@ function updateCurrentConversionDetails(progressElement, fileData, completeStrin
 
     const posterElement = document.getElementById("live-poster-value");
     if (posterElement != null) {
-        const nextSrc = fileData.cover_art_url || "/icons/tools/converter/art-placeholder.svg";
-        posterElement.dataset.artStatus = fileData.cover_art_status || "pending";
-        posterElement.dataset.artKey = fileData.cover_art_key || "";
+        const nextKey = fileData.cover_art_key || "";
+        const nextStatus = fileData.cover_art_status || "pending";
+        const nextSrc = fileData.cover_art_url || COVER_ART_PLACEHOLDER;
+        if (nextStatus === "ready") {
+            clearCoverArtRefreshTimer(nextKey);
+        }
+        posterElement.dataset.artStatus = nextStatus;
+        posterElement.dataset.artKey = nextKey;
+        posterElement.dataset.artFilename = fileData.filename || "";
+        posterElement.classList.toggle("is-refreshing", coverArtRefreshIsPending(nextKey));
         if (posterElement.getAttribute("src") !== nextSrc) {
             posterElement.setAttribute("src", nextSrc);
         }
+        syncCoverArtRefreshButton(posterElement);
     }
 
     setValueIfChanged("complete-value", completeString);
@@ -983,23 +996,14 @@ function ensureCurrentConversionLayout(progressElement) {
     const artElement = document.createElement("div");
     artElement.classList.add("live-art");
     layoutElement.appendChild(artElement);
-
-    const posterElement = document.createElement("img");
-    posterElement.id = "live-poster-value";
-    posterElement.classList.add("live-poster");
-    posterElement.alt = "";
-    posterElement.decoding = "async";
-    posterElement.src = "/icons/tools/converter/art-placeholder.svg";
-    posterElement.addEventListener("error", function() {
-        console.warn("[converter-art] live poster error", {
-            key: posterElement.dataset.artKey,
-            status: posterElement.dataset.artStatus,
-            src: posterElement.getAttribute("src")
-        });
-        posterElement.dataset.artStatus = "img_error";
-        posterElement.src = "/icons/tools/converter/art-placeholder.svg";
-    });
-    artElement.appendChild(posterElement);
+    artElement.appendChild(createCoverArtControl({
+        posterClass: "live-poster",
+        id: "live-poster-value",
+        filename: "",
+        coverArtUrl: COVER_ART_PLACEHOLDER,
+        coverArtStatus: "pending",
+        coverArtKey: ""
+    }));
 
     const mainElement = document.createElement("div");
     mainElement.classList.add("live-main");
@@ -1208,6 +1212,146 @@ function activityRenderKeys(viewMode, files) {
     };
 }
 
+function coverArtRefreshIsPending(key) {
+    return Object.prototype.hasOwnProperty.call(coverArtRefreshTimers, key);
+}
+
+function clearCoverArtRefreshTimer(key) {
+    if (!coverArtRefreshIsPending(key)) {
+        return;
+    }
+    window.clearTimeout(coverArtRefreshTimers[key]);
+    delete coverArtRefreshTimers[key];
+}
+
+function setCoverArtRefreshing(key, refreshing) {
+    var posters = document.querySelectorAll(".file-row-poster, .live-poster");
+    for (var i = 0; i < posters.length; i++) {
+        var poster = posters[i];
+        if ((poster.dataset.artKey || "") !== key) {
+            continue;
+        }
+        poster.classList.toggle("is-refreshing", refreshing);
+        syncCoverArtRefreshButton(poster);
+    }
+}
+
+function requestCoverArtRefresh(poster) {
+    var key = String(poster.dataset.artKey || "").trim();
+    var filename = String(poster.dataset.artFilename || "").trim();
+    if (!coverArtIsRefreshable(poster) || coverArtRefreshIsPending(key)) {
+        return;
+    }
+    if (ws == null || ws.readyState !== WebSocket.OPEN) {
+        return;
+    }
+
+    coverArtRefreshTimers[key] = window.setTimeout(function() {
+        clearCoverArtRefreshTimer(key);
+        setCoverArtRefreshing(key, false);
+    }, 45000);
+    setCoverArtRefreshing(key, true);
+
+    try {
+        ws.send(JSON.stringify({
+            messageType: "refresh_cover_art",
+            cover_art_key: key,
+            filename: filename
+        }));
+    } catch (error) {
+        console.warn("[converter-art] refresh send failed", error);
+        clearCoverArtRefreshTimer(key);
+        setCoverArtRefreshing(key, false);
+    }
+}
+
+function patchCachedCoverArt(message, listKey, storageKey, body) {
+    if (message == null || !Array.isArray(message[listKey])) {
+        return;
+    }
+
+    var changed = false;
+    for (var i = 0; i < message[listKey].length; i++) {
+        var file = message[listKey][i];
+        if ((file.cover_art_key || "") !== body.cover_art_key) {
+            continue;
+        }
+        file.cover_art_url = body.cover_art_url || file.cover_art_url;
+        file.cover_art_status = body.cover_art_status || file.cover_art_status;
+        changed = true;
+    }
+
+    if (changed) {
+        writeSessionJson(storageKey, message);
+    }
+}
+
+function applyCoverArtUpdate(body) {
+    if (body == null || typeof body !== "object") {
+        return;
+    }
+
+    var key = String(body.cover_art_key || "").trim();
+    if (key === "") {
+        return;
+    }
+
+    clearCoverArtRefreshTimer(key);
+
+    if (!body.ok) {
+        console.warn("[converter-art] refresh failed", body.error || body);
+        setCoverArtRefreshing(key, false);
+        return;
+    }
+
+    var nextStatus = body.cover_art_status || "pending";
+    var nextSrc = body.cover_art_url || COVER_ART_PLACEHOLDER;
+    var posters = document.querySelectorAll(".file-row-poster, .live-poster, #file-info-dialog-poster");
+    for (var i = 0; i < posters.length; i++) {
+        var poster = posters[i];
+        if ((poster.dataset.artKey || "") !== key) {
+            continue;
+        }
+        poster.dataset.artStatus = nextStatus;
+        poster.classList.remove("is-refreshing");
+        if (poster.getAttribute("src") !== nextSrc) {
+            poster.setAttribute("src", nextSrc);
+        }
+        syncCoverArtRefreshButton(poster);
+    }
+
+    var rows = document.querySelectorAll(".file-row");
+    for (var rowIndex = 0; rowIndex < rows.length; rowIndex++) {
+        if (!rows[rowIndex].dataset.fileInfo) {
+            continue;
+        }
+        try {
+            var stored = JSON.parse(rows[rowIndex].dataset.fileInfo);
+            if ((stored.cover_art_key || "") !== key) {
+                continue;
+            }
+            stored.cover_art_url = body.cover_art_url || stored.cover_art_url;
+            stored.cover_art_status = nextStatus;
+            rows[rowIndex].dataset.fileInfo = JSON.stringify(stored);
+        } catch (error) {
+            // Ignore malformed stored payloads.
+        }
+    }
+
+    patchCachedCoverArt(
+        cachedConvertedFiles,
+        "converted_files",
+        sessionConvertedStorageKey,
+        body
+    );
+    patchCachedCoverArt(
+        cachedFilesToConvert,
+        "files_to_convert",
+        sessionQueueStorageKey,
+        body
+    );
+}
+
 function patchActivityCoverArt(filesContainer, files) {
     if (filesContainer == null) {
         return;
@@ -1218,12 +1362,20 @@ function patchActivityCoverArt(filesContainer, files) {
     for (var i = 0; i < files.length && i < posters.length; i++) {
         var poster = posters[i];
         var file = files[i];
-        var nextSrc = file.cover_art_url || "/icons/tools/converter/art-placeholder.svg";
-        poster.dataset.artStatus = file.cover_art_status || "pending";
-        poster.dataset.artKey = file.cover_art_key || "";
+        var nextKey = file.cover_art_key || "";
+        var nextStatus = file.cover_art_status || "pending";
+        var nextSrc = file.cover_art_url || COVER_ART_PLACEHOLDER;
+        if (nextStatus === "ready") {
+            clearCoverArtRefreshTimer(nextKey);
+        }
+        poster.dataset.artStatus = nextStatus;
+        poster.dataset.artKey = nextKey;
+        poster.dataset.artFilename = file.filename || poster.dataset.artFilename || "";
+        poster.classList.toggle("is-refreshing", coverArtRefreshIsPending(nextKey));
         if (poster.getAttribute("src") !== nextSrc) {
             poster.setAttribute("src", nextSrc);
         }
+        syncCoverArtRefreshButton(poster);
 
         if (i < rows.length && rows[i].dataset.fileInfo) {
             try {

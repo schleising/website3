@@ -1,4 +1,4 @@
-const TOOLS_CACHE_VERSION = "tools-webapp-v16";
+const TOOLS_CACHE_VERSION = "tools-webapp-v17";
 
 // Warm shell assets when this SW is installed on a tools host.
 // Missing URLs on other hosts are harmless no-ops.
@@ -6,9 +6,9 @@ const TOOLS_SHELL_URLS = [
     "/",
     "/css/tools/fonts.css?v2.2.0",
     "/css/tools/converter/reset.css?v4.0.0",
-    "/css/tools/converter/main.css?v5.2.38",
-    "/js/tools/converter/utils.js?v5.1.6",
-    "/js/tools/converter/websocket.js?v5.1.17",
+    "/css/tools/converter/main.css?v5.2.39",
+    "/js/tools/converter/utils.js?v5.1.7",
+    "/js/tools/converter/websocket.js?v5.1.18",
     "/js/tools/converter/page-layout.js?v1.0.0",
     "/js/tools/converter/scope.js?v4.0.0",
     "/js/tools/converter/theme-toggle.js?v2.0.0",

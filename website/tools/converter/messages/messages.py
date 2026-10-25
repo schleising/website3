@@ -7,6 +7,7 @@ class MessageTypes(str, Enum):
     FILES_TO_CONVERT = "files_to_convert"
     CONVERTED_FILES = "converted_files"
     STATISTICS = "statistics"
+    COVER_ART_UPDATED = "cover_art_updated"
 
 class ConvertingFileData(BaseModel):
     filename: str
@@ -72,6 +73,14 @@ class FileToConvertData(BaseModel):
 class FilesToConvertMessage(BaseModel):
     files_to_convert: list[FileToConvertData]
 
+class CoverArtUpdatedData(BaseModel):
+    filename: str = ""
+    cover_art_url: str = ""
+    cover_art_status: str = ""
+    cover_art_key: str = ""
+    ok: bool = True
+    error: str = ""
+
 class StatisticsMessage(BaseModel):
     total_files: int
     total_converted: int
@@ -94,4 +103,11 @@ class StatisticsMessage(BaseModel):
 
 class Message(BaseModel):
     messageType: MessageTypes
-    messageBody: ConvertingFilesMessage | ConvertedFilesMessage | FilesToConvertMessage | StatisticsMessage | None
+    messageBody: (
+        ConvertingFilesMessage
+        | ConvertedFilesMessage
+        | FilesToConvertMessage
+        | StatisticsMessage
+        | CoverArtUpdatedData
+        | None
+    )

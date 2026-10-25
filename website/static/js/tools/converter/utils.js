@@ -120,6 +120,109 @@ function appendToConvertFileCard(element, data) {
     return row;
 }
 
+var COVER_ART_PLACEHOLDER = "/icons/tools/converter/art-placeholder.svg";
+
+var COVER_ART_REFRESH_ICON = [
+    '<svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">',
+    '<path d="M20 12a8 8 0 1 1-2.2-5.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>',
+    '<path d="M20 4.5V9h-4.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>',
+    "</svg>"
+].join("");
+
+function coverArtIsRefreshable(poster) {
+    if (poster == null) {
+        return false;
+    }
+
+    var status = String(poster.dataset.artStatus || "pending");
+    var key = String(poster.dataset.artKey || "").trim();
+    var filename = String(poster.dataset.artFilename || "").trim();
+    return status !== "ready" && key !== "" && filename !== "";
+}
+
+function syncCoverArtRefreshButton(poster) {
+    var button = poster == null ? null : poster.closest(".file-art-refresh");
+    if (!(button instanceof HTMLButtonElement)) {
+        return;
+    }
+
+    var refreshing = poster.classList.contains("is-refreshing");
+    var refreshable = coverArtIsRefreshable(poster);
+    button.disabled = !refreshable || refreshing;
+    button.classList.toggle("is-refreshable", refreshable);
+    button.classList.toggle("is-refreshing", refreshing);
+    button.setAttribute("aria-busy", refreshing ? "true" : "false");
+
+    if (refreshing) {
+        button.title = "Looking up cover art";
+        button.setAttribute("aria-label", "Looking up cover art");
+        return;
+    }
+
+    if (refreshable) {
+        button.title = "Look up cover art";
+        button.setAttribute("aria-label", "Look up cover art");
+        return;
+    }
+
+    button.title = "";
+    button.setAttribute("aria-label", "Cover art");
+}
+
+function createCoverArtControl(options) {
+    var button = document.createElement("button");
+    button.type = "button";
+    button.className = "file-art-refresh";
+
+    var poster = document.createElement("img");
+    poster.classList.add(options.posterClass);
+    poster.alt = "";
+    poster.decoding = "async";
+    if (options.lazy) {
+        poster.loading = "lazy";
+    }
+    if (options.id) {
+        poster.id = options.id;
+    }
+    poster.dataset.artStatus = options.coverArtStatus || "pending";
+    poster.dataset.artKey = options.coverArtKey || "";
+    poster.dataset.artFilename = options.filename || "";
+    poster.src = options.coverArtUrl || COVER_ART_PLACEHOLDER;
+    poster.addEventListener("error", function() {
+        console.warn("[converter-art] poster error", {
+            key: poster.dataset.artKey,
+            status: poster.dataset.artStatus,
+            src: poster.getAttribute("src")
+        });
+        if (poster.dataset.artStatus === "img_error") {
+            return;
+        }
+        poster.dataset.artStatus = "img_error";
+        if (poster.getAttribute("src") !== COVER_ART_PLACEHOLDER) {
+            poster.src = COVER_ART_PLACEHOLDER;
+        }
+        syncCoverArtRefreshButton(poster);
+    });
+    button.appendChild(poster);
+
+    var hint = document.createElement("span");
+    hint.className = "file-art-refresh-hint";
+    hint.setAttribute("aria-hidden", "true");
+    hint.innerHTML = COVER_ART_REFRESH_ICON;
+    button.appendChild(hint);
+
+    button.addEventListener("click", function(event) {
+        event.preventDefault();
+        event.stopPropagation();
+        if (typeof requestCoverArtRefresh === "function") {
+            requestCoverArtRefresh(poster);
+        }
+    });
+
+    syncCoverArtRefreshButton(poster);
+    return button;
+}
+
 function createFileRow(options) {
     var row = document.createElement("article");
     row.classList.add("file-row", "file-row--" + options.kind, "converted-file-card");
@@ -128,24 +231,14 @@ function createFileRow(options) {
     art.classList.add("file-row-art");
     row.appendChild(art);
 
-    var poster = document.createElement("img");
-    poster.classList.add("file-row-poster");
-    poster.alt = "";
-    poster.loading = "lazy";
-    poster.decoding = "async";
-    poster.dataset.artStatus = options.coverArtStatus || "pending";
-    poster.dataset.artKey = options.coverArtKey || "";
-    poster.src = options.coverArtUrl || "/icons/tools/converter/art-placeholder.svg";
-    poster.addEventListener("error", function() {
-        console.warn("[converter-art] poster error", {
-            key: poster.dataset.artKey,
-            status: poster.dataset.artStatus,
-            src: poster.getAttribute("src")
-        });
-        poster.dataset.artStatus = "img_error";
-        poster.src = "/icons/tools/converter/art-placeholder.svg";
-    });
-    art.appendChild(poster);
+    art.appendChild(createCoverArtControl({
+        posterClass: "file-row-poster",
+        lazy: true,
+        filename: options.filename,
+        coverArtUrl: options.coverArtUrl,
+        coverArtStatus: options.coverArtStatus,
+        coverArtKey: options.coverArtKey
+    }));
 
     var main = document.createElement("div");
     main.classList.add("file-row-main");
@@ -342,18 +435,22 @@ function openFileInfoDialog(data) {
     }
 
     var title = data.display_title || data.filename || "Converted file";
-    var posterUrl = data.cover_art_url || "/icons/tools/converter/art-placeholder.svg";
+    var posterUrl = data.cover_art_url || COVER_ART_PLACEHOLDER;
     var ratioNumber = data.percentage_saved == null || data.percentage_saved === ""
         ? null
         : Math.round(Number(data.percentage_saved));
     var savedLabel = ratioNumber == null || Number.isNaN(ratioNumber) ? "--" : ratioNumber + "%";
 
     if (poster != null) {
+        poster.dataset.artKey = data.cover_art_key || "";
+        poster.dataset.artFilename = data.filename || "";
+        poster.dataset.artStatus = data.cover_art_status || "pending";
         poster.src = posterUrl;
         poster.alt = "";
         poster.onerror = function() {
             poster.onerror = null;
-            poster.src = "/icons/tools/converter/art-placeholder.svg";
+            poster.dataset.artStatus = "img_error";
+            poster.src = COVER_ART_PLACEHOLDER;
         };
     }
 

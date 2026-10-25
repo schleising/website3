@@ -1061,6 +1061,89 @@ body::after {
     object-position: center center;
 }
 
+.file-art-refresh {
+    position: absolute;
+    inset: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0.35rem;
+    background: transparent;
+    color: #f4faf6;
+    cursor: default;
+    opacity: 1;
+    appearance: none;
+    -webkit-appearance: none;
+}
+
+.file-art-refresh:disabled {
+    opacity: 1;
+    cursor: default;
+}
+
+.file-art-refresh.is-refreshable:not(:disabled) {
+    cursor: pointer;
+}
+
+.file-art-refresh.is-refreshable:not(:disabled):focus-visible {
+    outline: 0.125rem solid var(--live);
+    outline-offset: -0.125rem;
+}
+
+.file-art-refresh.is-refreshing {
+    cursor: progress;
+}
+
+.file-art-refresh.is-refreshing .file-row-poster,
+.file-art-refresh.is-refreshing .live-poster {
+    opacity: 0.55;
+}
+
+.file-art-refresh-hint {
+    display: none;
+    position: absolute;
+    right: 0.28rem;
+    bottom: 0.28rem;
+    z-index: 1;
+    width: 1.35rem;
+    height: 1.35rem;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    background: rgba(12, 22, 19, 0.72);
+    color: #f4faf6;
+    pointer-events: none;
+    box-shadow: 0 1px 4px rgba(8, 16, 14, 0.28);
+}
+
+.file-art-refresh.is-refreshable .file-art-refresh-hint,
+.file-art-refresh.is-refreshing .file-art-refresh-hint {
+    display: flex;
+}
+
+.file-art-refresh-hint svg {
+    display: block;
+    width: 0.85rem;
+    height: 0.85rem;
+}
+
+.file-art-refresh.is-refreshing .file-art-refresh-hint svg {
+    animation: converter-art-refresh-spin 0.8s linear infinite;
+}
+
+@keyframes converter-art-refresh-spin {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
+
 .file-row-main {
     grid-column: 2;
     grid-row: 1;
@@ -1660,5 +1743,9 @@ body.dark-mode #overview-button[aria-expanded="true"] {
     #subscribe-button:hover,
     .retry-button:hover {
         transform: none;
+    }
+
+    .file-art-refresh.is-refreshing .file-art-refresh-hint svg {
+        animation: none;
     }
 }

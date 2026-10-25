@@ -1,6 +1,9 @@
-from datetime import UTC, datetime, timedelta
-import logging
+import asyncio
 import json
+import logging
+from collections.abc import Awaitable, Callable, Mapping
+from datetime import UTC, datetime, timedelta
+from typing import Any
 from urllib.parse import unquote
 
 from fastapi import APIRouter, Request, Response, WebSocket, WebSocketDisconnect, status
@@ -14,6 +17,7 @@ from .messages.messages import (
     ConvertingFilesMessage,
     ConvertingFileData,
     ConvertedFilesMessage,
+    CoverArtUpdatedData,
     FilesToConvertMessage,
     StatisticsMessage,
     MessageTypes,
@@ -22,6 +26,7 @@ from .messages.messages import (
 from ..utils import calculate_time_remaining
 from .cover_art_runtime import (
     PLACEHOLDER_ART_URL,
+    refresh_art_for_path,
     resolve_art_for_display_many,
     serve_cached_poster,
 )
@@ -78,6 +83,125 @@ async def converter_cover_art(cache_key: str) -> Response:
     )
 
 
+_cover_art_refresh_tasks: set[asyncio.Task[None]] = set()
+
+
+def _remember_cover_art_refresh(task: asyncio.Task[None]) -> None:
+    _cover_art_refresh_tasks.add(task)
+    task.add_done_callback(_cover_art_refresh_tasks.discard)
+
+
+def _as_str_dict(value: object) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        return {}
+    result: dict[str, Any] = {}
+    for key, item in value.items():
+        if isinstance(key, str):
+            result[key] = item
+    return result
+
+
+def _text_field(payload: Mapping[str, Any], key: str) -> str:
+    value = payload.get(key)
+    if not isinstance(value, str):
+        return ""
+    return value.strip()
+
+
+def _cover_art_refresh_target_ok(cache_key: str, filename: str) -> bool:
+    if (
+        cache_key == ""
+        or filename == ""
+        or len(cache_key) > 300
+        or len(filename) > 512
+    ):
+        return False
+    if any(token in cache_key for token in ("..", "/", "\\", "\x00")):
+        return False
+    if any(character.isspace() for character in cache_key):
+        return False
+    if any(token in filename for token in ("/", "\\", "\x00")) or filename in {
+        ".",
+        "..",
+    }:
+        return False
+    return True
+
+
+async def _cover_art_refresh_result(
+    cache_key: str, filename: str
+) -> CoverArtUpdatedData:
+    """Look up the stored path and force a new poster resolve."""
+    art_logger = logging.getLogger("converter.cover_art")
+    if not _cover_art_refresh_target_ok(cache_key, filename):
+        return CoverArtUpdatedData(
+            filename=filename,
+            cover_art_key=cache_key,
+            ok=False,
+            error="Invalid cover art refresh request.",
+        )
+
+    source_path = await database_tools.find_source_path_for_cover_art(
+        cache_key, filename
+    )
+    if source_path is None:
+        art_logger.info(
+            "Cover art refresh missed key=%s file=%s", cache_key, filename
+        )
+        return CoverArtUpdatedData(
+            filename=filename,
+            cover_art_key=cache_key,
+            ok=False,
+            error="Could not find that file.",
+        )
+
+    art_logger.info("Cover art refresh started key=%s file=%s", cache_key, filename)
+    try:
+        fields = await refresh_art_for_path(source_path)
+    except Exception as exc:  # noqa: BLE001
+        art_logger.warning(
+            "Cover art refresh failed key=%s file=%s: %s",
+            cache_key,
+            filename,
+            exc,
+        )
+        return CoverArtUpdatedData(
+            filename=filename,
+            cover_art_key=cache_key,
+            ok=False,
+            error="Cover art lookup failed.",
+        )
+
+    art_logger.info(
+        "Cover art refresh finished key=%s status=%s",
+        fields.cache_key,
+        fields.cover_art_status,
+    )
+    return CoverArtUpdatedData(
+        filename=fields.filename,
+        cover_art_url=fields.cover_art_url,
+        cover_art_status=fields.cover_art_status,
+        cover_art_key=fields.cache_key,
+        ok=True,
+    )
+
+
+async def _run_cover_art_refresh(
+    send_payload: Callable[[Mapping[str, Any]], Awaitable[None]],
+    cache_key: str,
+    filename: str,
+) -> None:
+    body = await _cover_art_refresh_result(cache_key, filename)
+    message = Message(
+        messageType=MessageTypes.COVER_ART_UPDATED,
+        messageBody=body,
+    )
+    try:
+        await send_payload(message.model_dump())
+    except (WebSocketDisconnect, RuntimeError) as exc:
+        logging.info("Cover art refresh result not sent: %s", exc)
+
+
 @converter_router.websocket("/ws/")
 async def converter_websocket(websocket: WebSocket):
     # Accept the websocket connection
@@ -97,6 +221,13 @@ async def converter_websocket(websocket: WebSocket):
 
     # Track which card view this websocket wants.
     files_view = MessageTypes.CONVERTED_FILES
+
+    # Cover-art refresh runs off this loop so Arr/TMDB lookups do not stall pings.
+    send_lock = asyncio.Lock()
+
+    async def send_payload(payload: Mapping[str, Any]) -> None:
+        async with send_lock:
+            await websocket.send_json(dict(payload))
 
     try:
         # Loop forever
@@ -204,10 +335,10 @@ async def converter_websocket(websocket: WebSocket):
                         logging.debug(f"Current conversion status: {message}")
 
                         # Send the conversion status
-                        await websocket.send_json(message.model_dump())
+                        await send_payload(message.model_dump())
                     else:
                         # Send the conversion status as None
-                        await websocket.send_json(
+                        await send_payload(
                             Message(
                                 messageType=MessageTypes.CONVERTING_FILES,
                                 messageBody=None,
@@ -227,7 +358,7 @@ async def converter_websocket(websocket: WebSocket):
                             )
 
                             logging.debug(f"Files to convert: {message}")
-                            await websocket.send_json(message.model_dump())
+                            await send_payload(message.model_dump())
                             last_files_to_convert_message = files_to_convert_message
                     else:
                         # Get the files converted
@@ -250,7 +381,7 @@ async def converter_websocket(websocket: WebSocket):
                             logging.debug(f"Files converted: {message}")
 
                             # Send the files converted
-                            await websocket.send_json(message.model_dump())
+                            await send_payload(message.model_dump())
 
                             # Set the last converted files message
                             last_converted_files_message = files_converted_message
@@ -269,7 +400,7 @@ async def converter_websocket(websocket: WebSocket):
                         logging.debug(f"Statistics: {message}")
 
                         # Send the statistics
-                        await websocket.send_json(message.model_dump())
+                        await send_payload(message.model_dump())
 
                         # Set the last statistics message
                         last_statistics_message = statistics
@@ -280,6 +411,18 @@ async def converter_websocket(websocket: WebSocket):
 
                     # Retry the conversion
                     await database_tools.retry_conversion_errors()
+
+                case "refresh_cover_art":
+                    logging.debug("Cover art refresh received")
+                    payload = _as_str_dict(msg)
+                    refresh_task = asyncio.create_task(
+                        _run_cover_art_refresh(
+                            send_payload,
+                            _text_field(payload, "cover_art_key"),
+                            _text_field(payload, "filename"),
+                        )
+                    )
+                    _remember_cover_art_refresh(refresh_task)
 
                 case "set_files_view":
                     requested_view = msg.get("view", MessageTypes.CONVERTED_FILES)
