@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Cryptics">
+  <defs>
+    <linearGradient id="crypticsBg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#2a5b90"/>
+      <stop offset="100%" stop-color="#4d7bb1"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="108" fill="url(#crypticsBg)"/>
+  <rect x="104" y="104" width="304" height="304" rx="56" fill="#f8fbff"/>
+  <path d="M320.3 179.4 A100 100 0 1 0 320.3 332.6" fill="none" stroke="#1f4570" stroke-width="54" stroke-linecap="round"/>
+</svg>

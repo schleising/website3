@@ -503,6 +503,7 @@ No framework. One script, deferred, same pattern as `website/static/js/units/uni
 | Script | `website/static/js/cryptics/anagram.js` |
 | Styles | `website/static/css/cryptics/cryptics.css`, plus existing `right-nav.css` |
 | Home icon | `website/static/images/home/cryptics.svg` |
+| Section icons | `website/static/icons/cryptics/` — a white letter tile with a C on the site blue. The anagrams page overrides the site favicon with the SVG and ICO, and links the 192px PNG as the Apple touch icon. No web manifest. |
 | Mount | `app.include_router(cryptics_router)` in `website/index.py`, next to `units_router` |
 | Left nav and home card | `website/templates/base.html`, `website/templates/index.html` |
 
