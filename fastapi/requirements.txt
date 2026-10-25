@@ -29,7 +29,7 @@ markdown==3.11.2
 markupsafe==3.0.4
 media-cover-art @ git+https://github.com/schleising/media-cover-art.git@b56f32b8cf2c073f143bb3e6df905265c731583d
 motor==3.7.1
-multidict==7.2.0
+multidict==7.2.1
 opentelemetry-api==1.45.1
 propcache==0.5.4
 pyasn1==0.6.4
@@ -46,7 +46,7 @@ python-multipart==0.0.32
 pyyaml==6.0.3
 rsa==4.9.1
 six==1.17.0
-starlette==1.9.0
+starlette==1.10.0
 tinycss2==1.5.1
 typing-extensions==4.16.0
 typing-inspection==0.4.4
