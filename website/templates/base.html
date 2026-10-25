@@ -90,6 +90,7 @@
             <a class="sub-level-nav{% if current_section == 'aircraft' %} is-current{% endif %}" href="/aircraft/"{% if current_section == 'aircraft' %} aria-current="page"{% endif %}>OpenSky Database</a>
             <a class="sub-level-nav{% if current_section == 'blog' %} is-current{% endif %}" href="/blog/"{% if current_section == 'blog' %} aria-current="page"{% endif %}>Blog</a>
             <a class="sub-level-nav{% if current_section == 'units' %} is-current{% endif %}" href="/units/"{% if current_section == 'units' %} aria-current="page"{% endif %}>Units</a>
+            <a class="sub-level-nav{% if current_section == 'cryptics' %} is-current{% endif %}" href="/cryptics/"{% if current_section == 'cryptics' %} aria-current="page"{% endif %}>Cryptics</a>
             {% if request.state.user != None %}
             <a class="sub-level-nav{% if current_section == 'markdown' %} is-current{% endif %}" href="/markdown/"{% if current_section == 'markdown' %} aria-current="page"{% endif %}>Markdown Editor</a>
             {% if request.state.user.can_use_tools %}

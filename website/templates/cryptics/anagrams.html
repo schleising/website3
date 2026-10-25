@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block title %}<title>Anagrams · Cryptics</title>{% endblock %}
+
+{% block meta_description %}
+<meta name="description" content="Shuffle cryptic-crossword anagrams and lock letters in place.">
+{% endblock %}
+
+{% block scripts %}
+<script defer src="/js/cryptics/anagram.js?v1.0.1"></script>
+{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="/css/right-nav.css?v1.1.0">
+<link rel="stylesheet" href="/css/cryptics/cryptics.css?v1.0.1">
+{% endblock %}
+
+{% block header %}
+<h3 class="header-text">Cryptics</h3>
+{% endblock %}
+
+{% block content %}
+<section class="cryptics-page" aria-label="Anagram helper">
+  <h3 class="cryptics-title">Anagrams</h3>
+  <noscript>
+    <p class="cryptics-note">Shuffling and locking run in this browser.</p>
+  </noscript>
+
+  <div class="cryptics-fields">
+    <label class="cryptics-field" for="cryptics-letters">
+      <span class="cryptics-label">Letters</span>
+      <input
+        id="cryptics-letters"
+        class="cryptics-input"
+        type="text"
+        autocomplete="off"
+        autocapitalize="characters"
+        spellcheck="false"
+        enterkeyhint="done"
+      >
+    </label>
+    <p id="cryptics-letters-error" class="cryptics-error" hidden></p>
+
+    <label class="cryptics-field" for="cryptics-enumeration">
+      <span class="cryptics-label">Enumeration</span>
+      <input
+        id="cryptics-enumeration"
+        class="cryptics-input"
+        type="text"
+        autocomplete="off"
+        autocapitalize="off"
+        spellcheck="false"
+        placeholder="6 or 4,3 or 3-4"
+      >
+    </label>
+    <p id="cryptics-enumeration-error" class="cryptics-error" hidden></p>
+  </div>
+
+  <div id="cryptics-board" class="cryptics-board" role="group" aria-label="Anagram board" hidden></div>
+
+  <div class="cryptics-actions">
+    <button type="button" class="btn btn-primary" id="cryptics-shuffle" disabled>Shuffle</button>
+    <button type="button" class="btn btn-outline-secondary" id="cryptics-clear-locks" disabled>Clear locks</button>
+  </div>
+
+  <p id="cryptics-hint" class="cryptics-hint">Click a letter to lock or unlock it. Drag it onto a position to lock it there. Shuffle moves the others.</p>
+  <p id="cryptics-live" class="cryptics-live" aria-live="polite"></p>
+</section>
+{% endblock %}
+
+{% block sidebar %}
+<a class="sub-level-nav is-current" href="/cryptics/anagrams/" aria-current="page">Anagrams</a>
+{% endblock %}
+
+{% block footer %}
+Cryptics
+{% endblock %}

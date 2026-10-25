@@ -1,6 +1,6 @@
 # Design: Cryptics
 
-Status: Proposed  
+Status: Implemented  
 Date: 2026-10-25  
 Scope: Public crossword tools on the main site. Version 1 is the Anagram helper.
 
@@ -12,7 +12,7 @@ Version 1 ships one tool, the **Anagram helper**:
 
 - Type or paste the fodder letters.
 - Shuffle them into a new order.
-- Drag a letter onto a numbered position to lock it there. Further shuffles move only the unlocked letters.
+- Click or tap a letter to lock or unlock it where it sits. Drag a letter onto a numbered position to lock it there. Further shuffles move only the unlocked letters.
 
 Later tools (pattern search, hidden words, and so on) should be able to appear as further right-nav entries without a new section.
 
@@ -135,8 +135,9 @@ Desktop, with the existing left and right sidebars:
 │              │                                   │               │
 │              │ [ Shuffle ]   [ Clear locks ]     │               │
 │              │                                   │               │
-│              │ Drag a letter onto a position     │               │
-│              │ to lock it. Shuffle moves the     │               │
+│              │ Click a letter to lock or unlock │               │
+│              │ it. Drag it onto a position to    │               │
+│              │ lock it there. Shuffle moves the  │               │
 │              │ others.                           │               │
 └──────────────┴───────────────────────────────────┴───────────────┘
 ```
@@ -170,12 +171,14 @@ Mobile uses the existing header buttons that open the left and right sidebars. T
 │ │ Clear locks              │ │
 │ └──────────────────────────┘ │
 │                              │
-│ Hold a letter, then drag it  │
-│ onto a position to lock it.  │
+│ Tap a letter to lock or     │
+│ unlock it. Hold, then drag  │
+│ it onto a position to lock  │
+│ it there.                   │
 └──────────────────────────────┘
 ```
 
-The hint sentence depends on the pointer. Fine pointers (mouse, trackpad) see the drag sentence. Coarse pointers see the hold-and-drag sentence. If both exist, show the drag sentence and rely on long-press still working.
+The hint depends on the pointer. Fine pointers (mouse, trackpad) see the click-to-toggle sentence. Coarse pointers see the tap-to-toggle sentence. If both exist, show the click sentence and rely on long-press still working.
 
 ### 5.3 Page regions
 
@@ -260,7 +263,7 @@ Mismatch: letters CATER (5), enumeration 4,3
 
 Group labels (`4`, `3`) sit under each group in muted text. The per-slot numbers stay, because locks are described by those numbers.
 
-Wrapping: slots wrap to the next line rather than shrinking below 44px. A group stays on one line when it fits. A gap is about `0.75rem`; a hyphen gap is a hyphen glyph centred in a slot-sized column so the row still aligns. On a narrow screen a long single word may wrap mid-word.
+Wrapping: slots wrap to the next line rather than shrinking below 44px. A group stays on one line when it fits. A comma gap is about `1.75rem`, wider than the space between letters in a word. A hyphen gap is a hyphen glyph centred in a slot-sized column so the row still aligns. On a narrow screen a long single word may wrap mid-word.
 
 ### 6.3 Board model
 
@@ -372,8 +375,7 @@ Side effects on those transitions:
 
 | Transition | Effect |
 |------------|--------|
-| Pending → Resting, pointer barely moved, tile is locked | Unlock that tile. A tap is the unlock gesture. |
-| Pending → Resting, pointer barely moved, tile is unlocked | No change. A tap does not lock. |
+| Pending → Resting, pointer barely moved | Toggle that tile. A click or tap locks it in its current position, or unlocks it if it is already locked. |
 | Pending → Resting, touch moved more than 10px before 400ms | Cancel. The browser may scroll. |
 | Held → Resting, finger released on the same tile | Lock that tile in its current slot. |
 | Dragging → Resting, released over a slot | Place that tile in the slot and lock it. See the swap rule below. |
@@ -420,11 +422,7 @@ While a drag is active:
 
 Mouse and pen skip the 400ms wait. Touch always waits, including on a device that also has a mouse. `pointerType` decides.
 
-Unlock without dragging:
-
-- Click or tap a locked tile (the Pending → Resting path).
-- **Clear locks**.
-- Keyboard: Backspace or Delete on the focused tile.
+Click or tap without dragging toggles the lock on that tile. **Clear locks** unlocks every tile. Keyboard: Backspace or Delete on the focused tile unlocks it.
 
 Dragging a locked tile to a new slot moves the lock with it. The old slot is not left locked, because the lock belongs to the tile.
 
@@ -539,7 +537,7 @@ Board, on a desktop-width window and a phone-width window:
 - Shuffle with every letter locked, or with a single letter, leaves the board as it is.
 - Drag `S` onto position 1. It locks, and the letter that was in position 1 occupies the old slot, unlocked. A second shuffle does not move `S`.
 - Dropping back onto the same slot locks the letter in place.
-- Click a locked letter and it unlocks. **Clear locks** unlocks all of them and does not reorder.
+- Click or tap a letter to lock it, and click or tap it again to unlock it. **Clear locks** unlocks all of them and does not reorder.
 - Reload the tab. Letters, enumeration, order, and locks return. A new tab starts empty.
 - With `prefers-reduced-motion: reduce`, a shuffle updates in place.
 
