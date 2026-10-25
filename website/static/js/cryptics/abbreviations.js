@@ -10,7 +10,7 @@
   }
   root.CrypticsAbbreviations = api;
 })(typeof globalThis !== "undefined" ? globalThis : this, function () {
-  const DATA_URL = "/data/cryptics/abbreviations.json";
+  const DATA_URL = "/data/cryptics/abbreviations.json?v1.0.1";
   const PAGE_PATH = "/cryptics/abbreviations/";
   const DEBOUNCE_MS = 150;
 

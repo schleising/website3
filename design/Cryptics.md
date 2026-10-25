@@ -903,7 +903,7 @@ The same pair of `abbr` and `means` appears once, compared with the meaning case
 
 `scripts/check_cryptics_abbreviations.py` loads the file and exits non-zero on a broken rule. The router does not import it. Pyright stays clean on the script.
 
-Inclusion: a row earns its place when solvers of UK cryptic puzzles (Times, Guardian, and the same tradition) are expected to recognise it. The expected catalogue is a few hundred rows. Categories:
+Inclusion: a row earns its place when solvers of UK cryptic puzzles (Times, Guardian, and the same tradition) are expected to recognise it. The committed file is the catalogue, and it runs to several hundred rows. Categories:
 
 | Category | What belongs there | Examples of the shape |
 |----------|--------------------|------------------------|
