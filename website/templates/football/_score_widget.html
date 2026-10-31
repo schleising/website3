@@ -32,7 +32,7 @@
 {% set season_key = selected_season_key|default(current_season_key)|default('') %}
 {% set home_score = none if live_matches else match.score.full_time.home %}
 {% set away_score = none if live_matches else match.score.full_time.away %}
-<div class="score-widget site-card" id="{{ match.id }}" data-match-time="{{ match.utc_date|kickoff_utc_iso }}">
+<div class="score-widget site-card" id="{{ match.id }}" data-match-time="{{ match.utc_date|kickoff_utc_iso }}" data-match-finished="{{ 'true' if match.status.has_finished else 'false' }}">
   <div class="date-and-time">
     {% if live_matches %}
     <time class="match-start" datetime="{{ match.utc_date|kickoff_utc_iso }}" data-kickoff-format="time"></time>

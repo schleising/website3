@@ -22,7 +22,7 @@ function initializeTodayScrollAnchor() {
 
     requestAnimationFrame(() => {
         requestAnimationFrame(() => {
-            const targetScrollTop = getTodayCenteredScrollTop(todayCard, contentContainer);
+            const targetScrollTop = getTodayScrollTop(todayCard, contentContainer);
 
             if (contentContainer) {
                 contentContainer.scrollTo({
@@ -55,7 +55,7 @@ function initializeTodayScrollAnchor() {
 
                 returnButton.addEventListener("click", () => {
                     returnButton.classList.remove("is-visible");
-                    const recenterScrollTop = getTodayCenteredScrollTop(todayCard, contentContainer);
+                    const recenterScrollTop = getTodayScrollTop(todayCard, contentContainer);
                     scrollContainerTo(contentContainer, recenterScrollTop, "smooth");
                 });
 
@@ -75,6 +75,120 @@ function initializeTodayScrollAnchor() {
             });
         });
     });
+}
+
+const EARLIEST_MATCH_CLIP_TOLERANCE_PX = 12;
+
+/**
+ * Scroll offset for Today's matches.
+ * Centre the day unless that would hide the earliest matches above the viewport.
+ * In that case, pin the first unfinished match under the day heading.
+ * Finished matches may sit above the fold.
+ *
+ * @param {HTMLElement} todayCard
+ * @param {HTMLElement | null} contentContainer
+ * @returns {number}
+ */
+function getTodayScrollTop(todayCard, contentContainer) {
+    const centeredScrollTop = getTodayCenteredScrollTop(todayCard, contentContainer);
+    const earliestMatch = todayCard.querySelector(".score-widget");
+    if (!(earliestMatch instanceof HTMLElement)) {
+        return centeredScrollTop;
+    }
+
+    if (!isElementAboveScrollport(
+        earliestMatch,
+        contentContainer,
+        centeredScrollTop,
+        EARLIEST_MATCH_CLIP_TOLERANCE_PX,
+    )) {
+        return centeredScrollTop;
+    }
+
+    const unfinishedMatch = findFirstUnfinishedMatch(todayCard);
+    if (!(unfinishedMatch instanceof HTMLElement)) {
+        return centeredScrollTop;
+    }
+
+    const heading = todayCard.querySelector(".football-day-heading");
+    const headingHeight = heading instanceof HTMLElement
+        ? heading.getBoundingClientRect().height
+        : 0;
+    return getElementAlignedScrollTop(unfinishedMatch, contentContainer, headingHeight);
+}
+
+/**
+ * First match in Today that has not finished, in page order.
+ *
+ * @param {HTMLElement} todayCard
+ * @returns {HTMLElement | null}
+ */
+function findFirstUnfinishedMatch(todayCard) {
+    for (const match of todayCard.querySelectorAll(".score-widget")) {
+        if (!(match instanceof HTMLElement)) {
+            continue;
+        }
+        if (match.dataset.matchFinished !== "true") {
+            return match;
+        }
+    }
+    return null;
+}
+
+/**
+ * @param {HTMLElement} element
+ * @param {HTMLElement | null} contentContainer
+ * @param {number} scrollTop
+ * @param {number} tolerancePx
+ * @returns {boolean}
+ */
+function isElementAboveScrollport(element, contentContainer, scrollTop, tolerancePx) {
+    const scrollportTop = contentContainer
+        ? contentContainer.getBoundingClientRect().top
+        : 0;
+    const elementTop = elementTopAtScroll(element, contentContainer, scrollTop);
+    return elementTop < scrollportTop - tolerancePx;
+}
+
+/**
+ * @param {HTMLElement} element
+ * @param {HTMLElement | null} contentContainer
+ * @param {number} scrollTop
+ * @returns {number}
+ */
+function elementTopAtScroll(element, contentContainer, scrollTop) {
+    const currentScroll = getCurrentScrollTop(contentContainer);
+    return element.getBoundingClientRect().top - (scrollTop - currentScroll);
+}
+
+/**
+ * Scroll offset that places an element `insetTop` pixels below the scrollport top.
+ *
+ * @param {HTMLElement} element
+ * @param {HTMLElement | null} contentContainer
+ * @param {number} insetTop
+ * @returns {number}
+ */
+function getElementAlignedScrollTop(element, contentContainer, insetTop) {
+    if (contentContainer) {
+        const containerRect = contentContainer.getBoundingClientRect();
+        const elementRect = element.getBoundingClientRect();
+        const nextScrollTop = contentContainer.scrollTop
+            + (elementRect.top - containerRect.top)
+            - insetTop;
+        const maxScrollTop = Math.max(
+            contentContainer.scrollHeight - contentContainer.clientHeight,
+            0,
+        );
+        return Math.min(Math.max(nextScrollTop, 0), maxScrollTop);
+    }
+
+    const nextScrollTop = element.getBoundingClientRect().top + window.scrollY - insetTop;
+    const maxScrollTop = Math.max(
+        document.documentElement.scrollHeight - window.innerHeight,
+        0,
+    );
+    return Math.min(Math.max(nextScrollTop, 0), maxScrollTop);
 }
 
 /**
