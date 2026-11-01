@@ -1,4 +1,4 @@
-const serviceWorkerPath = '/sw.js?v=tools-webapp-v35';
+const serviceWorkerPath = '/sw.js?v=tools-webapp-v36';
 const chartSettingsStorageKey = 'monitor.chartSettings';
 
 // The chart data to be fetched from the server
@@ -1259,58 +1259,60 @@ function drawHeatingBarPairs(svg, model, yAt, slotLeft, slotWidth, bindPointer, 
         if (slot.durationMs != null) {
             const value = heatingSlotValue(slot.durationMs, model.range.unit);
             const y = yAt(value);
-            if (value > 0) {
+            const barHeight = Math.max(0, baseline - y);
+            if (value > 0 && barHeight > 0) {
                 svg.append(heatingSvg("rect", {
                     class: "heating-bar-current heating-mark",
                     "data-mark": `c-${slot.index}`,
                     x: left,
                     y,
                     width: barWidth,
-                    height: Math.max(0, baseline - y),
+                    height: barHeight,
                     rx: 1.5,
                 }));
+                const hit = heatingSvg("rect", {
+                    class: "heating-time-hit",
+                    x: left,
+                    y,
+                    width: barWidth,
+                    height: barHeight,
+                    tabindex: "0",
+                    role: "img",
+                    "aria-label": pointerText(slot, slot.durationMs, "current"),
+                });
+                bindPointer(hit, pointerText(slot, slot.durationMs, "current"), `c-${slot.index}`);
+                svg.append(hit);
             }
-            const hit = heatingSvg("rect", {
-                class: "heating-time-hit",
-                x: slotLeft(slot.index),
-                y: 16,
-                width: model.showPrevious ? slotWidth / 2 : slotWidth,
-                height: baseline - 16,
-                tabindex: "0",
-                role: "img",
-                "aria-label": pointerText(slot, slot.durationMs, "current"),
-            });
-            bindPointer(hit, pointerText(slot, slot.durationMs, "current"), `c-${slot.index}`);
-            svg.append(hit);
         }
         const previous = model.previousSlots == null ? null : model.previousSlots[slot.index];
         if (model.showPrevious && previous != null && previous.durationMs != null) {
             const value = heatingSlotValue(previous.durationMs, model.range.unit);
             const y = yAt(value);
             const x = left + barWidth + gap;
-            if (value > 0) {
+            const barHeight = Math.max(0, baseline - y);
+            if (value > 0 && barHeight > 0) {
                 svg.append(heatingSvg("rect", {
                     class: "heating-bar-previous heating-mark",
                     "data-mark": `p-${slot.index}`,
                     x,
                     y,
                     width: barWidth,
-                    height: Math.max(0, baseline - y),
+                    height: barHeight,
                     rx: 1.5,
                 }));
+                const hit = heatingSvg("rect", {
+                    class: "heating-time-hit",
+                    x,
+                    y,
+                    width: barWidth,
+                    height: barHeight,
+                    tabindex: "0",
+                    role: "img",
+                    "aria-label": pointerText(previous, previous.durationMs, "previous"),
+                });
+                bindPointer(hit, pointerText(previous, previous.durationMs, "previous"), `p-${slot.index}`);
+                svg.append(hit);
             }
-            const hit = heatingSvg("rect", {
-                class: "heating-time-hit",
-                x: slotLeft(slot.index) + slotWidth / 2,
-                y: 16,
-                width: slotWidth / 2,
-                height: baseline - 16,
-                tabindex: "0",
-                role: "img",
-                "aria-label": pointerText(previous, previous.durationMs, "previous"),
-            });
-            bindPointer(hit, pointerText(previous, previous.durationMs, "previous"), `p-${slot.index}`);
-            svg.append(hit);
         }
     }
 }
