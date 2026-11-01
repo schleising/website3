@@ -1,4 +1,4 @@
-const serviceWorkerPath = '/sw.js?v=tools-webapp-v20';
+const serviceWorkerPath = '/sw.js?v=tools-webapp-v21';
 const chartSettingsStorageKey = 'monitor.chartSettings';
 
 // The chart data to be fetched from the server
@@ -642,7 +642,6 @@ const heatingTime = {
     rangeId: heatingTimeRanges[0].id,
     viewId: heatingTimeViews[0].id,
     cursor: new Date(),
-    previous: false,
     /** @type {string | null} */
     rangeBeforeLock: null,
 };
@@ -650,6 +649,7 @@ const heatingTime = {
 /** @type {{device_name: string, changes: Array<{timestamp: string, hvac_status: string}>} | null} */
 let heatingTimeSeries = null;
 let heatingTimeLoadedSince = "";
+let heatingTimePaintedKey = "";
 let heatingTimeFetchId = 0;
 
 /**
@@ -759,7 +759,7 @@ function heatingTimeQueryStart() {
     const range = heatingTimeRangeById(heatingTime.rangeId);
     const view = heatingTimeViewById(heatingTime.viewId);
     let cursor = heatingTime.cursor;
-    if (view.previous && heatingTime.previous) {
+    if (view.previous) {
         cursor = range.step(cursor, -1);
     }
     return range.window(cursor).start;
@@ -817,7 +817,7 @@ function buildHeatingTimeModel() {
     const bounds = range.window(heatingTime.cursor);
     const changes = heatingTimeSeries == null ? [] : heatingTimeSeries.changes;
     const slots = measureHeatingSlots(range.slots(bounds), changes, now);
-    const showPrevious = view.previous && heatingTime.previous;
+    const showPrevious = view.previous;
     /** @type {Array<HeatingMeasuredSlot | null> | null} */
     let previousSlots = null;
     if (showPrevious) {
@@ -1304,6 +1304,8 @@ function appendHeatingLegend(host, model) {
  */
 function drawHeatingHeatmap(host, model) {
     host.replaceChildren();
+    const root = document.createElement("div");
+    root.className = "heating-heat";
     const weekdays = document.createElement("div");
     weekdays.className = "heating-heat-weekdays";
     for (const label of HEATING_WEEKDAY_LABELS) {
@@ -1316,6 +1318,8 @@ function drawHeatingHeatmap(host, model) {
     grid.className = "heating-heat-grid";
     const firstDay = model.bounds.start.getDay();
     const lead = firstDay === 0 ? 6 : firstDay - 1;
+    const rowCount = Math.ceil((lead + model.slots.length) / HEATING_WEEKDAY_LABELS.length);
+    grid.style.setProperty("--heat-rows", String(rowCount));
     for (let index = 0; index < lead; index += 1) {
         const pad = document.createElement("span");
         pad.className = "heating-heat-pad";
@@ -1362,7 +1366,8 @@ function drawHeatingHeatmap(host, model) {
     const legendHours = maxHours <= 0 ? 0 : Math.max(1, Math.round(maxHours));
     legend.append(heatingHeatLegendSwatch(0), heatingHeatLegendSwatch(legendHours));
 
-    host.append(weekdays, grid, legend, pointer);
+    root.append(weekdays, grid, legend, pointer);
+    host.append(root);
 }
 
 /**
@@ -1414,15 +1419,6 @@ function syncHeatingTimeChrome() {
         item.setAttribute("aria-checked", item.dataset.viewId === view.id ? "true" : "false");
     });
 
-    const previous = document.getElementById("heating-time-previous");
-    const previousInput = document.getElementById("heating-time-previous-input");
-    if (previous != null) {
-        previous.hidden = !view.previous;
-    }
-    if (previousInput instanceof HTMLInputElement) {
-        previousInput.checked = heatingTime.previous;
-    }
-
     const label = document.getElementById("heating-time-label");
     if (label != null) {
         label.textContent = range.pagerLabel(bounds);
@@ -1453,7 +1449,28 @@ function heatingViewChevron() {
     return chevron;
 }
 
-function paintHeatingTime() {
+/**
+ * @param {HeatingTimeModel} model
+ * @returns {string}
+ */
+function heatingTimePaintKey(model) {
+    const slotKey = model.slots.map(slot => slot.durationMs ?? "x").join(",");
+    const previousKey = model.previousSlots == null
+        ? ""
+        : model.previousSlots.map(slot => (slot == null ? "-" : (slot.durationMs ?? "x"))).join(",");
+    return [
+        model.view.id,
+        model.range.id,
+        model.bounds.start.getTime(),
+        slotKey,
+        previousKey,
+    ].join("|");
+}
+
+/**
+ * @param {{force?: boolean}} [options]
+ */
+function paintHeatingTime(options) {
     const dialog = document.getElementById("heating-stats-dialog");
     const host = document.getElementById("heating-time-host");
     const empty = document.getElementById("heating-stats-empty");
@@ -1475,6 +1492,11 @@ function paintHeatingTime() {
         dialog.setAttribute("aria-labelledby", "heating-stats-title");
         dialog.removeAttribute("aria-label");
         const model = buildHeatingTimeModel();
+        const paintKey = heatingTimePaintKey(model);
+        if (!options?.force && paintKey === heatingTimePaintedKey && host.childElementCount > 0) {
+            return;
+        }
+        heatingTimePaintedKey = paintKey;
         model.view.draw(host, model);
         return;
     }
@@ -1483,7 +1505,10 @@ function paintHeatingTime() {
     title.textContent = "";
     dialog.removeAttribute("aria-labelledby");
     dialog.setAttribute("aria-label", "Heating");
-    host.replaceChildren();
+    if (host.childElementCount > 0) {
+        heatingTimePaintedKey = "";
+        host.replaceChildren();
+    }
 }
 
 /**
@@ -1501,16 +1526,6 @@ function refreshHeatingTime(options) {
     if (!reload) {
         paintHeatingTime();
         return;
-    }
-    if (sinceKey !== heatingTimeLoadedSince) {
-        const host = document.getElementById("heating-time-host");
-        const empty = document.getElementById("heating-stats-empty");
-        if (host != null) {
-            host.replaceChildren();
-        }
-        if (empty != null) {
-            empty.hidden = true;
-        }
     }
     void fetchHeatingSpan(since, sinceKey);
 }
@@ -1592,10 +1607,10 @@ function resetHeatingTime() {
     heatingTime.rangeId = heatingTimeRanges[0].id;
     heatingTime.viewId = heatingTimeViews[0].id;
     heatingTime.cursor = new Date();
-    heatingTime.previous = false;
     heatingTime.rangeBeforeLock = null;
     heatingTimeSeries = null;
     heatingTimeLoadedSince = "";
+    heatingTimePaintedKey = "";
     heatingTimeFetchId += 1;
 }
 
@@ -1606,7 +1621,6 @@ function initializeHeatingStats() {
     const rangeGroup = document.getElementById("heating-time-ranges");
     const viewButton = document.getElementById("heating-time-view");
     const menu = document.getElementById("heating-time-view-menu");
-    const previousInput = document.getElementById("heating-time-previous-input");
     const back = document.getElementById("heating-time-back");
     const forward = document.getElementById("heating-time-forward");
     if (
@@ -1616,7 +1630,6 @@ function initializeHeatingStats() {
         || rangeGroup == null
         || !(viewButton instanceof HTMLButtonElement)
         || menu == null
-        || !(previousInput instanceof HTMLInputElement)
         || !(back instanceof HTMLButtonElement)
         || !(forward instanceof HTMLButtonElement)
     ) {
@@ -1712,10 +1725,6 @@ function initializeHeatingStats() {
         }
     });
 
-    previousInput.addEventListener("change", () => {
-        heatingTime.previous = previousInput.checked;
-        refreshHeatingTime();
-    });
     back.addEventListener("click", () => {
         const range = heatingTimeRangeById(heatingTime.rangeId);
         heatingTime.cursor = range.step(heatingTime.cursor, -1);
@@ -1770,7 +1779,7 @@ function initializeHeatingStats() {
     });
     window.addEventListener("resize", () => {
         if (dialog.open) {
-            paintHeatingTime();
+            paintHeatingTime({ force: true });
         }
     });
 

@@ -10,7 +10,7 @@ Scope: One house-level dialog of heating time, opened by the existing Stats butt
 - **§6** is how a later view or range is added. It is a new entry in a list, not a new dialog.
 - The hours in the pictures are illustrative, not a house reading.
 - Mockups are concept art, not pixel-spec. Type, spacing, and colours will be rebuilt from Monitor tokens. Grey marks behind a card, where a picture has them, are the room temperature chart and are not part of this dialog.
-- Every picture uses the same row: the range control, the view menu (`Bars ▾`, `Total ▾`, or `Heatmap ▾`), and Previous when that view allows it.
+- Every picture uses the same row: the range control, then the view menu (`Bars ▾`, `Total ▾`, or `Heatmap ▾`) aligned to the right. The previous period is always drawn on Bars and Total. There is no Previous checkbox.
 - The earlier paired heating-and-cooling chart is withdrawn. This house has no cooling. `COOLING` only ends a heating run.
 - The thirteen-week chart is withdrawn. There is no year of months. Month is the days of one month.
 - The Stats run list in `design/Monitor-Heating-Stats.md` is withdrawn. The Stats button opens this dialog.
@@ -53,22 +53,22 @@ The existing **Stats** button in `.topbar-actions` opens `#heating-stats-dialog`
 HEATING                                         ( Close )
 Living Room Nest
 
-[ Day | Week | Month ]          Total ▾   ☐ Previous
+[ Day | Week | Month ]                         Total ▾
 
 <the active view>
 
         ‹   26 Oct – 1 Nov   ›
 ```
 
-One row. The range is the segmented control, drawn from the range list (§6). The selected segment uses the live teal. The view is a menu button on that same row, labelled with the active view and a chevron (`Bars ▾`, `Total ▾`, `Heatmap ▾`). Previous sits at the end of the row when the active view allows it. The pager sits under the chart and steps the active range by one window.
+One row. The range is the segmented control, drawn from the range list (§6). The selected segment uses the live teal. The view is a menu button at the right of that same row, labelled with the active view and a chevron (`Bars ▾`, `Total ▾`, `Heatmap ▾`). The pager sits under the chart and steps the active range by one window. The heatmap fits in the dialog; the dialog does not scroll.
 
 Opening the menu shows the view list: Bars, Total, Heatmap, with the active one marked. Choosing an item closes the menu and redraws. Clicking outside the menu, or Escape while it is open, closes the menu and leaves the dialog open. A second Escape closes the dialog. The menu button has `aria-haspopup="menu"` and `aria-expanded`. Arrow keys move in the list and Enter chooses.
 
-Opening the dialog sets the cursor to today, selects **Bars** and **Day**, and leaves Previous off. Closing returns focus to the Stats button. Escape and the backdrop close the dialog, same as today. `aria-haspopup="dialog"` and `aria-expanded` stay on the Stats button.
+Opening the dialog sets the cursor to today and selects **Bars** and **Day**. Closing returns focus to the Stats button. Escape and the backdrop close the dialog, same as today. `aria-haspopup="dialog"` and `aria-expanded` stay on the Stats button.
 
-Switching range keeps the cursor and the view. Switching view keeps the cursor and Previous. Heatmap only supports Month: choosing it selects Month and disables Day and Week. Those segments stay in the row so the control does not change length. Leaving Heatmap restores the range that was selected before it, when the new view supports that range.
+Switching range keeps the cursor and the view. Switching view keeps the cursor. Heatmap only supports Month: choosing it selects Month and disables Day and Week. Those segments stay in the row so the control does not change length. Leaving Heatmap restores the range that was selected before it, when the new view supports that range. A view that compares periods always draws the previous window. Changing range, view, or page keeps the current drawing until the next one is ready.
 
-On a narrow phone the row wraps under the range control, menu button then Previous. A later view is another item in the menu. It does not widen the row, become a native `<select>`, or open another dialog.
+On a narrow phone the view menu wraps under the range control, still aligned to the right. A later view is another item in the menu. It does not widen the row, become a native `<select>`, or open another dialog.
 
 The chart toolbar is unchanged. Daily, Weekly, Previous period, and Smoothed still resize only the room temperature charts and the wash.
 
@@ -98,7 +98,7 @@ The picture only drew the day numbers it labelled. The build draws every day num
 
 ![Running total through the week, this week and last week](monitor-heating/heating-time-total.jpg)
 
-The same slots as Bars for the active range. Each point is the heating time accumulated from the start of the window through that slot. The line is heating red. Previous, when on, is a second line in the room-chart amber. There is no fill under either line. The shaded area in an earlier picture is not part of this view.
+The same slots as Bars for the active range. Each point is the heating time accumulated from the start of the window through that slot. The line is heating red. The previous window is a second line in the room-chart amber. There is no fill under either line. The shaded area in an earlier picture is not part of this view.
 
 Day accumulates **minutes** and the axis can pass 60. Week and Month accumulate **hours**. The legend words match Bars for that range. A slot that has not started is not a point. The current line stops at now.
 
@@ -108,7 +108,7 @@ Day accumulates **minutes** and the axis can pass 60. Week and Month accumulate 
 
 One cell per day of the month on screen. Monday is the first column. The tint runs from the paper colour at 0 hours to solid heating red at the busiest day in that month. A day that has not started is an empty cell, outside the scale, not a white zero. The picture’s later dates are those empty cells. A finished day with no heating is the lightest tint.
 
-Previous is not offered. The checkbox is omitted. Day and Week are disabled and Month is selected. The pager still steps a month. The legend is `0 h` to the month’s busiest day, labelled in whole hours.
+The heatmap does not draw a previous month. Day and Week are disabled and Month is selected. The calendar fits in the dialog without scrolling. The pager still steps a month. The legend is `0 h` to the month’s busiest day, labelled in whole hours.
 
 ---
 
@@ -126,9 +126,9 @@ These apply to every view that uses them. A view opts out by the flags in §6. H
 
 Weeks start on Monday. Days, weeks, and months are the browser’s local calendar. The cursor is a local date. Opening sets it to today.
 
-Previous is the window of the same shape immediately before, aligned by slot: clock hour, weekday, or day number. It defaults off. Turning it off removes the amber series and leaves the red slots where they are. Slots do not jump.
+The previous window is the same shape immediately before, aligned by slot: clock hour, weekday, or day number. Bars and Total always draw it. The current bar or point stays on the left.
 
-The forward chevron is disabled when the window contains today. The back chevron is always enabled. Paging moves one whole window and keeps the view, the range, and Previous.
+The forward chevron is disabled when the window contains today. The back chevron is always enabled. Paging moves one whole window and keeps the view and the range.
 
 ### Zero, future, and a period still in progress
 
@@ -138,7 +138,7 @@ The forward chevron is disabled when the window contains today. The back chevron
 | Not started yet | Nothing. Not a zero. On the heatmap this is an empty cell. |
 | In progress (today, this week, this month) | The real time so far. Not scaled up to a full period. |
 
-On Day, an hour after now has no red bar. Yesterday’s later hours still draw when Previous is on. On Week, today is the height so far and the weekdays after today have no red bar. On Month, the same for day numbers after today. On Total, the line has no point for a slot that has not started.
+On Day, an hour after now has no red bar. Yesterday’s later hours still draw. On Week, today is the height so far and the weekdays after today have no red bar. On Month, the same for day numbers after today. On Total, the line has no point for a slot that has not started.
 
 When the window contains today, Bars and Total add one line under the chart: “Today is still in progress”, “This week is still in progress”, or “This month is still in progress”. A finished window has no such line. Heatmap uses the empty cells instead of that sentence.
 
@@ -168,7 +168,7 @@ A heating run is the clipped `HEATING` interval from `design/heating-webapp-inte
 
 The room chart’s payload is the rolling 14 days. This dialog does not widen that payload. A month plus the previous month is longer than 14 days, and paging back goes further. The dialog asks for the span it is showing.
 
-That span is the current window, plus the previous window when Previous is on, plus the one `heating_changes` row before the earlier start for the same `device_name`. The device rule matches the interface note: one device in the span, or the single steady device when the span is empty. Two devices omit the series. The query stays async Motor, and the naive `since` style stays.
+That span is the current window, plus the previous window when the view draws one, plus the one `heating_changes` row before the earlier start for the same `device_name`. The device rule matches the interface note: one device in the span, or the single steady device when the span is empty. Two devices omit the series. The query stays async Motor, and the naive `since` style stays.
 
 Clip each run to the slot, start inclusive and end exclusive. A run crossing midnight counts in each slot it overlaps. A trailing `HEATING` extends to now on a window that contains now, and stops at the end of a window that does not. Sum the overlaps. Do not pass the rows through `smoothTemperatureSeries` or `alignPreviousPeriodData`.
 
@@ -207,11 +207,11 @@ A **view** describes a drawing of the active range:
 | --- | --- |
 | `id`, `label` | Menu item id and the word in the menu. The menu button shows the active label |
 | `ranges` | Range ids this view can draw. Heatmap is `["month"]` |
-| `previous` | Whether the Previous checkbox is shown |
+| `previous` | Whether this view draws the previous window. There is no checkbox |
 | `pager` | Whether the pager is shown. All three current views set this |
 | `draw(host, model)` | Replaces the contents of the chart host |
 
-`model` is the shared result: the active range, the cursor, whether Previous is on, the current slots with their durations, and the previous slots when Previous is on. `draw` does not fetch and does not clip. Fetching and clipping live in one place so a new view cannot invent a second run rule.
+`model` is the shared result: the active range, the cursor, the current slots with their durations, and the previous slots when the view draws them. `draw` does not fetch and does not clip. Fetching and clipping live in one place so a new view cannot invent a second run rule.
 
 Dialog state is `{ rangeId, viewId, cursor, previous, rangeBeforeLock }`. Choosing a view whose `ranges` omit the current `rangeId` stores that id in `rangeBeforeLock` and selects the view’s first range. Choosing a view that includes `rangeBeforeLock` restores it.
 
@@ -230,7 +230,7 @@ A later view is a new object plus a `draw`, and it shows up as a menu item. A la
 2. One dialog, opened by the existing Stats button. The run list is removed. There is no Hours button.
 3. One row. The range (Day, Week, Month) is the segmented control. The view (Bars, Total, Heatmap) is a menu on that row. A later view is a menu item. A later range is a segment.
 4. Bars keep the Day, Week, and Month charts already specified. Total is the running sum of those slots. Heatmap is the month, one cell per day.
-5. Previous defaults off, current bar or line on the left in heating red, previous on the right in amber. Heatmap does not offer Previous. Slots stay put when Previous is turned off.
+5. Bars and Total always draw the previous window: current on the left in heating red, previous on the right in amber. Heatmap does not draw a previous month. The heatmap fits in the dialog without scrolling.
 6. The pager sits under the chart. Forward is disabled when the window contains today.
 7. A finished empty slot is zero. A slot that has not started draws nothing. The current period is the real time so far.
 8. The dialog queries `heating_changes` for the span it shows, plus one prior row. It does not widen the room chart’s 14-day payload.

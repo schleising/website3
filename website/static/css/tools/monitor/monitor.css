@@ -538,6 +538,19 @@ body.dark-mode .chart-svg {
     display: flex;
 }
 
+.heating-stats-dialog[open]:has(.heating-heat) {
+    height: min(90dvh, 40rem);
+    max-height: min(90dvh, 40rem);
+}
+
+.heating-stats-dialog[open]:has(.heating-heat) .heating-stats-panel {
+    flex: 1 1 auto;
+    min-height: 0;
+    height: auto;
+    max-height: 100%;
+    overflow: hidden;
+}
+
 .heating-stats-dialog {
     width: min(42rem, calc(100vw - 1.5rem - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)));
     max-height: min(90dvh, 40rem);
@@ -657,6 +670,7 @@ body.dark-mode .heating-time-range[aria-checked="true"] {
 
 .heating-time-view-wrap {
     position: relative;
+    margin-left: auto;
 }
 
 .heating-time-view {
@@ -688,7 +702,7 @@ body.dark-mode .heating-time-range[aria-checked="true"] {
 .heating-time-menu {
     position: absolute;
     top: calc(100% + 0.3rem);
-    left: 0;
+    right: 0;
     z-index: 2;
     min-width: 8.5rem;
     padding: 0.3rem;
@@ -719,15 +733,16 @@ body.dark-mode .heating-time-range[aria-checked="true"] {
     color: var(--live-deep, var(--live));
 }
 
-.heating-time-previous {
-    margin-left: auto;
-}
-
 .heating-time-host {
     flex: 1 1 auto;
     min-height: 0;
     margin-top: 0.85rem;
-    overflow: auto;
+    overflow: hidden;
+}
+
+.heating-time-host:has(.heating-heat) {
+    display: flex;
+    flex-direction: column;
 }
 
 .heating-stats-head,
@@ -869,11 +884,25 @@ body.dark-mode .heating-time-range[aria-checked="true"] {
     font-weight: 700;
 }
 
+.heating-heat {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+    height: 100%;
+}
+
 .heating-heat-weekdays,
 .heating-heat-grid {
     display: grid;
     grid-template-columns: repeat(7, minmax(0, 1fr));
     gap: 0.28rem;
+}
+
+.heating-heat-grid {
+    flex: 1 1 auto;
+    min-height: 0;
+    grid-template-rows: repeat(var(--heat-rows, 6), minmax(0, 1fr));
 }
 
 .heating-heat-weekdays {
@@ -884,7 +913,8 @@ body.dark-mode .heating-time-range[aria-checked="true"] {
 }
 
 .heating-heat-cell {
-    aspect-ratio: 1;
+    height: 100%;
+    min-height: 0;
     border: 0.0625rem solid transparent;
     border-radius: 0.35rem;
     background: transparent;
@@ -913,7 +943,7 @@ body.dark-mode .heating-heat-cell.is-hot {
 }
 
 .heating-heat-pad {
-    aspect-ratio: 1;
+    min-height: 0;
 }
 
 .heating-stats-close {

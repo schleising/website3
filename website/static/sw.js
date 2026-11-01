@@ -1,4 +1,4 @@
-const TOOLS_CACHE_VERSION = "tools-webapp-v20";
+const TOOLS_CACHE_VERSION = "tools-webapp-v21";
 
 // Warm shell assets when this SW is installed on a tools host.
 // Missing URLs on other hosts are harmless no-ops.
@@ -18,9 +18,9 @@ const TOOLS_SHELL_URLS = [
     "/css/tools/monitor/reset.css?v1.1.0",
     "/css/tools/webapp-tokens.css?v1.0.0",
     "/css/tools/webapp-shell.css?v1.0.0",
-    "/css/tools/monitor/monitor.css?v2.0.7",
+    "/css/tools/monitor/monitor.css?v2.0.8",
     "/js/tools/monitor/scope.js?v1.1.0",
-    "/js/tools/monitor/monitor.js?v2.0.10",
+    "/js/tools/monitor/monitor.js?v2.0.11",
     "/js/tools/monitor/page-layout.js?v1.0.0",
     "/js/tools/monitor/theme-toggle.js?v2.0.0",
     "/icons/tools/monitor/monitor-icon-any-20260504.svg"
