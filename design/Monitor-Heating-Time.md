@@ -106,7 +106,7 @@ Day accumulates **minutes** and the axis can pass 60. Week and Month accumulate 
 
 ![Month heatmap, darker red for more hours](monitor-heating/heating-time-heatmap.jpg)
 
-One cell per day of the month on screen. Monday is the first column. The tint runs from the paper colour at 0 hours to solid heating red at 7 hours. A day with more than 7 hours stays at that solid red. A day that has not started is an empty cell, outside the scale, not a white zero. The picture’s later dates are those empty cells. A finished day with no heating is the lightest tint.
+One cell per day of the month on screen. Monday is the first column. Under the day number, a smaller duration (`1h 24m`, `42m`, `0m`) sits with it, and that pair is centred in the tile. A day that has not started shows only its number. The tint runs from the paper colour at 0 hours to solid heating red at 7 hours. A day with more than 7 hours stays at that solid red. A day that has not started is an empty cell, outside the scale, not a white zero. The picture’s later dates are those empty cells. A finished day with no heating is the lightest tint.
 
 The heatmap does not draw a previous month. Day and Week are disabled and Month is selected. Each tile is square. On a narrow screen the tiles follow the dialog width. If that calendar would be taller than the dialog, the tiles shrink together and stay square, and the dialog does not scroll. The pager still steps a month. The legend is `0 h` to `7 h`.
 

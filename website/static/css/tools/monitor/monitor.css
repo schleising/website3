@@ -923,13 +923,33 @@ body.dark-mode .heating-time-range[aria-checked="true"] {
 }
 
 .heating-heat-cell {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.22rem;
     border: 0.0625rem solid transparent;
     border-radius: 0.35rem;
     background: transparent;
     color: var(--ink);
-    font-size: 0.75rem;
     font-variant-numeric: tabular-nums;
-    padding: 0;
+    line-height: 1;
+    padding: 0.1rem;
+}
+
+.heating-heat-day {
+    font-size: 0.75rem;
+}
+
+.heating-heat-time {
+    max-width: 100%;
+    color: inherit;
+    font-size: 0.58rem;
+    font-weight: 600;
+    letter-spacing: -0.03em;
+    line-height: 1;
+    opacity: 0.82;
+    white-space: nowrap;
 }
 
 .heating-heat-cell.is-measured {

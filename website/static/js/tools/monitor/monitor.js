@@ -1,4 +1,4 @@
-const serviceWorkerPath = '/sw.js?v=tools-webapp-v26';
+const serviceWorkerPath = '/sw.js?v=tools-webapp-v28';
 const chartSettingsStorageKey = 'monitor.chartSettings';
 
 // The chart data to be fetched from the server
@@ -416,6 +416,30 @@ function formatHeatingDuration(durationMs) {
         return `${hours} h`;
     }
     return `${hours} h ${minutes} min`;
+}
+
+/**
+ * Compact heating time for a heatmap tile.
+ * @param {number} durationMs
+ * @returns {string}
+ */
+function formatHeatingHeatLabel(durationMs) {
+    if (!(durationMs > 0)) {
+        return "0m";
+    }
+    if (durationMs < 60 * 1000) {
+        return "<1m";
+    }
+    const totalMinutes = Math.round(durationMs / 60000);
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    if (hours <= 0) {
+        return `${Math.max(totalMinutes, 1)}m`;
+    }
+    if (minutes === 0) {
+        return `${hours}h`;
+    }
+    return `${hours}h ${minutes}m`;
 }
 
 /**
@@ -1387,7 +1411,10 @@ function drawHeatingHeatmap(host, model) {
         const cell = document.createElement("button");
         cell.type = "button";
         cell.className = "heating-heat-cell";
-        cell.textContent = slot.label;
+        const day = document.createElement("span");
+        day.className = "heating-heat-day";
+        day.textContent = slot.label;
+        cell.append(day);
         if (slot.durationMs == null) {
             cell.classList.add("is-future");
             cell.disabled = true;
@@ -1399,6 +1426,10 @@ function drawHeatingHeatmap(host, model) {
                 cell.classList.add("is-hot");
             }
             cell.style.setProperty("--heat", heat.toFixed(3));
+            const time = document.createElement("span");
+            time.className = "heating-heat-time";
+            time.textContent = formatHeatingHeatLabel(slot.durationMs);
+            cell.append(time);
             const text = `${formatHeatingDay(slot.start)} · ${formatHeatingDuration(slot.durationMs)}`;
             cell.setAttribute("aria-label", text);
             const show = () => {
