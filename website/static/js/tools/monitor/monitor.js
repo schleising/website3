@@ -1,4 +1,4 @@
-const serviceWorkerPath = '/sw.js?v=tools-webapp-v22';
+const serviceWorkerPath = '/sw.js?v=tools-webapp-v24';
 const chartSettingsStorageKey = 'monitor.chartSettings';
 
 // The chart data to be fetched from the server
@@ -1413,6 +1413,52 @@ function drawHeatingHeatmap(host, model) {
 
     root.append(weekdays, grid, legend, pointer);
     host.append(root);
+    layoutHeatingHeatmap(root);
+}
+
+/**
+ * Square cells follow the dialog width. When that calendar would be taller
+ * than the dialog, the cells shrink together and stay square.
+ * @param {HTMLElement} root
+ */
+function layoutHeatingHeatmap(root) {
+    const grid = root.querySelector(".heating-heat-grid");
+    const weekdays = root.querySelector(".heating-heat-weekdays");
+    const panel = root.closest(".heating-stats-panel");
+    const dialog = root.closest(".heating-stats-dialog");
+    if (!(grid instanceof HTMLElement) || !(panel instanceof HTMLElement) || !(dialog instanceof HTMLElement)) {
+        return;
+    }
+    const rows = Number(grid.style.getPropertyValue("--heat-rows")) || 6;
+    const savedPanelMax = panel.style.maxHeight;
+    const savedDialogMax = dialog.style.maxHeight;
+    grid.style.width = "";
+    if (weekdays instanceof HTMLElement) {
+        weekdays.style.width = "";
+    }
+    panel.style.maxHeight = "none";
+    dialog.style.maxHeight = "none";
+    const gap = parseFloat(getComputedStyle(grid).rowGap) || 0;
+    const gridWidth = grid.getBoundingClientRect().width;
+    const outside = panel.getBoundingClientRect().height - grid.getBoundingClientRect().height;
+    panel.style.maxHeight = savedPanelMax;
+    dialog.style.maxHeight = savedDialogMax;
+    const panelLimit = parseFloat(getComputedStyle(panel).maxHeight);
+    const dialogLimit = parseFloat(getComputedStyle(dialog).maxHeight);
+    const limit = Math.min(
+        Number.isFinite(panelLimit) ? panelLimit : Infinity,
+        Number.isFinite(dialogLimit) ? dialogLimit : Infinity,
+    );
+    const cellFromWidth = (gridWidth - gap * 6) / 7;
+    const cellFromHeight = (limit - outside - gap * (rows - 1)) / rows;
+    if (!(cellFromHeight < cellFromWidth - 0.5)) {
+        return;
+    }
+    const width = Math.max(0, cellFromHeight) * 7 + gap * 6;
+    grid.style.width = `${width}px`;
+    if (weekdays instanceof HTMLElement) {
+        weekdays.style.width = `${width}px`;
+    }
 }
 
 /**

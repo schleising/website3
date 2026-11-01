@@ -535,20 +535,7 @@ body.dark-mode .chart-svg {
 }
 
 .heating-stats-dialog[open] {
-    display: flex;
-}
-
-.heating-stats-dialog[open]:has(.heating-heat) {
-    height: min(90dvh, 40rem);
-    max-height: min(90dvh, 40rem);
-}
-
-.heating-stats-dialog[open]:has(.heating-heat) .heating-stats-panel {
-    flex: 1 1 auto;
-    min-height: 0;
-    height: auto;
-    max-height: 100%;
-    overflow: hidden;
+    display: block;
 }
 
 .heating-stats-dialog {
@@ -733,7 +720,7 @@ body.dark-mode .heating-time-range[aria-checked="true"] {
 }
 
 .heating-time-host {
-    flex: 1 1 auto;
+    flex: 0 1 auto;
     min-height: 0;
     margin-top: 0.85rem;
     overflow: hidden;
@@ -893,9 +880,9 @@ body.dark-mode .heating-time-range[aria-checked="true"] {
 .heating-heat {
     display: flex;
     flex-direction: column;
-    flex: 1 1 auto;
+    align-items: center;
+    width: 100%;
     min-height: 0;
-    height: 100%;
 }
 
 .heating-heat-weekdays,
@@ -906,21 +893,34 @@ body.dark-mode .heating-time-range[aria-checked="true"] {
 }
 
 .heating-heat-grid {
-    flex: 1 1 auto;
+    width: 100%;
     min-height: 0;
-    grid-template-rows: repeat(var(--heat-rows, 6), minmax(0, 1fr));
+    align-content: start;
 }
 
 .heating-heat-weekdays {
+    width: 100%;
     margin-bottom: 0.28rem;
     color: var(--ink-muted);
     font-size: 0.72rem;
     text-align: center;
 }
 
-.heating-heat-cell {
-    height: 100%;
+.heating-heat-cell,
+.heating-heat-pad {
+    aspect-ratio: 1;
+    width: 100%;
+    min-width: 0;
     min-height: 0;
+    height: auto;
+}
+
+.heating-heat .heating-time-legend,
+.heating-heat .heating-time-pointer {
+    align-self: stretch;
+}
+
+.heating-heat-cell {
     border: 0.0625rem solid transparent;
     border-radius: 0.35rem;
     background: transparent;
@@ -946,10 +946,6 @@ body.dark-mode .heating-time-range[aria-checked="true"] {
 
 body.dark-mode .heating-heat-cell.is-hot {
     color: #1c1412;
-}
-
-.heating-heat-pad {
-    min-height: 0;
 }
 
 .heating-stats-close {

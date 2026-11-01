@@ -108,7 +108,7 @@ Day accumulates **minutes** and the axis can pass 60. Week and Month accumulate 
 
 One cell per day of the month on screen. Monday is the first column. The tint runs from the paper colour at 0 hours to solid heating red at 7 hours. A day with more than 7 hours stays at that solid red. A day that has not started is an empty cell, outside the scale, not a white zero. The picture’s later dates are those empty cells. A finished day with no heating is the lightest tint.
 
-The heatmap does not draw a previous month. Day and Week are disabled and Month is selected. The calendar fits in the dialog without scrolling. The pager still steps a month. The legend is `0 h` to `7 h`.
+The heatmap does not draw a previous month. Day and Week are disabled and Month is selected. Each tile is square. On a narrow screen the tiles follow the dialog width. If that calendar would be taller than the dialog, the tiles shrink together and stay square, and the dialog does not scroll. The pager still steps a month. The legend is `0 h` to `7 h`.
 
 ---
 
@@ -229,7 +229,7 @@ A later view is a new object plus a `draw`, and it shows up as a menu item. A la
 2. One dialog, opened by the existing Stats button. The run list is removed. There is no Hours button.
 3. One row. The range (Day, Week, Month) is the segmented control. The view (Bars, Total, Heatmap) is a menu on that row. A later view is a menu item. A later range is a segment.
 4. Bars keep the Day, Week, and Month charts already specified. Total is the running sum of those slots. Heatmap is the month, one cell per day.
-5. Bars and Total always draw the previous window: current on the left in heating red, previous on the right in amber. Heatmap does not draw a previous month. The heatmap fits in the dialog without scrolling.
+5. Bars and Total always draw the previous window: current on the left in heating red, previous on the right in amber. Heatmap does not draw a previous month. Its tiles are square and fit in the dialog without scrolling.
 6. The pager sits under the chart. Forward is disabled when the window contains today.
 7. A finished empty slot is zero. A slot that has not started draws nothing. The current period is the real time so far.
 8. The dialog queries `heating_changes` for the span it shows, plus one prior row. It does not widen the room chart’s 14-day payload.
