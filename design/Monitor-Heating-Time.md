@@ -92,13 +92,13 @@ Seven slots, Monday through Sunday. The vertical axis is **hours**. The label is
 
 One slot per day number, 1 through the last day of the month on screen. The vertical axis is **hours**. February has no 30 or 31. The label is the month, `November 2026`. While the window contains today the legend reads **This month** and **Last month**.
 
-The picture only drew the day numbers it labelled. The build draws every day number of that month. A day after today has no red bar. Last month has an amber bar on each of its own day numbers. A day number last month does not have leaves that amber half empty.
+The picture only drew the day numbers it labelled. The build draws every day number of that month. A day after today has no red bar. Last month has a teal bar on each of its own day numbers. A day number last month does not have leaves that teal half empty.
 
 ### Total
 
 ![Running total through the week, this week and last week](monitor-heating/heating-time-total.jpg)
 
-The same slots as Bars for the active range. Each point is the heating time accumulated from the start of the window through that slot. The line is heating red. The previous window is a second line in the room-chart amber. There is no fill under either line. The shaded area in an earlier picture is not part of this view.
+The same slots as Bars for the active range. Each point is the heating time accumulated from the start of the window through that slot. The line is heating red. The previous window is a second line in the live teal. There is no fill under either line. The shaded area in an earlier picture is not part of this view.
 
 Day accumulates **minutes** and the axis can pass 60. Week and Month accumulate **hours**. The legend words match Bars for that range. A slot that has not started is not a point. The current line stops at now.
 
@@ -150,9 +150,9 @@ Hovering or tapping a bar lights that bar and dims the others. Hovering or tappi
 
 Current is solid heating red, `#b42318` in light and `#ff7a6e` in dark. Add `--heating-bar` for that solid fill. It is not the translucent `--heating-band` wash.
 
-Previous is the room-chart amber, `#b56a12` in light and `#e0a24a` in dark.
+Previous is the live teal, `#0f8f7a` in light and `#2dceb2` in dark. The room chart keeps its amber for the previous temperature line.
 
-On Bars the current bar is the left of the pair and the previous bar is the right. On Total the current line is red and the previous line is amber. The heatmap uses red only.
+On Bars the current bar is the left of the pair and the previous bar is the right. On Total the current line is red and the previous line is teal. The heatmap uses red only.
 
 ### Copy when there is nothing to draw
 
@@ -229,7 +229,7 @@ A later view is a new object plus a `draw`, and it shows up as a menu item. A la
 2. One dialog, opened by the existing Stats button. The run list is removed. There is no Hours button.
 3. One row. The range (Day, Week, Month) is the segmented control. The view (Bars, Total, Heatmap) is a menu on that row. A later view is a menu item. A later range is a segment.
 4. Bars keep the Day, Week, and Month charts already specified. Total is the running sum of those slots. Heatmap is the month, one cell per day.
-5. Bars and Total always draw the previous window: current on the left in heating red, previous on the right in amber. Heatmap does not draw a previous month. Its tiles are square and fit in the dialog without scrolling.
+5. Bars and Total always draw the previous window: current on the left in heating red, previous on the right in teal. Heatmap does not draw a previous month. Its tiles are square and fit in the dialog without scrolling.
 6. The pager sits under the chart. Forward is disabled when the window contains today.
 7. A finished empty slot is zero. A slot that has not started draws nothing. The current period is the real time so far.
 8. The dialog queries `heating_changes` for the span it shows, plus one prior row. It does not widen the room chart’s 14-day payload.

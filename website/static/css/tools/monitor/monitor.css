@@ -50,6 +50,7 @@
     --chart-overlay: #b56a12;
     --heating-band: rgba(180, 35, 24, 0.23);
     --heating-bar: #b42318;
+    --heating-previous: #0f8f7a;
 }
 
 body.dark-mode {
@@ -58,6 +59,7 @@ body.dark-mode {
     --chart-overlay: #e0a24a;
     --heating-band: rgba(255, 122, 110, 0.31);
     --heating-bar: #ff7a6e;
+    --heating-previous: #2dceb2;
 }
 
 .chart-controls {
@@ -766,7 +768,7 @@ body.dark-mode .heating-time-range[aria-checked="true"] {
 
 .heating-bar-previous,
 .heating-dot-previous {
-    fill: var(--chart-overlay);
+    fill: var(--heating-previous);
 }
 
 .heating-line-current,
@@ -782,7 +784,7 @@ body.dark-mode .heating-time-range[aria-checked="true"] {
 }
 
 .heating-line-previous {
-    stroke: var(--chart-overlay);
+    stroke: var(--heating-previous);
 }
 
 .heating-mark {
@@ -830,7 +832,7 @@ body.dark-mode .heating-time-range[aria-checked="true"] {
 }
 
 .heating-time-swatch.previous {
-    background: var(--chart-overlay);
+    background: var(--heating-previous);
 }
 
 .heating-time-pointer,
