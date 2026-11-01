@@ -1,12 +1,13 @@
 # Design: Monitor heating stats popup
 
-Status: **Locked — B run list, topbar button** (2026-10-24)  
+Status: **Superseded** (2026-11-01) — the run list is withdrawn. The Stats button opens the dialog in `design/Monitor-Heating-Time.md`.  
 Date: 2026-10-24  
 Scope: One house-level heating summary on the Monitor chart page
 
 **How to use this doc**
 
-- **§3 B** and **§4.1** are the chosen design. A, C, and the band-click entries stay as the options that were not picked.
+- Do not build from this file. The Stats button opens the dialog in `design/Monitor-Heating-Time.md`.
+- **§3 B** and **§4.1** record the run list that was chosen and later withdrawn. A, C, and the band-click entries stay as the options that were not picked.
 - **§6** is the spec to build. The sample figures in §2 are illustrative, not a house reading.
 - Further notes go in **§7**.
 - Mockups are concept art, not pixel-spec. Type, spacing, and the heating wash will be rebuilt from Monitor tokens. The toolbar picture in §4 is the placement that was rejected.

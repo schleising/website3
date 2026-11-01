@@ -1,10 +1,10 @@
 # Heating changes on the Monitor charts
 
-This note is the whole contract for the heating read, the wash, and the Stats dialog’s numbers. Dialog chrome stays as it is. The half-interval run rule in `design/Monitor-Heating-Stats.md` is withdrawn. This note does not otherwise depend on that file.
+This note is the contract for the heating read and the wash. The Stats button and its dialog stay; the dialog body is `design/Monitor-Heating-Time.md`. The half-interval run rule in `design/Monitor-Heating-Stats.md` is withdrawn. This note does not otherwise depend on that file.
 
 ## Goal
 
-Read the heating change log and paint a red wash behind the temperature line for the times the heating is actually running. Keep the temperature line, the previous-period line, the Daily / Weekly windows, and the Stats dialog as they are.
+Read the heating change log and paint a red wash behind the temperature line for the times the heating is actually running. Keep the temperature line, the previous-period line, and the Daily / Weekly windows. The Stats button stays; what it opens is specified in `design/Monitor-Heating-Time.md`.
 
 The current page can keep reading `web_database.heating_samples`. That collection stays in place and keeps receiving a heartbeat on every Nest poll. Switch this page to `web_database.heating_changes` when this note is implemented. Until that switch, leave the current reader alone.
 
@@ -17,11 +17,11 @@ The current page can keep reading `web_database.heating_samples`. That collectio
 | `heat_celsius` | The heat threshold, in degrees Celsius |
 | `cool_celsius` | The cool threshold, in degrees Celsius |
 
-The chart paints `hvac_status == HEATING`. A row that only moves `mode`, `heat_celsius`, or `cool_celsius` does not start or stop the wash. `COOLING` is kept on the row and is not drawn. Mode and both thresholds stay on the payload. The Stats dialog reads the setting still in force from the latest change. A later usage page reads the same fields.
+The chart paints `hvac_status == HEATING`. A row that only moves `mode`, `heat_celsius`, or `cool_celsius` does not start or stop the wash. `COOLING` is kept on the row and is not drawn. Mode and both thresholds stay on the payload. A later usage page reads the same fields.
 
 There is one thermostat. Draw that one timeline on every room chart. When “Previous period” is on, the amber temperature line is the previous window and the wash stays on this period’s heating only.
 
-The Stats dialog stays on this page. On time, run count, longest run, and the run list use the same `HEATING` runs as the wash, clipped to local calendar days instead of the chart’s rolling window. It does not keep a second definition based on heartbeats.
+The Stats button stays on this page and opens the heating-time dialog. That dialog uses the same `HEATING` runs as the wash. It does not keep a second definition based on heartbeats. Its windows are calendar ranges, specified in `design/Monitor-Heating-Time.md`, not the chart’s rolling window.
 
 ## Stored documents
 
@@ -246,17 +246,11 @@ Until `heating_changes` has rows, omit `heating`. The chart then matches a tempe
 
 ## Stats dialog
 
-The dialog already on the Monitor page is part of this change. A separate usage page is not. Keep the button, the `<dialog>`, the copy, and the formatting already in `monitor.js` (`formatHeatingDuration`, `formatHeatingRunRange`, `heatingSummaryText`, `heatingStatusParts`). Point the numbers at `heating.changes`.
+The run list this section describes is withdrawn. The Stats button opens the dialog in `design/Monitor-Heating-Time.md` (Day, Week, and Month bars, a running total, and a month heatmap). Keep the button and the `<dialog>`. The run rule below is unchanged: those charts clip the same `HEATING` runs. `formatHeatingDuration` stays for pointer text.
 
 `heatingSeriesIsUsable` is true when `heating` is present and `changes` is a non-empty array. It does not look for `samples` or `sample_interval_secs`.
 
-- This period’s runs use calendar days in local time, not the chart’s rolling window. Daily is today from midnight through now. Weekly is today and the six calendar days before it, through now. A trailing `HEATING` extends to now.
-- The comparison is the equal run of calendar days immediately before. Daily is yesterday, midnight to midnight. Weekly is the seven calendar days before the current span. A trailing `HEATING` stops at that midnight.
-- The status line is the latest change, the row with the greatest timestamp. `HEATING` → Heating, `OFF` → Off, `COOLING` → Cooling. The setpoint is the threshold that belongs to that row’s `mode`, one decimal, same as the room temperatures. A missing mode or threshold is left off the line.
-- No `heating` object: “No heating readings”, and no zero row.
-- Changes exist, and the current window has no `HEATING` run: the existing empty-run line, `0 min on · 0 runs`.
-
-Both windows fit in the 14-day payload, including the one prior row. Run clocks stay in the browser’s local time.
+Window shape, Previous, the pager, and empty copy are in `design/Monitor-Heating-Time.md`. A trailing `HEATING` still extends to now only on a window that contains now, and stops at the end of a window that does not. A month plus the previous month does not fit the 14-day chart payload; that dialog queries `heating_changes` for the span it shows.
 
 ## Later usage totals
 
@@ -297,7 +291,7 @@ The existing heartbeat reader is the code this change replaces, including the St
 4. **A wash runs from a transition into `HEATING` until a transition out of it.** A later row that is still `HEATING` only updates `mode` or a threshold. `COOLING` stays on the row and is not drawn. The last `HEATING` extends to now on the current window only. Walk every change, then clip. Do not pad by half an interval or split on a gap.
 5. **Draw this period’s runs on every room chart.** Previous-period heating stays in the payload and is not drawn. The Stats dialog totals the previous calendar span.
 6. **Omit `heating` when there is no row, when the window has more than one `device_name`, or when the window is empty and the collection has more than one `device_name`.** The chart then matches a temperature-only page, and the dialog says “No heating readings”.
-7. **The Stats dialog stays.** Its chrome stays. Its numbers are these runs clipped to local calendar days: today, or today and the six days before it. The half-interval rule in `design/Monitor-Heating-Stats.md` is withdrawn.
+7. **The Stats button stays.** It opens the dialog in `design/Monitor-Heating-Time.md`. The run list is withdrawn. The half-interval rule in `design/Monitor-Heating-Stats.md` is withdrawn.
 8. **Bump the cached `monitor.js` URL and the service-worker cache name in the same change.**
 
 ## Revision
