@@ -1,4 +1,4 @@
-const serviceWorkerPath = '/sw.js?v=tools-webapp-v18';
+const serviceWorkerPath = '/sw.js?v=tools-webapp-v19';
 const chartSettingsStorageKey = 'monitor.chartSettings';
 
 // The chart data to be fetched from the server
@@ -327,14 +327,38 @@ function getPeriodBounds(period, periodOffset) {
 }
 
 /**
- * Turn heating changes into runs for the wash and the Stats dialog.
- * Sits beside getPeriodBounds so both windows share one definition.
+ * Calendar-day bounds for the Stats dialog, in local time. Daily is today
+ * from midnight through now. Weekly is today and the six calendar days before
+ * it, also through now. Offset 1 is the equal run of calendar days immediately
+ * before, ending at midnight. These are not the chart's rolling windows.
+ *
+ * @param {'daily' | 'weekly'} period
+ * @param {number} periodOffset 0 for current, 1 for previous
+ * @returns {{start: Date, end: Date}}
+ */
+function getHeatingStatsBounds(period, periodOffset) {
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const dayCount = period === "weekly" ? 7 : 1;
+    const start = new Date(todayStart);
+    start.setDate(start.getDate() - (dayCount - 1) - periodOffset * dayCount);
+    if (periodOffset === 0) {
+        return { start, end: now };
+    }
+    const end = new Date(todayStart);
+    end.setDate(end.getDate() - ((periodOffset - 1) * dayCount) - (dayCount - 1));
+    return { start, end };
+}
+
+/**
+ * Turn heating changes into runs. The wash clips these to getPeriodBounds.
+ * The Stats dialog clips them to getHeatingStatsBounds.
  *
  * Walk every change, including rows before the window, then clip. Only a
  * transition into HEATING opens a run. A later HEATING row leaves it open.
  * OFF and COOLING close it at that timestamp. A run still open at the end of
- * the series extends to the window end: now for the current window, and the
- * past end of the previous window. Start is inclusive and end is exclusive.
+ * the series extends to the end of the bounds it was given. Start is
+ * inclusive and end is exclusive.
  *
  * @param {Array<{timestamp: string, hvac_status: string}>} changes
  * @param {{start: Date, end: Date}} periodBounds
@@ -560,9 +584,9 @@ function heatingOnTimeMs(runs) {
  */
 function heatingPeriodCopy(period) {
     if (period === "weekly") {
-        return { window: "Weekly · last 7 days", previous: "Previous week" };
+        return { window: "Last 7 days", previous: "Previous 7 days" };
     }
-    return { window: "Daily · last 24 hours", previous: "Previous day" };
+    return { window: "Today", previous: "Yesterday" };
 }
 
 /**
@@ -658,8 +682,8 @@ function buildHeatingStatsView() {
     }
 
     const heating = heatingSeries;
-    const currentRuns = heatingRuns(heating.changes, getPeriodBounds(period, 0));
-    const previousRuns = heatingRuns(heating.changes, getPeriodBounds(period, 1));
+    const currentRuns = heatingRuns(heating.changes, getHeatingStatsBounds(period, 0));
+    const previousRuns = heatingRuns(heating.changes, getHeatingStatsBounds(period, 1));
     const runs = currentRuns.map(run => ({
         range: formatHeatingRunRange(run.start, run.end, period),
         duration: formatHeatingDuration(run.end.getTime() - run.start.getTime()),

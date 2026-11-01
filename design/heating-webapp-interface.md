@@ -21,7 +21,7 @@ The chart paints `hvac_status == HEATING`. A row that only moves `mode`, `heat_c
 
 There is one thermostat. Draw that one timeline on every room chart. When “Previous period” is on, the amber temperature line is the previous window and the wash stays on this period’s heating only.
 
-The Stats dialog stays on this page. On time, run count, longest run, and the run list are the same clipped `HEATING` runs the wash paints. It does not keep a second definition based on heartbeats.
+The Stats dialog stays on this page. On time, run count, longest run, and the run list use the same `HEATING` runs as the wash, clipped to local calendar days instead of the chart’s rolling window. It does not keep a second definition based on heartbeats.
 
 ## Stored documents
 
@@ -169,7 +169,7 @@ Sort `changes` by timestamp ascending before responding. Pass the four heating f
 
 ## Windows
 
-`getPeriodBounds(period, periodOffset)` is the window. Daily is the rolling 24 hours ending now. Weekly is the rolling 7 days ending now. Offset `1` is the equal span immediately before that. The windows are not calendar days and not midnight-aligned.
+`getPeriodBounds(period, periodOffset)` is the chart window. Daily is the rolling 24 hours ending now. Weekly is the rolling 7 days ending now. Offset `1` is the equal span immediately before that. The chart windows are not calendar days and not midnight-aligned. The Stats dialog uses local midnights instead, in `getHeatingStatsBounds`.
 
 Temperature points inside a window are `timestamp >= start && timestamp < end`. Build heating runs from every change, then clip each finished run to that same inclusive start and exclusive end.
 
@@ -206,7 +206,7 @@ Extend an open run to now only while clipping a window that already ends at now.
 
 Do not pass these rows through `smoothTemperatureSeries` or `alignPreviousPeriodData`. Smoothing would average a status. The previous-period shift would paint an older run on today’s clock. While drawing the wash, ignore `mode`, `heat_celsius`, and `cool_celsius`.
 
-The Stats dialog uses this same function. `heatingRuns` today pads each run by half of `sample_interval_secs` and splits a run when the gap is longer than two intervals. Delete that padding and that split. A steady `HEATING` with no further row is one run.
+The Stats dialog uses this same function, with calendar-day bounds rather than `getPeriodBounds`. `heatingRuns` today pads each run by half of `sample_interval_secs` and splits a run when the gap is longer than two intervals. Delete that padding and that split. A steady `HEATING` with no further row is one run.
 
 ## How to draw it
 
@@ -250,8 +250,8 @@ The dialog already on the Monitor page is part of this change. A separate usage 
 
 `heatingSeriesIsUsable` is true when `heating` is present and `changes` is a non-empty array. It does not look for `samples` or `sample_interval_secs`.
 
-- This period’s runs are the wash’s runs: `getPeriodBounds(period, 0)`, trailing `HEATING` extended to now.
-- The comparison is the same function at offset `1`. A trailing `HEATING` stops at that window’s end.
+- This period’s runs use calendar days in local time, not the chart’s rolling window. Daily is today from midnight through now. Weekly is today and the six calendar days before it, through now. A trailing `HEATING` extends to now.
+- The comparison is the equal run of calendar days immediately before. Daily is yesterday, midnight to midnight. Weekly is the seven calendar days before the current span. A trailing `HEATING` stops at that midnight.
 - The status line is the latest change, the row with the greatest timestamp. `HEATING` → Heating, `OFF` → Off, `COOLING` → Cooling. The setpoint is the threshold that belongs to that row’s `mode`, one decimal, same as the room temperatures. A missing mode or threshold is left off the line.
 - No `heating` object: “No heating readings”, and no zero row.
 - Changes exist, and the current window has no `HEATING` run: the existing empty-run line, `0 min on · 0 runs`.
@@ -262,8 +262,8 @@ Both windows fit in the 14-day payload, including the one prior row. Run clocks 
 
 A usage page is not part of this change. The Stats dialog is the page that shows these totals now. When a usage page is built, heating duration is the sum of the same clipped `HEATING` runs, not a count of rows and not a measurement of the rectangles. `mode`, `heat_celsius`, and `cool_celsius` on each row are the call setting and the thresholds from that timestamp until the next row. `COOLING` rows are available for a later cooling total. They are not added to the heating duration.
 
-- Current window: sum of runs clipped to `getPeriodBounds(period, 0)`, with a trailing `HEATING` extended to now.
-- Previous window: the same function at offset `1`. A trailing `HEATING` stops at that window’s end.
+- Current window: the Stats dialog’s calendar span, with a trailing `HEATING` extended to now. The chart wash stays on `getPeriodBounds(period, 0)`.
+- Previous window: the calendar span immediately before. A trailing `HEATING` stops at that midnight.
 
 A range wider than 14 days needs its own query against `heating_changes`. Use the same read: rows from `since`, the device chosen from those rows, plus that device’s one row before `since`. The chart payload is the shared read for the horizons the charts already have.
 
@@ -295,9 +295,9 @@ The existing heartbeat reader is the code this change replaces, including the St
 2. **`heating.changes` is the series.** Each item carries `timestamp`, `hvac_status`, `mode`, `heat_celsius`, and `cool_celsius`. There is no `samples` array and no sample interval. The wash and the Stats dialog both read `changes`.
 3. **The window rows choose the device.** The prior row is the newest row before the 14-day horizon for that same `device_name`. A name that appears only before the horizon is not a second thermostat. If the window is empty and the collection has exactly one device, that device’s newest row is the series.
 4. **A wash runs from a transition into `HEATING` until a transition out of it.** A later row that is still `HEATING` only updates `mode` or a threshold. `COOLING` stays on the row and is not drawn. The last `HEATING` extends to now on the current window only. Walk every change, then clip. Do not pad by half an interval or split on a gap.
-5. **Draw this period’s runs on every room chart.** Previous-period heating stays in the payload and is not drawn. The Stats dialog does use the previous window, as a total.
+5. **Draw this period’s runs on every room chart.** Previous-period heating stays in the payload and is not drawn. The Stats dialog totals the previous calendar span.
 6. **Omit `heating` when there is no row, when the window has more than one `device_name`, or when the window is empty and the collection has more than one `device_name`.** The chart then matches a temperature-only page, and the dialog says “No heating readings”.
-7. **The Stats dialog stays.** Its chrome and copy stay. Its numbers are these clipped runs. The half-interval rule in `design/Monitor-Heating-Stats.md` is withdrawn.
+7. **The Stats dialog stays.** Its chrome stays. Its numbers are these runs clipped to local calendar days: today, or today and the six days before it. The half-interval rule in `design/Monitor-Heating-Stats.md` is withdrawn.
 8. **Bump the cached `monitor.js` URL and the service-worker cache name in the same change.**
 
 ## Revision
