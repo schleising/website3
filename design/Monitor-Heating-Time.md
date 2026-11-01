@@ -223,7 +223,41 @@ A later view is a new object plus a `draw`, and it shows up as a menu item. A la
 
 ---
 
-## 7. Decisions
+## 7. Animating the dialog height
+
+The card the user sees is `.heating-stats-panel`. Its height is the height of its content, capped by `min(90dvh, 40rem)`. The `<dialog>` is transparent and follows that card. The width is the viewport rule and does not change. Switching between Bars or Total and the heatmap, or between a 5-row month and a 6-row month, changes the card’s height. Opening does too: the card is the chrome until the first chart is drawn. A window resize also changes it, and that one stays instant.
+
+The final height is the panel’s border box after three things are true: the new chart is in the document, `layoutHeatingHeatmap` has put `max-height` back, and no inline `height` and no height animation are applied. `getBoundingClientRect().height` at that moment is the number to animate to. It is not calculated from the row count, the SVG’s 248px, or the measurement `layoutHeatingHeatmap` takes while `max-height` is `none`.
+
+### Steps
+
+Do this at the end of a paint that replaced the chart, after the heatmap fit has returned.
+
+1. Before replacing the chart, read the panel’s border-box height. If an animation is already running, this is the height on screen. Keep that number, then cancel the animation.
+2. Draw. The heatmap fit restores `max-height` before it returns.
+3. Read the border-box height again. That is the end.
+4. If the two heights differ by less than a pixel, stop. The poll, a page that does not change the card, and a resize all land here.
+5. Otherwise play a Web Animations effect on the panel: `{ height: start }` to `{ height: end }`, 260ms, `ease`, `fill: "none"`. Set `overflow: hidden` for the effect and clear it in both `onfinish` and `oncancel`.
+
+`fill: "none"` means the effect is the only override. When it ends, the panel is `height: auto` again, which is the end height just measured. Do not write `style.height`. An inline pixel height left in place clips the chart when the finish event does not fire.
+
+`box-sizing` is `border-box`, so the `height` property is the same border box `getBoundingClientRect()` returns. Check that once: on the first frame, the border box matches the start keyframe within a pixel. If it is taller by the panel’s vertical padding and border, subtract that constant, taken from `getComputedStyle`, from both keyframes. The constant does not depend on which chart is showing. Do not tune it by comparing the height after the animation with the height during it.
+
+The new chart is already at its final size while the card eases. In-between frames do not refit the heatmap. The squares were fitted to the final max-height in step 2.
+
+### When a second change arrives
+
+Read the on-screen height before cancelling. Then cancel, draw, measure the new end, and start the new effect, all before the browser paints. Cancelling without that saved height would drop the card to `auto` for a frame.
+
+A fetch does not animate. The chart on screen stays until the new span is drawn, and the effect starts then, from the height read in step 1 of that paint. The toolbar may gain or lose a wrapped row when Heatmap disables Day and Week; that small change happens with the chrome update and is not given its own effect.
+
+The resize listener passes no animation. The card tracks the window. `prefers-reduced-motion: reduce` skips the effect as well.
+
+Opening uses the same steps. `showModal` has already shown the chrome-only card; the first chart paint reads that height as the start.
+
+---
+
+## 8. Decisions
 
 1. Heating only. `COOLING` ends a run and is not drawn.
 2. One dialog, opened by the existing Stats button. The run list is removed. There is no Hours button.
@@ -233,3 +267,4 @@ A later view is a new object plus a `draw`, and it shows up as a menu item. A la
 6. The pager sits under the chart. Forward is disabled when the window contains today.
 7. A finished empty slot is zero. A slot that has not started draws nothing. The current period is the real time so far.
 8. The dialog queries `heating_changes` for the span it shows, plus one prior row. It does not widen the room chart’s 14-day payload.
+9. The card’s height eases by the method in §7. The end height is the settled border box after the chart is drawn. The effect does not leave an inline height behind. Resize stays instant.

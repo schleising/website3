@@ -1,4 +1,4 @@
-const serviceWorkerPath = '/sw.js?v=tools-webapp-v28';
+const serviceWorkerPath = '/sw.js?v=tools-webapp-v31';
 const chartSettingsStorageKey = 'monitor.chartSettings';
 
 // The chart data to be fetched from the server
@@ -1587,8 +1587,126 @@ function heatingTimePaintKey(model) {
     ].join("|");
 }
 
+/** @type {Animation | null} */
+let heatingDialogAnimation = null;
+
 /**
- * @param {{force?: boolean}} [options]
+ * Some browsers paint a `height` keyframe as the content box, so the border
+ * box runs tall by the panel's vertical padding and border. Others paint the
+ * border box directly. Null until the first frame of an ease decides.
+ * @type {number | null}
+ */
+let heatingDialogHeightAdjust = null;
+
+/**
+ * @param {HTMLElement} panel
+ * @returns {number}
+ */
+function heatingDialogHeightFrame(panel) {
+    const box = getComputedStyle(panel);
+    return parseFloat(box.paddingTop) + parseFloat(box.paddingBottom)
+        + parseFloat(box.borderTopWidth) + parseFloat(box.borderBottomWidth);
+}
+
+/**
+ * CSS `ease` for a unit time.
+ * @param {number} t
+ * @returns {number}
+ */
+function heatingDialogEase(t) {
+    const cx = 3 * 0.25;
+    const bx = 3 * (0.25 - 0.25) - cx;
+    const ax = 1 - cx - bx;
+    const cy = 3 * 0.1;
+    const by = 3 * (1 - 0.1) - cy;
+    const ay = 1 - cy - by;
+    let u = t;
+    for (let i = 0; i < 8; i += 1) {
+        const x = ((ax * u + bx) * u + cx) * u - t;
+        const dx = (3 * ax * u + 2 * bx) * u + cx;
+        if (Math.abs(dx) < 1e-6) {
+            break;
+        }
+        u -= x / dx;
+    }
+    return ((ay * u + by) * u + cy) * u;
+}
+
+/**
+ * @param {HTMLElement} panel
+ * @param {Animation} animation
+ */
+function releaseHeatingDialogOverflow(panel, animation) {
+    if (heatingDialogAnimation !== animation) {
+        return;
+    }
+    panel.style.overflow = "";
+    heatingDialogAnimation = null;
+}
+
+/**
+ * Ease the card from the on-screen border box to the settled one.
+ * The underlying height stays auto.
+ * @param {HTMLElement} panel
+ * @param {number} start
+ * @param {number} end
+ */
+function animateHeatingDialogHeight(panel, start, end) {
+    if (Math.abs(end - start) < 1) {
+        return;
+    }
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        return;
+    }
+    const adjust = heatingDialogHeightAdjust ?? 0;
+    panel.style.overflow = "hidden";
+    const animation = panel.animate(
+        [
+            { height: `${start - adjust}px` },
+            { height: `${end - adjust}px` },
+        ],
+        { duration: 260, easing: "ease", fill: "none" },
+    );
+    heatingDialogAnimation = animation;
+    animation.onfinish = () => releaseHeatingDialogOverflow(panel, animation);
+    animation.oncancel = () => releaseHeatingDialogOverflow(panel, animation);
+    if (heatingDialogHeightAdjust != null) {
+        return;
+    }
+    /**
+     * @param {number} attempt
+     */
+    const learnHeatingDialogHeightAdjust = (attempt) => {
+        if (heatingDialogAnimation !== animation || animation.playState !== "running" || animation.currentTime == null) {
+            return;
+        }
+        const frame = heatingDialogHeightFrame(panel);
+        const progress = heatingDialogEase(Math.min(1, animation.currentTime / 260));
+        const expected = start + (end - start) * progress;
+        const extra = panel.getBoundingClientRect().height - expected;
+        if (Math.abs(extra - frame) < 8) {
+            heatingDialogHeightAdjust = frame;
+            if (animation.effect != null && "setKeyframes" in animation.effect) {
+                animation.effect.setKeyframes([
+                    { height: `${start - frame}px` },
+                    { height: `${end - frame}px` },
+                ]);
+            }
+            return;
+        }
+        if (Math.abs(extra) < 8 && animation.currentTime >= 16) {
+            heatingDialogHeightAdjust = 0;
+            return;
+        }
+        if (attempt < 2) {
+            requestAnimationFrame(() => learnHeatingDialogHeightAdjust(attempt + 1));
+        }
+    };
+    requestAnimationFrame(() => learnHeatingDialogHeightAdjust(0));
+}
+
+/**
+ * @param {{force?: boolean, animate?: boolean}} [options]
  */
 function paintHeatingTime(options) {
     const dialog = document.getElementById("heating-stats-dialog");
@@ -1616,8 +1734,15 @@ function paintHeatingTime(options) {
         if (!options?.force && paintKey === heatingTimePaintedKey && host.childElementCount > 0) {
             return;
         }
+        const panel = dialog.querySelector(".heating-stats-panel");
+        const animate = options?.animate !== false && panel instanceof HTMLElement;
+        const start = animate && panel instanceof HTMLElement ? panel.getBoundingClientRect().height : 0;
+        heatingDialogAnimation?.cancel();
         heatingTimePaintedKey = paintKey;
         model.view.draw(host, model);
+        if (animate && panel instanceof HTMLElement) {
+            animateHeatingDialogHeight(panel, start, panel.getBoundingClientRect().height);
+        }
         return;
     }
 
@@ -1899,7 +2024,7 @@ function initializeHeatingStats() {
     });
     window.addEventListener("resize", () => {
         if (dialog.open) {
-            paintHeatingTime({ force: true });
+            paintHeatingTime({ force: true, animate: false });
         }
     });
 
