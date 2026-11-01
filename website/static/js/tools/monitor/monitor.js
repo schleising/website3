@@ -1,4 +1,4 @@
-const serviceWorkerPath = '/sw.js?v=tools-webapp-v16';
+const serviceWorkerPath = '/sw.js?v=tools-webapp-v18';
 const chartSettingsStorageKey = 'monitor.chartSettings';
 
 // The chart data to be fetched from the server
@@ -11,10 +11,9 @@ var deviceData = null;
  * One thermostat timeline for every room chart. Mode and setpoint are read by
  * the heating stats dialog, not while drawing the bands.
  * @type {{
- *   sample_interval_secs: number,
  *   device_name: string,
  *   device_id: string,
- *   samples: Array<{
+ *   changes: Array<{
  *     timestamp: string,
  *     hvac_status: string,
  *     mode?: string | null,
@@ -328,45 +327,39 @@ function getPeriodBounds(period, periodOffset) {
 }
 
 /**
- * Turn heating heartbeats into runs for the wash and for a later usage total.
+ * Turn heating changes into runs for the wash and the Stats dialog.
  * Sits beside getPeriodBounds so both windows share one definition.
  *
- * Only HEATING extends a run. OFF and COOLING end one. A gap longer than
- * 2 × sampleIntervalSecs starts a new run. Readings are taken on the sample
- * interval, so a run is drawn half an interval before its first HEATING
- * sample and half an interval after its last HEATING sample. The result is
- * clipped to the window: start inclusive, end exclusive.
+ * Walk every change, including rows before the window, then clip. Only a
+ * transition into HEATING opens a run. A later HEATING row leaves it open.
+ * OFF and COOLING close it at that timestamp. A run still open at the end of
+ * the series extends to the window end: now for the current window, and the
+ * past end of the previous window. Start is inclusive and end is exclusive.
  *
- * @param {Array<{timestamp: string, hvac_status: string}>} samples
- * @param {number} sampleIntervalSecs
+ * @param {Array<{timestamp: string, hvac_status: string}>} changes
  * @param {{start: Date, end: Date}} periodBounds
  * @returns {Array<{start: Date, end: Date}>}
  */
-function heatingRuns(samples, sampleIntervalSecs, periodBounds) {
-    if (!(sampleIntervalSecs > 0) || periodBounds == null) {
+function heatingRuns(changes, periodBounds) {
+    if (periodBounds == null) {
         return [];
     }
 
-    const intervalMs = sampleIntervalSecs * 1000;
-    const halfIntervalMs = intervalMs / 2;
-    const maxGapMs = 2 * intervalMs;
     const windowStartMs = periodBounds.start.getTime();
     const windowEndMs = periodBounds.end.getTime();
 
-    const ordered = samples
-        .map(sample => ({
-            timeMs: new Date(sample.timestamp).getTime(),
-            heating: sample.hvac_status === "HEATING",
+    const ordered = changes
+        .map(change => ({
+            timeMs: new Date(change.timestamp).getTime(),
+            heating: change.hvac_status === "HEATING",
         }))
-        .filter(sample => Number.isFinite(sample.timeMs))
+        .filter(change => Number.isFinite(change.timeMs))
         .sort((left, right) => left.timeMs - right.timeMs);
 
     /** @type {Array<{start: Date, end: Date}>} */
     const runs = [];
     /** @type {number | null} */
     let runStartMs = null;
-    /** @type {number | null} */
-    let lastHeatingMs = null;
 
     /**
      * @param {number} startMs
@@ -383,40 +376,22 @@ function heatingRuns(samples, sampleIntervalSecs, periodBounds) {
         }
     }
 
-    function closeRun() {
-        if (runStartMs != null && lastHeatingMs != null) {
-            clipAndPush(runStartMs, lastHeatingMs + halfIntervalMs);
-        }
-        runStartMs = null;
-        lastHeatingMs = null;
-    }
-
-    for (const sample of ordered) {
-        if (!sample.heating) {
-            if (lastHeatingMs != null) {
-                closeRun();
+    for (const change of ordered) {
+        if (change.heating) {
+            if (runStartMs == null) {
+                runStartMs = change.timeMs;
             }
             continue;
         }
 
-        if (lastHeatingMs == null || runStartMs == null) {
-            runStartMs = sample.timeMs - halfIntervalMs;
-            lastHeatingMs = sample.timeMs;
-            continue;
-        }
-
-        const gapMs = sample.timeMs - lastHeatingMs;
-        if (gapMs > maxGapMs) {
-            closeRun();
-            runStartMs = sample.timeMs - halfIntervalMs;
-            lastHeatingMs = sample.timeMs;
-        } else {
-            lastHeatingMs = sample.timeMs;
+        if (runStartMs != null) {
+            clipAndPush(runStartMs, change.timeMs);
+            runStartMs = null;
         }
     }
 
-    if (lastHeatingMs != null) {
-        closeRun();
+    if (runStartMs != null) {
+        clipAndPush(runStartMs, windowEndMs);
     }
 
     return runs;
@@ -553,22 +528,22 @@ function heatingSetpointLabel(sample) {
 }
 
 /**
- * @param {Array<{timestamp: string}>} samples
+ * @param {Array<{timestamp: string}>} changes
  * @returns {{timestamp: string, hvac_status?: string, mode?: string | null, heat_celsius?: number | null, cool_celsius?: number | null} | null}
  */
-function latestHeatingSample(samples) {
-    /** @type {{timeMs: number, sample: {timestamp: string, hvac_status?: string, mode?: string | null, heat_celsius?: number | null, cool_celsius?: number | null}} | null} */
+function latestHeatingChange(changes) {
+    /** @type {{timeMs: number, change: {timestamp: string, hvac_status?: string, mode?: string | null, heat_celsius?: number | null, cool_celsius?: number | null}} | null} */
     let latest = null;
-    for (const sample of samples) {
-        const timeMs = new Date(sample.timestamp).getTime();
+    for (const change of changes) {
+        const timeMs = new Date(change.timestamp).getTime();
         if (!Number.isFinite(timeMs)) {
             continue;
         }
         if (latest == null || timeMs >= latest.timeMs) {
-            latest = { timeMs, sample };
+            latest = { timeMs, change };
         }
     }
-    return latest == null ? null : latest.sample;
+    return latest == null ? null : latest.change;
 }
 
 /**
@@ -650,10 +625,8 @@ function heatingStatusParts(sample) {
 function heatingSeriesIsUsable() {
     const heating = heatingSeries;
     return heating != null
-        && Array.isArray(heating.samples)
-        && heating.samples.length > 0
-        && typeof heating.sample_interval_secs === "number"
-        && heating.sample_interval_secs > 0;
+        && Array.isArray(heating.changes)
+        && heating.changes.length > 0;
 }
 
 /**
@@ -685,15 +658,15 @@ function buildHeatingStatsView() {
     }
 
     const heating = heatingSeries;
-    const currentRuns = heatingRuns(heating.samples, heating.sample_interval_secs, getPeriodBounds(period, 0));
-    const previousRuns = heatingRuns(heating.samples, heating.sample_interval_secs, getPeriodBounds(period, 1));
+    const currentRuns = heatingRuns(heating.changes, getPeriodBounds(period, 0));
+    const previousRuns = heatingRuns(heating.changes, getPeriodBounds(period, 1));
     const runs = currentRuns.map(run => ({
         range: formatHeatingRunRange(run.start, run.end, period),
         duration: formatHeatingDuration(run.end.getTime() - run.start.getTime()),
     }));
     const summary = heatingSummaryText(currentRuns);
     const compare = `${copy.previous} ${formatHeatingDuration(heatingOnTimeMs(previousRuns))}`;
-    const statusParts = heatingStatusParts(latestHeatingSample(heating.samples));
+    const statusParts = heatingStatusParts(latestHeatingChange(heating.changes));
     const statusKey = statusParts.map(part => part.text).join("|");
     const runKey = runs.map(run => `${run.range}|${run.duration}`).join("\n");
     return {
@@ -1841,10 +1814,7 @@ function drawHeatingBands(svg, device_id, series) {
     }
 
     const heating = heatingSeries;
-    if (heating == null || !Array.isArray(heating.samples) || heating.samples.length === 0) {
-        return;
-    }
-    if (typeof heating.sample_interval_secs !== "number" || !(heating.sample_interval_secs > 0)) {
+    if (heating == null || !Array.isArray(heating.changes) || heating.changes.length === 0) {
         return;
     }
 
@@ -1854,11 +1824,7 @@ function drawHeatingBands(svg, device_id, series) {
     }
 
     const range = chartValueRange(series);
-    const periodBounds = {
-        start: new Date(range.minTimestamp * timeScale),
-        end: new Date(range.maxTimestamp * timeScale),
-    };
-    const runs = heatingRuns(heating.samples, heating.sample_interval_secs, periodBounds);
+    const runs = heatingRuns(heating.changes, getPeriodBounds(chartPeriod, 0));
     if (runs.length === 0) {
         return;
     }

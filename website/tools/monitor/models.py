@@ -1,13 +1,8 @@
-import logging
 from datetime import datetime, timezone
 from enum import Enum
 from typing import Any
 
 from pydantic import BaseModel, Field, field_validator
-
-# Nest poll interval (POLL_INTERVAL_SECS in rust-backend). Reported on the
-# timeseries payload so the chart does not hardcode 300.
-HEATING_SAMPLE_INTERVAL_SECS = 300
 
 
 # The instance type of the capability, e.g. "online" or "sensorTemperature"
@@ -111,8 +106,8 @@ class TimeseriesData(BaseModel):
     data: list[TimeseriesDataPoint]
 
 
-# One Nest HVAC heartbeat stored in web_database.heating_samples.
-class HeatingSample(BaseModel):
+# One thermostat change stored in web_database.heating_changes.
+class HeatingChange(BaseModel):
     device_name: str
     timestamp: datetime
     hvac_status: str
@@ -121,9 +116,9 @@ class HeatingSample(BaseModel):
     cool_celsius: float | None = None
 
 
-# One sample on the timeseries payload. Mode and setpoints are carried for a
-# later usage page and are not drawn.
-class HeatingSamplePoint(BaseModel):
+# One change on the timeseries payload. Mode and thresholds are carried for the
+# Stats dialog and a later usage page, and are not drawn on the wash.
+class HeatingChangePoint(BaseModel):
     timestamp: str
     hvac_status: str
     mode: str | None = None
@@ -133,51 +128,80 @@ class HeatingSamplePoint(BaseModel):
 
 # The single thermostat timeline painted on every room chart.
 class HeatingSeries(BaseModel):
-    sample_interval_secs: int
     device_name: str
     device_id: str
-    samples: list[HeatingSamplePoint]
+    changes: list[HeatingChangePoint]
 
 
-# Timeseries data response. `heating` is omitted when there are no samples.
+# Timeseries data response. `heating` is omitted when there is no series.
 class TimeseriesDataResponse(BaseModel):
     data: list[TimeseriesData]
     heating: HeatingSeries | None = None
 
 
-def build_heating_series(samples: list[HeatingSample]) -> HeatingSeries | None:
+def _utc_isoformat(timestamp: datetime) -> str:
+    """Format a stored UTC timestamp. A naive value is UTC, matching the collection."""
+    if timestamp.tzinfo is None:
+        timestamp = timestamp.replace(tzinfo=timezone.utc)
+    return timestamp.astimezone(timezone.utc).isoformat()
+
+
+def select_heating_changes(
+    window: list[HeatingChange],
+    prior: HeatingChange | None = None,
+    *,
+    steady_newest: HeatingChange | None = None,
+    steady_has_other_device: bool = False,
+) -> list[HeatingChange] | None:
+    """Choose one thermostat's changes for the timeseries payload.
+
+    `window` is the rows with timestamp >= since. Those rows choose the device.
+    More than one device_name in the window omits the series. `prior` is that
+    device's newest row before since; a prior row for any other name is ignored.
+    When the window is empty, `steady_newest` is the series only if the
+    collection has that single device.
+    """
+    device_names = {row.device_name for row in window}
+    if len(device_names) > 1:
+        return None
+    if len(device_names) == 1:
+        device_name = next(iter(device_names))
+        chosen = list(window)
+        if prior is not None and prior.device_name == device_name:
+            chosen.append(prior)
+        return chosen
+    if steady_newest is None or steady_has_other_device:
+        return None
+    return [steady_newest]
+
+
+def build_heating_series(changes: list[HeatingChange]) -> HeatingSeries | None:
     """Build the one heating series for the timeseries payload.
 
-    This house has one thermostat. If more than one device name is stored, the
-    series is the device with the newest sample. Every status is kept, including
-    OFF and COOLING. Empty input means the chart should draw no wash.
+    Empty input, or more than one device name, omits `heating`. Rows stay in
+    timestamp order. A missing mode or threshold stays None so the response
+    can leave it off the JSON.
     """
-    if not samples:
+    if not changes:
         return None
 
-    ordered = sorted(samples, key=lambda sample: (sample.timestamp, sample.device_name))
-    device_name = ordered[-1].device_name
-    device_names = {sample.device_name for sample in ordered}
-    if len(device_names) > 1:
-        logging.warning(
-            "heating_samples has %s thermostats; chart series uses %s",
-            len(device_names),
-            device_name,
-        )
+    device_names = {change.device_name for change in changes}
+    if len(device_names) != 1:
+        return None
 
-    device_samples = [sample for sample in ordered if sample.device_name == device_name]
+    ordered = sorted(changes, key=lambda change: change.timestamp)
+    device_name = ordered[0].device_name
     return HeatingSeries(
-        sample_interval_secs=HEATING_SAMPLE_INTERVAL_SECS,
         device_name=device_name,
         device_id=device_name.lower().replace(" ", "-"),
-        samples=[
-            HeatingSamplePoint(
-                timestamp=sample.timestamp.astimezone(timezone.utc).isoformat(),
-                hvac_status=sample.hvac_status,
-                mode=sample.mode,
-                heat_celsius=sample.heat_celsius,
-                cool_celsius=sample.cool_celsius,
+        changes=[
+            HeatingChangePoint(
+                timestamp=_utc_isoformat(change.timestamp),
+                hvac_status=change.hvac_status,
+                mode=change.mode,
+                heat_celsius=change.heat_celsius,
+                cool_celsius=change.cool_celsius,
             )
-            for sample in device_samples
+            for change in ordered
         ],
     )

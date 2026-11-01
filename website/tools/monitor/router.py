@@ -6,9 +6,9 @@ from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 
-from . import heating_samples_collection, sensor_data_collection
+from . import heating_changes_collection, sensor_data_collection
 from .models import (
-    HeatingSample,
+    HeatingChange,
     SensorDataPoints,
     SensorData,
     SensorDataMessage,
@@ -17,6 +17,7 @@ from .models import (
     TimeseriesDataResponse,
     HeatingSeries,
     build_heating_series,
+    select_heating_changes,
 )
 
 # Devices whose readings should not be shown on the monitor
@@ -127,19 +128,56 @@ async def _timeseries_for_device(
 
 
 async def _load_heating_series(since: datetime) -> HeatingSeries | None:
-    """Load heating heartbeats with the same 14-day `since` as the room series.
+    """Load heating changes with the same 14-day `since` as the room series.
 
     `since` is the naive `datetime.now() - 14 days` already used for sensor_data.
-    Stored timestamps are UTC. Missing rows leave `heating` unset.
+    Stored timestamps are UTC. The window rows choose the thermostat. The prior
+    row is that device's newest change before `since`. A steady log with one
+    device and no row inside the window still returns that newest change.
     """
-    if heating_samples_collection is None:
+    if heating_changes_collection is None:
         return None
 
-    cursor = heating_samples_collection.find({"timestamp": {"$gte": since}}).sort(
+    cursor = heating_changes_collection.find({"timestamp": {"$gte": since}}).sort(
         [("timestamp", 1)]
     )
-    samples = [HeatingSample.model_validate(item) async for item in cursor]
-    return build_heating_series(samples)
+    window = [HeatingChange.model_validate(item) async for item in cursor]
+    names = {row.device_name for row in window}
+    if len(names) > 1:
+        return None
+
+    prior: HeatingChange | None = None
+    steady_newest: HeatingChange | None = None
+    steady_has_other_device = False
+    if len(names) == 1:
+        device_name = next(iter(names))
+        prior_doc = await heating_changes_collection.find_one(
+            {"device_name": device_name, "timestamp": {"$lt": since}},
+            sort=[("timestamp", -1)],
+        )
+        if prior_doc is not None:
+            prior = HeatingChange.model_validate(prior_doc)
+    else:
+        newest_doc = await heating_changes_collection.find_one(
+            sort=[("timestamp", -1)]
+        )
+        if newest_doc is None:
+            return None
+        steady_newest = HeatingChange.model_validate(newest_doc)
+        other_doc = await heating_changes_collection.find_one(
+            {"device_name": {"$ne": steady_newest.device_name}}
+        )
+        steady_has_other_device = other_doc is not None
+
+    selected = select_heating_changes(
+        window,
+        prior,
+        steady_newest=steady_newest,
+        steady_has_other_device=steady_has_other_device,
+    )
+    if selected is None:
+        return None
+    return build_heating_series(selected)
 
 
 # Endpoint to get the timeseries data.
@@ -171,7 +209,7 @@ async def timeseries() -> TimeseriesDataResponse:
 
     # Get the timeseries data for each device over the last 14 days
     # (supports daily/weekly charts with previous-period overlay).
-    # The same `since` covers heating_samples, including the previous week.
+    # The same `since` covers heating_changes, including the one row before it.
     since = datetime.now() - timedelta(days=14)
     timeseries_data = list(
         await asyncio.gather(
