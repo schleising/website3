@@ -857,7 +857,7 @@ body.dark-mode .heating-time-range[aria-checked="true"] {
     margin-top: 0.35rem;
 }
 
-.heating-time-pager button {
+.heating-time-pager button:not(.heating-time-label) {
     border: 0;
     background: transparent;
     color: var(--ink);
@@ -866,7 +866,7 @@ body.dark-mode .heating-time-range[aria-checked="true"] {
     padding: 0.15rem 0.55rem;
 }
 
-.heating-time-pager button:disabled {
+.heating-time-pager button:not(.heating-time-label):disabled {
     color: var(--ink-muted);
     opacity: 0.35;
     cursor: default;
@@ -874,9 +874,24 @@ body.dark-mode .heating-time-range[aria-checked="true"] {
 
 .heating-time-label {
     min-width: 9rem;
+    border: 0;
+    background: transparent;
     color: var(--ink);
     font-family: var(--font-display);
+    font-size: 0.88rem;
     font-weight: 700;
+    padding: 0.2rem 0.45rem;
+}
+
+.heating-time-label:not(:disabled) {
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 0.18em;
+}
+
+.heating-time-label:disabled {
+    opacity: 1;
+    cursor: default;
 }
 
 .heating-heat {

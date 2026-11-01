@@ -128,7 +128,7 @@ Weeks start on Monday. Days, weeks, and months are the browser’s local calenda
 
 The previous window is the same shape immediately before, aligned by slot: clock hour, weekday, or day number. Bars and Total always draw it. The current bar or point stays on the left.
 
-The forward chevron is disabled when the window contains today. The back chevron is always enabled. Paging moves one whole window and keeps the view and the range.
+The forward chevron is disabled when the window contains today. The back chevron is always enabled. Paging moves one whole window and keeps the view and the range. Tapping the date between the chevrons returns to the window that contains today. While that window is already showing, the date is not a control.
 
 ### Zero, future, and a period still in progress
 
@@ -264,7 +264,7 @@ Opening uses the same steps. `showModal` has already shown the chrome-only card;
 3. One row. The range (Day, Week, Month) is the segmented control. The view (Bars, Total, Heatmap) is a menu on that row. A later view is a menu item. A later range is a segment.
 4. Bars keep the Day, Week, and Month charts already specified. Total is the running sum of those slots. Heatmap is the month, one cell per day.
 5. Bars and Total always draw the previous window: current on the left in heating red, previous on the right in teal. Heatmap does not draw a previous month. Its tiles are square and fit in the dialog without scrolling.
-6. The pager sits under the chart. Forward is disabled when the window contains today.
+6. The pager sits under the chart. Forward is disabled when the window contains today. The date between the chevrons returns to that window.
 7. A finished empty slot is zero. A slot that has not started draws nothing. The current period is the real time so far.
 8. The dialog queries `heating_changes` for the span it shows, plus one prior row. It does not widen the room chart’s 14-day payload.
 9. The card’s height eases by the method in §7. The end height is the settled border box after the chart is drawn. The effect does not leave an inline height behind. Resize stays instant.

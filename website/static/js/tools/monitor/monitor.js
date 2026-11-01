@@ -1,4 +1,4 @@
-const serviceWorkerPath = '/sw.js?v=tools-webapp-v31';
+const serviceWorkerPath = '/sw.js?v=tools-webapp-v32';
 const chartSettingsStorageKey = 'monitor.chartSettings';
 
 // The chart data to be fetched from the server
@@ -1546,8 +1546,15 @@ function syncHeatingTimeChrome() {
     });
 
     const label = document.getElementById("heating-time-label");
-    if (label != null) {
-        label.textContent = range.pagerLabel(bounds);
+    if (label instanceof HTMLButtonElement) {
+        const pagerText = range.pagerLabel(bounds);
+        label.textContent = pagerText;
+        label.disabled = containsNow;
+        if (containsNow) {
+            label.removeAttribute("aria-label");
+        } else {
+            label.setAttribute("aria-label", `${pagerText}, return to today`);
+        }
     }
     const pager = document.getElementById("heating-time-pager");
     if (pager != null) {
@@ -1868,6 +1875,7 @@ function initializeHeatingStats() {
     const menu = document.getElementById("heating-time-view-menu");
     const back = document.getElementById("heating-time-back");
     const forward = document.getElementById("heating-time-forward");
+    const label = document.getElementById("heating-time-label");
     if (
         !(button instanceof HTMLButtonElement)
         || !(dialog instanceof HTMLDialogElement)
@@ -1877,6 +1885,7 @@ function initializeHeatingStats() {
         || menu == null
         || !(back instanceof HTMLButtonElement)
         || !(forward instanceof HTMLButtonElement)
+        || !(label instanceof HTMLButtonElement)
     ) {
         return;
     }
@@ -1981,6 +1990,13 @@ function initializeHeatingStats() {
         }
         const range = heatingTimeRangeById(heatingTime.rangeId);
         heatingTime.cursor = range.step(heatingTime.cursor, 1);
+        refreshHeatingTime();
+    });
+    label.addEventListener("click", () => {
+        if (label.disabled) {
+            return;
+        }
+        heatingTime.cursor = new Date();
         refreshHeatingTime();
     });
 
