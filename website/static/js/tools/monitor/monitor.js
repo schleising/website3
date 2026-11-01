@@ -1,4 +1,4 @@
-const serviceWorkerPath = '/sw.js?v=tools-webapp-v32';
+const serviceWorkerPath = '/sw.js?v=tools-webapp-v35';
 const chartSettingsStorageKey = 'monitor.chartSettings';
 
 // The chart data to be fetched from the server
@@ -69,6 +69,101 @@ let activeScrubState = null;
  */
 function formatTemperature(value) {
     return value.toFixed(1) + "°C";
+}
+
+/**
+ * Latest mode, activity, and heat target. A row that omits mode or
+ * heat_celsius keeps the previous value.
+ * @param {Array<{timestamp: string, hvac_status?: string, mode?: string, heat_celsius?: number}>} changes
+ * @returns {{call: "On" | "Off" | null, activity: "Heating" | "Idle" | null, target: number | null} | null}
+ */
+function heatingStateInForce(changes) {
+    if (changes.length === 0) {
+        return null;
+    }
+    const ordered = changes.slice().sort(
+        (left, right) => new Date(left.timestamp).getTime() - new Date(right.timestamp).getTime(),
+    );
+    /** @type {string | null} */
+    let mode = null;
+    /** @type {number | null} */
+    let target = null;
+    /** @type {string | null} */
+    let status = null;
+    for (const change of ordered) {
+        if (typeof change.hvac_status === "string" && change.hvac_status !== "") {
+            status = change.hvac_status;
+        }
+        if (typeof change.mode === "string" && change.mode !== "") {
+            mode = change.mode;
+        }
+        if (typeof change.heat_celsius === "number" && Number.isFinite(change.heat_celsius)) {
+            target = change.heat_celsius;
+        }
+    }
+    /** @type {"On" | "Off" | null} */
+    let call = null;
+    if (mode === "HEAT" || mode === "HEATCOOL") {
+        call = "On";
+    } else if (mode === "OFF" || mode === "COOL") {
+        call = "Off";
+    }
+    /** @type {"Heating" | "Idle" | null} */
+    let activity = null;
+    if (status === "HEATING") {
+        activity = "Heating";
+    } else if (status != null) {
+        activity = "Idle";
+    }
+    if (call == null && activity == null && target == null) {
+        return null;
+    }
+    return { call, activity, target };
+}
+
+function syncHeatingState() {
+    const pill = document.getElementById("heating-state");
+    if (!(pill instanceof HTMLElement)) {
+        return;
+    }
+    const changes = heatingSeries != null && Array.isArray(heatingSeries.changes)
+        ? heatingSeries.changes
+        : [];
+    const state = heatingStateInForce(changes);
+    if (state == null) {
+        pill.hidden = true;
+        pill.replaceChildren();
+        pill.removeAttribute("aria-label");
+        pill.classList.remove("is-heating", "is-on", "is-off");
+        return;
+    }
+    /** @type {string[]} */
+    const parts = [];
+    /** @type {string[]} */
+    const spoken = [];
+    if (state.call != null) {
+        parts.push(state.call);
+        spoken.push(state.call === "On" ? "Heating is on" : "Heating is off");
+    }
+    if (state.activity != null) {
+        parts.push(state.activity);
+        spoken.push(state.activity === "Heating" ? "actively heating" : "not heating");
+    }
+    if (state.target != null) {
+        const label = formatTemperature(state.target);
+        parts.push(label);
+        spoken.push(`target ${label}`);
+    }
+    pill.replaceChildren(...parts.map(text => {
+        const span = document.createElement("span");
+        span.textContent = text;
+        return span;
+    }));
+    pill.classList.toggle("is-heating", state.activity === "Heating");
+    pill.classList.toggle("is-on", state.activity !== "Heating" && state.call === "On");
+    pill.classList.toggle("is-off", state.activity !== "Heating" && state.call !== "On");
+    pill.setAttribute("aria-label", spoken.join(", "));
+    pill.hidden = false;
 }
 
 /**
@@ -2658,6 +2753,7 @@ async function fetchTemperatureData() {
             // Update the temperature data
             deviceData = response_data.data;
             heatingSeries = response_data.heating ?? null;
+            syncHeatingState();
             drawCharts();
             refreshAllTemperatureReadouts();
             refreshHeatingTime({ refetch: true });

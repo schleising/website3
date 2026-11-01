@@ -422,6 +422,23 @@ body.dark-mode .chart-svg {
         max-width: none;
     }
 
+    .topbar {
+        flex-wrap: nowrap;
+        align-items: center;
+        gap: 0.25rem;
+    }
+
+    .brand-title {
+        font-size: 1.25rem;
+        letter-spacing: -0.045em;
+    }
+
+    .topbar-actions {
+        flex-wrap: nowrap;
+        flex-shrink: 0;
+        gap: 0.2rem;
+    }
+
     .charts {
         grid-template-columns: 1fr;
         gap: 0.65rem;
@@ -491,6 +508,57 @@ body.dark-mode .chart-svg {
     }
 }
 
+.topbar-actions {
+    justify-content: flex-end;
+}
+
+.heating-state {
+    display: inline-flex;
+    align-items: center;
+    height: 2.1rem;
+    max-width: 100%;
+    margin: 0;
+    padding: 0 0.85rem;
+    border: 0.0625rem solid var(--line);
+    border-radius: 999px;
+    background: var(--surface-strong);
+    color: var(--ink);
+    font-family: var(--font-display);
+    font-size: 0.78rem;
+    font-weight: 700;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.heating-state[hidden] {
+    display: none;
+}
+
+.heating-state span + span::before {
+    content: "·";
+    margin: 0 0.4rem;
+    color: currentColor;
+    opacity: 0.45;
+    font-weight: 650;
+}
+
+.heating-state.is-heating {
+    color: var(--heating-bar);
+    background: color-mix(in srgb, var(--heating-bar) 12%, var(--surface-strong));
+    border-color: color-mix(in srgb, var(--heating-bar) 38%, var(--line));
+}
+
+.heating-state.is-on {
+    color: var(--live-deep, var(--live));
+    background: var(--live-soft);
+    border-color: color-mix(in srgb, var(--live) 40%, var(--line));
+}
+
+.heating-state.is-off {
+    color: var(--ink-muted);
+}
+
 .heating-stats-button {
     display: inline-flex;
     align-items: center;
@@ -526,6 +594,12 @@ body.dark-mode .chart-svg {
 }
 
 @media screen and (max-width: 44rem) {
+    .heating-state {
+        height: 1.9rem;
+        padding: 0 0.4rem;
+        font-size: 0.64rem;
+    }
+
     .heating-stats-button {
         height: 1.9rem;
         padding: 0 0.7rem;
