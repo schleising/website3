@@ -179,7 +179,7 @@ Weeks start on Monday. Days, weeks, and months are the browser’s local calenda
 
 The month axis is always 31 slots, so a shorter month still has a place for a later day of the previous month. A day the month on screen does not have (`31` in November, `29`–`31` in a non-leap February) is absent: no red bar, and it is not measured. The heatmap drops those absent days and shows only the real days. Previous month still draws its own day 31 on a November chart.
 
-The previous window is the same shape immediately before, aligned by slot: clock hour, weekday, or day number. Bars and Total always draw it, current on the left, previous on the right. Heatmap does not.
+The previous window is the same shape immediately before, aligned by slot: clock hour, weekday, or day number. On Bars the previous-period label is a toggle. It starts off, so only the current period is drawn and each bar fills its slot. Turning it on draws the previous period on the right and the current period on the left. Total always draws both. Heatmap does not.
 
 The forward chevron is disabled when the window contains today. The back chevron stays enabled. Paging moves one whole window and keeps the view and the range. The date between the chevrons is a button. On an earlier window it is underlined, and a tap sets the cursor to today. While the window already contains today, that button is disabled and reads as the date alone.
 
@@ -195,7 +195,7 @@ On Day, an hour after now has no red bar. Yesterday’s later hours still draw. 
 
 ### Bars
 
-Twenty-four hour slots on Day, seven weekday slots on Week, thirty-one day slots on Month. While the window contains today the legend reads **Today** / **Yesterday**, **This week** / **Last week**, or **This month** / **Last month**. On an earlier window it reads the two dates, weeks, or months.
+Twenty-four hour slots on Day, seven weekday slots on Week, thirty-one day slots on Month. While the window contains today the legend reads **Today** / **Yesterday**, **This week** / **Last week**, or **This month** / **Last month**. On an earlier window it reads the two dates, weeks, or months. The previous label toggles that series. It opens off, and the current bar then uses the full slot.
 
 ### Total
 
@@ -292,7 +292,7 @@ When `monitor.js` or `monitor.css` changes, raise its query in the template and 
 3. A run starts when status becomes `HEATING` and ends when it leaves `HEATING`. A later `HEATING` row keeps the run open. Walk every change, then clip. A trailing `HEATING` extends to now only on a window that contains now.
 4. The wash is this period’s runs on every room chart, behind both temperature lines. Previous-period heating is not drawn there. The chart toolbar does not resize the dialog.
 5. Stats opens one dialog. Bars, Total, and Heatmap are views. Day, Week, and Month are ranges. A later view is a menu item. A later range is a segment.
-6. Bars and Total always draw the previous window: current in heating red, previous in live teal. Heatmap is the month only. Its tiles are square, show the duration under the day number, and treat 7 hours as solid red.
+6. On Bars the previous-period label toggles that series. It starts hidden, and the current bar then fills the slot. Total always draws the previous window. Current is heating red, previous is live teal. Heatmap is the month only. Its tiles are square, show the duration under the day number, and treat 7 hours as solid red.
 7. The month axis is day 1 through 31. The heatmap shows only real days. A finished empty slot is zero. A slot that has not started draws nothing.
 8. The pager steps one window. Forward is disabled on the window that contains today. The date between the chevrons returns to that window.
 9. The dialog asks `GET /heating` for the span it shows. It does not widen the 14-day chart payload.

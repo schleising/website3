@@ -889,10 +889,25 @@ body.dark-mode .heating-time-range[aria-checked="true"] {
     font-size: 0.82rem;
 }
 
-.heating-time-legend span {
+.heating-time-legend span,
+.heating-time-legend-toggle {
     display: inline-flex;
     align-items: center;
     gap: 0.35rem;
+}
+
+.heating-time-legend-toggle {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+}
+
+.heating-time-legend-toggle[aria-pressed="false"] {
+    opacity: 0.38;
 }
 
 .heating-time-swatch {

@@ -1,4 +1,4 @@
-const serviceWorkerPath = '/sw.js?v=tools-webapp-v36';
+const serviceWorkerPath = '/sw.js?v=tools-webapp-v37';
 const chartSettingsStorageKey = 'monitor.chartSettings';
 
 // The chart data to be fetched from the server
@@ -760,6 +760,9 @@ const heatingTime = {
     rangeBeforeLock: null,
 };
 
+/** Bars start with the previous period hidden. The legend label toggles it. */
+let heatingBarsShowPrevious = false;
+
 /** @type {{device_name: string, changes: Array<{timestamp: string, hvac_status: string}>} | null} */
 let heatingTimeSeries = null;
 let heatingTimeLoadedSince = "";
@@ -931,7 +934,7 @@ function buildHeatingTimeModel() {
     const bounds = range.window(heatingTime.cursor);
     const changes = heatingTimeSeries == null ? [] : heatingTimeSeries.changes;
     const slots = measureHeatingSlots(range.slots(bounds), changes, now);
-    const showPrevious = view.previous;
+    const showPrevious = view.id === "bars" ? heatingBarsShowPrevious : view.previous;
     /** @type {Array<HeatingMeasuredSlot | null> | null} */
     let previousSlots = null;
     if (showPrevious) {
@@ -1252,7 +1255,10 @@ function drawHeatingSeries(host, model, cumulative) {
  */
 function drawHeatingBarPairs(svg, model, yAt, slotLeft, slotWidth, bindPointer, pointerText) {
     const gap = Math.min(3, slotWidth * 0.08);
-    const barWidth = Math.max(2, (slotWidth - gap * 3) / 2);
+    const paired = model.showPrevious;
+    const barWidth = paired
+        ? Math.max(2, (slotWidth - gap * 3) / 2)
+        : Math.max(2, slotWidth - gap * 2);
     const baseline = yAt(0);
     for (const slot of model.slots) {
         const left = slotLeft(slot.index) + gap;
@@ -1285,7 +1291,7 @@ function drawHeatingBarPairs(svg, model, yAt, slotLeft, slotWidth, bindPointer, 
             }
         }
         const previous = model.previousSlots == null ? null : model.previousSlots[slot.index];
-        if (model.showPrevious && previous != null && previous.durationMs != null) {
+        if (paired && previous != null && previous.durationMs != null) {
             const value = heatingSlotValue(previous.durationMs, model.range.unit);
             const y = yAt(value);
             const x = left + barWidth + gap;
@@ -1447,25 +1453,36 @@ function drawHeatingTotal(host, model) {
 }
 
 /**
- * @param {HTMLElement} host
- * @param {HeatingTimeModel} model
+ * @param {string} tone
+ * @param {string} label
+ * @returns {HTMLElement}
  */
+function heatingLegendRow(tone, label) {
+    const row = document.createElement("span");
+    const swatch = document.createElement("i");
+    swatch.className = `heating-time-swatch ${tone}`;
+    swatch.setAttribute("aria-hidden", "true");
+    row.append(swatch, document.createTextNode(label));
+    return row;
+}
+
 function appendHeatingLegend(host, model) {
     const legend = document.createElement("div");
     legend.className = "heating-time-legend";
-    const items = [
-        { tone: "current", label: model.range.legend(model.bounds, "current") },
-    ];
-    if (model.showPrevious) {
-        items.push({ tone: "previous", label: model.range.legend(model.bounds, "previous") });
-    }
-    for (const item of items) {
-        const row = document.createElement("span");
-        const swatch = document.createElement("i");
-        swatch.className = `heating-time-swatch ${item.tone}`;
-        swatch.setAttribute("aria-hidden", "true");
-        row.append(swatch, document.createTextNode(item.label));
-        legend.append(row);
+    legend.append(heatingLegendRow("current", model.range.legend(model.bounds, "current")));
+    if (model.view.id === "bars" && model.view.previous) {
+        const toggle = document.createElement("button");
+        toggle.type = "button";
+        toggle.className = "heating-time-legend-toggle";
+        toggle.setAttribute("aria-pressed", model.showPrevious ? "true" : "false");
+        toggle.append(heatingLegendRow("previous", model.range.legend(model.bounds, "previous")));
+        toggle.addEventListener("click", () => {
+            heatingBarsShowPrevious = !heatingBarsShowPrevious;
+            paintHeatingTime();
+        });
+        legend.append(toggle);
+    } else if (model.showPrevious) {
+        legend.append(heatingLegendRow("previous", model.range.legend(model.bounds, "previous")));
     }
     host.append(legend);
 }
@@ -1957,6 +1974,7 @@ function resetHeatingTime() {
     heatingTime.viewId = heatingTimeViews[0].id;
     heatingTime.cursor = new Date();
     heatingTime.rangeBeforeLock = null;
+    heatingBarsShowPrevious = false;
     heatingTimeSeries = null;
     heatingTimeLoadedSince = "";
     heatingTimePaintedKey = "";
