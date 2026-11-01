@@ -662,7 +662,6 @@ body.dark-mode .heating-time-range[aria-checked="true"] {
 .heating-time-view:focus-visible,
 .heating-time-menu-item:focus-visible,
 .heating-time-pager button:focus-visible,
-.heating-time-hit:focus-visible,
 .heating-heat-cell:focus-visible {
     outline: 0.125rem solid rgba(15, 143, 122, 0.55);
     outline-offset: 0.125rem;
@@ -747,7 +746,6 @@ body.dark-mode .heating-time-range[aria-checked="true"] {
 
 .heating-stats-head,
 .heating-time-toolbar,
-.heating-time-progress,
 .heating-time-pager {
     flex-shrink: 0;
 }
@@ -800,9 +798,22 @@ body.dark-mode .heating-time-range[aria-checked="true"] {
     stroke: var(--chart-overlay);
 }
 
+.heating-mark {
+    transition: opacity 120ms ease;
+}
+
+.heating-time-chart.is-pointing .heating-mark {
+    opacity: 0.28;
+}
+
+.heating-time-chart.is-pointing .heating-mark.is-lit {
+    opacity: 1;
+}
+
 .heating-time-hit {
     fill: transparent;
     cursor: pointer;
+    outline: none;
 }
 
 .heating-time-legend {
@@ -836,7 +847,6 @@ body.dark-mode .heating-time-range[aria-checked="true"] {
 }
 
 .heating-time-pointer,
-.heating-time-progress,
 .heating-time-label {
     margin: 0;
     color: var(--ink-muted);
@@ -848,10 +858,6 @@ body.dark-mode .heating-time-range[aria-checked="true"] {
 .heating-time-pointer {
     min-height: 1.25rem;
     margin-top: 0.35rem;
-}
-
-.heating-time-progress {
-    margin-top: 0.2rem;
 }
 
 .heating-time-pager {
@@ -962,6 +968,12 @@ body.dark-mode .heating-heat-cell.is-hot {
 
 body.dark-mode .heating-stats-dialog::backdrop {
     background: rgba(0, 0, 0, 0.55);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .heating-mark {
+        transition: none;
+    }
 }
 
 @media (prefers-reduced-motion: no-preference) {

@@ -106,9 +106,9 @@ Day accumulates **minutes** and the axis can pass 60. Week and Month accumulate 
 
 ![Month heatmap, darker red for more hours](monitor-heating/heating-time-heatmap.jpg)
 
-One cell per day of the month on screen. Monday is the first column. The tint runs from the paper colour at 0 hours to solid heating red at the busiest day in that month. A day that has not started is an empty cell, outside the scale, not a white zero. The picture’s later dates are those empty cells. A finished day with no heating is the lightest tint.
+One cell per day of the month on screen. Monday is the first column. The tint runs from the paper colour at 0 hours to solid heating red at 7 hours. A day with more than 7 hours stays at that solid red. A day that has not started is an empty cell, outside the scale, not a white zero. The picture’s later dates are those empty cells. A finished day with no heating is the lightest tint.
 
-The heatmap does not draw a previous month. Day and Week are disabled and Month is selected. The calendar fits in the dialog without scrolling. The pager still steps a month. The legend is `0 h` to the month’s busiest day, labelled in whole hours.
+The heatmap does not draw a previous month. Day and Week are disabled and Month is selected. The calendar fits in the dialog without scrolling. The pager still steps a month. The legend is `0 h` to `7 h`.
 
 ---
 
@@ -138,13 +138,13 @@ The forward chevron is disabled when the window contains today. The back chevron
 | Not started yet | Nothing. Not a zero. On the heatmap this is an empty cell. |
 | In progress (today, this week, this month) | The real time so far. Not scaled up to a full period. |
 
-On Day, an hour after now has no red bar. Yesterday’s later hours still draw. On Week, today is the height so far and the weekdays after today have no red bar. On Month, the same for day numbers after today. On Total, the line has no point for a slot that has not started.
-
-When the window contains today, Bars and Total add one line under the chart: “Today is still in progress”, “This week is still in progress”, or “This month is still in progress”. A finished window has no such line. Heatmap uses the empty cells instead of that sentence.
+On Day, an hour after now has no red bar. Yesterday’s later hours still draw. On Week, today is the height so far and the weekdays after today have no red bar. On Month, the same for day numbers after today. On Total, the line has no point for a slot that has not started. There is no caption saying the period is still in progress.
 
 ### Pointer text
 
 Bars and Total use the duration words already in the Stats dialog: `42 min`, `4 h 10 min`, under a minute as `< 1 min`. The axis unit is coarser than the pointer. A bar of 1.4 hours reads `1 h 24 min`. Heatmap uses the same words on the cell.
+
+Hovering or tapping a bar lights that bar and dims the others. Hovering or tapping a Total slot lights that slot’s points and dims the other points. There is no outline around the bar or the point.
 
 ### Colours
 
@@ -199,7 +199,6 @@ A **range** describes a window:
 | `legend(window, which)` | “Today” / “Yesterday”, “This week” / “Last week”, and so on |
 | `unit` | `minutes` or `hours`, for Bars and for the Total axis |
 | `axisMax` | A fixed max such as 60, or none when the axis fits the data |
-| `progressLabel` | “Today is still in progress”, or none |
 
 A **view** describes a drawing of the active range:
 
@@ -213,7 +212,7 @@ A **view** describes a drawing of the active range:
 
 `model` is the shared result: the active range, the cursor, the current slots with their durations, and the previous slots when the view draws them. `draw` does not fetch and does not clip. Fetching and clipping live in one place so a new view cannot invent a second run rule.
 
-Dialog state is `{ rangeId, viewId, cursor, previous, rangeBeforeLock }`. Choosing a view whose `ranges` omit the current `rangeId` stores that id in `rangeBeforeLock` and selects the view’s first range. Choosing a view that includes `rangeBeforeLock` restores it.
+Dialog state is `{ rangeId, viewId, cursor, rangeBeforeLock }`. Choosing a view whose `ranges` omit the current `rangeId` stores that id in `rangeBeforeLock` and selects the view’s first range. Choosing a view that includes `rangeBeforeLock` restores it.
 
 The first lists are:
 

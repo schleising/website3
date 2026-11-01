@@ -1,4 +1,4 @@
-const serviceWorkerPath = '/sw.js?v=tools-webapp-v21';
+const serviceWorkerPath = '/sw.js?v=tools-webapp-v22';
 const chartSettingsStorageKey = 'monitor.chartSettings';
 
 // The chart data to be fetched from the server
@@ -425,6 +425,7 @@ function formatHeatingDuration(durationMs) {
 
 const HEATING_SVG_NS = "http://www.w3.org/2000/svg";
 const HEATING_WEEKDAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const HEATING_HEATMAP_MAX_HOURS = 7;
 
 /**
  * @typedef {{start: Date, end: Date}} HeatingWindow
@@ -435,7 +436,6 @@ const HEATING_WEEKDAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
  *   label: string,
  *   unit: 'minutes' | 'hours',
  *   axisMax: number | null,
- *   progressLabel: string,
  *   window: (cursor: Date) => HeatingWindow,
  *   step: (cursor: Date, direction: number) => Date,
  *   slots: (bounds: HeatingWindow) => HeatingSlot[],
@@ -448,14 +448,12 @@ const HEATING_WEEKDAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
  *   ranges: string[],
  *   previous: boolean,
  *   pager: boolean,
- *   progress: boolean,
  *   draw: (host: HTMLElement, model: HeatingTimeModel) => void,
  * }} HeatingTimeView
  * @typedef {{
  *   range: HeatingTimeRange,
  *   view: HeatingTimeView,
  *   bounds: HeatingWindow,
- *   containsNow: boolean,
  *   showPrevious: boolean,
  *   slots: HeatingMeasuredSlot[],
  *   previousSlots: Array<HeatingMeasuredSlot | null> | null,
@@ -469,7 +467,6 @@ const heatingTimeRanges = [
         label: "Day",
         unit: "minutes",
         axisMax: 60,
-        progressLabel: "Today is still in progress",
         window(cursor) {
             const start = startOfLocalDay(cursor);
             const end = new Date(start);
@@ -517,7 +514,6 @@ const heatingTimeRanges = [
         label: "Week",
         unit: "hours",
         axisMax: null,
-        progressLabel: "This week is still in progress",
         window(cursor) {
             const start = startOfLocalWeek(cursor);
             const end = new Date(start);
@@ -564,7 +560,6 @@ const heatingTimeRanges = [
         label: "Month",
         unit: "hours",
         axisMax: null,
-        progressLabel: "This month is still in progress",
         window(cursor) {
             const start = new Date(cursor.getFullYear(), cursor.getMonth(), 1);
             const end = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1);
@@ -615,7 +610,6 @@ const heatingTimeViews = [
         ranges: ["day", "week", "month"],
         previous: true,
         pager: true,
-        progress: true,
         draw: drawHeatingBars,
     },
     {
@@ -624,7 +618,6 @@ const heatingTimeViews = [
         ranges: ["day", "week", "month"],
         previous: true,
         pager: true,
-        progress: true,
         draw: drawHeatingTotal,
     },
     {
@@ -633,7 +626,6 @@ const heatingTimeViews = [
         ranges: ["month"],
         previous: false,
         pager: true,
-        progress: false,
         draw: drawHeatingHeatmap,
     },
 ];
@@ -829,7 +821,6 @@ function buildHeatingTimeModel() {
         range,
         view,
         bounds,
-        containsNow: heatingWindowContainsNow(bounds, now),
         showPrevious,
         slots,
         previousSlots,
@@ -1036,16 +1027,63 @@ function drawHeatingSeries(host, model, cumulative) {
     pointer.className = "heating-time-pointer";
 
     /**
+     * @param {Element} mark
+     * @param {string} active
+     * @returns {boolean}
+     */
+    function markIsLit(mark, active) {
+        if (mark.getAttribute("data-mark") === active) {
+            return true;
+        }
+        return active.startsWith("slot-") && mark.getAttribute("data-slot") === active.slice(5);
+    }
+
+    /**
+     * @param {string} active
+     */
+    function pointAt(active) {
+        svg.classList.add("is-pointing");
+        const series = active.startsWith("c-") ? "current" : active.startsWith("p-") ? "previous" : null;
+        for (const mark of svg.querySelectorAll(".heating-mark")) {
+            mark.classList.toggle("is-lit", markIsLit(mark, active));
+        }
+        for (const line of svg.querySelectorAll(".heating-line-current, .heating-line-previous")) {
+            const lineSeries = line.classList.contains("heating-line-current") ? "current" : "previous";
+            line.classList.toggle("is-lit", series == null || lineSeries === series);
+        }
+    }
+
+    function clearPoint(next) {
+        if (next instanceof Element && svg.contains(next) && next.classList.contains("heating-time-hit")) {
+            return;
+        }
+        svg.classList.remove("is-pointing");
+        for (const mark of svg.querySelectorAll(".is-lit")) {
+            mark.classList.remove("is-lit");
+        }
+    }
+
+    /**
      * @param {SVGElement} target
      * @param {string} text
+     * @param {string} active
      */
-    function bindPointer(target, text) {
+    function bindPointer(target, text, active) {
         const show = () => {
             pointer.textContent = text;
+            pointAt(active);
         };
         target.addEventListener("pointerenter", show);
         target.addEventListener("focus", show);
-        target.addEventListener("click", show);
+        target.addEventListener("pointerleave", event => {
+            if (document.activeElement === target) {
+                return;
+            }
+            clearPoint(event.relatedTarget);
+        });
+        target.addEventListener("blur", event => {
+            clearPoint(event.relatedTarget);
+        });
     }
 
     /**
@@ -1087,7 +1125,7 @@ function drawHeatingSeries(host, model, cumulative) {
  * @param {(value: number) => number} yAt
  * @param {(index: number) => number} slotLeft
  * @param {number} slotWidth
- * @param {(target: SVGElement, text: string) => void} bindPointer
+ * @param {(target: SVGElement, text: string, active: string) => void} bindPointer
  * @param {(slot: HeatingMeasuredSlot, durationMs: number, which: 'current' | 'previous') => string} pointerText
  */
 function drawHeatingBarPairs(svg, model, yAt, slotLeft, slotWidth, bindPointer, pointerText) {
@@ -1101,7 +1139,8 @@ function drawHeatingBarPairs(svg, model, yAt, slotLeft, slotWidth, bindPointer, 
             const y = yAt(value);
             if (value > 0) {
                 svg.append(heatingSvg("rect", {
-                    class: "heating-bar-current",
+                    class: "heating-bar-current heating-mark",
+                    "data-mark": `c-${slot.index}`,
                     x: left,
                     y,
                     width: barWidth,
@@ -1119,7 +1158,7 @@ function drawHeatingBarPairs(svg, model, yAt, slotLeft, slotWidth, bindPointer, 
                 role: "img",
                 "aria-label": pointerText(slot, slot.durationMs, "current"),
             });
-            bindPointer(hit, pointerText(slot, slot.durationMs, "current"));
+            bindPointer(hit, pointerText(slot, slot.durationMs, "current"), `c-${slot.index}`);
             svg.append(hit);
         }
         const previous = model.previousSlots == null ? null : model.previousSlots[slot.index];
@@ -1129,7 +1168,8 @@ function drawHeatingBarPairs(svg, model, yAt, slotLeft, slotWidth, bindPointer, 
             const x = left + barWidth + gap;
             if (value > 0) {
                 svg.append(heatingSvg("rect", {
-                    class: "heating-bar-previous",
+                    class: "heating-bar-previous heating-mark",
+                    "data-mark": `p-${slot.index}`,
                     x,
                     y,
                     width: barWidth,
@@ -1147,7 +1187,7 @@ function drawHeatingBarPairs(svg, model, yAt, slotLeft, slotWidth, bindPointer, 
                 role: "img",
                 "aria-label": pointerText(previous, previous.durationMs, "previous"),
             });
-            bindPointer(hit, pointerText(previous, previous.durationMs, "previous"));
+            bindPointer(hit, pointerText(previous, previous.durationMs, "previous"), `p-${slot.index}`);
             svg.append(hit);
         }
     }
@@ -1175,7 +1215,7 @@ function heatingLinePoints(points, yAt, slotLeft, slotWidth, unit) {
  * @param {(value: number) => number} yAt
  * @param {(index: number) => number} slotLeft
  * @param {number} slotWidth
- * @param {(target: SVGElement, text: string) => void} bindPointer
+ * @param {(target: SVGElement, text: string, active: string) => void} bindPointer
  * @param {(slot: HeatingMeasuredSlot, durationMs: number, which: 'current' | 'previous') => string} pointerText
  */
 function drawHeatingCumulativeLines(svg, model, yAt, slotLeft, slotWidth, bindPointer, pointerText) {
@@ -1221,13 +1261,21 @@ function drawHeatingCumulativeLines(svg, model, yAt, slotLeft, slotWidth, bindPo
                 continue;
             }
             svg.append(heatingSvg("polyline", {
-                class: lineClass,
+                class: `${lineClass} heating-mark`,
                 points: heatingLinePoints(segment, yAt, slotLeft, slotWidth, model.range.unit),
             }));
             for (const point of segment) {
                 const x = slotLeft(point.slot.index) + slotWidth / 2;
                 const y = yAt(heatingSlotValue(point.totalMs, model.range.unit));
-                svg.append(heatingSvg("circle", { class: dotClass, cx: x, cy: y, r: 3.2 }));
+                const seriesMark = which === "current" ? "c" : "p";
+                svg.append(heatingSvg("circle", {
+                    class: `${dotClass} heating-mark`,
+                    "data-mark": `${seriesMark}-${point.slot.index}`,
+                    "data-slot": String(point.slot.index),
+                    cx: x,
+                    cy: y,
+                    r: 3.2,
+                }));
                 if (!hits) {
                     continue;
                 }
@@ -1246,7 +1294,7 @@ function drawHeatingCumulativeLines(svg, model, yAt, slotLeft, slotWidth, bindPo
                     role: "img",
                     "aria-label": text,
                 });
-                bindPointer(hit, text);
+                bindPointer(hit, text, `slot-${point.slot.index}`);
                 svg.append(hit);
             }
         }
@@ -1327,8 +1375,7 @@ function drawHeatingHeatmap(host, model) {
         grid.append(pad);
     }
 
-    const measured = model.slots.filter(slot => slot.durationMs != null);
-    const maxMs = measured.reduce((max, slot) => Math.max(max, slot.durationMs ?? 0), 0);
+    const maxMs = HEATING_HEATMAP_MAX_HOURS * 3600000;
     const pointer = document.createElement("p");
     pointer.className = "heating-time-pointer";
 
@@ -1342,7 +1389,7 @@ function drawHeatingHeatmap(host, model) {
             cell.disabled = true;
             cell.setAttribute("aria-label", formatHeatingDay(slot.start));
         } else {
-            const heat = maxMs <= 0 ? 0 : slot.durationMs / maxMs;
+            const heat = Math.min(1, slot.durationMs / maxMs);
             cell.classList.add("is-measured");
             if (heat >= 0.72) {
                 cell.classList.add("is-hot");
@@ -1362,9 +1409,7 @@ function drawHeatingHeatmap(host, model) {
 
     const legend = document.createElement("div");
     legend.className = "heating-time-legend";
-    const maxHours = maxMs / 3600000;
-    const legendHours = maxHours <= 0 ? 0 : Math.max(1, Math.round(maxHours));
-    legend.append(heatingHeatLegendSwatch(0), heatingHeatLegendSwatch(legendHours));
+    legend.append(heatingHeatLegendSwatch(0), heatingHeatLegendSwatch(HEATING_HEATMAP_MAX_HOURS));
 
     root.append(weekdays, grid, legend, pointer);
     host.append(root);
@@ -1430,12 +1475,6 @@ function syncHeatingTimeChrome() {
     const forward = document.getElementById("heating-time-forward");
     if (forward instanceof HTMLButtonElement) {
         forward.disabled = containsNow;
-    }
-    const progress = document.getElementById("heating-time-progress");
-    if (progress != null) {
-        const showProgress = view.progress && containsNow;
-        progress.hidden = !showProgress;
-        progress.textContent = showProgress ? range.progressLabel : "";
     }
 }
 
