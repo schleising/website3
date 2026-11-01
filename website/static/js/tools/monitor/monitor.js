@@ -1,4 +1,4 @@
-const serviceWorkerPath = '/sw.js?v=tools-webapp-v25';
+const serviceWorkerPath = '/sw.js?v=tools-webapp-v26';
 const chartSettingsStorageKey = 'monitor.chartSettings';
 
 // The chart data to be fetched from the server
@@ -429,7 +429,7 @@ const HEATING_HEATMAP_MAX_HOURS = 7;
 
 /**
  * @typedef {{start: Date, end: Date}} HeatingWindow
- * @typedef {{key: string, label: string, tick: boolean, start: Date, end: Date}} HeatingSlot
+ * @typedef {{key: string, label: string, tick: boolean, start: Date, end: Date, absent?: boolean}} HeatingSlot
  * @typedef {HeatingSlot & {durationMs: number | null, index: number}} HeatingMeasuredSlot
  * @typedef {{
  *   id: string,
@@ -571,20 +571,23 @@ const heatingTimeRanges = [
         slots(bounds) {
             /** @type {HeatingSlot[]} */
             const slots = [];
-            const cursor = new Date(bounds.start);
-            while (cursor < bounds.end) {
-                const start = new Date(cursor);
-                const end = new Date(cursor);
-                end.setDate(end.getDate() + 1);
-                const day = start.getDate();
+            const year = bounds.start.getFullYear();
+            const month = bounds.start.getMonth();
+            for (let day = 1; day <= 31; day += 1) {
+                const start = new Date(year, month, day);
+                const absent = start.getMonth() !== month;
+                const end = new Date(start);
+                if (!absent) {
+                    end.setDate(end.getDate() + 1);
+                }
                 slots.push({
                     key: String(day),
                     label: String(day),
                     tick: day === 1 || day % 5 === 0,
-                    start,
-                    end,
+                    start: absent ? bounds.start : start,
+                    end: absent ? bounds.start : end,
+                    absent,
                 });
-                cursor.setDate(cursor.getDate() + 1);
             }
             return slots;
         },
@@ -766,7 +769,7 @@ function heatingTimeQueryStart() {
 function measureHeatingSlots(slots, changes, now) {
     const nowMs = now.getTime();
     return slots.map((slot, index) => {
-        if (slot.start.getTime() > nowMs) {
+        if (slot.absent || slot.start.getTime() > nowMs) {
             return { ...slot, index, durationMs: null };
         }
         const end = new Date(Math.min(slot.end.getTime(), nowMs));
@@ -1364,9 +1367,10 @@ function drawHeatingHeatmap(host, model) {
 
     const grid = document.createElement("div");
     grid.className = "heating-heat-grid";
+    const days = model.slots.filter(slot => !slot.absent);
     const firstDay = model.bounds.start.getDay();
     const lead = firstDay === 0 ? 6 : firstDay - 1;
-    const rowCount = Math.ceil((lead + model.slots.length) / HEATING_WEEKDAY_LABELS.length);
+    const rowCount = Math.ceil((lead + days.length) / HEATING_WEEKDAY_LABELS.length);
     grid.style.setProperty("--heat-rows", String(rowCount));
     for (let index = 0; index < lead; index += 1) {
         const pad = document.createElement("span");
@@ -1379,7 +1383,7 @@ function drawHeatingHeatmap(host, model) {
     const pointer = document.createElement("p");
     pointer.className = "heating-time-pointer";
 
-    for (const slot of model.slots) {
+    for (const slot of days) {
         const cell = document.createElement("button");
         cell.type = "button";
         cell.className = "heating-heat-cell";

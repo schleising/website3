@@ -90,9 +90,9 @@ Seven slots, Monday through Sunday. The vertical axis is **hours**. The label is
 
 ![One month of heating time, one bar per day of the month](monitor-heating/heating-time-month.jpg)
 
-One slot per day number, 1 through the last day of the month on screen. The vertical axis is **hours**. February has no 30 or 31. The label is the month, `November 2026`. While the window contains today the legend reads **This month** and **Last month**.
+The axis is always day 1 through 31, so a shorter month still has a slot for a later day in the previous month. The vertical axis is **hours**. A day the month on screen does not have, such as 31 in November or 30 in February, has no red bar. The label is the month, `November 2026`. While the window contains today the legend reads **This month** and **Last month**.
 
-The picture only drew the day numbers it labelled. The build draws every day number of that month. A day after today has no red bar. Last month has a teal bar on each of its own day numbers. A day number last month does not have leaves that teal half empty.
+The picture only drew the day numbers it labelled. The build keeps all 31 day numbers. A day after today has no red bar. Last month has a teal bar on each of its own day numbers, including a day number this month does not have. A day number last month does not have leaves that teal half empty.
 
 ### Total
 
@@ -122,7 +122,7 @@ These apply to every view that uses them. A view opts out by the flags in §6. H
 | --- | --- | --- | --- |
 | Day | 24 clock hours | Minutes, axis fixed 0–60 | One calendar day |
 | Week | Mon–Sun | Hours | One week, Monday to Sunday |
-| Month | Day 1 through the last day of that month | Hours | One calendar month |
+| Month | Day 1 through 31 | Hours | One calendar month |
 
 Weeks start on Monday. Days, weeks, and months are the browser’s local calendar. The cursor is a local date. Opening sets it to today.
 
