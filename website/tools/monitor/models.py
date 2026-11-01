@@ -116,8 +116,8 @@ class HeatingChange(BaseModel):
     cool_celsius: float | None = None
 
 
-# One change on the timeseries payload. Mode and thresholds are carried for the
-# Stats dialog and a later usage page, and are not drawn on the wash.
+# One change on the timeseries payload. Mode and thresholds stay for a later
+# usage page. The wash and the heating-time dialog read hvac_status.
 class HeatingChangePoint(BaseModel):
     timestamp: str
     hvac_status: str

@@ -49,6 +49,7 @@
     --chart-text: rgba(90, 107, 100, 0.95);
     --chart-overlay: #b56a12;
     --heating-band: rgba(180, 35, 24, 0.23);
+    --heating-bar: #b42318;
 }
 
 body.dark-mode {
@@ -56,6 +57,7 @@ body.dark-mode {
     --chart-text: rgba(232, 242, 236, 0.85);
     --chart-overlay: #e0a24a;
     --heating-band: rgba(255, 122, 110, 0.31);
+    --heating-bar: #ff7a6e;
 }
 
 .chart-controls {
@@ -537,7 +539,7 @@ body.dark-mode .chart-svg {
 }
 
 .heating-stats-dialog {
-    width: min(28rem, calc(100vw - 1.5rem - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)));
+    width: min(42rem, calc(100vw - 1.5rem - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)));
     max-height: min(90dvh, 40rem);
     margin: auto;
     padding: 0;
@@ -585,79 +587,333 @@ body.dark-mode .chart-svg {
     font-size: 1.35rem;
 }
 
-.heating-stats-period,
-.heating-stats-compare,
-.heating-stats-empty,
-.heating-stats-runs-empty {
-    margin: 0.2rem 0 0;
+.heating-stats-empty {
+    margin: 0.85rem 0 0;
     color: var(--ink-muted);
     font-size: 0.92rem;
 }
 
-.heating-stats-summary,
-.heating-stats-compare,
-.heating-stats-empty,
-.heating-stats-status {
-    flex-shrink: 0;
+.heating-time-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.45rem 0.55rem;
+    margin-top: 0.85rem;
 }
 
-.heating-stats-summary {
-    margin: 0.7rem 0 0;
+.heating-time-ranges {
+    display: inline-flex;
+    padding: 0.18rem;
+    border: 0.0625rem solid var(--line);
+    border-radius: 999px;
+    background: rgba(18, 32, 28, 0.06);
+}
+
+body.dark-mode .heating-time-ranges {
+    background: rgba(232, 242, 236, 0.06);
+}
+
+.heating-time-range,
+.heating-time-view,
+.heating-time-menu-item,
+.heating-time-pager button {
     font-family: var(--font-display);
-    font-size: 1.02rem;
     font-weight: 700;
-    letter-spacing: -0.02em;
+    cursor: pointer;
 }
 
-.heating-stats-runs {
+.heating-time-range {
+    border: 0;
+    border-radius: 999px;
+    padding: 0.38rem 0.8rem;
+    background: transparent;
+    color: var(--ink-muted);
+    font-size: 0.8rem;
+}
+
+.heating-time-range[aria-checked="true"] {
+    background: var(--live);
+    color: #f7fbf9;
+}
+
+body.dark-mode .heating-time-range[aria-checked="true"] {
+    color: #10211c;
+}
+
+.heating-time-range:disabled {
+    opacity: 0.38;
+    cursor: default;
+}
+
+.heating-time-range:focus-visible,
+.heating-time-view:focus-visible,
+.heating-time-menu-item:focus-visible,
+.heating-time-pager button:focus-visible,
+.heating-time-hit:focus-visible,
+.heating-heat-cell:focus-visible {
+    outline: 0.125rem solid rgba(15, 143, 122, 0.55);
+    outline-offset: 0.125rem;
+}
+
+.heating-time-view-wrap {
+    position: relative;
+}
+
+.heating-time-view {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    height: 2.15rem;
+    padding: 0 0.8rem;
+    border: 0.0625rem solid var(--line-strong);
+    border-radius: 999px;
+    background: var(--surface-strong);
+    color: var(--ink);
+    font-size: 0.8rem;
+}
+
+.heating-time-view[aria-expanded="true"] {
+    border-color: var(--live);
+    background: var(--live-soft);
+}
+
+.heating-time-view-chevron {
+    width: 0;
+    height: 0;
+    border-right: 0.26rem solid transparent;
+    border-left: 0.26rem solid transparent;
+    border-top: 0.32rem solid currentColor;
+}
+
+.heating-time-menu {
+    position: absolute;
+    top: calc(100% + 0.3rem);
+    left: 0;
+    z-index: 2;
+    min-width: 8.5rem;
+    padding: 0.3rem;
+    border: 0.0625rem solid var(--line);
+    border-radius: var(--radius-md);
+    background: var(--surface-strong);
+    box-shadow: var(--shadow);
+}
+
+.heating-time-menu[hidden] {
+    display: none;
+}
+
+.heating-time-menu-item {
+    display: block;
+    width: 100%;
+    padding: 0.42rem 0.65rem;
+    border: 0;
+    border-radius: 0.45rem;
+    background: transparent;
+    color: var(--ink);
+    font-size: 0.82rem;
+    text-align: left;
+}
+
+.heating-time-menu-item[aria-checked="true"] {
+    background: var(--live-soft);
+    color: var(--live-deep, var(--live));
+}
+
+.heating-time-previous {
+    margin-left: auto;
+}
+
+.heating-time-host {
     flex: 1 1 auto;
     min-height: 0;
-    margin-top: 0.55rem;
-    padding: 0.45rem 0.1rem 0.15rem;
-    overflow-y: auto;
-    overscroll-behavior: contain;
-    border-top: 0.0625rem solid var(--line);
-    border-bottom: 0.0625rem solid var(--line);
+    margin-top: 0.85rem;
+    overflow: auto;
 }
 
-.heating-stats-runs .section-kicker {
-    margin-bottom: 0.15rem;
-}
-
-.heating-stats-run-list {
-    margin: 0;
-    padding: 0;
-    list-style: none;
-}
-
-.heating-stats-run {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 1rem;
-    padding: 0.45rem 0.15rem;
-    border-top: 0.0625rem solid var(--line);
-    font-size: 0.92rem;
-    font-variant-numeric: tabular-nums;
-}
-
-.heating-stats-run:first-child {
-    border-top: 0;
-}
-
-.heating-stats-run-duration {
+.heating-stats-head,
+.heating-time-toolbar,
+.heating-time-progress,
+.heating-time-pager {
     flex-shrink: 0;
-    color: var(--ink-muted);
 }
 
-.heating-stats-status {
-    margin: 0.55rem 0 0;
-    color: var(--ink-muted);
-    font-size: 0.92rem;
+.heating-time-chart {
+    display: block;
+    width: 100%;
+    height: auto;
 }
 
-.heating-stats-status-heating {
-    color: var(--danger);
+.heating-time-chart text {
+    fill: var(--chart-text);
+    font-family: var(--font-body);
+    font-size: 12px;
+}
+
+.heating-time-grid {
+    stroke: var(--chart-grid);
+    stroke-width: 1;
+}
+
+.heating-time-axis {
+    stroke: var(--chart-grid);
+    stroke-width: 1;
+}
+
+.heating-bar-current,
+.heating-dot-current {
+    fill: var(--heating-bar);
+}
+
+.heating-bar-previous,
+.heating-dot-previous {
+    fill: var(--chart-overlay);
+}
+
+.heating-line-current,
+.heating-line-previous {
+    fill: none;
+    stroke-width: 2.25;
+    stroke-linejoin: round;
+    stroke-linecap: round;
+}
+
+.heating-line-current {
+    stroke: var(--heating-bar);
+}
+
+.heating-line-previous {
+    stroke: var(--chart-overlay);
+}
+
+.heating-time-hit {
+    fill: transparent;
+    cursor: pointer;
+}
+
+.heating-time-legend {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 0.9rem;
+    margin-top: 0.45rem;
+    color: var(--ink-muted);
+    font-size: 0.82rem;
+}
+
+.heating-time-legend span {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.heating-time-swatch {
+    width: 0.75rem;
+    height: 0.75rem;
+    border-radius: 0.15rem;
+}
+
+.heating-time-swatch.current {
+    background: var(--heating-bar);
+}
+
+.heating-time-swatch.previous {
+    background: var(--chart-overlay);
+}
+
+.heating-time-pointer,
+.heating-time-progress,
+.heating-time-label {
+    margin: 0;
+    color: var(--ink-muted);
+    font-size: 0.88rem;
+    font-variant-numeric: tabular-nums;
+    text-align: center;
+}
+
+.heating-time-pointer {
+    min-height: 1.25rem;
+    margin-top: 0.35rem;
+}
+
+.heating-time-progress {
+    margin-top: 0.2rem;
+}
+
+.heating-time-pager {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    margin-top: 0.35rem;
+}
+
+.heating-time-pager button {
+    border: 0;
+    background: transparent;
+    color: var(--ink);
+    font-size: 1.35rem;
+    line-height: 1;
+    padding: 0.15rem 0.55rem;
+}
+
+.heating-time-pager button:disabled {
+    color: var(--ink-muted);
+    opacity: 0.35;
+    cursor: default;
+}
+
+.heating-time-label {
+    min-width: 9rem;
+    color: var(--ink);
+    font-family: var(--font-display);
+    font-weight: 700;
+}
+
+.heating-heat-weekdays,
+.heating-heat-grid {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 0.28rem;
+}
+
+.heating-heat-weekdays {
+    margin-bottom: 0.28rem;
+    color: var(--ink-muted);
+    font-size: 0.72rem;
+    text-align: center;
+}
+
+.heating-heat-cell {
+    aspect-ratio: 1;
+    border: 0.0625rem solid transparent;
+    border-radius: 0.35rem;
+    background: transparent;
+    color: var(--ink);
+    font-size: 0.75rem;
+    font-variant-numeric: tabular-nums;
+    padding: 0;
+}
+
+.heating-heat-cell.is-measured {
+    border-color: var(--line);
+    background: color-mix(in srgb, var(--heating-bar) calc(var(--heat) * 100%), var(--surface-strong));
+}
+
+.heating-heat-cell.is-future {
+    color: var(--ink-muted);
+    opacity: 0.55;
+}
+
+.heating-heat-cell.is-hot {
+    color: #fff;
+}
+
+body.dark-mode .heating-heat-cell.is-hot {
+    color: #1c1412;
+}
+
+.heating-heat-pad {
+    aspect-ratio: 1;
 }
 
 .heating-stats-close {

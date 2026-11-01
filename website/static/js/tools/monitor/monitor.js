@@ -1,4 +1,4 @@
-const serviceWorkerPath = '/sw.js?v=tools-webapp-v19';
+const serviceWorkerPath = '/sw.js?v=tools-webapp-v20';
 const chartSettingsStorageKey = 'monitor.chartSettings';
 
 // The chart data to be fetched from the server
@@ -8,8 +8,8 @@ const chartSettingsStorageKey = 'monitor.chartSettings';
 var deviceData = null;
 
 /**
- * One thermostat timeline for every room chart. Mode and setpoint are read by
- * the heating stats dialog, not while drawing the bands.
+ * One thermostat timeline for every room chart. The wash reads hvac_status.
+ * The heating-time dialog loads its own span.
  * @type {{
  *   device_name: string,
  *   device_id: string,
@@ -23,9 +23,6 @@ var deviceData = null;
  * } | null}
  */
 let heatingSeries = null;
-
-/** Skips a dialog rewrite when the visible heating stats have not changed. */
-let heatingStatsRenderKey = "";
 
 /**
  * @type {Map<string, DOMMatrix>} 
@@ -327,32 +324,8 @@ function getPeriodBounds(period, periodOffset) {
 }
 
 /**
- * Calendar-day bounds for the Stats dialog, in local time. Daily is today
- * from midnight through now. Weekly is today and the six calendar days before
- * it, also through now. Offset 1 is the equal run of calendar days immediately
- * before, ending at midnight. These are not the chart's rolling windows.
- *
- * @param {'daily' | 'weekly'} period
- * @param {number} periodOffset 0 for current, 1 for previous
- * @returns {{start: Date, end: Date}}
- */
-function getHeatingStatsBounds(period, periodOffset) {
-    const now = new Date();
-    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const dayCount = period === "weekly" ? 7 : 1;
-    const start = new Date(todayStart);
-    start.setDate(start.getDate() - (dayCount - 1) - periodOffset * dayCount);
-    if (periodOffset === 0) {
-        return { start, end: now };
-    }
-    const end = new Date(todayStart);
-    end.setDate(end.getDate() - ((periodOffset - 1) * dayCount) - (dayCount - 1));
-    return { start, end };
-}
-
-/**
  * Turn heating changes into runs. The wash clips these to getPeriodBounds.
- * The Stats dialog clips them to getHeatingStatsBounds.
+ * The heating-time dialog clips each slot on its own.
  *
  * Walk every change, including rows before the window, then clip. Only a
  * transition into HEATING opens a run. A later HEATING row leaves it open.
@@ -446,128 +419,368 @@ function formatHeatingDuration(durationMs) {
 }
 
 /**
+ * Heating-time dialog. Ranges and views are lists: a new one is an entry,
+ * not a new control in the template. Drawing does not fetch or clip.
+ */
+
+const HEATING_SVG_NS = "http://www.w3.org/2000/svg";
+const HEATING_WEEKDAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+/**
+ * @typedef {{start: Date, end: Date}} HeatingWindow
+ * @typedef {{key: string, label: string, tick: boolean, start: Date, end: Date}} HeatingSlot
+ * @typedef {HeatingSlot & {durationMs: number | null, index: number}} HeatingMeasuredSlot
+ * @typedef {{
+ *   id: string,
+ *   label: string,
+ *   unit: 'minutes' | 'hours',
+ *   axisMax: number | null,
+ *   progressLabel: string,
+ *   window: (cursor: Date) => HeatingWindow,
+ *   step: (cursor: Date, direction: number) => Date,
+ *   slots: (bounds: HeatingWindow) => HeatingSlot[],
+ *   legend: (bounds: HeatingWindow, which: 'current' | 'previous') => string,
+ *   pagerLabel: (bounds: HeatingWindow) => string,
+ * }} HeatingTimeRange
+ * @typedef {{
+ *   id: string,
+ *   label: string,
+ *   ranges: string[],
+ *   previous: boolean,
+ *   pager: boolean,
+ *   progress: boolean,
+ *   draw: (host: HTMLElement, model: HeatingTimeModel) => void,
+ * }} HeatingTimeView
+ * @typedef {{
+ *   range: HeatingTimeRange,
+ *   view: HeatingTimeView,
+ *   bounds: HeatingWindow,
+ *   containsNow: boolean,
+ *   showPrevious: boolean,
+ *   slots: HeatingMeasuredSlot[],
+ *   previousSlots: Array<HeatingMeasuredSlot | null> | null,
+ * }} HeatingTimeModel
+ */
+
+/** @type {HeatingTimeRange[]} */
+const heatingTimeRanges = [
+    {
+        id: "day",
+        label: "Day",
+        unit: "minutes",
+        axisMax: 60,
+        progressLabel: "Today is still in progress",
+        window(cursor) {
+            const start = startOfLocalDay(cursor);
+            const end = new Date(start);
+            end.setDate(end.getDate() + 1);
+            return { start, end };
+        },
+        step(cursor, direction) {
+            const next = startOfLocalDay(cursor);
+            next.setDate(next.getDate() + direction);
+            return next;
+        },
+        slots(bounds) {
+            /** @type {HeatingSlot[]} */
+            const slots = [];
+            for (let hour = 0; hour < 24; hour += 1) {
+                const start = new Date(bounds.start);
+                start.setHours(hour, 0, 0, 0);
+                const end = new Date(start);
+                end.setHours(hour + 1, 0, 0, 0);
+                slots.push({
+                    key: String(hour),
+                    label: String(hour).padStart(2, "0"),
+                    tick: hour % 6 === 0,
+                    start,
+                    end,
+                });
+            }
+            return slots;
+        },
+        legend(bounds, which) {
+            const live = heatingWindowContainsNow(bounds, new Date());
+            if (which === "previous") {
+                const prior = new Date(bounds.start);
+                prior.setDate(prior.getDate() - 1);
+                return live ? "Yesterday" : formatHeatingDay(prior);
+            }
+            return live ? "Today" : formatHeatingDay(bounds.start);
+        },
+        pagerLabel(bounds) {
+            return formatHeatingDay(bounds.start);
+        },
+    },
+    {
+        id: "week",
+        label: "Week",
+        unit: "hours",
+        axisMax: null,
+        progressLabel: "This week is still in progress",
+        window(cursor) {
+            const start = startOfLocalWeek(cursor);
+            const end = new Date(start);
+            end.setDate(end.getDate() + 7);
+            return { start, end };
+        },
+        step(cursor, direction) {
+            const next = startOfLocalWeek(cursor);
+            next.setDate(next.getDate() + direction * 7);
+            return next;
+        },
+        slots(bounds) {
+            /** @type {HeatingSlot[]} */
+            const slots = [];
+            for (let index = 0; index < 7; index += 1) {
+                const start = new Date(bounds.start);
+                start.setDate(start.getDate() + index);
+                const end = new Date(start);
+                end.setDate(end.getDate() + 1);
+                slots.push({
+                    key: String(index),
+                    label: HEATING_WEEKDAY_LABELS[index],
+                    tick: true,
+                    start,
+                    end,
+                });
+            }
+            return slots;
+        },
+        legend(bounds, which) {
+            const live = heatingWindowContainsNow(bounds, new Date());
+            if (which === "previous") {
+                const prior = this.window(new Date(bounds.start.getTime() - 1));
+                return live ? "Last week" : formatHeatingWeek(prior);
+            }
+            return live ? "This week" : formatHeatingWeek(bounds);
+        },
+        pagerLabel(bounds) {
+            return formatHeatingWeek(bounds);
+        },
+    },
+    {
+        id: "month",
+        label: "Month",
+        unit: "hours",
+        axisMax: null,
+        progressLabel: "This month is still in progress",
+        window(cursor) {
+            const start = new Date(cursor.getFullYear(), cursor.getMonth(), 1);
+            const end = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1);
+            return { start, end };
+        },
+        step(cursor, direction) {
+            return new Date(cursor.getFullYear(), cursor.getMonth() + direction, 1);
+        },
+        slots(bounds) {
+            /** @type {HeatingSlot[]} */
+            const slots = [];
+            const cursor = new Date(bounds.start);
+            while (cursor < bounds.end) {
+                const start = new Date(cursor);
+                const end = new Date(cursor);
+                end.setDate(end.getDate() + 1);
+                const day = start.getDate();
+                slots.push({
+                    key: String(day),
+                    label: String(day),
+                    tick: day === 1 || day % 5 === 0,
+                    start,
+                    end,
+                });
+                cursor.setDate(cursor.getDate() + 1);
+            }
+            return slots;
+        },
+        legend(bounds, which) {
+            const live = heatingWindowContainsNow(bounds, new Date());
+            if (which === "previous") {
+                const prior = this.window(new Date(bounds.start.getTime() - 1));
+                return live ? "Last month" : formatHeatingMonth(prior);
+            }
+            return live ? "This month" : formatHeatingMonth(bounds);
+        },
+        pagerLabel(bounds) {
+            return formatHeatingMonth(bounds);
+        },
+    },
+];
+
+/** @type {HeatingTimeView[]} */
+const heatingTimeViews = [
+    {
+        id: "bars",
+        label: "Bars",
+        ranges: ["day", "week", "month"],
+        previous: true,
+        pager: true,
+        progress: true,
+        draw: drawHeatingBars,
+    },
+    {
+        id: "total",
+        label: "Total",
+        ranges: ["day", "week", "month"],
+        previous: true,
+        pager: true,
+        progress: true,
+        draw: drawHeatingTotal,
+    },
+    {
+        id: "heatmap",
+        label: "Heatmap",
+        ranges: ["month"],
+        previous: false,
+        pager: true,
+        progress: false,
+        draw: drawHeatingHeatmap,
+    },
+];
+
+const heatingTime = {
+    rangeId: heatingTimeRanges[0].id,
+    viewId: heatingTimeViews[0].id,
+    cursor: new Date(),
+    previous: false,
+    /** @type {string | null} */
+    rangeBeforeLock: null,
+};
+
+/** @type {{device_name: string, changes: Array<{timestamp: string, hvac_status: string}>} | null} */
+let heatingTimeSeries = null;
+let heatingTimeLoadedSince = "";
+let heatingTimeFetchId = 0;
+
+/**
+ * @param {Date} date
+ * @returns {Date}
+ */
+function startOfLocalDay(date) {
+    return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
+/**
+ * Monday is the first day of the week.
+ * @param {Date} date
+ * @returns {Date}
+ */
+function startOfLocalWeek(date) {
+    const start = startOfLocalDay(date);
+    const day = start.getDay();
+    const delta = day === 0 ? -6 : 1 - day;
+    start.setDate(start.getDate() + delta);
+    return start;
+}
+
+/**
+ * @param {HeatingWindow} bounds
+ * @param {Date} now
+ * @returns {boolean}
+ */
+function heatingWindowContainsNow(bounds, now) {
+    const time = now.getTime();
+    return bounds.start.getTime() <= time && time < bounds.end.getTime();
+}
+
+/**
  * @param {Date} date
  * @returns {string}
  */
-function formatHeatingClock(date) {
-    const hours = String(date.getHours()).padStart(2, "0");
-    const minutes = String(date.getMinutes()).padStart(2, "0");
-    return `${hours}:${minutes}`;
+function formatHeatingDay(date) {
+    return date.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
 }
 
 /**
- * Daily runs on one calendar day are clocks only. Anything that can be confused
- * with another day includes the date.
- *
- * @param {Date} start
- * @param {Date} end
- * @param {'daily' | 'weekly'} period
+ * @param {HeatingWindow} bounds
  * @returns {string}
  */
-function formatHeatingRunRange(start, end, period) {
-    const sameDay = start.toDateString() === end.toDateString();
-    const startClock = formatHeatingClock(start);
-    const endClock = formatHeatingClock(end);
-    if (period === "daily" && sameDay) {
-        return `${startClock}–${endClock}`;
-    }
-
-    const dayFormat = { weekday: "short", day: "numeric", month: "short" };
-    const startDay = start.toLocaleDateString([], dayFormat);
-    if (sameDay) {
-        return `${startDay} ${startClock}–${endClock}`;
-    }
-    const endDay = end.toLocaleDateString([], dayFormat);
-    return `${startDay} ${startClock}–${endDay} ${endClock}`;
+function formatHeatingWeek(bounds) {
+    const last = new Date(bounds.end.getTime() - 1);
+    return `${formatHeatingDay(bounds.start)} – ${formatHeatingDay(last)}`;
 }
 
 /**
- * @param {string | null | undefined} mode
- * @returns {string | null}
+ * @param {HeatingWindow} bounds
+ * @returns {string}
  */
-function heatingModeLabel(mode) {
-    if (mode == null || mode === "") {
-        return null;
-    }
-
-    const known = {
-        HEAT: "Heat",
-        COOL: "Cool",
-        HEATCOOL: "Heat · Cool",
-        OFF: "Off",
-    };
-    if (Object.prototype.hasOwnProperty.call(known, mode)) {
-        return known[mode];
-    }
-    if (mode === mode.toUpperCase()) {
-        return mode.charAt(0) + mode.slice(1).toLowerCase();
-    }
-    return mode;
+function formatHeatingMonth(bounds) {
+    return bounds.start.toLocaleDateString("en-GB", { month: "long", year: "numeric" });
 }
 
 /**
- * @param {string | null | undefined} status
- * @returns {string | null}
+ * @param {string} id
+ * @returns {HeatingTimeRange}
  */
-function heatingHvacLabel(status) {
-    if (status === "HEATING") {
-        return "Heating";
+function heatingTimeRangeById(id) {
+    const range = heatingTimeRanges.find(item => item.id === id);
+    if (range == null) {
+        return heatingTimeRanges[0];
     }
-    if (status === "COOLING") {
-        return "Cooling";
-    }
-    if (status === "OFF") {
-        return "Off";
-    }
-    return null;
+    return range;
 }
 
 /**
- * @param {{
- *   hvac_status: string,
- *   mode?: string | null,
- *   heat_celsius?: number | null,
- *   cool_celsius?: number | null,
- * }} sample
- * @returns {string | null}
+ * @param {string} id
+ * @returns {HeatingTimeView}
  */
-function heatingSetpointLabel(sample) {
-    const mode = sample.mode;
-    /** @type {number | null | undefined} */
-    let celsius = null;
-    if (mode === "HEAT") {
-        celsius = sample.heat_celsius;
-    } else if (mode === "COOL") {
-        celsius = sample.cool_celsius;
-    } else if (mode === "HEATCOOL") {
-        celsius = sample.hvac_status === "COOLING" ? sample.cool_celsius : sample.heat_celsius;
-        if (typeof celsius !== "number") {
-            celsius = sample.hvac_status === "COOLING" ? sample.heat_celsius : sample.cool_celsius;
+function heatingTimeViewById(id) {
+    const view = heatingTimeViews.find(item => item.id === id);
+    if (view == null) {
+        return heatingTimeViews[0];
+    }
+    return view;
+}
+
+/**
+ * @param {string} viewId
+ */
+function selectHeatingTimeView(viewId) {
+    const view = heatingTimeViewById(viewId);
+    if (!view.ranges.includes(heatingTime.rangeId)) {
+        if (heatingTime.rangeBeforeLock == null) {
+            heatingTime.rangeBeforeLock = heatingTime.rangeId;
         }
+        heatingTime.rangeId = view.ranges[0];
+    } else if (
+        heatingTime.rangeBeforeLock != null
+        && view.ranges.includes(heatingTime.rangeBeforeLock)
+    ) {
+        heatingTime.rangeId = heatingTime.rangeBeforeLock;
+        heatingTime.rangeBeforeLock = null;
     }
-    if (typeof celsius !== "number" || !Number.isFinite(celsius)) {
-        return null;
-    }
-    return formatTemperature(celsius);
+    heatingTime.viewId = view.id;
 }
 
 /**
- * @param {Array<{timestamp: string}>} changes
- * @returns {{timestamp: string, hvac_status?: string, mode?: string | null, heat_celsius?: number | null, cool_celsius?: number | null} | null}
+ * @returns {Date}
  */
-function latestHeatingChange(changes) {
-    /** @type {{timeMs: number, change: {timestamp: string, hvac_status?: string, mode?: string | null, heat_celsius?: number | null, cool_celsius?: number | null}} | null} */
-    let latest = null;
-    for (const change of changes) {
-        const timeMs = new Date(change.timestamp).getTime();
-        if (!Number.isFinite(timeMs)) {
-            continue;
-        }
-        if (latest == null || timeMs >= latest.timeMs) {
-            latest = { timeMs, change };
-        }
+function heatingTimeQueryStart() {
+    const range = heatingTimeRangeById(heatingTime.rangeId);
+    const view = heatingTimeViewById(heatingTime.viewId);
+    let cursor = heatingTime.cursor;
+    if (view.previous && heatingTime.previous) {
+        cursor = range.step(cursor, -1);
     }
-    return latest == null ? null : latest.change;
+    return range.window(cursor).start;
+}
+
+/**
+ * @param {HeatingSlot[]} slots
+ * @param {Array<{timestamp: string, hvac_status: string}>} changes
+ * @param {Date} now
+ * @returns {HeatingMeasuredSlot[]}
+ */
+function measureHeatingSlots(slots, changes, now) {
+    const nowMs = now.getTime();
+    return slots.map((slot, index) => {
+        if (slot.start.getTime() > nowMs) {
+            return { ...slot, index, durationMs: null };
+        }
+        const end = new Date(Math.min(slot.end.getTime(), nowMs));
+        const runs = heatingRuns(changes, { start: slot.start, end });
+        return { ...slot, index, durationMs: heatingOnTimeMs(runs) };
+    });
 }
 
 /**
@@ -579,260 +792,989 @@ function heatingOnTimeMs(runs) {
 }
 
 /**
- * @param {'daily' | 'weekly'} period
- * @returns {{window: string, previous: string}}
+ * @param {HeatingMeasuredSlot[]} currentSlots
+ * @param {HeatingMeasuredSlot[]} previousMeasured
+ * @returns {Array<HeatingMeasuredSlot | null>}
  */
-function heatingPeriodCopy(period) {
-    if (period === "weekly") {
-        return { window: "Last 7 days", previous: "Previous 7 days" };
-    }
-    return { window: "Today", previous: "Yesterday" };
-}
-
-/**
- * @param {Array<{start: Date, end: Date}>} runs
- * @returns {string}
- */
-function heatingSummaryText(runs) {
-    if (runs.length === 0) {
-        return "0 min on · 0 runs";
-    }
-
-    const durations = runs.map(run => run.end.getTime() - run.start.getTime());
-    const total = durations.reduce((sum, value) => sum + value, 0);
-    const longest = Math.max(...durations);
-    const runLabel = runs.length === 1 ? "1 run" : `${runs.length} runs`;
-    return `${formatHeatingDuration(total)} on · ${runLabel} · longest ${formatHeatingDuration(longest)}`;
-}
-
-/**
- * @param {{
- *   hvac_status?: string,
- *   mode?: string | null,
- *   heat_celsius?: number | null,
- *   cool_celsius?: number | null,
- * } | null} sample
- * @returns {Array<{text: string, heating: boolean}>}
- */
-function heatingStatusParts(sample) {
-    if (sample == null || sample.hvac_status == null) {
-        return [];
-    }
-
-    /** @type {Array<{text: string, heating: boolean}>} */
-    const parts = [];
-    const hvac = heatingHvacLabel(sample.hvac_status);
-    if (hvac != null) {
-        parts.push({ text: hvac, heating: sample.hvac_status === "HEATING" });
-    }
-
-    const mode = heatingModeLabel(sample.mode);
-    if (mode != null && mode.toLowerCase() !== (hvac ?? "").toLowerCase()) {
-        parts.push({ text: mode, heating: false });
-    }
-
-    const setpoint = heatingSetpointLabel({
-        hvac_status: sample.hvac_status,
-        mode: sample.mode,
-        heat_celsius: sample.heat_celsius,
-        cool_celsius: sample.cool_celsius,
+function alignHeatingSlots(currentSlots, previousMeasured) {
+    const byKey = new Map(previousMeasured.map(slot => [slot.key, slot]));
+    return currentSlots.map(slot => {
+        const match = byKey.get(slot.key);
+        if (match == null) {
+            return null;
+        }
+        return { ...match, index: slot.index };
     });
-    if (setpoint != null) {
-        parts.push({ text: setpoint, heating: false });
-    }
-    return parts;
 }
 
 /**
- * @returns {boolean}
+ * @returns {HeatingTimeModel}
  */
-function heatingSeriesIsUsable() {
-    const heating = heatingSeries;
-    return heating != null
-        && Array.isArray(heating.changes)
-        && heating.changes.length > 0;
-}
-
-/**
- * @returns {{
- *   key: string,
- *   hasReadings: boolean,
- *   deviceName: string,
- *   periodLabel: string,
- *   summary: string,
- *   compare: string,
- *   runs: Array<{range: string, duration: string}>,
- *   statusParts: Array<{text: string, heating: boolean}>,
- * }}
- */
-function buildHeatingStatsView() {
-    const period = chartPeriod === "weekly" ? "weekly" : "daily";
-    const copy = heatingPeriodCopy(period);
-    if (!heatingSeriesIsUsable() || heatingSeries == null) {
-        return {
-            key: `empty|${period}`,
-            hasReadings: false,
-            deviceName: "",
-            periodLabel: copy.window,
-            summary: "",
-            compare: "",
-            runs: [],
-            statusParts: [],
-        };
+function buildHeatingTimeModel() {
+    const range = heatingTimeRangeById(heatingTime.rangeId);
+    const view = heatingTimeViewById(heatingTime.viewId);
+    const now = new Date();
+    const bounds = range.window(heatingTime.cursor);
+    const changes = heatingTimeSeries == null ? [] : heatingTimeSeries.changes;
+    const slots = measureHeatingSlots(range.slots(bounds), changes, now);
+    const showPrevious = view.previous && heatingTime.previous;
+    /** @type {Array<HeatingMeasuredSlot | null> | null} */
+    let previousSlots = null;
+    if (showPrevious) {
+        const priorBounds = range.window(range.step(heatingTime.cursor, -1));
+        const measured = measureHeatingSlots(range.slots(priorBounds), changes, now);
+        previousSlots = alignHeatingSlots(slots, measured);
     }
-
-    const heating = heatingSeries;
-    const currentRuns = heatingRuns(heating.changes, getHeatingStatsBounds(period, 0));
-    const previousRuns = heatingRuns(heating.changes, getHeatingStatsBounds(period, 1));
-    const runs = currentRuns.map(run => ({
-        range: formatHeatingRunRange(run.start, run.end, period),
-        duration: formatHeatingDuration(run.end.getTime() - run.start.getTime()),
-    }));
-    const summary = heatingSummaryText(currentRuns);
-    const compare = `${copy.previous} ${formatHeatingDuration(heatingOnTimeMs(previousRuns))}`;
-    const statusParts = heatingStatusParts(latestHeatingChange(heating.changes));
-    const statusKey = statusParts.map(part => part.text).join("|");
-    const runKey = runs.map(run => `${run.range}|${run.duration}`).join("\n");
     return {
-        key: [period, heating.device_name, summary, compare, statusKey, runKey].join("\n"),
-        hasReadings: true,
-        deviceName: heating.device_name,
-        periodLabel: copy.window,
-        summary,
-        compare,
-        runs,
-        statusParts,
+        range,
+        view,
+        bounds,
+        containsNow: heatingWindowContainsNow(bounds, now),
+        showPrevious,
+        slots,
+        previousSlots,
     };
 }
 
 /**
- * @param {{resetScroll?: boolean}} [options]
+ * @param {number} durationMs
+ * @param {'minutes' | 'hours'} unit
+ * @returns {number}
  */
-function renderHeatingStats(options) {
+function heatingSlotValue(durationMs, unit) {
+    return durationMs / (unit === "minutes" ? 60000 : 3600000);
+}
+
+/**
+ * @param {number[]} values
+ * @returns {number}
+ */
+function heatingAxisCeiling(values) {
+    const peak = values.reduce((max, value) => Math.max(max, value), 0);
+    if (peak <= 0) {
+        return 1;
+    }
+    const padded = peak * 1.15;
+    const power = 10 ** Math.floor(Math.log10(padded));
+    const fraction = padded / power;
+    const nice = fraction <= 1 ? 1 : fraction <= 2 ? 2 : fraction <= 5 ? 5 : 10;
+    return nice * power;
+}
+
+/**
+ * @param {number} value
+ * @returns {string}
+ */
+function formatHeatingAxisTick(value) {
+    if (Math.abs(value - Math.round(value)) < 0.05) {
+        return String(Math.round(value));
+    }
+    return value.toFixed(1);
+}
+
+/**
+ * @param {string} name
+ * @param {Record<string, string | number | null | undefined>} attrs
+ * @param {string} [text]
+ * @returns {SVGElement}
+ */
+function heatingSvg(name, attrs, text) {
+    const element = document.createElementNS(HEATING_SVG_NS, name);
+    for (const [key, value] of Object.entries(attrs)) {
+        if (value != null) {
+            element.setAttribute(key, String(value));
+        }
+    }
+    if (text != null) {
+        element.textContent = text;
+    }
+    return element;
+}
+
+/**
+ * @param {HeatingTimeModel} model
+ * @param {boolean} cumulative
+ * @returns {number}
+ */
+function heatingChartAxisMax(model, cumulative) {
+    if (!cumulative && model.range.axisMax != null) {
+        return model.range.axisMax;
+    }
+    /** @type {number[]} */
+    const values = [];
+    const series = cumulative ? heatingCumulative(model.slots) : [model.slots.map(slot => ({
+        slot,
+        totalMs: slot.durationMs ?? 0,
+    }))];
+    for (const segment of series) {
+        for (const point of segment) {
+            if (point.slot.durationMs == null && !cumulative) {
+                continue;
+            }
+            values.push(heatingSlotValue(cumulative ? point.totalMs : (point.slot.durationMs ?? 0), model.range.unit));
+        }
+    }
+    if (model.showPrevious && model.previousSlots != null) {
+        const previous = cumulative
+            ? heatingCumulative(model.previousSlots)
+            : [model.previousSlots.filter(slot => slot != null).map(slot => ({
+                slot,
+                totalMs: slot.durationMs ?? 0,
+            }))];
+        for (const segment of previous) {
+            for (const point of segment) {
+                const duration = cumulative ? point.totalMs : (point.slot.durationMs ?? 0);
+                if (point.slot.durationMs == null && !cumulative) {
+                    continue;
+                }
+                values.push(heatingSlotValue(duration, model.range.unit));
+            }
+        }
+    }
+    return heatingAxisCeiling(values);
+}
+
+/**
+ * @param {Array<HeatingMeasuredSlot | null>} slots
+ * @returns {Array<Array<{slot: HeatingMeasuredSlot, totalMs: number}>>}
+ */
+function heatingCumulative(slots) {
+    /** @type {Array<Array<{slot: HeatingMeasuredSlot, totalMs: number}>>} */
+    const segments = [];
+    /** @type {Array<{slot: HeatingMeasuredSlot, totalMs: number}>} */
+    let segment = [];
+    let totalMs = 0;
+    for (const slot of slots) {
+        if (slot == null) {
+            if (segment.length > 0) {
+                segments.push(segment);
+                segment = [];
+            }
+            continue;
+        }
+        if (slot.durationMs == null) {
+            break;
+        }
+        totalMs += slot.durationMs;
+        segment.push({ slot, totalMs });
+    }
+    if (segment.length > 0) {
+        segments.push(segment);
+    }
+    return segments;
+}
+
+/**
+ * @param {HTMLElement} host
+ * @param {HeatingTimeModel} model
+ * @param {boolean} cumulative
+ */
+function drawHeatingSeries(host, model, cumulative) {
+    host.replaceChildren();
+    const width = Math.max(280, host.clientWidth);
+    const height = 248;
+    const pad = { top: 22, right: 8, bottom: 28, left: 36 };
+    const axisMax = heatingChartAxisMax(model, cumulative);
+    const plotWidth = width - pad.left - pad.right;
+    const plotHeight = height - pad.top - pad.bottom;
+    const slotCount = Math.max(model.slots.length, 1);
+    const slotWidth = plotWidth / slotCount;
+
+    /**
+     * @param {number} value
+     * @returns {number}
+     */
+    function yAt(value) {
+        const clamped = Math.max(0, Math.min(axisMax, value));
+        return pad.top + plotHeight * (1 - clamped / axisMax);
+    }
+
+    /**
+     * @param {number} index
+     * @returns {number}
+     */
+    function slotLeft(index) {
+        return pad.left + slotWidth * index;
+    }
+
+    const svg = heatingSvg("svg", {
+        class: "heating-time-chart",
+        width,
+        height,
+        viewBox: `0 0 ${width} ${height}`,
+        role: "img",
+        "aria-label": model.range.pagerLabel(model.bounds),
+    });
+    const unit = model.range.unit === "minutes" ? "Minutes" : "Hours";
+    svg.append(heatingSvg("text", { x: pad.left, y: 14 }, unit));
+
+    const ticks = model.range.axisMax === 60 ? [0, 30, 60] : [0, axisMax / 2, axisMax];
+    for (const tick of ticks) {
+        const y = yAt(tick);
+        svg.append(heatingSvg("line", {
+            class: "heating-time-grid",
+            x1: pad.left,
+            x2: width - pad.right,
+            y1: y,
+            y2: y,
+        }));
+        svg.append(heatingSvg("text", {
+            x: pad.left - 6,
+            y: y + 4,
+            "text-anchor": "end",
+        }, formatHeatingAxisTick(tick)));
+    }
+    svg.append(heatingSvg("line", {
+        class: "heating-time-axis",
+        x1: pad.left,
+        x2: width - pad.right,
+        y1: yAt(0),
+        y2: yAt(0),
+    }));
+
+    const pointer = document.createElement("p");
+    pointer.className = "heating-time-pointer";
+
+    /**
+     * @param {SVGElement} target
+     * @param {string} text
+     */
+    function bindPointer(target, text) {
+        const show = () => {
+            pointer.textContent = text;
+        };
+        target.addEventListener("pointerenter", show);
+        target.addEventListener("focus", show);
+        target.addEventListener("click", show);
+    }
+
+    /**
+     * @param {HeatingMeasuredSlot} slot
+     * @param {number} durationMs
+     * @param {'current' | 'previous'} which
+     * @returns {string}
+     */
+    function pointerText(slot, durationMs, which) {
+        const legend = model.range.legend(model.bounds, which);
+        return `${legend} ${slot.label} · ${formatHeatingDuration(durationMs)}`;
+    }
+
+    if (cumulative) {
+        drawHeatingCumulativeLines(svg, model, yAt, slotLeft, slotWidth, bindPointer, pointerText);
+    } else {
+        drawHeatingBarPairs(svg, model, yAt, slotLeft, slotWidth, bindPointer, pointerText);
+    }
+
+    for (const slot of model.slots) {
+        if (!slot.tick) {
+            continue;
+        }
+        svg.append(heatingSvg("text", {
+            x: slotLeft(slot.index) + slotWidth / 2,
+            y: height - 8,
+            "text-anchor": "middle",
+        }, slot.label));
+    }
+
+    host.append(svg);
+    appendHeatingLegend(host, model);
+    host.append(pointer);
+}
+
+/**
+ * @param {SVGElement} svg
+ * @param {HeatingTimeModel} model
+ * @param {(value: number) => number} yAt
+ * @param {(index: number) => number} slotLeft
+ * @param {number} slotWidth
+ * @param {(target: SVGElement, text: string) => void} bindPointer
+ * @param {(slot: HeatingMeasuredSlot, durationMs: number, which: 'current' | 'previous') => string} pointerText
+ */
+function drawHeatingBarPairs(svg, model, yAt, slotLeft, slotWidth, bindPointer, pointerText) {
+    const gap = Math.min(3, slotWidth * 0.08);
+    const barWidth = Math.max(2, (slotWidth - gap * 3) / 2);
+    const baseline = yAt(0);
+    for (const slot of model.slots) {
+        const left = slotLeft(slot.index) + gap;
+        if (slot.durationMs != null) {
+            const value = heatingSlotValue(slot.durationMs, model.range.unit);
+            const y = yAt(value);
+            if (value > 0) {
+                svg.append(heatingSvg("rect", {
+                    class: "heating-bar-current",
+                    x: left,
+                    y,
+                    width: barWidth,
+                    height: Math.max(0, baseline - y),
+                    rx: 1.5,
+                }));
+            }
+            const hit = heatingSvg("rect", {
+                class: "heating-time-hit",
+                x: slotLeft(slot.index),
+                y: 16,
+                width: model.showPrevious ? slotWidth / 2 : slotWidth,
+                height: baseline - 16,
+                tabindex: "0",
+                role: "img",
+                "aria-label": pointerText(slot, slot.durationMs, "current"),
+            });
+            bindPointer(hit, pointerText(slot, slot.durationMs, "current"));
+            svg.append(hit);
+        }
+        const previous = model.previousSlots == null ? null : model.previousSlots[slot.index];
+        if (model.showPrevious && previous != null && previous.durationMs != null) {
+            const value = heatingSlotValue(previous.durationMs, model.range.unit);
+            const y = yAt(value);
+            const x = left + barWidth + gap;
+            if (value > 0) {
+                svg.append(heatingSvg("rect", {
+                    class: "heating-bar-previous",
+                    x,
+                    y,
+                    width: barWidth,
+                    height: Math.max(0, baseline - y),
+                    rx: 1.5,
+                }));
+            }
+            const hit = heatingSvg("rect", {
+                class: "heating-time-hit",
+                x: slotLeft(slot.index) + slotWidth / 2,
+                y: 16,
+                width: slotWidth / 2,
+                height: baseline - 16,
+                tabindex: "0",
+                role: "img",
+                "aria-label": pointerText(previous, previous.durationMs, "previous"),
+            });
+            bindPointer(hit, pointerText(previous, previous.durationMs, "previous"));
+            svg.append(hit);
+        }
+    }
+}
+
+/**
+ * @param {Array<{slot: HeatingMeasuredSlot, totalMs: number}>} points
+ * @param {(value: number) => number} yAt
+ * @param {(index: number) => number} slotLeft
+ * @param {number} slotWidth
+ * @param {'minutes' | 'hours'} unit
+ * @returns {string}
+ */
+function heatingLinePoints(points, yAt, slotLeft, slotWidth, unit) {
+    return points.map(point => {
+        const x = slotLeft(point.slot.index) + slotWidth / 2;
+        const y = yAt(heatingSlotValue(point.totalMs, unit));
+        return `${x},${y}`;
+    }).join(" ");
+}
+
+/**
+ * @param {SVGElement} svg
+ * @param {HeatingTimeModel} model
+ * @param {(value: number) => number} yAt
+ * @param {(index: number) => number} slotLeft
+ * @param {number} slotWidth
+ * @param {(target: SVGElement, text: string) => void} bindPointer
+ * @param {(slot: HeatingMeasuredSlot, durationMs: number, which: 'current' | 'previous') => string} pointerText
+ */
+function drawHeatingCumulativeLines(svg, model, yAt, slotLeft, slotWidth, bindPointer, pointerText) {
+    const baseline = yAt(0);
+    /**
+     * @param {Array<Array<{slot: HeatingMeasuredSlot, totalMs: number}>>} segments
+     * @param {'current' | 'previous'} which
+     */
+    /**
+     * @param {number} index
+     * @returns {number | null}
+     */
+    function previousTotalAt(index) {
+        if (!model.showPrevious || model.previousSlots == null) {
+            return null;
+        }
+        let totalMs = 0;
+        for (const slot of model.previousSlots) {
+            if (slot == null || slot.durationMs == null) {
+                if (slot != null && slot.durationMs == null) {
+                    break;
+                }
+                continue;
+            }
+            totalMs += slot.durationMs;
+            if (slot.index === index) {
+                return totalMs;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * @param {Array<Array<{slot: HeatingMeasuredSlot, totalMs: number}>>} segments
+     * @param {'current' | 'previous'} which
+     * @param {boolean} hits
+     */
+    function drawSegments(segments, which, hits) {
+        const lineClass = which === "current" ? "heating-line-current" : "heating-line-previous";
+        const dotClass = which === "current" ? "heating-dot-current" : "heating-dot-previous";
+        for (const segment of segments) {
+            if (segment.length === 0) {
+                continue;
+            }
+            svg.append(heatingSvg("polyline", {
+                class: lineClass,
+                points: heatingLinePoints(segment, yAt, slotLeft, slotWidth, model.range.unit),
+            }));
+            for (const point of segment) {
+                const x = slotLeft(point.slot.index) + slotWidth / 2;
+                const y = yAt(heatingSlotValue(point.totalMs, model.range.unit));
+                svg.append(heatingSvg("circle", { class: dotClass, cx: x, cy: y, r: 3.2 }));
+                if (!hits) {
+                    continue;
+                }
+                let text = pointerText(point.slot, point.totalMs, which);
+                const prior = previousTotalAt(point.slot.index);
+                if (prior != null) {
+                    text = `${text} · ${pointerText(point.slot, prior, "previous")}`;
+                }
+                const hit = heatingSvg("rect", {
+                    class: "heating-time-hit",
+                    x: slotLeft(point.slot.index),
+                    y: 16,
+                    width: slotWidth,
+                    height: Math.max(0, baseline - 16),
+                    tabindex: "0",
+                    role: "img",
+                    "aria-label": text,
+                });
+                bindPointer(hit, text);
+                svg.append(hit);
+            }
+        }
+    }
+
+    if (model.showPrevious && model.previousSlots != null) {
+        drawSegments(heatingCumulative(model.previousSlots), "previous", false);
+    }
+    drawSegments(heatingCumulative(model.slots), "current", true);
+}
+
+/**
+ * @param {HTMLElement} host
+ * @param {HeatingTimeModel} model
+ */
+function drawHeatingBars(host, model) {
+    drawHeatingSeries(host, model, false);
+}
+
+/**
+ * @param {HTMLElement} host
+ * @param {HeatingTimeModel} model
+ */
+function drawHeatingTotal(host, model) {
+    drawHeatingSeries(host, model, true);
+}
+
+/**
+ * @param {HTMLElement} host
+ * @param {HeatingTimeModel} model
+ */
+function appendHeatingLegend(host, model) {
+    const legend = document.createElement("div");
+    legend.className = "heating-time-legend";
+    const items = [
+        { tone: "current", label: model.range.legend(model.bounds, "current") },
+    ];
+    if (model.showPrevious) {
+        items.push({ tone: "previous", label: model.range.legend(model.bounds, "previous") });
+    }
+    for (const item of items) {
+        const row = document.createElement("span");
+        const swatch = document.createElement("i");
+        swatch.className = `heating-time-swatch ${item.tone}`;
+        swatch.setAttribute("aria-hidden", "true");
+        row.append(swatch, document.createTextNode(item.label));
+        legend.append(row);
+    }
+    host.append(legend);
+}
+
+/**
+ * @param {HTMLElement} host
+ * @param {HeatingTimeModel} model
+ */
+function drawHeatingHeatmap(host, model) {
+    host.replaceChildren();
+    const weekdays = document.createElement("div");
+    weekdays.className = "heating-heat-weekdays";
+    for (const label of HEATING_WEEKDAY_LABELS) {
+        const cell = document.createElement("span");
+        cell.textContent = label;
+        weekdays.append(cell);
+    }
+
+    const grid = document.createElement("div");
+    grid.className = "heating-heat-grid";
+    const firstDay = model.bounds.start.getDay();
+    const lead = firstDay === 0 ? 6 : firstDay - 1;
+    for (let index = 0; index < lead; index += 1) {
+        const pad = document.createElement("span");
+        pad.className = "heating-heat-pad";
+        pad.setAttribute("aria-hidden", "true");
+        grid.append(pad);
+    }
+
+    const measured = model.slots.filter(slot => slot.durationMs != null);
+    const maxMs = measured.reduce((max, slot) => Math.max(max, slot.durationMs ?? 0), 0);
+    const pointer = document.createElement("p");
+    pointer.className = "heating-time-pointer";
+
+    for (const slot of model.slots) {
+        const cell = document.createElement("button");
+        cell.type = "button";
+        cell.className = "heating-heat-cell";
+        cell.textContent = slot.label;
+        if (slot.durationMs == null) {
+            cell.classList.add("is-future");
+            cell.disabled = true;
+            cell.setAttribute("aria-label", formatHeatingDay(slot.start));
+        } else {
+            const heat = maxMs <= 0 ? 0 : slot.durationMs / maxMs;
+            cell.classList.add("is-measured");
+            if (heat >= 0.72) {
+                cell.classList.add("is-hot");
+            }
+            cell.style.setProperty("--heat", heat.toFixed(3));
+            const text = `${formatHeatingDay(slot.start)} · ${formatHeatingDuration(slot.durationMs)}`;
+            cell.setAttribute("aria-label", text);
+            const show = () => {
+                pointer.textContent = text;
+            };
+            cell.addEventListener("pointerenter", show);
+            cell.addEventListener("focus", show);
+            cell.addEventListener("click", show);
+        }
+        grid.append(cell);
+    }
+
+    const legend = document.createElement("div");
+    legend.className = "heating-time-legend";
+    const maxHours = maxMs / 3600000;
+    const legendHours = maxHours <= 0 ? 0 : Math.max(1, Math.round(maxHours));
+    legend.append(heatingHeatLegendSwatch(0), heatingHeatLegendSwatch(legendHours));
+
+    host.append(weekdays, grid, legend, pointer);
+}
+
+/**
+ * @param {number} hours
+ * @returns {HTMLSpanElement}
+ */
+function heatingHeatLegendSwatch(hours) {
+    const row = document.createElement("span");
+    const swatch = document.createElement("i");
+    swatch.className = "heating-time-swatch" + (hours > 0 ? " current" : "");
+    if (hours <= 0) {
+        swatch.style.background = "var(--surface-strong)";
+        swatch.style.boxShadow = "inset 0 0 0 0.0625rem var(--line)";
+    }
+    swatch.setAttribute("aria-hidden", "true");
+    row.append(swatch, document.createTextNode(`${hours} h`));
+    return row;
+}
+
+function syncHeatingTimeChrome() {
+    const range = heatingTimeRangeById(heatingTime.rangeId);
+    const view = heatingTimeViewById(heatingTime.viewId);
+    const bounds = range.window(heatingTime.cursor);
+    const containsNow = heatingWindowContainsNow(bounds, new Date());
+
+    document.querySelectorAll(".heating-time-range").forEach(button => {
+        if (!(button instanceof HTMLButtonElement)) {
+            return;
+        }
+        const id = button.dataset.rangeId ?? "";
+        const selected = id === range.id;
+        const allowed = view.ranges.includes(id);
+        button.disabled = !allowed;
+        button.setAttribute("aria-checked", selected ? "true" : "false");
+        button.tabIndex = selected ? 0 : -1;
+    });
+
+    const viewButton = document.getElementById("heating-time-view");
+    if (viewButton != null) {
+        viewButton.replaceChildren(
+            document.createTextNode(view.label),
+            heatingViewChevron(),
+        );
+    }
+    document.querySelectorAll(".heating-time-menu-item").forEach(item => {
+        if (!(item instanceof HTMLButtonElement)) {
+            return;
+        }
+        item.setAttribute("aria-checked", item.dataset.viewId === view.id ? "true" : "false");
+    });
+
+    const previous = document.getElementById("heating-time-previous");
+    const previousInput = document.getElementById("heating-time-previous-input");
+    if (previous != null) {
+        previous.hidden = !view.previous;
+    }
+    if (previousInput instanceof HTMLInputElement) {
+        previousInput.checked = heatingTime.previous;
+    }
+
+    const label = document.getElementById("heating-time-label");
+    if (label != null) {
+        label.textContent = range.pagerLabel(bounds);
+    }
+    const pager = document.getElementById("heating-time-pager");
+    if (pager != null) {
+        pager.hidden = !view.pager;
+    }
+    const forward = document.getElementById("heating-time-forward");
+    if (forward instanceof HTMLButtonElement) {
+        forward.disabled = containsNow;
+    }
+    const progress = document.getElementById("heating-time-progress");
+    if (progress != null) {
+        const showProgress = view.progress && containsNow;
+        progress.hidden = !showProgress;
+        progress.textContent = showProgress ? range.progressLabel : "";
+    }
+}
+
+/**
+ * @returns {HTMLSpanElement}
+ */
+function heatingViewChevron() {
+    const chevron = document.createElement("span");
+    chevron.className = "heating-time-view-chevron";
+    chevron.setAttribute("aria-hidden", "true");
+    return chevron;
+}
+
+function paintHeatingTime() {
     const dialog = document.getElementById("heating-stats-dialog");
-    if (!(dialog instanceof HTMLDialogElement)) {
-        return;
-    }
-
-    const resetScroll = options?.resetScroll === true;
-    const view = buildHeatingStatsView();
-    if (!resetScroll && view.key === heatingStatsRenderKey) {
-        return;
-    }
-    heatingStatsRenderKey = view.key;
-
-    const title = document.getElementById("heating-stats-title");
-    const period = document.getElementById("heating-stats-period");
+    const host = document.getElementById("heating-time-host");
     const empty = document.getElementById("heating-stats-empty");
-    const summary = document.getElementById("heating-stats-summary");
-    const compare = document.getElementById("heating-stats-compare");
-    const runs = document.getElementById("heating-stats-runs");
-    const runsEmpty = document.getElementById("heating-stats-runs-empty");
-    const runList = document.getElementById("heating-stats-run-list");
-    const status = document.getElementById("heating-stats-status");
-    if (
-        !(title instanceof HTMLElement)
-        || period == null
-        || empty == null
-        || summary == null
-        || compare == null
-        || runs == null
-        || runsEmpty == null
-        || runList == null
-        || status == null
-    ) {
-        heatingStatsRenderKey = "";
+    const title = document.getElementById("heating-stats-title");
+    if (!(dialog instanceof HTMLDialogElement) || host == null || empty == null || !(title instanceof HTMLElement)) {
         return;
     }
 
-    period.textContent = view.periodLabel;
-    if (view.deviceName !== "") {
+    const sinceKey = String(heatingTimeQueryStart().getTime());
+    if (sinceKey !== heatingTimeLoadedSince) {
+        return;
+    }
+
+    const hasReadings = heatingTimeSeries != null && heatingTimeSeries.changes.length > 0;
+    empty.hidden = hasReadings;
+    if (hasReadings && heatingTimeSeries != null) {
         title.hidden = false;
-        title.textContent = view.deviceName;
+        title.textContent = heatingTimeSeries.device_name;
         dialog.setAttribute("aria-labelledby", "heating-stats-title");
         dialog.removeAttribute("aria-label");
-    } else {
-        title.hidden = true;
-        title.textContent = "";
-        dialog.removeAttribute("aria-labelledby");
-        dialog.setAttribute("aria-label", "Heating");
-    }
-
-    empty.hidden = view.hasReadings;
-    summary.hidden = !view.hasReadings;
-    compare.hidden = !view.hasReadings;
-    runs.hidden = !view.hasReadings;
-    status.hidden = !view.hasReadings || view.statusParts.length === 0;
-    if (!view.hasReadings) {
+        const model = buildHeatingTimeModel();
+        model.view.draw(host, model);
         return;
     }
 
-    summary.textContent = view.summary;
-    compare.textContent = view.compare;
+    title.hidden = true;
+    title.textContent = "";
+    dialog.removeAttribute("aria-labelledby");
+    dialog.setAttribute("aria-label", "Heating");
+    host.replaceChildren();
+}
 
-    const scrollTop = resetScroll ? 0 : runs.scrollTop;
-    runsEmpty.hidden = view.runs.length > 0;
-    runList.hidden = view.runs.length === 0;
-    runList.replaceChildren();
-    for (const run of view.runs) {
-        const item = document.createElement("li");
-        item.className = "heating-stats-run";
-        const range = document.createElement("span");
-        range.textContent = run.range;
-        const duration = document.createElement("span");
-        duration.className = "heating-stats-run-duration";
-        duration.textContent = run.duration;
-        item.append(range, duration);
-        runList.append(item);
+/**
+ * @param {{refetch?: boolean}} [options]
+ */
+function refreshHeatingTime(options) {
+    const dialog = document.getElementById("heating-stats-dialog");
+    if (!(dialog instanceof HTMLDialogElement) || !dialog.open) {
+        return;
     }
-    runs.scrollTop = scrollTop;
+    syncHeatingTimeChrome();
+    const since = heatingTimeQueryStart();
+    const sinceKey = String(since.getTime());
+    const reload = options?.refetch === true || sinceKey !== heatingTimeLoadedSince;
+    if (!reload) {
+        paintHeatingTime();
+        return;
+    }
+    if (sinceKey !== heatingTimeLoadedSince) {
+        const host = document.getElementById("heating-time-host");
+        const empty = document.getElementById("heating-stats-empty");
+        if (host != null) {
+            host.replaceChildren();
+        }
+        if (empty != null) {
+            empty.hidden = true;
+        }
+    }
+    void fetchHeatingSpan(since, sinceKey);
+}
 
-    status.replaceChildren();
-    view.statusParts.forEach((part, index) => {
-        if (index > 0) {
-            status.append(document.createTextNode(" · "));
+/**
+ * @param {Date} since
+ * @param {string} sinceKey
+ */
+async function fetchHeatingSpan(since, sinceKey) {
+    const id = ++heatingTimeFetchId;
+    try {
+        const response = await fetch(`/heating/?since=${encodeURIComponent(since.toISOString())}`, {
+            cache: "no-store",
+        });
+        if (!response.ok) {
+            throw new Error(`Heating span ${response.status}`);
         }
-        const span = document.createElement("span");
-        span.textContent = part.text;
-        if (part.heating) {
-            span.className = "heating-stats-status-heating";
+        const body = await response.json();
+        if (id !== heatingTimeFetchId) {
+            return;
         }
-        status.append(span);
-    });
+        heatingTimeSeries = body != null && Array.isArray(body.changes) ? body : null;
+        heatingTimeLoadedSince = sinceKey;
+        paintHeatingTime();
+    } catch (error) {
+        if (id !== heatingTimeFetchId) {
+            return;
+        }
+        console.error("Error fetching heating span:", error);
+    }
+}
+
+/**
+ * @param {boolean} [focusButton]
+ */
+function closeHeatingViewMenu(focusButton) {
+    const menu = document.getElementById("heating-time-view-menu");
+    const button = document.getElementById("heating-time-view");
+    if (menu != null) {
+        menu.hidden = true;
+    }
+    if (button != null) {
+        button.setAttribute("aria-expanded", "false");
+        if (focusButton) {
+            button.focus();
+        }
+    }
+}
+
+/**
+ * @param {'first' | 'last' | 'active'} [which]
+ */
+function openHeatingViewMenu(which) {
+    const menu = document.getElementById("heating-time-view-menu");
+    const button = document.getElementById("heating-time-view");
+    if (menu == null || button == null) {
+        return;
+    }
+    menu.hidden = false;
+    button.setAttribute("aria-expanded", "true");
+    const items = [...menu.querySelectorAll(".heating-time-menu-item")];
+    const active = items.find(item => item.getAttribute("aria-checked") === "true");
+    const target = which === "last"
+        ? items[items.length - 1]
+        : which === "first"
+            ? items[0]
+            : (active ?? items[0]);
+    if (target instanceof HTMLElement) {
+        target.focus();
+    }
+}
+
+function heatingViewMenuIsOpen() {
+    const menu = document.getElementById("heating-time-view-menu");
+    return menu != null && !menu.hidden;
+}
+
+function resetHeatingTime() {
+    heatingTime.rangeId = heatingTimeRanges[0].id;
+    heatingTime.viewId = heatingTimeViews[0].id;
+    heatingTime.cursor = new Date();
+    heatingTime.previous = false;
+    heatingTime.rangeBeforeLock = null;
+    heatingTimeSeries = null;
+    heatingTimeLoadedSince = "";
+    heatingTimeFetchId += 1;
 }
 
 function initializeHeatingStats() {
     const button = document.getElementById("heating-stats-button");
     const dialog = document.getElementById("heating-stats-dialog");
     const closeButton = document.getElementById("heating-stats-close");
-    if (!(button instanceof HTMLButtonElement) || !(dialog instanceof HTMLDialogElement) || closeButton == null) {
+    const rangeGroup = document.getElementById("heating-time-ranges");
+    const viewButton = document.getElementById("heating-time-view");
+    const menu = document.getElementById("heating-time-view-menu");
+    const previousInput = document.getElementById("heating-time-previous-input");
+    const back = document.getElementById("heating-time-back");
+    const forward = document.getElementById("heating-time-forward");
+    if (
+        !(button instanceof HTMLButtonElement)
+        || !(dialog instanceof HTMLDialogElement)
+        || closeButton == null
+        || rangeGroup == null
+        || !(viewButton instanceof HTMLButtonElement)
+        || menu == null
+        || !(previousInput instanceof HTMLInputElement)
+        || !(back instanceof HTMLButtonElement)
+        || !(forward instanceof HTMLButtonElement)
+    ) {
         return;
     }
 
+    for (const range of heatingTimeRanges) {
+        const rangeButton = document.createElement("button");
+        rangeButton.type = "button";
+        rangeButton.className = "heating-time-range";
+        rangeButton.dataset.rangeId = range.id;
+        rangeButton.setAttribute("role", "radio");
+        rangeButton.textContent = range.label;
+        rangeButton.addEventListener("click", () => {
+            if (rangeButton.disabled) {
+                return;
+            }
+            heatingTime.rangeId = range.id;
+            heatingTime.rangeBeforeLock = null;
+            refreshHeatingTime();
+        });
+        rangeGroup.append(rangeButton);
+    }
+
+    rangeGroup.addEventListener("keydown", event => {
+        if (event.key !== "ArrowRight" && event.key !== "ArrowLeft") {
+            return;
+        }
+        const buttons = [...rangeGroup.querySelectorAll(".heating-time-range")].filter(
+            item => item instanceof HTMLButtonElement && !item.disabled,
+        );
+        const index = buttons.indexOf(document.activeElement);
+        if (index < 0) {
+            return;
+        }
+        event.preventDefault();
+        const delta = event.key === "ArrowRight" ? 1 : -1;
+        const next = buttons[(index + delta + buttons.length) % buttons.length];
+        if (next instanceof HTMLButtonElement) {
+            next.click();
+            next.focus();
+        }
+    });
+
+    for (const view of heatingTimeViews) {
+        const item = document.createElement("button");
+        item.type = "button";
+        item.className = "heating-time-menu-item";
+        item.dataset.viewId = view.id;
+        item.setAttribute("role", "menuitemradio");
+        item.textContent = view.label;
+        item.addEventListener("click", () => {
+            selectHeatingTimeView(view.id);
+            closeHeatingViewMenu(true);
+            refreshHeatingTime();
+        });
+        menu.append(item);
+    }
+
+    viewButton.addEventListener("click", () => {
+        if (heatingViewMenuIsOpen()) {
+            closeHeatingViewMenu();
+        } else {
+            openHeatingViewMenu("active");
+        }
+    });
+    viewButton.addEventListener("keydown", event => {
+        if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+            event.preventDefault();
+            openHeatingViewMenu(event.key === "ArrowUp" ? "last" : "first");
+        }
+    });
+    menu.addEventListener("keydown", event => {
+        const items = [...menu.querySelectorAll(".heating-time-menu-item")];
+        const index = items.indexOf(document.activeElement);
+        if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+            event.preventDefault();
+            const delta = event.key === "ArrowDown" ? 1 : -1;
+            const next = items[(index + delta + items.length) % items.length];
+            if (next instanceof HTMLElement) {
+                next.focus();
+            }
+        } else if (event.key === "Home" && items[0] instanceof HTMLElement) {
+            event.preventDefault();
+            items[0].focus();
+        } else if (event.key === "End" && items[items.length - 1] instanceof HTMLElement) {
+            event.preventDefault();
+            items[items.length - 1].focus();
+        } else if (event.key === "Escape") {
+            event.preventDefault();
+            event.stopPropagation();
+            closeHeatingViewMenu(true);
+        }
+    });
+
+    previousInput.addEventListener("change", () => {
+        heatingTime.previous = previousInput.checked;
+        refreshHeatingTime();
+    });
+    back.addEventListener("click", () => {
+        const range = heatingTimeRangeById(heatingTime.rangeId);
+        heatingTime.cursor = range.step(heatingTime.cursor, -1);
+        refreshHeatingTime();
+    });
+    forward.addEventListener("click", () => {
+        if (forward.disabled) {
+            return;
+        }
+        const range = heatingTimeRangeById(heatingTime.rangeId);
+        heatingTime.cursor = range.step(heatingTime.cursor, 1);
+        refreshHeatingTime();
+    });
+
     button.addEventListener("click", () => {
-        renderHeatingStats({ resetScroll: true });
+        resetHeatingTime();
+        closeHeatingViewMenu();
         if (!dialog.open) {
             button.setAttribute("aria-expanded", "true");
             dialog.showModal();
         }
+        refreshHeatingTime({ refetch: true });
     });
-
     closeButton.addEventListener("click", () => {
         dialog.close();
     });
-
-    dialog.addEventListener("click", (event) => {
+    dialog.addEventListener("click", event => {
         if (event.target === dialog) {
             dialog.close();
+            return;
+        }
+        const wrap = document.getElementById("heating-time-view-wrap");
+        if (
+            heatingViewMenuIsOpen()
+            && wrap != null
+            && event.target instanceof Node
+            && !wrap.contains(event.target)
+        ) {
+            closeHeatingViewMenu();
         }
     });
-
+    dialog.addEventListener("cancel", event => {
+        if (heatingViewMenuIsOpen()) {
+            event.preventDefault();
+            closeHeatingViewMenu(true);
+        }
+    });
     dialog.addEventListener("close", () => {
+        closeHeatingViewMenu();
         button.setAttribute("aria-expanded", "false");
         button.focus();
     });
+    window.addEventListener("resize", () => {
+        if (dialog.open) {
+            paintHeatingTime();
+        }
+    });
 
-    renderHeatingStats();
+    syncHeatingTimeChrome();
 }
 
 /**
@@ -1173,7 +2115,6 @@ function initializeChartControls() {
             chartPeriod = nextPeriod;
             syncChartControls();
             persistChartSettings();
-            renderHeatingStats({ resetScroll: true });
 
             if (deviceData != null) {
                 drawCharts();
@@ -1449,7 +2390,7 @@ async function fetchTemperatureData() {
             heatingSeries = response_data.heating ?? null;
             drawCharts();
             refreshAllTemperatureReadouts();
-            renderHeatingStats();
+            refreshHeatingTime({ refetch: true });
         })
         .catch(error => {
             console.error('Error fetching temperature data:', error);

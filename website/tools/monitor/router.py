@@ -180,6 +180,13 @@ async def _load_heating_series(since: datetime) -> HeatingSeries | None:
     return build_heating_series(selected)
 
 
+def _naive_utc(value: datetime) -> datetime:
+    """Match heating_changes, which stores naive UTC timestamps."""
+    if value.tzinfo is None:
+        return value
+    return value.astimezone(timezone.utc).replace(tzinfo=None)
+
+
 # Endpoint to get the timeseries data.
 # None fields (absent mode/setpoint, or no heating series) are omitted.
 @monitor_router.get(
@@ -220,3 +227,20 @@ async def timeseries() -> TimeseriesDataResponse:
 
     # Return the timeseries data
     return TimeseriesDataResponse(data=timeseries_data, heating=heating)
+
+
+# Heating-time dialog. Wider than the chart's 14 days, so it is its own read.
+# `since` is the start of the earliest window on screen. The prior row is included.
+@monitor_router.get(
+    "/heating",
+    response_class=JSONResponse,
+    response_model_exclude_none=True,
+)
+@monitor_router.get(
+    "/heating/",
+    response_class=JSONResponse,
+    response_model_exclude_none=True,
+)
+async def heating_span(since: datetime) -> HeatingSeries | None:
+    logging.info("Heating span requested")
+    return await _load_heating_series(_naive_utc(since))
