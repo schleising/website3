@@ -49,7 +49,7 @@ One row is written when the thermostat combination changes. Until the next row, 
 | `device_name` | Nest display name. This house has one thermostat |
 | `timestamp` | UTC time when this combination was first observed. Stored naive; treat it as UTC |
 | `hvac_status` | `OFF`, `HEATING`, or `COOLING` |
-| `mode` | Nest mode, such as `HEAT`, `COOL`, `HEATCOOL`, or `OFF`. Omitted when that poll had none |
+| `mode` | Nest mode, such as `HEAT`, `COOL`, `HEATCOOL`, `OFF`, or `ECO`. Omitted when that poll had none |
 | `heat_celsius` | Heat threshold. Omitted when Nest did not send it |
 | `cool_celsius` | Cool threshold. Omitted when Nest did not send it |
 
@@ -140,7 +140,7 @@ The group is `<g class="heating-bands" id="heating-bands-{device_id}">`, `pointe
 
 Daily, Weekly, Previous period, and Smoothed resize the room charts and the wash only. They do not resize the dialog. Smoothed changes the temperature line only. Previous period draws the amber temperature line and leaves the wash on this period’s runs. The online/offline status is not rewritten with the word Heating.
 
-A status pill, `#heating-state`, sits in `.topbar-actions` immediately left of Stats. On a narrow screen the Monitor title is smaller so the pill, Stats, and the day/night switch stay on that one row. It reads the latest in-force change on the chart payload. `HEAT` and `HEATCOOL` read **On**. `OFF` and `COOL` read **Off**. `hvac_status` `HEATING` reads **Heating**; any other status reads **Idle**. The target is the latest `heat_celsius`, one decimal, `19.5°C`. A later row that omits `mode` or `heat_celsius` keeps the previous value. The three facts are separated by middots. While the equipment is heating, the pill uses heating red. While heat is called for and the equipment is idle, it uses the live teal. While heat is off, it is quiet. The pill is hidden when `heating` is missing. It updates with the timeseries poll.
+A status pill, `#heating-state`, sits in `.topbar-actions` immediately left of Stats. On a narrow screen the Monitor title is smaller so the pill, Stats, and the day/night switch stay on that one row. It reads the latest in-force change on the chart payload. The mode is shown by name: **Heat**, **Cool**, **Heat • Cool**, **Off**, and **Eco**. Any other mode is shown too, in title case, so a new Nest mode is not dropped. `hvac_status` `HEATING` reads **Heating**; any other status reads **Idle**. The target is the latest `heat_celsius`, one decimal, `19.5°C`. A later row that omits `mode` or `heat_celsius` keeps the previous value. The three facts are separated by middots. While the equipment is heating, the pill uses heating red. While Heat, Heat • Cool, or Eco is set and the equipment is idle, it uses the live teal. Cool, Off, and any other idle mode stay quiet. The pill is hidden when `heating` is missing. It updates with the timeseries poll.
 
 ---
 
@@ -297,4 +297,4 @@ When `monitor.js` or `monitor.css` changes, raise its query in the template and 
 8. The pager steps one window. Forward is disabled on the window that contains today. The date between the chevrons returns to that window.
 9. The dialog asks `GET /heating` for the span it shows. It does not widen the 14-day chart payload.
 10. The card’s height eases from the on-screen border box to the settled border box. The effect does not leave an inline height. Resize stays instant.
-11. A pill left of Stats shows whether heat is on, whether the equipment is heating, and the target temperature. It uses the latest in-force change from the chart payload.
+11. A pill left of Stats shows the thermostat mode, including Eco, whether the equipment is heating, and the target temperature. It uses the latest in-force change from the chart payload.

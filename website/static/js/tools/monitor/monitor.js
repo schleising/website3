@@ -1,4 +1,4 @@
-const serviceWorkerPath = '/sw.js?v=tools-webapp-v37';
+const serviceWorkerPath = '/sw.js?v=tools-webapp-v38';
 const chartSettingsStorageKey = 'monitor.chartSettings';
 
 // The chart data to be fetched from the server
@@ -71,11 +71,50 @@ function formatTemperature(value) {
     return value.toFixed(1) + "°C";
 }
 
+/** Readable Nest mode names. Eco is a mode, not folded into Off. */
+const HEATING_MODE_LABELS = {
+    HEAT: "Heat",
+    COOL: "Cool",
+    HEATCOOL: "Heat • Cool",
+    HEAT_COOL: "Heat • Cool",
+    OFF: "Off",
+    ECO: "Eco",
+    MANUAL_ECO: "Eco",
+};
+
+/** Modes that can still call for heat, so an idle pill stays in the live teal. */
+const HEATING_MODES_CALLING = new Set(["HEAT", "HEATCOOL", "HEAT_COOL", "ECO", "MANUAL_ECO"]);
+
+/**
+ * @param {string} mode
+ * @returns {string}
+ */
+function heatingModeKey(mode) {
+    return mode.trim().replace(/[\s-]+/g, "_").toUpperCase();
+}
+
+/**
+ * @param {string} mode
+ * @returns {string}
+ */
+function heatingModeLabel(mode) {
+    const key = heatingModeKey(mode);
+    const known = HEATING_MODE_LABELS[key];
+    if (known != null) {
+        return known;
+    }
+    return key
+        .split("_")
+        .filter(word => word !== "")
+        .map(word => word.charAt(0) + word.slice(1).toLowerCase())
+        .join(" ");
+}
+
 /**
  * Latest mode, activity, and heat target. A row that omits mode or
  * heat_celsius keeps the previous value.
  * @param {Array<{timestamp: string, hvac_status?: string, mode?: string, heat_celsius?: number}>} changes
- * @returns {{call: "On" | "Off" | null, activity: "Heating" | "Idle" | null, target: number | null} | null}
+ * @returns {{mode: string | null, calling: boolean, activity: "Heating" | "Idle" | null, target: number | null} | null}
  */
 function heatingStateInForce(changes) {
     if (changes.length === 0) {
@@ -101,13 +140,8 @@ function heatingStateInForce(changes) {
             target = change.heat_celsius;
         }
     }
-    /** @type {"On" | "Off" | null} */
-    let call = null;
-    if (mode === "HEAT" || mode === "HEATCOOL") {
-        call = "On";
-    } else if (mode === "OFF" || mode === "COOL") {
-        call = "Off";
-    }
+    const modeLabel = mode == null ? null : heatingModeLabel(mode);
+    const calling = mode != null && HEATING_MODES_CALLING.has(heatingModeKey(mode));
     /** @type {"Heating" | "Idle" | null} */
     let activity = null;
     if (status === "HEATING") {
@@ -115,10 +149,10 @@ function heatingStateInForce(changes) {
     } else if (status != null) {
         activity = "Idle";
     }
-    if (call == null && activity == null && target == null) {
+    if (modeLabel == null && activity == null && target == null) {
         return null;
     }
-    return { call, activity, target };
+    return { mode: modeLabel, calling, activity, target };
 }
 
 function syncHeatingState() {
@@ -141,9 +175,13 @@ function syncHeatingState() {
     const parts = [];
     /** @type {string[]} */
     const spoken = [];
-    if (state.call != null) {
-        parts.push(state.call);
-        spoken.push(state.call === "On" ? "Heating is on" : "Heating is off");
+    if (state.mode != null) {
+        parts.push(state.mode);
+        spoken.push(state.mode === "Off"
+            ? "Off"
+            : state.mode === "Heat • Cool"
+                ? "Heat and cool mode"
+                : `${state.mode} mode`);
     }
     if (state.activity != null) {
         parts.push(state.activity);
@@ -160,8 +198,8 @@ function syncHeatingState() {
         return span;
     }));
     pill.classList.toggle("is-heating", state.activity === "Heating");
-    pill.classList.toggle("is-on", state.activity !== "Heating" && state.call === "On");
-    pill.classList.toggle("is-off", state.activity !== "Heating" && state.call !== "On");
+    pill.classList.toggle("is-on", state.activity !== "Heating" && state.calling);
+    pill.classList.toggle("is-off", state.activity !== "Heating" && !state.calling);
     pill.setAttribute("aria-label", spoken.join(", "));
     pill.hidden = false;
 }
