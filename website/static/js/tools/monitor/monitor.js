@@ -1,4 +1,4 @@
-const serviceWorkerPath = '/sw.js?v=tools-webapp-v41';
+const serviceWorkerPath = '/sw.js?v=tools-webapp-v43';
 const chartSettingsStorageKey = 'monitor.chartSettings';
 
 // The chart data to be fetched from the server
@@ -1677,7 +1677,7 @@ function layoutHeatingHeatmap(root) {
 function heatingHeatLegendSwatch(hours) {
     const row = document.createElement("span");
     const swatch = document.createElement("i");
-    swatch.className = "heating-time-swatch" + (hours > 0 ? " current" : "");
+    swatch.className = "heating-time-swatch" + (hours > 0 ? " heating-heat-scale" : "");
     if (hours <= 0) {
         swatch.style.background = "var(--surface-strong)";
         swatch.style.boxShadow = "inset 0 0 0 0.0625rem var(--line)";

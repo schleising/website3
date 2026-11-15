@@ -837,12 +837,12 @@ body.dark-mode .heating-time-range[aria-checked="true"] {
 
 .heating-bar-current,
 .heating-dot-current {
-    fill: var(--heating-bar);
+    fill: var(--live);
 }
 
 .heating-bar-previous,
 .heating-dot-previous {
-    fill: var(--heating-previous);
+    fill: var(--chart-overlay);
 }
 
 .heating-line-current,
@@ -854,11 +854,11 @@ body.dark-mode .heating-time-range[aria-checked="true"] {
 }
 
 .heating-line-current {
-    stroke: var(--heating-bar);
+    stroke: var(--live);
 }
 
 .heating-line-previous {
-    stroke: var(--heating-previous);
+    stroke: var(--chart-overlay);
 }
 
 .heating-mark {
@@ -917,11 +917,15 @@ body.dark-mode .heating-time-range[aria-checked="true"] {
 }
 
 .heating-time-swatch.current {
-    background: var(--heating-bar);
+    background: var(--live);
 }
 
 .heating-time-swatch.previous {
-    background: var(--heating-previous);
+    background: var(--chart-overlay);
+}
+
+.heating-time-swatch.heating-heat-scale {
+    background: var(--heating-bar);
 }
 
 .heating-time-pointer,

@@ -205,7 +205,7 @@ The same slots as Bars. Each point is the heating time accumulated from the star
 
 One cell per real day of the month. Monday is the first column. Blank cells lead the first row. The day number and, once the day has started, a smaller duration sit centred in the tile with a small gap between them. Tile text is `0m`, `<1m`, `42m`, `4h`, or `4h 10m`. The pointer and the accessible name use the longer form below.
 
-The tint runs from the paper colour at 0 hours to solid `--heating-bar` at 7 hours. A longer day stays at that solid red. The legend is `0 h` to `7 h`.
+The tint runs from the paper colour at 0 hours to solid `--heating-bar` at 7 hours. A longer day stays at that solid red. The legend is `0 h` to `7 h`. The heatmap has no previous period, so it does not use the this-period and last-period colours.
 
 Tiles are square. They follow the dialog width. If that calendar would be taller than the dialog, the tiles shrink together, stay square, and the weekday header matches the grid. The dialog does not scroll. The pager still steps a month.
 
@@ -219,10 +219,10 @@ Hovering or tapping a bar lights that bar and dims the others. Hovering or tappi
 
 | Series | Token | Light | Dark |
 | --- | --- | --- | --- |
-| Current bars, line, heatmap | `--heating-bar` | `#b42318` | `#ff7a6e` |
-| Previous bars and line | `--heating-previous` | `#0f8f7a` | `#2dceb2` |
+| Current bars and line | `--live` | `#0f8f7a` | `#2dceb2` |
+| Previous bars and line | `--chart-overlay` | `#b56a12` | `#e0a24a` |
 
-`--heating-previous` matches the live teal. The room chart’s previous temperature line stays amber.
+These are the room chart’s colours: this period is the live teal, last period is the amber line. The heating wash and the status pill stay heating red.
 
 ### Empty
 
@@ -292,7 +292,7 @@ When `monitor.js` or `monitor.css` changes, raise its query in the template and 
 3. A run starts when status becomes `HEATING` and ends when it leaves `HEATING`. A later `HEATING` row keeps the run open. Walk every change, then clip. A trailing `HEATING` extends to now only on a window that contains now.
 4. The wash is this period’s runs on every room chart, behind both temperature lines. Previous-period heating is not drawn there. The chart toolbar does not resize the dialog.
 5. Stats opens one dialog. Bars, Total, and Heatmap are views. Day, Week, and Month are ranges. A later view is a menu item. A later range is a segment.
-6. On Bars the previous-period label toggles that series. It starts hidden, and the current bar then fills the slot. Total always draws the previous window. Current is heating red, previous is live teal. Heatmap is the month only. Its tiles are square, show the duration under the day number, and treat 7 hours as solid red.
+6. On Bars the previous-period label toggles that series. It starts hidden, and the current bar then fills the slot. Total always draws the previous window. Current is the live teal, previous is the amber of the room chart’s last period. Heatmap is the month only. Its tiles are square, show the duration under the day number, and treat 7 hours as solid red.
 7. The month axis is day 1 through 31. The heatmap shows only real days. A finished empty slot is zero. A slot that has not started draws nothing.
 8. The pager steps one window. Forward is disabled on the window that contains today. The date between the chevrons returns to that window.
 9. The dialog asks `GET /heating` for the span it shows. It does not widen the 14-day chart payload.
