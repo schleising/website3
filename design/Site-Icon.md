@@ -1,6 +1,6 @@
 # Site icon
 
-Status: Masthead is the direction. Four further versions sit under the original. The live favicon is unchanged.  
+Status: Masthead Original is the live favicon (`website/static/icons/favicon.svg` and `favicon.ico`, cache `v1.5.1`). The paper half is `#a8c0dc` so it separates from a light browser tab bar.  
 Scope: the main site mark in `website/templates/base.html` (`/icons/favicon.svg` and `/icons/favicon.ico`).  
 Not in scope: section icons (Football, Feeds, Aircraft, and the rest) or the standalone webapp icons. Those hosts follow [Webapp-Design-Language.md](Webapp-Design-Language.md) and do not use this blue.
 
@@ -104,6 +104,6 @@ A website as a page. Paper sheet on the header blue, folded corner in the pale s
 
 At 16px the rules vanish and the folded corner remains, so it still reads as a document. It is a familiar file icon. Iteration would be the fold size, the page margin inside the tile, and whether the sheet should be the whole icon with no blue field behind it.
 
-## Choosing
+## Chosen
 
-Reply with **Original**, **Cap**, **Bar**, **Split**, or **Rule**. The next pass stays on that Masthead and tunes weight and proportion. Window, Door, and Sheet stay in this document and are not the next step.
+**Original.** It is the favicon. Cap, Bar, Split, and Rule stay here as the other Masthead tries. Window, Door, and Sheet were the other directions and were not taken.
