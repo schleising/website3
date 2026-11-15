@@ -1,4 +1,4 @@
-const serviceWorkerPath = '/sw.js?v=tools-webapp-v39';
+const serviceWorkerPath = '/sw.js?v=tools-webapp-v41';
 const chartSettingsStorageKey = 'monitor.chartSettings';
 
 // The chart data to be fetched from the server
@@ -1596,7 +1596,7 @@ function drawHeatingHeatmap(host, model) {
         } else {
             const heat = Math.min(1, slot.durationMs / maxMs);
             cell.classList.add("is-measured");
-            if (heat >= 0.72) {
+            if (heat >= 0.46) {
                 cell.classList.add("is-hot");
             }
             cell.style.setProperty("--heat", heat.toFixed(3));
