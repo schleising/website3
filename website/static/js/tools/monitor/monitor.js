@@ -1,4 +1,4 @@
-const serviceWorkerPath = '/sw.js?v=tools-webapp-v38';
+const serviceWorkerPath = '/sw.js?v=tools-webapp-v39';
 const chartSettingsStorageKey = 'monitor.chartSettings';
 
 // The chart data to be fetched from the server
@@ -1048,12 +1048,10 @@ function heatingSvg(name, attrs, text) {
 /**
  * @param {HeatingTimeModel} model
  * @param {boolean} cumulative
- * @returns {number}
+ * @param {'minutes' | 'hours'} unit
+ * @returns {number[]}
  */
-function heatingChartAxisMax(model, cumulative) {
-    if (!cumulative && model.range.axisMax != null) {
-        return model.range.axisMax;
-    }
+function heatingChartValues(model, cumulative, unit) {
     /** @type {number[]} */
     const values = [];
     const series = cumulative ? heatingCumulative(model.slots) : [model.slots.map(slot => ({
@@ -1065,7 +1063,7 @@ function heatingChartAxisMax(model, cumulative) {
             if (point.slot.durationMs == null && !cumulative) {
                 continue;
             }
-            values.push(heatingSlotValue(cumulative ? point.totalMs : (point.slot.durationMs ?? 0), model.range.unit));
+            values.push(heatingSlotValue(cumulative ? point.totalMs : (point.slot.durationMs ?? 0), unit));
         }
     }
     if (model.showPrevious && model.previousSlots != null) {
@@ -1081,11 +1079,33 @@ function heatingChartAxisMax(model, cumulative) {
                 if (point.slot.durationMs == null && !cumulative) {
                     continue;
                 }
-                values.push(heatingSlotValue(duration, model.range.unit));
+                values.push(heatingSlotValue(duration, unit));
             }
         }
     }
-    return heatingAxisCeiling(values);
+    return values;
+}
+
+/**
+ * Axis unit and maximum for a bars or total chart.
+ * Day totals stay in minutes until the line passes 60, then switch to hours.
+ * @param {HeatingTimeModel} model
+ * @param {boolean} cumulative
+ * @returns {{unit: 'minutes' | 'hours', axisMax: number}}
+ */
+function heatingChartScale(model, cumulative) {
+    if (!cumulative && model.range.axisMax != null) {
+        return { unit: model.range.unit, axisMax: model.range.axisMax };
+    }
+    let unit = model.range.unit;
+    let values = heatingChartValues(model, cumulative, unit);
+    const peak = values.reduce((max, value) => Math.max(max, value), 0);
+    if (unit === "minutes" && peak > 60) {
+        unit = "hours";
+        values = values.map(value => value / 60);
+    }
+    const axisMax = heatingAxisCeiling(values);
+    return { unit, axisMax };
 }
 
 /**
@@ -1128,7 +1148,8 @@ function drawHeatingSeries(host, model, cumulative) {
     const width = Math.max(280, host.clientWidth);
     const height = 248;
     const pad = { top: 22, right: 8, bottom: 28, left: 36 };
-    const axisMax = heatingChartAxisMax(model, cumulative);
+    const scale = heatingChartScale(model, cumulative);
+    const axisMax = scale.axisMax;
     const plotWidth = width - pad.left - pad.right;
     const plotHeight = height - pad.top - pad.bottom;
     const slotCount = Math.max(model.slots.length, 1);
@@ -1159,10 +1180,10 @@ function drawHeatingSeries(host, model, cumulative) {
         role: "img",
         "aria-label": model.range.pagerLabel(model.bounds),
     });
-    const unit = model.range.unit === "minutes" ? "Minutes" : "Hours";
-    svg.append(heatingSvg("text", { x: pad.left, y: 14 }, unit));
+    const unitLabel = scale.unit === "minutes" ? "Minutes" : "Hours";
+    svg.append(heatingSvg("text", { x: pad.left, y: 14 }, unitLabel));
 
-    const ticks = model.range.axisMax === 60 ? [0, 30, 60] : [0, axisMax / 2, axisMax];
+    const ticks = [0, axisMax / 2, axisMax];
     for (const tick of ticks) {
         const y = yAt(tick);
         svg.append(heatingSvg("line", {
@@ -1261,7 +1282,7 @@ function drawHeatingSeries(host, model, cumulative) {
     }
 
     if (cumulative) {
-        drawHeatingCumulativeLines(svg, model, yAt, slotLeft, slotWidth, bindPointer, pointerText);
+        drawHeatingCumulativeLines(svg, model, yAt, slotLeft, slotWidth, bindPointer, pointerText, scale.unit);
     } else {
         drawHeatingBarPairs(svg, model, yAt, slotLeft, slotWidth, bindPointer, pointerText);
     }
@@ -1385,8 +1406,9 @@ function heatingLinePoints(points, yAt, slotLeft, slotWidth, unit) {
  * @param {number} slotWidth
  * @param {(target: SVGElement, text: string, active: string) => void} bindPointer
  * @param {(slot: HeatingMeasuredSlot, durationMs: number, which: 'current' | 'previous') => string} pointerText
+ * @param {'minutes' | 'hours'} unit
  */
-function drawHeatingCumulativeLines(svg, model, yAt, slotLeft, slotWidth, bindPointer, pointerText) {
+function drawHeatingCumulativeLines(svg, model, yAt, slotLeft, slotWidth, bindPointer, pointerText, unit) {
     const baseline = yAt(0);
     /**
      * @param {Array<Array<{slot: HeatingMeasuredSlot, totalMs: number}>>} segments
@@ -1430,11 +1452,11 @@ function drawHeatingCumulativeLines(svg, model, yAt, slotLeft, slotWidth, bindPo
             }
             svg.append(heatingSvg("polyline", {
                 class: `${lineClass} heating-mark`,
-                points: heatingLinePoints(segment, yAt, slotLeft, slotWidth, model.range.unit),
+                points: heatingLinePoints(segment, yAt, slotLeft, slotWidth, unit),
             }));
             for (const point of segment) {
                 const x = slotLeft(point.slot.index) + slotWidth / 2;
-                const y = yAt(heatingSlotValue(point.totalMs, model.range.unit));
+                const y = yAt(heatingSlotValue(point.totalMs, unit));
                 const seriesMark = which === "current" ? "c" : "p";
                 svg.append(heatingSvg("circle", {
                     class: `${dotClass} heating-mark`,

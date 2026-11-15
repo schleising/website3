@@ -199,7 +199,7 @@ Twenty-four hour slots on Day, seven weekday slots on Week, thirty-one day slots
 
 ### Total
 
-The same slots as Bars. Each point is the heating time accumulated from the start of the window through that slot. Day accumulates minutes and the axis can pass 60. Week and Month accumulate hours. There is no fill under either line.
+The same slots as Bars. Each point is the heating time accumulated from the start of the window through that slot. Day accumulates minutes until the line passes 60 minutes, then the axis switches to hours and fits the line. Week and Month accumulate hours. There is no fill under either line.
 
 ### Heatmap
 
