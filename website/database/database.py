@@ -13,15 +13,32 @@ from bson.codec_options import CodecOptions
 
 T = TypeVar("T", bound=BaseModel)
 
+_shared_client: AsyncIOMotorClient[dict[str, object]] | None = None
+_shared_client_server: str | None = None
+
+
+def shared_motor_client(server_name: str) -> AsyncIOMotorClient[dict[str, object]]:
+    """Return the process-wide Motor client, opening it on first use."""
+
+    global _shared_client, _shared_client_server
+
+    client = _shared_client
+    if client is None or _shared_client_server != server_name:
+        client = AsyncIOMotorClient(server_name, 27017)
+        _shared_client = client
+        _shared_client_server = server_name
+
+    return client
+
+
 class Database:
     def __init__(self) -> None:
-        """Creates a Database instance, creates a connection to the Mongo DB"""
+        """Creates a Database instance on the shared Mongo connection."""
         with open("/app/database/db_server.txt", "r", encoding="utf8") as serverFile:
-            serverName = serverFile.read().strip()
+            server_name = serverFile.read().strip()
 
-            self.client = AsyncIOMotorClient(serverName, 27017)
-
-            self.current_db: AsyncIOMotorDatabase | None = None
+        self.client = shared_motor_client(server_name)
+        self.current_db: AsyncIOMotorDatabase | None = None
 
     def set_database(self, db_name: str) -> AsyncIOMotorDatabase:
         """Set the database within the Mongo instance
