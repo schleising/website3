@@ -192,30 +192,52 @@ class FeedDbHelperTests(unittest.TestCase):
                 saved_count=0,
                 categories=[],
             ),
-            3,
         )
 
         feed_db.invalidate_category_counts_cache("test-user")
         self.assertNotIn("test-user", feed_db._category_counts_cache)
 
-    def test_category_counts_cache_misses_when_read_state_size_changes(self) -> None:
+    def test_category_counts_cache_reuses_entry_until_invalidated(self) -> None:
+        import asyncio
+        from unittest.mock import AsyncMock
+
         from website.feeds import feed_db
         from website.feeds.models import FeedCategoryListResponse
 
-        feed_db._category_counts_cache["test-user"] = (
-            feed_db.utc_now(),
-            FeedCategoryListResponse(
-                all_unread_count=0,
-                recently_read_count=0,
-                saved_count=0,
-                categories=[],
-            ),
-            2,
+        cached = FeedCategoryListResponse(
+            all_unread_count=2,
+            recently_read_count=0,
+            saved_count=0,
+            categories=[],
         )
+        rebuilt = FeedCategoryListResponse(
+            all_unread_count=5,
+            recently_read_count=0,
+            saved_count=0,
+            categories=[],
+        )
+        feed_db._category_counts_cache["test-user"] = (feed_db.utc_now(), cached)
 
-        cached_entry = feed_db._category_counts_cache["test-user"]
-        self.assertEqual(cached_entry[2], 2)
-        self.assertNotEqual(cached_entry[2], 3)
+        async def scenario() -> None:
+            with patch.object(
+                feed_db,
+                "build_categories_with_counts",
+                new_callable=AsyncMock,
+            ) as build:
+                hit = await feed_db.resolve_categories_with_counts_cached("test-user", [], [])
+                self.assertIs(hit, cached)
+                build.assert_not_called()
+
+                feed_db.invalidate_category_counts_cache("test-user")
+                build.return_value = rebuilt
+                miss = await feed_db.resolve_categories_with_counts_cached("test-user", [], [])
+                self.assertIs(miss, rebuilt)
+                build.assert_awaited_once()
+
+        try:
+            asyncio.run(scenario())
+        finally:
+            _ = feed_db._category_counts_cache.pop("test-user", None)
 
 
 class ArticleNavigationLinkTests(unittest.TestCase):
