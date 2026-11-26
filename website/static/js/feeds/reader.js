@@ -3524,5 +3524,5 @@
     scheduleTouchScrollReadCheck();
     schedulePagePrefetchCheck();
 
-    window.setInterval(refreshLiveReaderState, 2000);
+    window.setInterval(refreshLiveReaderState, 10000);
 })();

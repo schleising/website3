@@ -100,7 +100,7 @@ async def get_data() -> SensorDataPoints:
 
 
 async def _timeseries_for_device(
-    device_name: str, since: datetime
+    device_name: str, since: datetime, *, newer_than: bool
 ) -> TimeseriesData:
     assert sensor_data_collection is not None
     collection = sensor_data_collection
@@ -108,7 +108,7 @@ async def _timeseries_for_device(
     data = collection.find(
         {
             "device_name": device_name,
-            "timestamp": {"$gte": since},
+            "timestamp": {"$gt" if newer_than else "$gte": since},
         }
     ).sort([("timestamp", 1)])
 
@@ -199,7 +199,7 @@ def _naive_utc(value: datetime) -> datetime:
     response_class=JSONResponse,
     response_model_exclude_none=True,
 )
-async def timeseries() -> TimeseriesDataResponse:
+async def timeseries(after: datetime | None = None) -> TimeseriesDataResponse:
     logging.info("Timeseries data requested")
 
     if sensor_data_collection is None:
@@ -214,16 +214,27 @@ async def timeseries() -> TimeseriesDataResponse:
 
     logging.debug(f"Device names: {device_names}")
 
-    # Get the timeseries data for each device over the last 14 days
-    # (supports daily/weekly charts with previous-period overlay).
-    # The same `since` covers heating_changes, including the one row before it.
-    since = datetime.now() - timedelta(days=14)
+    # Full reads cover 14 days so daily and weekly charts, including the
+    # previous period, can be filtered in the browser. `after` returns only
+    # points newer than the chart already holds. Heating stays a 14-day read:
+    # the series is small, and the row before the window clips the first band.
+    window_start = datetime.now() - timedelta(days=14)
+    since = window_start
+    newer_than = False
+    if after is not None:
+        requested = _naive_utc(after)
+        if requested >= window_start:
+            since = requested
+            newer_than = True
     timeseries_data = list(
         await asyncio.gather(
-            *[_timeseries_for_device(name, since) for name in device_names]
+            *[
+                _timeseries_for_device(name, since, newer_than=newer_than)
+                for name in device_names
+            ]
         )
     )
-    heating = await _load_heating_series(since)
+    heating = await _load_heating_series(window_start)
 
     # Return the timeseries data
     return TimeseriesDataResponse(data=timeseries_data, heating=heating)

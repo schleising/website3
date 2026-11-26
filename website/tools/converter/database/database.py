@@ -2,6 +2,7 @@ import re
 from bisect import bisect_left
 from datetime import datetime, timedelta
 from statistics import median
+from time import monotonic
 from typing import Any, Mapping
 
 from pymongo import ASCENDING, DESCENDING, UpdateOne
@@ -18,6 +19,132 @@ from ..cover_art_runtime import (
     source_path_matching_cover_art,
 )
 from . import media_collection
+
+_STATISTICS_CACHE_SECONDS = 30.0
+_statistics_cache: tuple[float, StatisticsMessage] | None = None
+
+
+def _sum_when(condition: dict[str, Any], value: Any = 1) -> dict[str, Any]:
+    return {"$sum": {"$cond": [condition, value, 0]}}
+
+
+def _is_true(field: str) -> dict[str, Any]:
+    return {"$eq": [f"${field}", True]}
+
+
+def _is_false(field: str) -> dict[str, Any]:
+    return {"$eq": [f"${field}", False]}
+
+
+def _filename_matches(pattern: str) -> dict[str, Any]:
+    return {
+        "$regexMatch": {
+            "input": {"$ifNull": ["$filename", ""]},
+            "regex": pattern,
+        }
+    }
+
+
+def _statistics_pipeline() -> list[dict[str, Any]]:
+    """One pass over non-deleted media, grouped by converter name."""
+
+    converted = _is_true("converted")
+    queued = {
+        "$and": [
+            _is_true("conversion_required"),
+            _is_false("converted"),
+            _is_false("converting"),
+            _is_false("conversion_error"),
+        ]
+    }
+    films = _filename_matches("Films")
+    tv = _filename_matches("/TV/")
+    dated_conversion = {
+        "$and": [
+            converted,
+            {"$eq": [{"$type": "$end_conversion_time"}, "date"]},
+            {"$eq": [{"$type": "$start_conversion_time"}, "date"]},
+        ]
+    }
+    return [
+        {"$match": {"deleted": False}},
+        {
+            "$group": {
+                "_id": "$backend_name",
+                "total_files": {"$sum": 1},
+                "total_converted": _sum_when(converted),
+                "queued": _sum_when(queued),
+                "converting": _sum_when(_is_true("converting")),
+                "bytes_before": _sum_when(converted, {"$ifNull": ["$pre_conversion_size", 0]}),
+                "bytes_after": _sum_when(converted, {"$ifNull": ["$current_size", 0]}),
+                "conversion_ms": _sum_when(
+                    dated_conversion,
+                    {"$subtract": ["$end_conversion_time", "$start_conversion_time"]},
+                ),
+                "queue_bytes_before": _sum_when(
+                    _is_true("conversion_required"),
+                    {"$ifNull": ["$pre_conversion_size", 0]},
+                ),
+                "queue_bytes_after": _sum_when(
+                    _is_true("conversion_required"),
+                    {"$ifNull": ["$current_size", 0]},
+                ),
+                "films_converted": _sum_when({"$and": [converted, films]}),
+                "films_queued": _sum_when(
+                    {
+                        "$and": [
+                            _is_true("conversion_required"),
+                            _is_false("converted"),
+                            _is_false("conversion_error"),
+                            films,
+                        ]
+                    }
+                ),
+                "films_in_progress": _sum_when({"$and": [_is_true("conversion_in_progress"), films]}),
+                "tv_converted": _sum_when({"$and": [converted, tv]}),
+                "tv_queued": _sum_when(
+                    {
+                        "$and": [
+                            _is_true("conversion_required"),
+                            _is_false("converted"),
+                            _is_false("conversion_error"),
+                            tv,
+                        ]
+                    }
+                ),
+                "tv_in_progress": _sum_when({"$and": [_is_true("conversion_in_progress"), tv]}),
+                "conversion_errors": _sum_when(_is_true("conversion_error")),
+            }
+        },
+    ]
+
+
+def _sum_statistics_rows(rows: list[dict[str, Any]]) -> dict[str, int]:
+    keys = (
+        "total_files",
+        "total_converted",
+        "queued",
+        "converting",
+        "bytes_before",
+        "bytes_after",
+        "conversion_ms",
+        "queue_bytes_before",
+        "queue_bytes_after",
+        "films_converted",
+        "films_queued",
+        "films_in_progress",
+        "tv_converted",
+        "tv_queued",
+        "tv_in_progress",
+        "conversion_errors",
+    )
+    totals = {key: 0 for key in keys}
+    for row in rows:
+        for key in keys:
+            value = row.get(key, 0)
+            if isinstance(value, (int, float)):
+                totals[key] += int(value)
+    return totals
 
 
 class DatabaseTools:
@@ -834,6 +961,25 @@ class DatabaseTools:
         return None
 
     async def get_statistics(self) -> StatisticsMessage:
+        """Return library totals, recomputed at most every 30 seconds.
+
+        A ping still calls this, but the totals only change when a conversion
+        finishes. One pass over non-deleted files replaces the separate counts,
+        sums, and filename scans.
+        """
+
+        global _statistics_cache
+
+        now = monotonic()
+        cached = _statistics_cache
+        if cached is not None and now - cached[0] < _STATISTICS_CACHE_SECONDS:
+            return cached[1]
+
+        statistics = await self._compute_statistics()
+        _statistics_cache = (now, statistics)
+        return statistics
+
+    async def _compute_statistics(self) -> StatisticsMessage:
         if media_collection is None:
             return StatisticsMessage(
                 total_files=0,
@@ -856,232 +1002,51 @@ class DatabaseTools:
                 conversions_by_backend={},
             )
 
-        # Get the total number of files in the database
-        total_files = await media_collection.count_documents({"deleted": False})
+        rows = await media_collection.aggregate(_statistics_pipeline()).to_list(length=None)
+        totals = _sum_statistics_rows(rows)
 
-        # Get the total number of files that have been converted
-        total_converted = await media_collection.count_documents(
-            {"converted": True, "deleted": False}
-        )
-
-        # Get the total number of files that need to be converted
-        total_to_convert = await media_collection.count_documents(
-            {
-                "conversion_required": True,
-                "converted": False,
-                "converting": False,
-                "conversion_error": False,
-                "deleted": False,
-            }
-        )
-
-        # Get the total number of files that are currently being converted
-        total_converting = await media_collection.count_documents(
-            {"converting": True, "deleted": False}
-        )
-
-        # Add the number of files that are currently being converted to the total number of files that need to be converted
-        total_to_convert += total_converting
-
-        # Get the total number of gigabytes before conversion
-        gigabytes_before_conversion_db = await media_collection.aggregate(
-            [
-                {"$match": {"converted": True, "deleted": False}},
-                {"$group": {"_id": None, "total": {"$sum": "$pre_conversion_size"}}},
-            ]
-        ).to_list(length=None)
-
-        # Convert the total number of bytes to gigabytes
-        if gigabytes_before_conversion_db:
-            gigabytes_before_conversion = float(
-                gigabytes_before_conversion_db[0]["total"] / 1000000000
-            )
-        else:
-            # If there are no files in the database, set the total number of gigabytes to 0
-            gigabytes_before_conversion = 0
-
-        # Get the total number of gigabytes after conversion
-        gigabytes_after_conversion_db = await media_collection.aggregate(
-            [
-                {"$match": {"converted": True, "deleted": False}},
-                {"$group": {"_id": None, "total": {"$sum": "$current_size"}}},
-            ]
-        ).to_list(length=None)
-
-        # Convert the total number of bytes to gigabytes
-        if gigabytes_after_conversion_db:
-            gigabytes_after_conversion = float(
-                gigabytes_after_conversion_db[0]["total"] / 1000000000
-            )
-        else:
-            # If there are no files in the database, set the total number of gigabytes to 0
-            gigabytes_after_conversion = gigabytes_before_conversion
-
-        # Get the total number of gigabytes saved
+        total_files = totals["total_files"]
+        total_converted = totals["total_converted"]
+        total_to_convert = totals["queued"] + totals["converting"]
+        bytes_before = float(totals["bytes_before"])
+        bytes_after = float(totals["bytes_after"])
+        gigabytes_before_conversion = bytes_before / 1_000_000_000
+        gigabytes_after_conversion = gigabytes_before_conversion
+        if totals["total_converted"] > 0:
+            gigabytes_after_conversion = bytes_after / 1_000_000_000
         gigabytes_saved = gigabytes_before_conversion - gigabytes_after_conversion
-
-        # Get the percentage saved
         if gigabytes_before_conversion != 0:
             percentage_saved = gigabytes_saved / gigabytes_before_conversion * 100
         else:
-            # If there are no files in the database, set the percentage saved to 0
             percentage_saved = 0
 
-        # Get the total conversion time from the database
-        total_conversion_time_db = await media_collection.aggregate(
-            [
-                {"$match": {"converted": True, "deleted": False}},
-                {
-                    "$group": {
-                        "_id": None,
-                        "total": {
-                            "$sum": {
-                                "$subtract": [
-                                    "$end_conversion_time",
-                                    "$start_conversion_time",
-                                ]
-                            }
-                        },
-                    }
-                },
-            ]
-        ).to_list(length=None)
+        conversion_milliseconds = float(totals["conversion_ms"])
+        total_conversion_time_string = str(
+            timedelta(milliseconds=conversion_milliseconds)
+        ).split(".")[0]
 
-        # Convert the total conversion time to a timedelta object
-        if total_conversion_time_db:
-            total_conversion_time = timedelta(
-                milliseconds=total_conversion_time_db[0]["total"]
-            )
-        else:
-            # If there are no files in the database, set the total conversion time to 0
-            total_conversion_time = timedelta(milliseconds=0)
+        total_size_before_conversion = float(totals["queue_bytes_before"]) / 1_000_000_000_000
+        total_size_after_conversion = float(totals["queue_bytes_after"]) / 1_000_000_000_000
+        total_films_converted = totals["films_converted"]
+        films_to_convert = totals["films_queued"] + totals["films_in_progress"]
+        total_tv_converted = totals["tv_converted"]
+        tv_to_convert = totals["tv_queued"] + totals["tv_in_progress"]
+        total_conversion_errors = totals["conversion_errors"]
 
-        # Convert the total conversion time to a string in the format "n days HH:MM:SS"
-        total_conversion_time_string = str(total_conversion_time).split(".")[0]
-
-        # Get the total size of all of the video files requiring conversion before conversion by summing the pre_conversion_size field
-        total_size_before_conversion_db = await media_collection.aggregate(
-            [
-                {"$match": {"conversion_required": True, "deleted": False}},
-                {"$group": {"_id": None, "total": {"$sum": "$pre_conversion_size"}}},
-            ]
-        ).to_list(length=None)
-
-        # Convert the total number of bytes to terabytes
-        if total_size_before_conversion_db:
-            total_size_before_conversion = float(
-                total_size_before_conversion_db[0]["total"] / 1000000000000
-            )
-        else:
-            # If there are no files in the database, set the total number of terabytes to 0
-            total_size_before_conversion = 0
-
-        # Get the total size of all of the video files requiring conversion after conversion by summing the current_size field
-        total_size_after_conversion_db = await media_collection.aggregate(
-            [
-                {"$match": {"conversion_required": True, "deleted": False}},
-                {"$group": {"_id": None, "total": {"$sum": "$current_size"}}},
-            ]
-        ).to_list(length=None)
-
-        # Convert the total number of bytes to terabytes
-        if total_size_after_conversion_db:
-            total_size_after_conversion = float(
-                total_size_after_conversion_db[0]["total"] / 1000000000000
-            )
-        else:
-            # If there are no files in the database, set the total number of terabytes to 0
-            total_size_after_conversion = total_size_before_conversion
-
-        # Get the number of films which have been converted
-        total_films_converted = await media_collection.count_documents(
-            {"converted": True, "deleted": False, "filename": {"$regex": r"Films"}}
-        )
-
-        # Get the number of films which have to be converted
-        total_films_to_convert = await media_collection.count_documents(
-            {
-                "conversion_required": True,
-                "converted": False,
-                "conversion_error": False,
-                "deleted": False,
-                "filename": {"$regex": r"Films"},
-            }
-        )
-
-        # Get the number of films which are currently being converted
-        total_films_converting = await media_collection.count_documents(
-            {
-                "conversion_in_progress": True,
-                "deleted": False,
-                "filename": {"$regex": r"Films"},
-            }
-        )
-
-        films_to_convert = total_films_to_convert + total_films_converting
-
-        # TV counts use the same path convention as Films (/Media/TV/...)
-        total_tv_converted = await media_collection.count_documents(
-            {"converted": True, "deleted": False, "filename": {"$regex": r"/TV/"}}
-        )
-
-        total_tv_to_convert = await media_collection.count_documents(
-            {
-                "conversion_required": True,
-                "converted": False,
-                "conversion_error": False,
-                "deleted": False,
-                "filename": {"$regex": r"/TV/"},
-            }
-        )
-
-        total_tv_converting = await media_collection.count_documents(
-            {
-                "conversion_in_progress": True,
-                "deleted": False,
-                "filename": {"$regex": r"/TV/"},
-            }
-        )
-
-        tv_to_convert = total_tv_to_convert + total_tv_converting
-
-        # Get the count of conversion errors
-        total_conversion_errors = await media_collection.count_documents(
-            {"conversion_error": True, "deleted": False}
-        )
-
-        # Get the total number of files converted by each backed sorted by backend name
-        total_files_converted_by_backend_db = media_collection.aggregate(
-            [
-                {"$match": {"converted": True, "deleted": False}},
-                {"$group": {"_id": "$backend_name", "total": {"$sum": 1}}},
-                {"$sort": {"_id": 1}},
-            ]
-        )
-
-        # Create a dictionary of backend names and the number of files converted by each backend
         conversions_by_backend: dict[str, int] = {}
-
-        # Iterate through the list of files converted by each backend
-        async for backend in total_files_converted_by_backend_db:
-            # Get the backend name without the number at the end
-            backend_stem = backend["_id"].split("-")[0]
-
-            # If the backend name is not in the dictionary, add it
-            if backend_stem not in conversions_by_backend:
-                conversions_by_backend[backend_stem] = 0
-
-            # Add the number of files converted by the backend to the total for that backend
-            conversions_by_backend[backend_stem] += backend["total"]
-
-        # Sort the dictionary by descending value
-        conversions_by_backend = dict(
-            sorted(
-                conversions_by_backend.items(), key=lambda item: item[1], reverse=True
+        for row in rows:
+            backend_name = row.get("_id")
+            converted_count = int(row.get("total_converted", 0))
+            if not isinstance(backend_name, str) or converted_count == 0:
+                continue
+            backend_stem = backend_name.split("-")[0]
+            conversions_by_backend[backend_stem] = (
+                conversions_by_backend.get(backend_stem, 0) + converted_count
             )
+        conversions_by_backend = dict(
+            sorted(conversions_by_backend.items(), key=lambda item: item[1], reverse=True)
         )
 
-        # Create a StatisticsMessage from the database objects
         statistics_message = StatisticsMessage(
             total_files=total_files,
             total_converted=total_converted,

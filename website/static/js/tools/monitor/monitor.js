@@ -1,4 +1,4 @@
-const serviceWorkerPath = '/sw.js?v=tools-webapp-v43';
+const serviceWorkerPath = '/sw.js?v=tools-webapp-v44';
 const chartSettingsStorageKey = 'monitor.chartSettings';
 
 // The chart data to be fetched from the server
@@ -2822,25 +2822,130 @@ async function fetchSensorData() {
         });
 }
 
-// Fetch the time series temperature data from the server
-async function fetchTemperatureData() {
-    const headers = new Headers();
-    headers.append("Content-Type", "application/json");
-    // Fetch the temperature data
-    fetch('/timeseries/', { headers, cache: 'no-store' })
-        .then(response => response.json())
-        .then(response_data => {
-            // Update the temperature data
-            deviceData = response_data.data;
-            heatingSeries = response_data.heating ?? null;
-            syncHeatingState();
-            drawCharts();
-            refreshAllTemperatureReadouts();
-            refreshHeatingTime({ refetch: true });
-        })
-        .catch(error => {
-            console.error('Error fetching temperature data:', error);
+const chartHistoryMs = 14 * 24 * 60 * 60 * 1000;
+let temperatureFetchInFlight = false;
+
+/**
+ * Oldest newest-point across devices that already have chart points.
+ * Devices with an empty series stay empty and do not force a full reload.
+ *
+ * @param {Array<{data?: Array<{timestamp: string}>}> | null} devices
+ * @returns {string | null}
+ */
+function incrementalAfter(devices) {
+    if (devices == null || devices.length === 0) {
+        return null;
+    }
+    /** @type {{iso: string, ms: number} | null} */
+    let oldestLatest = null;
+    for (const device of devices) {
+        const points = device.data || [];
+        if (points.length === 0) {
+            continue;
+        }
+        const latest = points[points.length - 1].timestamp;
+        const latestMs = new Date(latest).getTime();
+        if (!Number.isFinite(latestMs)) {
+            continue;
+        }
+        if (oldestLatest == null || latestMs < oldestLatest.ms) {
+            oldestLatest = { iso: latest, ms: latestMs };
+        }
+    }
+    return oldestLatest != null ? oldestLatest.iso : null;
+}
+
+/**
+ * @param {Array<{timestamp: string}>} existing
+ * @param {Array<{timestamp: string}>} incoming
+ * @returns {Array<{timestamp: string}>}
+ */
+function mergePointsByTimestamp(existing, incoming) {
+    const byTimestamp = new Map();
+    for (const point of existing) {
+        byTimestamp.set(point.timestamp, point);
+    }
+    for (const point of incoming) {
+        byTimestamp.set(point.timestamp, point);
+    }
+    return [...byTimestamp.values()].sort(
+        (left, right) => new Date(left.timestamp).getTime() - new Date(right.timestamp).getTime()
+    );
+}
+
+/**
+ * @param {Array<{timestamp: string}>} points
+ * @param {number} cutoffMs
+ * @returns {Array<{timestamp: string}>}
+ */
+function trimPointsToHistory(points, cutoffMs) {
+    return points.filter(point => new Date(point.timestamp).getTime() >= cutoffMs);
+}
+
+/**
+ * @param {{data?: Array<{device_id: string, data?: Array<{timestamp: string}>}>}} responseData
+ * @param {boolean} incremental
+ */
+function applyTimeseriesResponse(responseData, incremental) {
+    const cutoffMs = Date.now() - chartHistoryMs;
+    const incomingDevices = responseData.data || [];
+    if (!incremental || deviceData == null) {
+        deviceData = incomingDevices.map(device => ({
+            ...device,
+            data: trimPointsToHistory(device.data || [], cutoffMs),
+        }));
+    } else {
+        const incomingById = new Map(incomingDevices.map(device => [device.device_id, device]));
+        const knownIds = new Set(deviceData.map(device => device.device_id));
+        deviceData = deviceData.map(device => {
+            const incoming = incomingById.get(device.device_id);
+            return {
+                ...device,
+                data: trimPointsToHistory(
+                    mergePointsByTimestamp(device.data || [], incoming != null ? incoming.data || [] : []),
+                    cutoffMs
+                ),
+            };
         });
+        for (const device of incomingDevices) {
+            if (!knownIds.has(device.device_id)) {
+                deviceData.push({
+                    ...device,
+                    data: trimPointsToHistory(device.data || [], cutoffMs),
+                });
+            }
+        }
+    }
+    heatingSeries = responseData.heating ?? null;
+}
+
+// Fetch the chart once, then only the points newer than the oldest device.
+async function fetchTemperatureData() {
+    if (temperatureFetchInFlight) {
+        return;
+    }
+    const after = incrementalAfter(deviceData);
+    const incremental = after != null;
+    const url = incremental
+        ? `/timeseries/?after=${encodeURIComponent(after)}`
+        : "/timeseries/";
+    temperatureFetchInFlight = true;
+    try {
+        const response = await fetch(url, { cache: "no-store" });
+        if (!response.ok) {
+            throw new Error(`Timeseries ${response.status}`);
+        }
+        const responseData = await response.json();
+        applyTimeseriesResponse(responseData, incremental);
+        syncHeatingState();
+        drawCharts();
+        refreshAllTemperatureReadouts();
+        refreshHeatingTime({ refetch: true });
+    } catch (error) {
+        console.error("Error fetching temperature data:", error);
+    } finally {
+        temperatureFetchInFlight = false;
+    }
 }
 
 // Function to draw the charts of the temperature data

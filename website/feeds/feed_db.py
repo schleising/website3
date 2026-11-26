@@ -51,7 +51,7 @@ FEED_VALIDATION_REDIRECT_STATUSES = {301, 302, 303, 307, 308}
 TRUNCATED_SUMMARY_PARAGRAPH_LIMIT = 5
 SEARCH_QUERY_MAX_LENGTH = 160
 FEED_ARTICLE_TEXT_INDEX_CACHE_TTL = timedelta(minutes=10)
-CATEGORY_COUNTS_CACHE_TTL = timedelta(seconds=2)
+CATEGORY_COUNTS_CACHE_TTL = timedelta(seconds=30)
 HEAD_PROBE_MAX_LIMIT = 20
 FEED_ARTICLE_TEXT_INDEX_KEYS: list[tuple[str, str]] = [
     ("title", "text"),
@@ -63,7 +63,7 @@ SEARCH_TERM_IRREGULAR_VARIANTS: dict[str, tuple[str, ...]] = {
 
 _feed_article_text_index_available_cache: bool | None = None
 _feed_article_text_index_checked_at: datetime | None = None
-_category_counts_cache: dict[str, tuple[datetime, FeedCategoryListResponse, int]] = {}
+_category_counts_cache: dict[str, tuple[datetime, FeedCategoryListResponse]] = {}
 
 SUMMARY_ANCHOR_HREF_RE = re.compile(
     r'(?P<prefix>\bhref\s*=\s*)(?P<quote>["\']?)(?P<href>[^"\'\s>]+)(?P=quote)',
@@ -1736,27 +1736,19 @@ async def resolve_categories_with_counts_cached(
     user_id: str,
     categories: list[FeedCategoryDocument],
     subscriptions: list[dict[str, Any]],
-    read_state_ids: set[ObjectId],
 ) -> FeedCategoryListResponse:
-    """Return category counts, using cache only when read-state size still matches."""
+    """Return category counts, recomputed at most every 30 seconds.
+
+    Marking an article read or unread drops this cache immediately.
+    """
 
     now = utc_now()
-    read_state_count = len(read_state_ids)
     cached_entry = _category_counts_cache.get(user_id)
-    if (
-        cached_entry is not None
-        and now - cached_entry[0] <= CATEGORY_COUNTS_CACHE_TTL
-        and cached_entry[2] == read_state_count
-    ):
+    if cached_entry is not None and now - cached_entry[0] <= CATEGORY_COUNTS_CACHE_TTL:
         return cached_entry[1]
 
-    payload = await build_categories_with_counts(
-        user_id,
-        categories,
-        subscriptions,
-        read_state_ids,
-    )
-    _category_counts_cache[user_id] = (now, payload, read_state_count)
+    payload = await build_categories_with_counts(user_id, categories, subscriptions)
+    _category_counts_cache[user_id] = (now, payload)
     return payload
 
 
@@ -1764,7 +1756,6 @@ async def build_categories_with_counts(
     user_id: str,
     categories: list[FeedCategoryDocument],
     subscriptions: list[dict[str, Any]],
-    read_state_ids: set[ObjectId],
 ) -> FeedCategoryListResponse:
     """Build sidebar categories and unread counters from preloaded scope data."""
 
@@ -1779,6 +1770,7 @@ async def build_categories_with_counts(
     feed_to_category = {
         sub["feed_id"]: sub["category_id"] for sub in subscriptions if "feed_id" in sub and "category_id" in sub
     }
+    unread_by_feed = await unread_counts_by_feed(user_id, list(feed_to_category.keys()))
 
     category_summaries: list[FeedCategorySummary] = []
     all_unread_count = 0
@@ -1789,7 +1781,7 @@ async def build_categories_with_counts(
             for feed_id, category_id in feed_to_category.items()
             if category.id is not None and category_id == category.id
         ]
-        unread_count = await count_unread_articles_for_feed_ids(category_feed_ids, read_state_ids)
+        unread_count = sum(unread_by_feed.get(feed_id, 0) for feed_id in category_feed_ids)
 
         if not category.muted:
             all_unread_count += unread_count
@@ -1824,13 +1816,7 @@ async def get_categories_with_counts(user_id: str) -> FeedCategoryListResponse:
 
     categories = await list_category_documents(user_id)
     subscriptions = await list_user_subscription_docs(user_id)
-    read_state_ids = await get_read_article_id_set(user_id)
-    return await resolve_categories_with_counts_cached(
-        user_id,
-        categories,
-        subscriptions,
-        read_state_ids,
-    )
+    return await resolve_categories_with_counts_cached(user_id, categories, subscriptions)
 
 
 async def get_read_article_id_set(user_id: str) -> set[ObjectId]:
@@ -1915,24 +1901,47 @@ async def count_saved_articles(
     )
 
 
-async def count_unread_articles_for_feed_ids(
-    feed_ids: list[ObjectId],
-    read_state_ids: set[ObjectId],
-) -> int:
-    """Count unread articles for a set of feeds."""
+async def unread_counts_by_feed(user_id: str, feed_ids: list[ObjectId]) -> dict[ObjectId, int]:
+    """Count unread articles per feed in one pass.
+
+    Each article looks up this user's read state by article id. Articles with
+    no read hit are unread. The article list still uses the read-id set.
+    """
 
     if feed_articles_collection is None or len(feed_ids) == 0:
-        return 0
+        return {}
 
-    query: dict[str, Any] = {
-        "feed_id": {"$in": feed_ids},
-        "is_deleted": False,
-    }
+    pipeline: list[dict[str, Any]] = [
+        {"$match": {"feed_id": {"$in": feed_ids}, "is_deleted": False}},
+    ]
+    if user_article_states_collection is not None:
+        pipeline.extend(
+            [
+                {
+                    "$lookup": {
+                        "from": user_article_states_collection.name,
+                        "localField": "_id",
+                        "foreignField": "article_id",
+                        "pipeline": [
+                            {"$match": {"user_id": user_id, "is_read": True}},
+                            {"$limit": 1},
+                            {"$project": {"_id": 1}},
+                        ],
+                        "as": "read_hit",
+                    }
+                },
+                {"$match": {"read_hit": {"$size": 0}}},
+            ]
+        )
+    pipeline.append({"$group": {"_id": "$feed_id", "count": {"$sum": 1}}})
 
-    if len(read_state_ids) > 0:
-        query["_id"] = {"$nin": list(read_state_ids)}
-
-    return await feed_articles_collection.count_documents(query)
+    counts: dict[ObjectId, int] = {}
+    async for row in feed_articles_collection.aggregate(pipeline):
+        feed_id = row.get("_id")
+        count = row.get("count")
+        if isinstance(feed_id, ObjectId) and isinstance(count, int | float):
+            counts[feed_id] = int(count)
+    return counts
 
 
 async def count_recently_read(
@@ -3798,14 +3807,12 @@ async def get_sidebar_meta_for_reader(user_id: str) -> FeedSidebarMetaResponse:
 
     categories = await list_category_documents(user_id)
     subscriptions = await list_user_subscription_docs(user_id)
-    read_state_ids = await get_read_article_id_set(user_id)
-
     categories_payload = await resolve_categories_with_counts_cached(
         user_id,
         categories,
         subscriptions,
-        read_state_ids,
     )
+    read_state_ids = await get_read_article_id_set(user_id)
 
     visible_feed_ids_by_group = await get_sidebar_visible_feed_ids_by_group(
         user_id,
@@ -3835,14 +3842,12 @@ async def get_reader_live_sync(
 
     categories = await list_category_documents(user_id)
     subscriptions = await list_user_subscription_docs(user_id)
-    read_state_ids = await get_read_article_id_set(user_id)
-
     categories_payload = await resolve_categories_with_counts_cached(
         user_id,
         categories,
         subscriptions,
-        read_state_ids,
     )
+    read_state_ids = await get_read_article_id_set(user_id)
 
     visible_feed_ids_by_group = await get_sidebar_visible_feed_ids_by_group(
         user_id,
