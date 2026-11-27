@@ -1,4 +1,4 @@
-const TOOLS_CACHE_VERSION = "tools-webapp-v45";
+const TOOLS_CACHE_VERSION = "tools-webapp-v46";
 
 // Warm shell assets when this SW is installed on a tools host.
 // Missing URLs on other hosts are harmless no-ops.
@@ -132,14 +132,14 @@ self.addEventListener("fetch", function (event) {
     }
 
     if (event.request.mode === "navigate") {
-        // A navigation Request cannot be rebuilt with a cache mode, so request the URL directly.
+        // Keep the original navigation request. Rebuilding it follows the
+        // cross-site redirect to the passkey page inside the worker; when that
+        // fails, the saved app is shown instead of the sign-in prompt.
         event.respondWith(
-            fetch(event.request.url, {
-                cache: "no-store",
-                credentials: "same-origin",
-            }).then(function (networkResponse) {
-                putInCache("/", networkResponse);
-                putInCache(event.request, networkResponse);
+            fetch(event.request).then(function (networkResponse) {
+                if (networkResponse.ok && networkResponse.type === "basic") {
+                    putInCache(event.request, networkResponse);
+                }
                 return networkResponse;
             }).catch(function () {
                 return caches.match(event.request).then(function (cached) {

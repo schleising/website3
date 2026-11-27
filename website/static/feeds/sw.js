@@ -1,4 +1,4 @@
-const FEEDS_CACHE_VERSION = "feeds-webapp-v13";
+const FEEDS_CACHE_VERSION = "feeds-webapp-v14";
 const FEEDS_SHELL_URLS = [
     "/css/base.css?v1.2.0",
     "/css/dropdown-menus.css?v1.2.7",
@@ -45,11 +45,10 @@ self.addEventListener("fetch", event => {
     }
 
     if (event.request.mode === "navigate") {
+        // Keep the original navigation request so a redirect to the passkey
+        // page reaches the browser instead of being replaced by the saved app.
         event.respondWith(
-            fetch(event.request.url, {
-                cache: "no-store",
-                credentials: "same-origin",
-            }).catch(() => caches.match("/"))
+            fetch(event.request).catch(() => caches.match("/"))
         );
         return;
     }
