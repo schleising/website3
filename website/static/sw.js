@@ -1,4 +1,4 @@
-const TOOLS_CACHE_VERSION = "tools-webapp-v44";
+const TOOLS_CACHE_VERSION = "tools-webapp-v45";
 
 // Warm shell assets when this SW is installed on a tools host.
 // Missing URLs on other hosts are harmless no-ops.
@@ -36,6 +36,14 @@ function isLiveDataRequest(requestUrl) {
         || path.endsWith("/heating")
         || path.endsWith("/heating/")
     );
+}
+
+function isApiRequest(requestUrl) {
+    return requestUrl.pathname.includes("/api/");
+}
+
+function fetchNoStore(request) {
+    return fetch(new Request(request, { cache: "no-store" }));
 }
 
 function isCacheableRequest(request, requestUrl) {
@@ -116,9 +124,20 @@ self.addEventListener("fetch", function (event) {
         return;
     }
 
+    // Category mute, colours, and unread counts are user state. Cache-first
+    // kept a normal refresh on the previous response until the next poll.
+    if (isApiRequest(requestUrl)) {
+        event.respondWith(fetchNoStore(event.request));
+        return;
+    }
+
     if (event.request.mode === "navigate") {
+        // A navigation Request cannot be rebuilt with a cache mode, so request the URL directly.
         event.respondWith(
-            fetch(event.request).then(function (networkResponse) {
+            fetch(event.request.url, {
+                cache: "no-store",
+                credentials: "same-origin",
+            }).then(function (networkResponse) {
                 putInCache("/", networkResponse);
                 putInCache(event.request, networkResponse);
                 return networkResponse;

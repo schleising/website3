@@ -1,10 +1,8 @@
-const FEEDS_CACHE_VERSION = "feeds-webapp-v12";
+const FEEDS_CACHE_VERSION = "feeds-webapp-v13";
 const FEEDS_SHELL_URLS = [
-    "/",
-    "/settings/",
     "/css/base.css?v1.2.0",
     "/css/dropdown-menus.css?v1.2.7",
-    "/css/feeds/feeds.css?v1.3.8",
+    "/css/feeds/feeds.css?v1.3.10",
     "/js/base.js?v1.2.23",
     "/js/feeds/pwa.js?v1.0.1",
     "/icons/feeds/android-chrome-192x192.png?v1.0.1"
@@ -42,13 +40,16 @@ self.addEventListener("fetch", event => {
         requestUrl.pathname.startsWith("/api/")
         || requestUrl.pathname.startsWith("/feeds/api/")
     ) {
-        event.respondWith(fetch(event.request));
+        event.respondWith(fetch(new Request(event.request, { cache: "no-store" })));
         return;
     }
 
     if (event.request.mode === "navigate") {
         event.respondWith(
-            fetch(event.request).catch(() => caches.match("/"))
+            fetch(event.request.url, {
+                cache: "no-store",
+                credentials: "same-origin",
+            }).catch(() => caches.match("/"))
         );
         return;
     }

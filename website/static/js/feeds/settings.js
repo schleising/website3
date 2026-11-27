@@ -884,19 +884,28 @@
         });
     }
 
+    let categoryRefreshGeneration = 0;
+
     /**
      * Refresh right-sidebar counts and category state.
      *
      * @returns {Promise<void>}
      */
     async function refreshSidebarCounts() {
+        const generation = ++categoryRefreshGeneration;
         try {
-            const response = await fetch(categoriesEndpoint, { method: "GET" });
-            if (!response.ok) {
+            const response = await fetch(categoriesEndpoint, {
+                method: "GET",
+                cache: "no-store",
+            });
+            if (!response.ok || generation !== categoryRefreshGeneration) {
                 return;
             }
 
             const payload = await response.json();
+            if (generation !== categoryRefreshGeneration) {
+                return;
+            }
             const categories = Array.isArray(payload.categories) ? payload.categories : [];
             syncCategoryPreferencesList(categories);
             updateSidebarCounts(payload);
@@ -1648,6 +1657,12 @@
             const payload = await requestJson(endpoint, "POST", {});
             const nowMuted = Boolean(payload.muted);
             applyMuteButtonState(actionButton, nowMuted, categoryName);
+            const sidebarLink = document.querySelector(
+                `.feed-category-link[data-category-id="${CSS.escape(categoryId)}"]`
+            );
+            if (sidebarLink instanceof HTMLElement) {
+                sidebarLink.classList.toggle("is-muted", nowMuted);
+            }
             setStatus(nowMuted ? "Category muted." : "Category unmuted.");
             await refreshSidebarCounts();
         } catch (error) {

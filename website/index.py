@@ -268,6 +268,25 @@ async def football_html_cache_control_middleware(request: Request, call_next):
 
 
 @app.middleware("http")
+async def feeds_dynamic_cache_control_middleware(request: Request, call_next):
+    response = await call_next(request)
+
+    path = request.url.path
+    if not path.startswith("/feeds"):
+        return response
+
+    content_type = response.headers.get("content-type", "")
+    is_html = "text/html" in content_type
+    is_api_json = path.startswith("/feeds/api/") and "application/json" in content_type
+    if not is_html and not is_api_json:
+        return response
+
+    response.headers["Cache-Control"] = "no-store"
+    response.headers["Pragma"] = "no-cache"
+    return response
+
+
+@app.middleware("http")
 async def passkey_migration_middleware(request: Request, call_next):
     path = request.url.path
     if _is_passkey_migration_exempt_path(path):

@@ -182,16 +182,10 @@ class FeedDbHelperTests(unittest.TestCase):
 
     def test_invalidate_category_counts_cache_clears_user_entry(self) -> None:
         from website.feeds import feed_db
-        from website.feeds.models import FeedCategoryListResponse
 
         feed_db._category_counts_cache["test-user"] = (
             feed_db.utc_now(),
-            FeedCategoryListResponse(
-                all_unread_count=1,
-                recently_read_count=0,
-                saved_count=0,
-                categories=[],
-            ),
+            feed_db._CategoryCountSnapshot({"category": 1}, 0, 0),
         )
 
         feed_db.invalidate_category_counts_cache("test-user")
@@ -201,14 +195,21 @@ class FeedDbHelperTests(unittest.TestCase):
         import asyncio
         from unittest.mock import AsyncMock
 
-        from website.feeds import feed_db
-        from website.feeds.models import FeedCategoryListResponse
+        from bson import ObjectId
 
-        cached = FeedCategoryListResponse(
-            all_unread_count=2,
-            recently_read_count=0,
-            saved_count=0,
-            categories=[],
+        from website.feeds import feed_db
+        from website.feeds.models import FeedCategoryDocument, FeedCategoryListResponse
+
+        category_id = ObjectId()
+        muted_category = FeedCategoryDocument.model_validate(
+            {
+                "_id": category_id,
+                "user_id": "test-user",
+                "name": "F1",
+                "muted": True,
+                "color_hex": "#112233",
+                "sort_order": 2,
+            }
         )
         rebuilt = FeedCategoryListResponse(
             all_unread_count=5,
@@ -216,7 +217,10 @@ class FeedDbHelperTests(unittest.TestCase):
             saved_count=0,
             categories=[],
         )
-        feed_db._category_counts_cache["test-user"] = (feed_db.utc_now(), cached)
+        feed_db._category_counts_cache["test-user"] = (
+            feed_db.utc_now(),
+            feed_db._CategoryCountSnapshot({str(category_id): 4}, 3, 1),
+        )
 
         async def scenario() -> None:
             with patch.object(
@@ -224,13 +228,24 @@ class FeedDbHelperTests(unittest.TestCase):
                 "build_categories_with_counts",
                 new_callable=AsyncMock,
             ) as build:
-                hit = await feed_db.resolve_categories_with_counts_cached("test-user", [], [])
-                self.assertIs(hit, cached)
+                hit = await feed_db.resolve_categories_with_counts_cached(
+                    "test-user",
+                    [muted_category],
+                    [],
+                )
                 build.assert_not_called()
+                self.assertEqual(hit.all_unread_count, 0)
+                self.assertEqual(hit.categories[0].muted, True)
+                self.assertEqual(hit.categories[0].unread_count, 4)
+                self.assertEqual(hit.categories[0].color_hex, "#112233")
 
                 feed_db.invalidate_category_counts_cache("test-user")
                 build.return_value = rebuilt
-                miss = await feed_db.resolve_categories_with_counts_cached("test-user", [], [])
+                miss = await feed_db.resolve_categories_with_counts_cached(
+                    "test-user",
+                    [muted_category],
+                    [],
+                )
                 self.assertIs(miss, rebuilt)
                 build.assert_awaited_once()
 

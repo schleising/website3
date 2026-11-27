@@ -4,7 +4,7 @@ import logging
 from datetime import UTC, datetime, timedelta
 from html import unescape
 import re
-from typing import Any, Literal, cast
+from typing import Any, Literal, NamedTuple, cast
 import xml.etree.ElementTree as ET
 from urllib.parse import urljoin, urlparse, urlunparse
 
@@ -63,7 +63,16 @@ SEARCH_TERM_IRREGULAR_VARIANTS: dict[str, tuple[str, ...]] = {
 
 _feed_article_text_index_available_cache: bool | None = None
 _feed_article_text_index_checked_at: datetime | None = None
-_category_counts_cache: dict[str, tuple[datetime, FeedCategoryListResponse]] = {}
+class _CategoryCountSnapshot(NamedTuple):
+    """Unread totals that stay valid across mute, colour, and order changes."""
+
+    unread_by_category_id: dict[str, int]
+    recently_read_count: int
+    saved_count: int
+
+
+_category_counts_cache: dict[str, tuple[datetime, _CategoryCountSnapshot]] = {}
+_category_counts_generation: dict[str, int] = {}
 
 SUMMARY_ANCHOR_HREF_RE = re.compile(
     r'(?P<prefix>\bhref\s*=\s*)(?P<quote>["\']?)(?P<href>[^"\'\s>]+)(?P=quote)',
@@ -1730,6 +1739,56 @@ def invalidate_category_counts_cache(user_id: str) -> None:
     """Drop cached sidebar category counts for a user."""
 
     _category_counts_cache.pop(user_id, None)
+    _category_counts_generation[user_id] = _category_counts_generation.get(user_id, 0) + 1
+
+
+def _counts_from_response(payload: FeedCategoryListResponse) -> _CategoryCountSnapshot:
+    return _CategoryCountSnapshot(
+        unread_by_category_id={
+            category.category_id: category.unread_count for category in payload.categories
+        },
+        recently_read_count=payload.recently_read_count,
+        saved_count=payload.saved_count,
+    )
+
+
+def _response_from_counts(
+    categories: list[FeedCategoryDocument],
+    counts: _CategoryCountSnapshot,
+) -> FeedCategoryListResponse:
+    """Apply cached unread totals to the categories just loaded.
+
+    Mute, colour, name, and order come from those documents, so a count cache
+    hit cannot put an older preference back on screen.
+    """
+
+    summaries: list[FeedCategorySummary] = []
+    all_unread_count = 0
+    for category in categories:
+        if category.id is None:
+            continue
+
+        unread_count = counts.unread_by_category_id.get(str(category.id), 0)
+        if not category.muted:
+            all_unread_count += unread_count
+
+        summaries.append(
+            FeedCategorySummary(
+                category_id=str(category.id),
+                name=category.name,
+                unread_count=unread_count,
+                muted=category.muted,
+                color_hex=category.color_hex,
+                sort_order=category.sort_order,
+            )
+        )
+
+    return FeedCategoryListResponse(
+        all_unread_count=all_unread_count,
+        recently_read_count=counts.recently_read_count,
+        saved_count=counts.saved_count,
+        categories=summaries,
+    )
 
 
 async def resolve_categories_with_counts_cached(
@@ -1739,16 +1798,19 @@ async def resolve_categories_with_counts_cached(
 ) -> FeedCategoryListResponse:
     """Return category counts, recomputed at most every 30 seconds.
 
-    Marking an article read or unread drops this cache immediately.
+    Marking an article read or unread drops the cached totals immediately.
+    Category preferences are always taken from the documents passed in.
     """
 
     now = utc_now()
+    generation = _category_counts_generation.get(user_id, 0)
     cached_entry = _category_counts_cache.get(user_id)
     if cached_entry is not None and now - cached_entry[0] <= CATEGORY_COUNTS_CACHE_TTL:
-        return cached_entry[1]
+        return _response_from_counts(categories, cached_entry[1])
 
     payload = await build_categories_with_counts(user_id, categories, subscriptions)
-    _category_counts_cache[user_id] = (now, payload)
+    if _category_counts_generation.get(user_id, 0) == generation:
+        _category_counts_cache[user_id] = (now, _counts_from_response(payload))
     return payload
 
 
@@ -3283,8 +3345,6 @@ async def set_category_muted(user_id: str, category_id: str, muted: bool) -> Fee
     updated = await feed_categories_collection.find_one(
         {"_id": category_object_id, "user_id": user_id}
     )
-    if updated is not None:
-        invalidate_category_counts_cache(user_id)
     return FeedCategoryDocument.model_validate(updated) if updated is not None else None
 
 
